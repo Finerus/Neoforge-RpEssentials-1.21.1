@@ -643,30 +643,22 @@ public class OneriaCommands {
         // -------------------------------------------------------------------------
         // MODULE: MESSAGERIE PRIVÉE — remplace /msg /tell /w /whisper + /r
         // -------------------------------------------------------------------------
-        // Supprimer les commandes vanilla avant de les remplacer
         for (String alias : new String[]{"msg", "tell", "w", "whisper"}) {
             dispatcher.getRoot().getChildren().removeIf(node -> node.getName().equals(alias));
             dispatcher.register(Commands.literal(alias)
                     .then(Commands.argument("target", EntityArgument.player())
                             .then(Commands.argument("message", StringArgumentType.greedyString())
                                     .executes(ctx -> {
-                                        ServerPlayer sender = ctx.getSource().getPlayerOrException();
                                         ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
                                         String msg = StringArgumentType.getString(ctx, "message");
-                                        OneriaMessagingManager.sendMessage(sender, target, msg);
-                                        return 1;
-                                    }))));
-        }
 
-        for (String alias : new String[]{"msg", "tell", "w", "whisper"}) {
-            dispatcher.register(Commands.literal(alias)
-                    .then(Commands.argument("target", EntityArgument.player())
-                            .then(Commands.argument("message", StringArgumentType.greedyString())
-                                    .executes(ctx -> {
-                                        ServerPlayer sender = ctx.getSource().getPlayerOrException();
-                                        ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
-                                        String msg = StringArgumentType.getString(ctx, "message");
-                                        OneriaMessagingManager.sendMessage(sender, target, msg);
+                                        if (ctx.getSource().getEntity() instanceof ServerPlayer sender) {
+                                            OneriaMessagingManager.sendMessage(sender, target, msg);
+                                        } else {
+                                            MutableComponent toTarget = Component.literal("§7[MP] §f§lServeur§r§7 vous écrit : " + msg);
+                                            target.sendSystemMessage(toTarget);
+                                            ctx.getSource().sendSuccess(() -> Component.literal("§7[MP] Vous écrivez à §f§l" + target.getName().getString() + "§r§7 : " + msg), false);
+                                        }
                                         return 1;
                                     }))));
         }
