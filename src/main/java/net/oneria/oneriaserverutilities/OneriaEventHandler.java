@@ -45,6 +45,7 @@ public class OneriaEventHandler {
 
         // Fix 3 : signature correcte checkOnLogin(ServerPlayer, MinecraftServer)
         TempLicenseExpirationManager.checkOnLogin(player, server);
+        TempLicenseExpirationManager.markRevokedLicenseItems(player);
 
         // Fix 4 : new Thread() supprimé -- CompletableFuture seul suffit
         // server.execute() est une méthode de MinecraftServer, pas de Thread

@@ -1144,6 +1144,11 @@ public class OneriaCommands {
         license.set(net.minecraft.core.component.DataComponents.LORE,
                 new net.minecraft.world.item.component.ItemLore(lore));
 
+        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        tag.putString("professionId", professionId);
+        license.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(tag));
+
         if (!target.getInventory().add(license)) {
             target.drop(license, false);
         }
@@ -1179,6 +1184,8 @@ public class OneriaCommands {
 
         ServerPlayer staff = ctx.getSource().getPlayer();
         LicenseManager.logAction("REVOKE", staff, target, profession, null);
+
+        TempLicenseExpirationManager.markRevokedLicenseItems(target);
 
         ProfessionRestrictionManager.ProfessionData profData =
                 ProfessionRestrictionManager.getProfessionData(profession);

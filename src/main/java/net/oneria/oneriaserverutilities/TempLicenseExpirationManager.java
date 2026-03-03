@@ -29,6 +29,36 @@ public class TempLicenseExpirationManager {
             revoke(server, uuid, e, player);
     }
 
+    public static void markRevokedLicenseItems(ServerPlayer player) {
+        List<String> activeLicenses = LicenseManager.getLicenses(player.getUUID());
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            net.minecraft.world.item.ItemStack stack = player.getInventory().getItem(i);
+            if (stack.isEmpty() || !(stack.getItem() instanceof net.oneria.oneriaserverutilities.items.LicenseItem)) continue;
+            if (!stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) continue;
+
+            net.minecraft.nbt.CompoundTag tag = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA).copyTag();
+            String profId = tag.getString("professionId");
+            if (profId.isEmpty()) continue;
+
+            boolean isActive = activeLicenses.stream().anyMatch(l -> l.equalsIgnoreCase(profId));
+            boolean alreadyRevoked = tag.getBoolean("revoked");
+
+            if (!isActive && !alreadyRevoked) {
+                tag.putBoolean("revoked", true);
+                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                        net.minecraft.world.item.component.CustomData.of(tag));
+
+                List<net.minecraft.network.chat.Component> lore = new java.util.ArrayList<>();
+                var existing = stack.get(net.minecraft.core.component.DataComponents.LORE);
+                if (existing != null) lore.addAll(existing.lines());
+                lore.add(net.minecraft.network.chat.Component.literal("§c§l✖ PERMIS RÉVOQUÉ"));
+                lore.add(net.minecraft.network.chat.Component.literal("§cCe permis n'est plus valide."));
+                stack.set(net.minecraft.core.component.DataComponents.LORE,
+                        new net.minecraft.world.item.component.ItemLore(lore));
+            }
+        }
+    }
+
     public static void tickMidnightSweep(MinecraftServer server, int hour, int minute) {
         int today = LocalDate.now().getDayOfYear();
         if (today != lastSweepDay) { hasDoneSweepToday = false; lastSweepDay = today; }
@@ -47,6 +77,9 @@ public class TempLicenseExpirationManager {
             }
         }
         OneriaServerUtilities.LOGGER.info("[TempLicenseExpiration] Midnight sweep done.");
+        for (ServerPlayer online : server.getPlayerList().getPlayers()) {
+            markRevokedLicenseItems(online);
+        }
     }
 
     private static void revoke(MinecraftServer server, UUID uuid,

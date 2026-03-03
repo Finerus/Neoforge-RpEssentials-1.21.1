@@ -109,6 +109,12 @@ public class OneriaServerUtilities {
             }
         }
 
+        if (tickCounter % 12000 == 0) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                TempLicenseExpirationManager.markRevokedLicenseItems(player);
+            }
+        }
+
         if (tickCounter % 400 == 0) {
             ProfessionRestrictionEventHandler.cleanupCaches();
         }

@@ -1,6 +1,26 @@
 # Changelog - Oneria Mod
 All notable changes to this project will be documented in this file.
 
+## [3.0.2] - 2026-03-03
+
+**Added**
+
+* **Revoked License Visual Marker:**
+  - Physical license items are now visually marked when their license has been revoked.
+  - Lore is updated with `✖ PERMIS RÉVOQUÉ` and `Ce permis n'est plus valide.` on the item directly.
+  - Marking is triggered on player login, every 10 minutes server-side, and immediately on `/license revoke` if the player is online.
+  - Uses a `revoked` flag stored in the item's `CUSTOM_DATA` to avoid duplicate marking.
+  - Items given before this update (without `professionId` in CUSTOM_DATA) are not affected.
+
+**Technical**
+
+* **Modified Classes:**
+  - `TempLicenseExpirationManager` — added `markRevokedLicenseItems(ServerPlayer)`, called on login and in midnight sweep.
+  - `OneriaEventHandler` — calls `markRevokedLicenseItems()` on player login.
+  - `OneriaCommands` — `revokeLicense()` now calls `markRevokedLicenseItems()` immediately if player is online.
+  - `OneriaServerUtilities` — added 10-minute tick (`% 12000`) to sweep all online players.
+  - `OneriaCommands` — `giveLicense()` now stores `professionId` in item `CUSTOM_DATA` for future revoke detection.
+
 ## [3.0.1] - 2026-03-03
 
 **Fixed**
