@@ -302,6 +302,35 @@ public class LicenseManager {
         return result;
     }
 
+    /**
+     * Supprime une entree precise de licenses-temp.json.
+     * Compare par targetUUID + profession + expiresAt pour etre precis.
+     */
+    public static void removeTempLicense(TempLicenseEntry toRemove) {
+        ensureInitialized();
+        tempLicenses.removeIf(e ->
+                e.targetUUID.equals(toRemove.targetUUID) &&
+                        e.profession.equals(toRemove.profession) &&
+                        e.expiresAt.equals(toRemove.expiresAt)
+        );
+        saveTempToFile();
+    }
+
+    /**
+     * Retourne la date d'expiration d'un permis RP pour un joueur,
+     * ou null si la profession n'est pas temporaire.
+     */
+    public static String getTempExpirationDate(UUID playerUUID, String profession) {
+        ensureInitialized();
+        String uuidStr = playerUUID.toString();
+        for (TempLicenseEntry entry : tempLicenses) {
+            if (entry.targetUUID.equals(uuidStr) && entry.profession.equalsIgnoreCase(profession)) {
+                return entry.expiresAt;
+            }
+        }
+        return null;
+    }
+
     public static void reload() {
         licenseFile = null;
         auditFile   = null;
@@ -345,6 +374,27 @@ public class LicenseManager {
         OneriaServerUtilities.LOGGER.info("[LicenseAudit] {} | {} -> {} | {} | {}",
                 action, staffName, target.getName().getString(), profession,
                 extra != null ? extra : "");
+    }
+
+    /**
+     * Enregistre une action systeme dans l'audit log (sans joueur staff humain).
+     * Utilise pour les expirations automatiques (EXPIRE_RP).
+     *
+     * @param action      "EXPIRE_RP"
+     * @param targetName  Nom du joueur cible
+     * @param targetUUID  UUID du joueur cible (String)
+     * @param profession  ID du metier
+     * @param extra       Infos supplementaires (ex: "Expire le 31/03/2025")
+     */
+    public static void logActionSystem(String action, String targetName, String targetUUID,
+                                       String profession, String extra) {
+        ensureInitialized();
+        AuditEntry entry = new AuditEntry(action, "System", "system",
+                targetName, targetUUID, profession, extra);
+        auditLog.add(entry);
+        saveAuditToFile();
+        OneriaServerUtilities.LOGGER.info("[LicenseAudit] {} | System -> {} | {} | {}",
+                action, targetName, profession, extra != null ? extra : "");
     }
 
     public static List<AuditEntry> getAuditLog() {

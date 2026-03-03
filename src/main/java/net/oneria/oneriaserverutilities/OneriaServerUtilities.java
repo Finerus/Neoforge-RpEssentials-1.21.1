@@ -94,18 +94,13 @@ public class OneriaServerUtilities {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        if (event.getServer() == null) {
-            return;
-        }
+        if (event.getServer() == null) return;
 
-        // Do not update every tick to save bandwidth (here every 40 ticks = 2s)
+        // Déclaré ICI — visible par tous les blocs
+        var server = event.getServer();
+
         if (tickCounter++ % 40 == 0) {
-            var server = event.getServer();
-
-            // Blur system - seulement si activé
             if (OneriaConfig.ENABLE_BLUR.get()) {
-                // Force sending an UPDATE_DISPLAY_NAME packet for all players
-                // Our Mixin will intercept this packet and modify the content on the fly
                 ClientboundPlayerInfoUpdatePacket packet = new ClientboundPlayerInfoUpdatePacket(
                         EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),
                         server.getPlayerList().getPlayers()
@@ -114,12 +109,16 @@ public class OneriaServerUtilities {
             }
         }
 
-        // Nettoyer les caches toutes les 20 secondes (400 ticks)
         if (tickCounter % 400 == 0) {
             ProfessionRestrictionEventHandler.cleanupCaches();
         }
 
-        OneriaScheduleManager.tick(event.getServer());
-        WorldBorderManager.tick(event.getServer());
+        if (tickCounter % 1200 == 0) {
+            java.time.LocalTime now = java.time.LocalTime.now();
+            TempLicenseExpirationManager.tickMidnightSweep(server, now.getHour(), now.getMinute());
+        }
+
+        OneriaScheduleManager.tick(server);
+        WorldBorderManager.tick(server);
     }
 }

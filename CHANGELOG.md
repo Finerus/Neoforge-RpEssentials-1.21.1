@@ -1,6 +1,64 @@
 # Changelog - Oneria Mod
 All notable changes to this project will be documented in this file.
 
+## [3.0.1] - 2026-03-03
+
+**Fixed**
+
+* **License Revocation — No Longer Removes Item From Inventory:**
+  - `/license revoke` now only removes the profession from `licenses.json` and invalidates permissions.
+  - The physical license item is kept in the player's inventory as a decorative object.
+  - Profession restrictions are lifted immediately via `ProfessionSyncHelper.syncToPlayer()`.
+  - Player is notified that their license has been revoked.
+
+* **`RevokedLicenseManager` — Removed:**
+  - The class has been entirely removed as it no longer serves a purpose.
+  - All references in `OneriaEventHandler` and `OneriaCommands` have been cleaned up.
+
+* **`OneriaEventHandler` — Raw Thread Replaced:**
+  - The `new Thread(() -> { Thread.sleep(2000); ... }).start()` pattern on player login has been replaced with `CompletableFuture.runAsync()`.
+  - Eliminates the creation of one OS thread per player connection under load.
+  - `server.execute()` ensures the deferred logic still runs on the server thread.
+  - Added imports `net.minecraft.server.MinecraftServer` and `net.neoforged.neoforge.server.ServerLifecycleHooks`.
+
+* **`OneriaServerUtilities.onServerTick()` — `server` Variable Scope:**
+  - `var server` was declared inside the `if (tickCounter++ % 40 == 0)` block, making it invisible to the rest of the method.
+  - Now declared once at the top of the method and reused by all blocks.
+
+**Added**
+
+* **`TempLicenseExpirationManager` — Automatic RP License Expiration:**
+  - New class handling automatic expiration of RP licenses issued via `/license giverp`.
+  - Two triggers: `checkOnLogin(player, server)` on player connection, and `tickMidnightSweep(server, hour, minute)` called from `onServerTick()` every 60 seconds (effective once per day at midnight).
+  - On expiration: removes from `licenses-temp.json`, removes from `licenses.json` as a safety measure, invalidates cache, syncs client restrictions, and notifies the player if online.
+  - Physical item is kept in inventory — player is informed it is no longer valid.
+  - All expirations logged to `license-audit.json` with action `EXPIRE_RP`.
+  - Takes `MinecraftServer` as an explicit parameter — never uses `player.getServer()` which is `@Nullable`.
+
+* **`LicenseManager` — Two New Methods:**
+  - `removeTempLicense(TempLicenseEntry)` — removes a specific entry from `licenses-temp.json`, matched by `targetUUID` + `profession` + `expiresAt`.
+  - `logActionSystem(action, targetName, targetUUID, profession, extra)` — logs an audit entry without a human staff actor, used for system-triggered actions such as `EXPIRE_RP`.
+
+**Technical**
+
+* **Removed Classes:**
+  - `RevokedLicenseManager` — fully deleted, no replacement needed.
+
+* **New Classes:**
+  - `TempLicenseExpirationManager` — automatic expiration logic for RP licenses.
+
+* **Modified Classes:**
+  - `OneriaEventHandler` — removed `RevokedLicenseManager` calls, replaced raw thread, added `TempLicenseExpirationManager.checkOnLogin()`.
+  - `OneriaServerUtilities` — fixed `server` scope in `onServerTick()`, added `tickMidnightSweep` call every 1200 ticks.
+  - `OneriaCommands` — `revokeLicense()` no longer calls `RevokedLicenseManager`, now calls `ProfessionSyncHelper.syncToPlayer()` immediately after revocation. `giveLicense()` also calls `syncToPlayer()`.
+  - `LicenseManager` — added `removeTempLicense()` and `logActionSystem()`.
+
+**Migration Notes**
+
+* No configuration changes required.
+* `RevokedLicenseManager` is gone — if you have any custom patches referencing it, remove them.
+* Players who had licenses revoked in 3.0.0 and still have the physical item in their inventory will keep it. Their permissions are already removed in `licenses.json` — no action needed.
+
 ## [3.0.0] - 2026-03-02
 
 **⚠ Breaking Change:** Configuration entirely restructured into 5 separate files under `config/oneria/`.

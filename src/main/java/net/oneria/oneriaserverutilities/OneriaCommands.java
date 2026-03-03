@@ -1119,21 +1119,15 @@ public class OneriaCommands {
 
     // --- LICENSE HANDLERS ---
 
-// ============================================================
-// Remplace giveLicense(), revokeLicense() et giveRPLicense()
-// dans OneriaCommands.java
-// ============================================================
-
     private static int giveLicense(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String professionId = StringArgumentType.getString(ctx, "profession");
 
-        // Récupérer les données du métier depuis la config
         ProfessionRestrictionManager.ProfessionData professionData =
                 ProfessionRestrictionManager.getProfessionData(professionId);
 
         if (professionData == null) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Métier inconnu: " + professionId));
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Metier inconnu: " + professionId));
             return 0;
         }
 
@@ -1143,8 +1137,9 @@ public class OneriaCommands {
 
         license.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
                 Component.literal(professionData.colorCode + "§lPermis de " + professionData.displayName));
+
         java.util.List<Component> lore = new java.util.ArrayList<>();
-        lore.add(Component.literal("§7Délivré à: §f" + displayName));
+        lore.add(Component.literal("§7Delivre a: §f" + displayName));
         lore.add(Component.literal("§7Date: §f" + java.time.LocalDate.now().toString()));
         license.set(net.minecraft.core.component.DataComponents.LORE,
                 new net.minecraft.world.item.component.ItemLore(lore));
@@ -1155,19 +1150,18 @@ public class OneriaCommands {
 
         LicenseManager.addLicense(target.getUUID(), professionId);
 
-        // Audit log
         ServerPlayer staff = ctx.getSource().getPlayer();
         LicenseManager.logAction("GIVE", staff, target, professionId, null);
 
+        ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
+        ProfessionSyncHelper.syncToPlayer(target);
+
         ctx.getSource().sendSuccess(() ->
                 Component.literal("§a[Oneria] Permis de " + professionData.getFormattedName() +
-                        "§a donné à §f" + displayName), true);
+                        "§a donne a §f" + displayName), true);
 
-        target.sendSystemMessage(Component.literal("§aVous avez reçu un " + professionData.getFormattedName() +
+        target.sendSystemMessage(Component.literal("§aVous avez recu un " + professionData.getFormattedName() +
                 "§6§l Permis§a !"));
-
-        // Invalider le cache des restrictions pour ce joueur
-        ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
 
         return 1;
     }
@@ -1176,28 +1170,26 @@ public class OneriaCommands {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String profession = StringArgumentType.getString(ctx, "profession");
 
-        // Retirer la licence de la base de données
+        // Retirer uniquement de licenses.json — l'item reste dans l'inventaire
         LicenseManager.removeLicense(target.getUUID(), profession);
 
-        // Marquer pour suppression de l'inventaire
-        RevokedLicenseManager.markForRemoval(target.getUUID(), profession);
-
-        // Invalider le cache des restrictions pour ce joueur
+        // Invalider le cache + sync client immediat
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
+        ProfessionSyncHelper.syncToPlayer(target);
 
-        // Supprimer immédiatement les licences de l'inventaire si le joueur est en ligne
-        RevokedLicenseManager.removeAllRevokedLicenses(target);
-
-        // Audit log
         ServerPlayer staff = ctx.getSource().getPlayer();
         LicenseManager.logAction("REVOKE", staff, target, profession, null);
 
         ProfessionRestrictionManager.ProfessionData profData =
                 ProfessionRestrictionManager.getProfessionData(profession);
-        String displayName = profData != null ? profData.displayName : profession;
+        String profDisplayName = profData != null ? profData.displayName : profession;
 
         ctx.getSource().sendSuccess(() ->
-                Component.literal("§a[Oneria] Permis de §f" + displayName + "§a révoqué pour §f" + target.getName().getString()), true);
+                Component.literal("§a[Oneria] Permis de §f" + profDisplayName +
+                        "§a revoque pour §f" + target.getName().getString()), true);
+
+        target.sendSystemMessage(Component.literal(
+                "§cVotre permis de §f" + profDisplayName + "§c a ete revoque."));
 
         return 1;
     }
@@ -1205,76 +1197,85 @@ public class OneriaCommands {
     private static int giveRPLicense(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String professionId = StringArgumentType.getString(ctx, "profession");
-        int daysDuration = IntegerArgumentType.getInteger(ctx, "days_duration");
+        int days = IntegerArgumentType.getInteger(ctx, "days_duration");
 
-        ProfessionRestrictionManager.ProfessionData professionData =
+        ProfessionRestrictionManager.ProfessionData profData =
                 ProfessionRestrictionManager.getProfessionData(professionId);
-
-        if (professionData == null) {
+        if (profData == null) {
             ctx.getSource().sendFailure(Component.literal("§c[Oneria] Métier inconnu: " + professionId));
             return 0;
         }
 
         String displayName = NicknameManager.getDisplayName(target);
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String issued  = java.time.LocalDate.now().format(fmt);
+        String expires = java.time.LocalDate.now().plusDays(days).format(fmt);
 
-        java.time.LocalDate issueDate = java.time.LocalDate.now();
-        java.time.LocalDate expirationDate = issueDate.plusDays(daysDuration);
-
-        // Format: DD/MM/YYYY
-        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String issueDateStr = issueDate.format(formatter);
-        String expirationDateStr = expirationDate.format(formatter);
-
+        // Item
         ItemStack license = new ItemStack(OneriaItems.LICENSE.get());
-
-        // Nom identique aux vrais permis - AUCUNE indication RP
         license.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
-                Component.literal(professionData.colorCode + "§lPermis de " + professionData.displayName));
-
-        // Lore professionnel - ressemble à un vrai permis
+                Component.literal(profData.colorCode + "§lPermis de " + profData.displayName));
         java.util.List<Component> lore = new java.util.ArrayList<>();
         lore.add(Component.literal("§7Délivré à: §f" + displayName));
-        lore.add(Component.literal("§7Date de délivrance: §f" + issueDateStr));
-        lore.add(Component.literal("§7Valide jusqu'au: §f" + expirationDateStr));
-
+        lore.add(Component.literal("§7Date de délivrance: §f" + issued));
+        lore.add(Component.literal("§7Valide jusqu'au: §f" + expires));
         license.set(net.minecraft.core.component.DataComponents.LORE,
                 new net.minecraft.world.item.component.ItemLore(lore));
+        if (!target.getInventory().add(license)) target.drop(license, false);
 
-        if (!target.getInventory().add(license)) {
-            target.drop(license, false);
-        }
+        // Donne les vraies permissions — retiré automatiquement à expiration
+        LicenseManager.addLicense(target.getUUID(), professionId);
 
-        // Enregistrer dans licenses-temp.json
+        // Enregistre dans licenses-temp.json + audit
         ServerPlayer staff = ctx.getSource().getPlayer();
-        LicenseManager.addTempLicense(staff, target, professionId, daysDuration, issueDateStr, expirationDateStr);
+        LicenseManager.addTempLicense(staff, target, professionId, days, issued, expires);
+        LicenseManager.logAction("GIVE_RP", staff, target, professionId,
+                days + " jours, expire le " + expires);
 
-        // Audit log
-        String extra = daysDuration + " jours, expire le " + expirationDateStr;
-        LicenseManager.logAction("GIVE_RP", staff, target, professionId, extra);
+        // Invalider cache + sync client immédiat
+        ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
+        ProfessionSyncHelper.syncToPlayer(target);
 
-        ctx.getSource().sendSuccess(() ->
-                Component.literal("§a[Oneria] Permis temporaire de " + professionData.getFormattedName() +
-                        "§a donné à §f" + displayName + " §7(" + daysDuration + " jours, expire le " + expirationDateStr + ")"), true);
-
-        target.sendSystemMessage(Component.literal("§aVous avez reçu un " + professionData.getFormattedName() +
-                "§6§l Permis §7valable jusqu'au §f" + expirationDateStr));
-
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§a[Oneria] Permis temporaire de " + profData.getFormattedName() +
+                        "§a donné à §f" + displayName +
+                        " §7(" + days + " jours, expire le " + expires + ")"), true);
+        target.sendSystemMessage(Component.literal(
+                "§aVous avez reçu un " + profData.getFormattedName() +
+                        "§6§l Permis §7valable jusqu'au §f" + expires));
         return 1;
     }
 
 
     private static int listLicenses(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
-        java.util.List<String> licenses = LicenseManager.getLicenses(target.getUUID());
+        List<String> licenses = LicenseManager.getLicenses(target.getUUID());
 
         if (licenses.isEmpty()) {
             ctx.getSource().sendSuccess(() ->
-                    Component.literal("§e[Oneria] §f" + target.getName().getString() + "§e n'a aucun permis."), false);
-        } else {
-            ctx.getSource().sendSuccess(() ->
-                    Component.literal("§e[Oneria] Permis de §f" + target.getName().getString() + "§e: §f" + String.join(", ", licenses)), false);
+                    Component.literal("§e[Oneria] §f" + target.getName().getString() +
+                            "§e n'a aucun permis."), false);
+            return 1;
         }
 
+        StringBuilder sb = new StringBuilder();
+        sb.append("§6╔═══════════════════════════════════╗\n");
+        sb.append("§6║ §e§lPERMIS — §f").append(target.getName().getString()).append("\n");
+        sb.append("§6╠═══════════════════════════════════╣\n");
+
+        for (String profession : licenses) {
+            String expiry = LicenseManager.getTempExpirationDate(target.getUUID(), profession);
+            if (expiry != null) {
+                sb.append("§6║ §f").append(profession)
+                        .append(" §7(RP - expire le ").append(expiry).append(")\n");
+            } else {
+                sb.append("§6║ §f").append(profession).append("\n");
+            }
+        }
+
+        sb.append("§6╚═══════════════════════════════════╝");
+        String msg = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;
     }
 
@@ -1282,8 +1283,7 @@ public class OneriaCommands {
         var allLicenses = LicenseManager.getAllLicenses();
 
         if (allLicenses.isEmpty()) {
-            ctx.getSource().sendSuccess(() ->
-                    Component.literal("§e[Oneria] Aucune licence enregistrée."), false);
+            ctx.getSource().sendSuccess(() -> Component.literal("§e[Oneria] Aucune licence enregistrée."), false);
             return 1;
         }
 
@@ -1291,22 +1291,37 @@ public class OneriaCommands {
         result.append("§6║ §e§lLICENSES - TOUS LES JOUEURS §6║\n");
         result.append("§6╠═══════════════════════════════════╣\n");
 
+        var server = ctx.getSource().getServer();
+
         for (var entry : allLicenses.entrySet()) {
             java.util.UUID uuid = entry.getKey();
             List<String> licenses = entry.getValue();
 
-            ServerPlayer player = ctx.getSource().getServer().getPlayerList().getPlayer(uuid);
-            String playerName = player != null ? player.getName().getString() : uuid.toString();
+            // Récupération sécurisée du nom
+            ServerPlayer onlinePlayer = server.getPlayerList().getPlayer(uuid);
+            String playerName = (onlinePlayer != null)
+                    ? onlinePlayer.getName().getString()
+                    : server.getProfileCache().get(uuid)
+                    .map(com.mojang.authlib.GameProfile::getName)
+                    .orElse(uuid.toString());
 
-            result.append("§6║ §f").append(playerName).append("§7:\n");
-            for (String license : licenses) {
-                result.append("§6║   §e- ").append(license).append("\n");
+            StringBuilder licLine = new StringBuilder();
+            for (String lic : licenses) {
+                if (licLine.length() > 0) licLine.append("§7, ");
+                String expiry = LicenseManager.getTempExpirationDate(uuid, lic);
+                licLine.append("§f").append(lic);
+                if (expiry != null) {
+                    licLine.append(" §7(RP - ").append(expiry).append(")");
+                }
             }
+
+            result.append("§6║ §f").append(playerName).append("§7: ")
+                    .append(licLine.length() > 0 ? licLine : "§8Aucune").append("\n");
         }
 
         result.append("§6╚═══════════════════════════════════╝");
-
         ctx.getSource().sendSuccess(() -> Component.literal(result.toString()), false);
+
         return 1;
     }
 
