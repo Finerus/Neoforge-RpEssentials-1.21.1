@@ -673,6 +673,77 @@ public class OneriaCommands {
         oneriaRoot.then(Commands.literal("help")
                 .executes(OneriaCommands::showHelp));
 
+        // -------------------------------------------------------------------------
+        // MODULE: LAST CONNECTION (Requires isStaff)
+        // -------------------------------------------------------------------------
+        var lastConnNode = Commands.literal("lastconnection")
+                .requires(src -> OneriaPermissions.isStaff(src.getPlayer()));
+
+        // /oneria lastconnection <player>
+        lastConnNode.then(Commands.argument("player", StringArgumentType.word())
+                .executes(OneriaCommands::lastConnectionPlayer));
+
+        // /oneria lastconnection list [count]
+        lastConnNode.then(Commands.literal("list")
+                .executes(ctx -> lastConnectionList(ctx, 20))
+                .then(Commands.argument("count", IntegerArgumentType.integer(1, 100))
+                        .executes(ctx -> lastConnectionList(ctx, IntegerArgumentType.getInteger(ctx, "count"))))
+        );
+
+        oneriaRoot.then(lastConnNode);
+
+        // -------------------------------------------------------------------------
+        // MODULE: WARN (Staff commands + player /mywarn)
+        // -------------------------------------------------------------------------
+        var warnNode = Commands.literal("warn")
+                .requires(src -> OneriaPermissions.isStaff(src.getPlayer()));
+
+        // /oneria warn add <player> <reason>
+        warnNode.then(Commands.literal("add")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                .executes(OneriaCommands::warnAdd))));
+
+        // /oneria warn temp <player> <minutes> <reason>
+        warnNode.then(Commands.literal("temp")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .then(Commands.argument("minutes", IntegerArgumentType.integer(1))
+                                .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                        .executes(OneriaCommands::warnTemp)))));
+
+        // /oneria warn remove <warnId>
+        warnNode.then(Commands.literal("remove")
+                .then(Commands.argument("warnId", StringArgumentType.word())
+                        .executes(OneriaCommands::warnRemove)));
+
+        // /oneria warn list [player]  — staff peut voir n'importe qui
+        warnNode.then(Commands.literal("list")
+                .executes(OneriaCommands::warnListAll)
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(OneriaCommands::warnListPlayer)));
+
+        // /oneria warn info <warnId>
+        warnNode.then(Commands.literal("info")
+                .then(Commands.argument("warnId", StringArgumentType.word())
+                        .executes(OneriaCommands::warnInfo)));
+
+        // /oneria warn clear <player>  — supprimer tous les warns d'un joueur
+        warnNode.then(Commands.literal("clear")
+                .then(Commands.argument("target", EntityArgument.player())
+                        .executes(OneriaCommands::warnClear)));
+
+        // /oneria warn purge  — purger les warns expirés
+        warnNode.then(Commands.literal("purge")
+                .executes(OneriaCommands::warnPurge));
+
+        oneriaRoot.then(warnNode);
+
+        // /mywarn — alias standalone accessible à tous les joueurs
+        dispatcher.register(Commands.literal("mywarn")
+                .requires(src -> src.getEntity() instanceof net.minecraft.server.level.ServerPlayer)
+                .executes(OneriaCommands::myWarn));
+
+
         // =========================================================================
         // Register root
         // =========================================================================
@@ -1563,6 +1634,444 @@ public class OneriaCommands {
 
     private static int showColors(CommandContext<CommandSourceStack> ctx) {
         ctx.getSource().sendSuccess(() -> OneriaChatFormatter.getColorsHelp(), false);
+        return 1;
+    }
+
+    // =========================================================================
+    // LAST CONNECTION — implémentation
+    // =========================================================================
+
+    private static int lastConnectionPlayer(CommandContext<CommandSourceStack> ctx) {
+        try {
+            if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
+                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Le suivi de connexion est désactivé dans la config."));
+                return 0;
+            }
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Config non chargée."));
+            return 0;
+        }
+
+        String targetName = StringArgumentType.getString(ctx, "player");
+        MinecraftServer server = ctx.getSource().getServer();
+
+        // Chercher d'abord parmi les joueurs en ligne
+        ServerPlayer online = server.getPlayerList().getPlayerByName(targetName);
+        UUID targetUUID = null;
+        if (online != null) {
+            targetUUID = online.getUUID();
+        } else {
+            // Chercher dans le cache de LastConnectionManager
+            targetUUID = LastConnectionManager.findUUIDByName(targetName);
+        }
+
+        if (targetUUID == null) {
+            ctx.getSource().sendFailure(Component.literal(
+                    "§c[Oneria] Joueur introuvable : §e" + targetName +
+                            "\n§7(Le joueur doit s'être déjà connecté au moins une fois pour apparaître ici.)"));
+            return 0;
+        }
+
+        // Capture finale nécessaire : targetUUID est réassigné dans le if/else ci-dessus
+        final UUID finalTargetUUID = targetUUID;
+
+        LastConnectionManager.ConnectionEntry entry = LastConnectionManager.getEntry(finalTargetUUID);
+        if (entry == null) {
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Aucune donnée de connexion pour §e" + targetName));
+            return 0;
+        }
+
+        String status = online != null ? "§a● En ligne" : "§7○ Hors ligne";
+        String loginStr  = entry.lastLogin  != null ? "§f" + entry.lastLogin  : "§7Inconnu";
+        String logoutStr = entry.lastLogout != null ? "§f" + entry.lastLogout : "§7Inconnu";
+
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§6╔═ Dernière connexion ═══════════════╗\n" +
+                        "§6║ §7Joueur : §e" + (entry.mcName != null ? entry.mcName : targetName) + " §8(" + finalTargetUUID + ")\n" +
+                        "§6║ §7Statut  : " + status + "\n" +
+                        "§6║ §7Login   : " + loginStr + "\n" +
+                        "§6║ §7Logout  : " + logoutStr + "\n" +
+                        "§6╚════════════════════════════════════╝"
+        ), false);
+        return 1;
+    }
+
+    private static int lastConnectionList(CommandContext<CommandSourceStack> ctx, int count) {
+        try {
+            if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
+                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Le suivi de connexion est désactivé dans la config."));
+                return 0;
+            }
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Config non chargée."));
+            return 0;
+        }
+
+        MinecraftServer server = ctx.getSource().getServer();
+        var allEntries = LastConnectionManager.getAllSortedByLogin();
+        int total = allEntries.size();
+
+        if (total == 0) {
+            ctx.getSource().sendSuccess(() -> Component.literal("§7[Oneria] Aucune donnée de connexion enregistrée."), false);
+            return 1;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("§6╔═ Dernières connexions (").append(Math.min(count, total)).append("/").append(total).append(") ══╗\n");
+
+        int shown = 0;
+        for (var e : allEntries) {
+            if (shown >= count) break;
+            UUID uuid = e.getKey();
+            LastConnectionManager.ConnectionEntry entry = e.getValue();
+            String name = entry.mcName != null ? entry.mcName : uuid.toString().substring(0, 8) + "...";
+            boolean isOnline = server.getPlayerList().getPlayer(uuid) != null;
+            String bullet = isOnline ? "§a●" : "§7○";
+            String loginStr = entry.lastLogin != null ? entry.lastLogin : "§8Inconnu";
+            sb.append("§6║ ").append(bullet).append(" §e").append(name)
+                    .append("§7 — ").append(loginStr).append("\n");
+            shown++;
+        }
+        sb.append("§6╚═══════════════════════════════════╝");
+
+        String finalMsg = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(finalMsg), false);
+        return 1;
+    }
+
+    // =========================================================================
+    // WARN — implémentation
+    // =========================================================================
+
+    private static boolean warnSystemCheck(CommandContext<CommandSourceStack> ctx) {
+        try {
+            if (!ModerationConfig.ENABLE_WARN_SYSTEM.get()) {
+                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Le système de warns est désactivé dans la config."));
+                return false;
+            }
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Config non chargée."));
+            return false;
+        }
+        return true;
+    }
+
+    /** Diffuse un message à tous les staffers en ligne. */
+    private static void broadcastToStaff(MinecraftServer server, String message) {
+        if (message == null || message.isEmpty()) return;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (OneriaPermissions.isStaff(p)) {
+                p.sendSystemMessage(Component.literal(message));
+            }
+        }
+    }
+
+    private static int warnAdd(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        if (!warnSystemCheck(ctx)) return 0;
+
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+        String reason = StringArgumentType.getString(ctx, "reason");
+        MinecraftServer server = ctx.getSource().getServer();
+
+        UUID issuerUUID = null;
+        String issuerName = "Console";
+        if (ctx.getSource().getEntity() instanceof ServerPlayer issuer) {
+            issuerUUID = issuer.getUUID();
+            issuerName = issuer.getName().getString();
+        }
+
+        String warnId = WarnManager.addWarn(
+                target.getUUID(), target.getName().getString(),
+                issuerUUID, issuerName,
+                reason, null /* permanent */);
+
+        // Notifier la cible
+        target.sendSystemMessage(Component.literal(
+                "§c⚠ §lVous avez reçu un avertissement §r§c(warn #" + warnId + ") !\n" +
+                        "§7Raison : §f" + reason + "\n" +
+                        "§7Durée  : §fPermanent\n" +
+                        "§7Tapez §l/mywarn §r§7pour voir tous vos avertissements."));
+
+        // Notifier le staff
+        try {
+            String fmt = ModerationConfig.WARN_ADDED_BROADCAST_FORMAT.get();
+            if (!fmt.isEmpty()) {
+                String broadcast = fmt
+                        .replace("{id}", warnId)
+                        .replace("{staff}", issuerName)
+                        .replace("{player}", target.getName().getString())
+                        .replace("{reason}", reason)
+                        .replace("{expiry}", "Permanent");
+                broadcastToStaff(server, broadcast);
+            }
+        } catch (IllegalStateException ignored) {}
+
+        // Feedback à l'émetteur (s'il n'est pas staff — pour éviter doublon)
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§a[Oneria] Warn §e#" + warnId + "§a ajouté pour §e" + target.getName().getString() +
+                        "§a. Raison : §f" + reason), false);
+        return 1;
+    }
+
+    private static int warnTemp(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        if (!warnSystemCheck(ctx)) return 0;
+
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+        int minutes = IntegerArgumentType.getInteger(ctx, "minutes");
+        String reason = StringArgumentType.getString(ctx, "reason");
+        MinecraftServer server = ctx.getSource().getServer();
+
+        // Vérifier la limite de durée max
+        try {
+            int maxDays = ModerationConfig.WARN_MAX_TEMP_DAYS.get();
+            if (maxDays > 0 && minutes > maxDays * 1440) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "§c[Oneria] Durée maximale autorisée : " + maxDays + " jours (" + (maxDays * 1440) + " minutes)."));
+                return 0;
+            }
+        } catch (IllegalStateException ignored) {}
+
+        UUID issuerUUID = null;
+        String issuerName = "Console";
+        if (ctx.getSource().getEntity() instanceof ServerPlayer issuer) {
+            issuerUUID = issuer.getUUID();
+            issuerName = issuer.getName().getString();
+        }
+
+        long expiresAt = System.currentTimeMillis() + (long) minutes * 60_000;
+
+        String warnId = WarnManager.addWarn(
+                target.getUUID(), target.getName().getString(),
+                issuerUUID, issuerName,
+                reason, expiresAt);
+
+        // Formater la durée pour l'affichage
+        String durationStr;
+        if (minutes < 60) durationStr = minutes + " minute(s)";
+        else if (minutes < 1440) durationStr = (minutes / 60) + "h " + (minutes % 60) + "min";
+        else durationStr = (minutes / 1440) + "j " + ((minutes % 1440) / 60) + "h";
+
+        // Notifier la cible
+        target.sendSystemMessage(Component.literal(
+                "§c⚠ §lVous avez reçu un avertissement temporaire §r§c(warn #" + warnId + ") !\n" +
+                        "§7Raison : §f" + reason + "\n" +
+                        "§7Durée  : §f" + durationStr + "\n" +
+                        "§7Tapez §l/mywarn §r§7pour voir tous vos avertissements."));
+
+        // Notifier le staff
+        try {
+            String fmt = ModerationConfig.WARN_ADDED_BROADCAST_FORMAT.get();
+            if (!fmt.isEmpty()) {
+                String broadcast = fmt
+                        .replace("{id}", warnId)
+                        .replace("{staff}", issuerName)
+                        .replace("{player}", target.getName().getString())
+                        .replace("{reason}", reason)
+                        .replace("{expiry}", durationStr);
+                broadcastToStaff(server, broadcast);
+            }
+        } catch (IllegalStateException ignored) {}
+
+        String finalDurationStr = durationStr;
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§a[Oneria] Warn temporaire §e#" + warnId + "§a ajouté pour §e" + target.getName().getString() +
+                        "§a (" + finalDurationStr + "). Raison : §f" + reason), false);
+        return 1;
+    }
+
+    private static int warnRemove(CommandContext<CommandSourceStack> ctx) {
+        if (!warnSystemCheck(ctx)) return 0;
+
+        String warnId = StringArgumentType.getString(ctx, "warnId");
+        MinecraftServer server = ctx.getSource().getServer();
+
+        // Récupérer l'entrée avant suppression (pour le broadcast)
+        Optional<WarnManager.WarnEntry> optEntry = WarnManager.getWarnById(warnId);
+        if (optEntry.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Warn introuvable : §e#" + warnId));
+            return 0;
+        }
+
+        WarnManager.WarnEntry entry = optEntry.get();
+        boolean removed = WarnManager.removeWarn(warnId);
+
+        if (!removed) {
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Échec de la suppression du warn §e#" + warnId));
+            return 0;
+        }
+
+        String staffName = "Console";
+        if (ctx.getSource().getEntity() instanceof ServerPlayer issuer) {
+            staffName = issuer.getName().getString();
+        }
+
+        // Notifier le joueur visé s'il est en ligne
+        ServerPlayer target = server.getPlayerList().getPlayer(UUID.fromString(entry.targetUUID));
+        if (target != null) {
+            target.sendSystemMessage(Component.literal(
+                    "§a✔ Votre avertissement §l#" + warnId + " §r§a a été retiré par le staff."));
+        }
+
+        // Broadcast staff
+        try {
+            String fmt = ModerationConfig.WARN_REMOVED_BROADCAST_FORMAT.get();
+            if (!fmt.isEmpty()) {
+                broadcastToStaff(server, fmt.replace("{id}", warnId).replace("{staff}", staffName));
+            }
+        } catch (IllegalStateException ignored) {}
+
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§a[Oneria] Warn §e#" + warnId + "§a supprimé (était pour §e" + entry.targetName + "§a)."), false);
+        return 1;
+    }
+
+    private static int warnListPlayer(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        if (!warnSystemCheck(ctx)) return 0;
+
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+        return displayWarnList(ctx, target.getUUID(), target.getName().getString(), true);
+    }
+
+    private static int warnListAll(CommandContext<CommandSourceStack> ctx) {
+        if (!warnSystemCheck(ctx)) return 0;
+
+        var all = WarnManager.getAll();
+        if (all.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("§7[Oneria] Aucun warn enregistré."), false);
+            return 1;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("§6╔═ Tous les warns (").append(all.size()).append(") ══════════╗\n");
+        for (WarnManager.WarnEntry w : all) {
+            String status = w.isExpired() ? "§8[EXP]" : (w.isPermanent() ? "§c[PERM]" : "§e[TEMP]");
+            sb.append("§6║ ").append(status).append(" §e#").append(w.id)
+                    .append(" §7→ §f").append(w.targetName)
+                    .append(" §7— ").append(w.reason).append("\n");
+        }
+        sb.append("§6╚═══════════════════════════════════╝");
+
+        String finalMsg = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(finalMsg), false);
+        return 1;
+    }
+
+    private static int warnInfo(CommandContext<CommandSourceStack> ctx) {
+        if (!warnSystemCheck(ctx)) return 0;
+
+        String warnId = StringArgumentType.getString(ctx, "warnId");
+        Optional<WarnManager.WarnEntry> opt = WarnManager.getWarnById(warnId);
+
+        if (opt.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Warn introuvable : §e#" + warnId));
+            return 0;
+        }
+
+        WarnManager.WarnEntry w = opt.get();
+        String typeStr = w.isPermanent() ? "§cPermanent" : (w.isExpired() ? "§8Expiré" : "§eTemporaire");
+
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§6╔═ Warn #" + w.id + " ═══════════════════════╗\n" +
+                        "§6║ §7Joueur    : §e" + w.targetName + " §8(" + w.targetUUID + ")\n" +
+                        "§6║ §7Staff     : §e" + w.issuerName + "\n" +
+                        "§6║ §7Raison    : §f" + w.reason + "\n" +
+                        "§6║ §7Date      : §f" + w.getFormattedDate() + "\n" +
+                        "§6║ §7Type      : " + typeStr + "\n" +
+                        "§6║ §7Expiration: §f" + w.getFormattedExpiry() + "\n" +
+                        "§6╚════════════════════════════════════╝"
+        ), false);
+        return 1;
+    }
+
+    private static int warnClear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        if (!warnSystemCheck(ctx)) return 0;
+
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+        int removed = WarnManager.clearWarns(target.getUUID());
+
+        if (removed == 0) {
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "§7[Oneria] §e" + target.getName().getString() + " §7n'avait aucun warn."), false);
+            return 1;
+        }
+
+        target.sendSystemMessage(Component.literal(
+                "§a✔ Tous vos avertissements ont été effacés par le staff."));
+
+        int finalRemoved = removed;
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§a[Oneria] §e" + finalRemoved + " §awarn(s) supprimé(s) pour §e" + target.getName().getString() + "§a."), false);
+        return 1;
+    }
+
+    private static int warnPurge(CommandContext<CommandSourceStack> ctx) {
+        if (!warnSystemCheck(ctx)) return 0;
+
+        int purged = WarnManager.purgeExpiredWarns();
+        int finalPurged = purged;
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                "§a[Oneria] Purge terminée : §e" + finalPurged + " §awarn(s) expiré(s) supprimé(s)."), false);
+        return 1;
+    }
+
+    /** /mywarn — joueur voit ses propres warns actifs */
+    private static int myWarn(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) {
+            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Cette commande ne peut être utilisée que par un joueur."));
+            return 0;
+        }
+
+        try {
+            if (!ModerationConfig.ENABLE_WARN_SYSTEM.get()) {
+                player.sendSystemMessage(Component.literal("§c[Oneria] Le système de warns est désactivé."));
+                return 0;
+            }
+        } catch (IllegalStateException e) {
+            return 0;
+        }
+
+        return displayWarnList(ctx, player.getUUID(), player.getName().getString(), false);
+    }
+
+    /**
+     * Affiche la liste des warns d'un joueur.
+     * @param showAll si true, montre aussi les expirés ; si false, uniquement les actifs.
+     */
+    private static int displayWarnList(CommandContext<CommandSourceStack> ctx,
+                                       UUID uuid, String name, boolean showAll) {
+        List<WarnManager.WarnEntry> list = showAll
+                ? WarnManager.getWarns(uuid)
+                : WarnManager.getActiveWarns(uuid);
+
+        if (list.isEmpty()) {
+            String msg = showAll
+                    ? "§7[Oneria] §e" + name + " §7n'a aucun warn."
+                    : "§a✔ Vous n'avez aucun avertissement actif.";
+            ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+            return 1;
+        }
+
+        long activeCount = list.stream().filter(w -> !w.isExpired()).count();
+        StringBuilder sb = new StringBuilder();
+        sb.append("§6╔═ Avertissements de §e").append(name).append(" §6(").append(activeCount).append(" actif(s)) ═╗\n");
+
+        for (WarnManager.WarnEntry w : list) {
+            String status;
+            if (w.isExpired())      status = "§8[EXP]";
+            else if (w.isPermanent()) status = "§c[PERM]";
+            else                     status = "§e[TEMP]";
+
+            sb.append("§6║ ").append(status)
+                    .append(" §7#").append(w.id)
+                    .append(" §8(").append(w.getFormattedDate()).append(")")
+                    .append(" §7par §f").append(w.issuerName).append("\n")
+                    .append("§6║   §7→ §f").append(w.reason)
+                    .append(" §8| ").append(w.getFormattedExpiry()).append("\n");
+        }
+        sb.append("§6╚═══════════════════════════════════╝");
+
+        String finalMsg = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(finalMsg), false);
         return 1;
     }
 

@@ -12,6 +12,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import java.util.List;
+
 @EventBusSubscriber(modid = OneriaServerUtilities.MODID)
 public class OneriaEventHandler {
 
@@ -21,8 +23,10 @@ public class OneriaEventHandler {
 
         OneriaServerUtilities.LOGGER.info("Player {} logged in", player.getName().getString());
 
+        // --- Nametag packet ---
         PacketDistributor.sendToPlayer(player, new HideNametagsPacket(OneriaConfig.HIDE_NAMETAGS.get()));
 
+        // --- Nickname custom name ---
         if (NicknameManager.hasNickname(player.getUUID())) {
             String nickname = NicknameManager.getNickname(player.getUUID());
             String nametagDisplay;
@@ -37,18 +41,18 @@ public class OneriaEventHandler {
             player.setCustomNameVisible(true);
         }
 
+        // --- Profession sync ---
         ProfessionSyncHelper.syncToPlayer(player);
 
-        // Fix 1 : import net.minecraft.server.MinecraftServer ajouté
-        // Fix 2 : import net.neoforged.neoforge.server.ServerLifecycleHooks ajouté
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        // --- Last connection: enregistrer le login IMMÉDIATEMENT ---
+        LastConnectionManager.recordLogin(player);
 
-        // Fix 3 : signature correcte checkOnLogin(ServerPlayer, MinecraftServer)
+        // --- Temp license expiration ---
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         TempLicenseExpirationManager.checkOnLogin(player, server);
         TempLicenseExpirationManager.markRevokedLicenseItems(player);
 
-        // Fix 4 : new Thread() supprimé -- CompletableFuture seul suffit
-        // server.execute() est une méthode de MinecraftServer, pas de Thread
+        // --- Actions différées (schedule, welcome, warns) sur le server thread ---
         if (server != null) {
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
@@ -60,6 +64,8 @@ public class OneriaEventHandler {
                 server.execute(() -> {
                     checkScheduleOnJoin(player);
                     sendWelcomeMessage(player);
+                    notifyWarnsOnJoin(player);   // ← NOUVEAU
+                    autoPurgeWarnsOnJoin(player); // ← NOUVEAU
                 });
             });
         }
@@ -71,10 +77,18 @@ public class OneriaEventHandler {
 
         OneriaServerUtilities.LOGGER.info("Player {} logged out", player.getName().getString());
 
+        // --- Last connection: enregistrer le logout ---
+        LastConnectionManager.recordLogout(player);
+
+        // --- Invalidation des caches ---
         OneriaPermissions.invalidateCache(player.getUUID());
         WorldBorderManager.clearCache(player.getUUID());
         OneriaMessagingManager.clearCache(player.getUUID());
     }
+
+    // =========================================================================
+    // SCHEDULE
+    // =========================================================================
 
     private static void checkScheduleOnJoin(ServerPlayer player) {
         Component kickMessage = OneriaScheduleManager.canPlayerJoin(player);
@@ -90,6 +104,10 @@ public class OneriaEventHandler {
             ProfessionRestrictionManager.invalidatePlayerCache(player.getUUID());
         }
     }
+
+    // =========================================================================
+    // WELCOME
+    // =========================================================================
 
     private static void sendWelcomeMessage(ServerPlayer player) {
         if (!ScheduleConfig.ENABLE_WELCOME.get()) return;
@@ -113,5 +131,50 @@ public class OneriaEventHandler {
                 OneriaServerUtilities.LOGGER.warn("Failed to play welcome sound: {}", soundName);
             }
         }
+    }
+
+    // =========================================================================
+    // WARN NOTIFICATIONS ON JOIN (NOUVEAU)
+    // =========================================================================
+
+    /**
+     * Notifie le joueur de ses warns actifs au login, si le système est activé.
+     * Affiche le nombre de warns actifs et l'invite à taper /mywarn.
+     */
+    private static void notifyWarnsOnJoin(ServerPlayer player) {
+        try {
+            if (ModerationConfig.ENABLE_WARN_SYSTEM == null || !ModerationConfig.ENABLE_WARN_SYSTEM.get()) return;
+            if (!ModerationConfig.WARN_NOTIFY_ON_JOIN.get()) return;
+        } catch (IllegalStateException e) {
+            return;
+        }
+
+        List<WarnManager.WarnEntry> activeWarns = WarnManager.getActiveWarns(player.getUUID());
+        if (activeWarns.isEmpty()) return;
+
+        int count = activeWarns.size();
+        String template;
+        try {
+            template = ModerationConfig.WARN_JOIN_MESSAGE.get();
+        } catch (IllegalStateException e) {
+            template = "§c⚠ Vous avez §l{count} avertissement(s) actif(s)§r§c. Tapez §l/mywarn §r§cpour les consulter.";
+        }
+        String msg = template.replace("{count}", String.valueOf(count));
+        player.sendSystemMessage(Component.literal(msg));
+    }
+
+    /**
+     * Purge les warns expirés au login si autoPurgeExpired est activé.
+     * Appelé sur le server thread donc thread-safe.
+     */
+    private static void autoPurgeWarnsOnJoin(ServerPlayer player) {
+        try {
+            if (ModerationConfig.ENABLE_WARN_SYSTEM == null || !ModerationConfig.ENABLE_WARN_SYSTEM.get()) return;
+            if (!ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get()) return;
+        } catch (IllegalStateException e) {
+            return;
+        }
+        // La purge est légère (in-memory filter + async save si changement)
+        WarnManager.purgeExpiredWarns();
     }
 }

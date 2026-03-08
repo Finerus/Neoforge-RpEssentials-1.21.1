@@ -1,6 +1,77 @@
 # Changelog - Oneria Mod
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2026-03-08
+
+**Added**
+
+* **Last Connection Tracking:**
+  - Automatic recording of each player's last login and logout times.
+  - Data stored in `world/data/oneriamod/lastconnection.json` — `UUID (McUsername)` key format, consistent with all other mod data files.
+  - Async save via `CompletableFuture`, synchronous load on startup.
+  - Login is recorded immediately on connection; logout is recorded on disconnection.
+  - Staff commands:
+    - `/oneria lastconnection <player>` — displays a player's last login, last logout and current online status.
+    - `/oneria lastconnection list [count]` — lists the N most recent connections sorted by descending date (default: 20).
+  - Fully configurable in `oneria-moderation.toml`, new `[Last Connection]` section:
+    - `enableLastConnection` — enable/disable the entire tracking system.
+    - `trackLogout` — toggle logout time recording independently.
+    - `dateFormat` — Java `SimpleDateFormat` pattern used for both storage and display.
+
+* **Warn System:**
+  - Full staff warning system with permanent and temporary warns.
+  - Data stored in `world/data/oneriamod/warns.json` — auto-incremental integer IDs, recalculated from the current max after every deletion to avoid gaps and collisions.
+  - Warned player is notified immediately in chat with the reason, duration, and an invite to run `/mywarn`.
+  - Configurable staff broadcast on warn add and warn remove.
+  - Active warn count notified to the player on every login (configurable message with `{count}` placeholder).
+  - Optional automatic purge of expired temp-warns on player login.
+  - Staff commands (requires `isStaff`):
+    - `/oneria warn add <player> <reason>` — issue a permanent warn.
+    - `/oneria warn temp <player> <minutes> <reason>` — issue a temporary warn with configurable max duration.
+    - `/oneria warn remove <warnId>` — remove a specific warn; notifies the player if online.
+    - `/oneria warn list [player]` — list all warns, or all warns for a specific player.
+    - `/oneria warn info <warnId>` — show full details of a warn (issuer, reason, date, remaining time).
+    - `/oneria warn clear <player>` — remove all warns for a player at once; notifies the player if online.
+    - `/oneria warn purge` — manually purge all expired temp-warns.
+  - Player command (available to all):
+    - `/mywarn` — display own active warns with reason, issuer, date and remaining duration.
+  - Fully configurable in `oneria-moderation.toml`, new `[Warn System]` section:
+    - `enableWarnSystem` — enable/disable the entire system.
+    - `notifyOnJoin` — toggle login notification.
+    - `joinMessage` — customizable login notification message (`{count}` placeholder).
+    - `maxTempDays` — maximum allowed duration for `/oneria warn temp` (0 = unlimited).
+    - `autoPurgeExpired` — toggle automatic purge of expired warns on player login.
+    - `addedBroadcastFormat` — staff broadcast format on warn add (`{id}`, `{staff}`, `{player}`, `{reason}`, `{expiry}`).
+    - `removedBroadcastFormat` — staff broadcast format on warn remove (`{id}`, `{staff}`).
+
+**Fixed**
+
+* **`lastConnectionPlayer` — Lambda Capture:**
+  - `targetUUID` was reassigned inside an `if/else` block, making it non-effectively-final and causing a compilation error when captured in a `sendSuccess` lambda.
+  - Fixed by capturing `final UUID finalTargetUUID` after the null-check early return.
+
+**Technical**
+
+* **New Classes:**
+  - `LastConnectionManager` — connection tracking manager, lazy init + async save pattern consistent with `NicknameManager`.
+  - `WarnManager` — warn manager with `WarnEntry` inner class, auto-incremental IDs, async save pattern consistent with `LicenseManager`. Exposes `recalculateCounter()` called after every deletion (`removeWarn`, `clearWarns`, `purgeExpiredWarns`).
+
+* **Modified Classes:**
+  - `ModerationConfig` — two new config sections: `[Last Connection]` and `[Warn System]`.
+  - `OneriaEventHandler` — `onPlayerLogin` now calls `LastConnectionManager.recordLogin()` immediately (before the deferred block), and the deferred block includes `notifyWarnsOnJoin()` and `autoPurgeWarnsOnJoin()`. `onPlayerLogout` now calls `LastConnectionManager.recordLogout()`.
+  - `OneriaCommands` — two new command modules: `lastconnection` (2 handlers) and `warn` (13 handlers + `/mywarn` standalone alias).
+
+* **Data Storage:**
+  - `world/data/oneriamod/lastconnection.json` — last login/logout per player, keyed by `UUID (McUsername)`.
+  - `world/data/oneriamod/warns.json` — full warn registry, JSON array of `WarnEntry` objects.
+
+**Migration Notes**
+
+* No breaking changes — fully backward compatible with 3.0.3.
+* Both new data files are created automatically on first use; no manual action required.
+* `oneria-moderation.toml` gains two new sections on first launch — existing options are untouched.
+* Both systems are disabled-safe: setting `enableLastConnection` or `enableWarnSystem` to `false` completely bypasses all related logic with no side effects.
+
 ## [3.0.3] - 2026-03-03
 
 **Added**
