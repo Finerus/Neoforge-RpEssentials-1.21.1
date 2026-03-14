@@ -1,6 +1,176 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [4.0.0]
+
+**⚠ Breaking Change:** The mod ID has changed from `oneriaserverutilities` to `rpessentials`. Automatic migration is included — no manual action required on first launch.
+
+---
+
+**Added**
+
+* **Custom Nametag System:** Full client-side nametag rendering with distance obfuscation and block occlusion.
+  - Configurable via new `rpessentials-nametag.toml`.
+  - Block occlusion: nametag hidden when a solid block is between the viewer and the target (client-side raycast, cached every 50ms).
+  - Distance obfuscation: same `§k` logic as the existing TabList system, configurable distance threshold.
+  - Configurable format with tokens `$prefix`, `$name`, `$suffix`, `$profession`.
+  - Staff members always see real names regardless of distance and occlusion (configurable).
+  - Disabled by default — fully backward compatible with existing `hideNametags` behaviour.
+  - Data pushed server→client via new `SyncNametagDataPacket` on login and on every nickname/license change.
+  - All nametag caches reset cleanly on client disconnect.
+
+* **Per-Day Schedule System:** The schedule system now supports individual opening/closing times per day of the week.
+  - Each day (`MONDAY` through `SUNDAY`) has its own `enabled`, `open`, and `close` fields.
+  - Disabled days are treated as fully closed.
+  - Supports cross-midnight ranges (e.g. `22:00` → `02:00`).
+  - `/rpessentials config set scheduleDay <DAY> <open|close|enabled> <value>` — live update without restart.
+  - `canPlayerJoin()` now displays the next open day and its hours in the kick message. Placeholders: `{day}`, `{open}`, `{close}`.
+  - `/rpessentials schedule` and `/schedule` now display the full week at a glance with the current day highlighted.
+
+* **Death Hours:** New optional schedule layer that activates RP death during configured time slots, independently of the global Death RP toggle.
+  - Configurable via `[Death Hours]` section in `rpessentials-schedule.toml`.
+  - Supports multiple slots and cross-midnight ranges.
+  - When enabled, `isDeathRPEnabled()` checks the current time before applying the global state.
+  - Disabled by default.
+
+* **HRP Hours:** New optional schedule layer for HRP (out-of-roleplay) period management.
+  - Two tiers: tolerated (noted but not punished) and allowed (fully free).
+  - Broadcast message sent once per slot start to all connected players.
+  - Configurable display mode: `CHAT`, `ACTION_BAR`, `TITLE`, `IMMERSIVE`.
+  - Disabled by default — entirely ignored when `enableHrpHours = false`.
+
+* **Auto-Unwhitelist:** Automatic removal of inactive players from the whitelist.
+  - Configurable inactivity threshold (days).
+  - Runs once per day at midnight.
+  - Requires `enableLastConnection = true`.
+  - Staff members online at the time receive a clickable `[Annuler]` button to immediately re-whitelist the player.
+  - Optional extra commands executed per removed player. Placeholders: `{player}`, `{uuid}`.
+  - Disabled by default.
+
+* **Vanilla Tag Auto-Management on License:** When a license is given or revoked, the corresponding vanilla `/tag` is automatically added or removed.
+  - Tag name = profession ID. No configuration required.
+
+* **`/rpessentials setrole`:** New command to assign a role to a player.
+  - Removes all existing role tags, adds the new tag, and sets the corresponding LuckPerms group.
+  - Roles configurable in `rpessentials-core.toml` under `[Roles]`. Format: `roleId;lpGroup`.
+  - Autocompletion of available roles.
+  - No recompilation required to add or modify roles.
+  - Requires OP level 3.
+  - Replaces `commandadmin.js` from KubeJS.
+
+* **`/warn` — Player-First Autocomplete:** `/warn info` and `/warn remove` now accept a player name as the first argument, followed by a warn ID.
+  - Autocompletion step 1: only players who have at least one warn are suggested.
+  - Autocompletion step 2: only warn IDs belonging to the selected player are suggested, with the reason shown as tooltip.
+  - Existing handlers `warnInfo` and `warnRemove` are reused unchanged — only the command tree structure changed.
+
+**Improved**
+
+* **`RpEssentials.onServerTick()`:**
+  - Added `WorldBorderManager.tick()` — was missing, zones were completely silent.
+  - Added `TempLicenseExpirationManager.tickMidnightSweep()` — was missing, RP license expiration was never triggered.
+  - Added `LastConnectionManager.tickAutoUnwhitelist()` — new.
+  - Added `CraftingAndArmorRestrictionEventHandler.cleanupCaches()` every 400 ticks — was missing.
+  - `tickCounter` increments at the end of the method to ensure all modulo conditions fire correctly on tick 0.
+
+* **`ScheduleConfig`:**
+  - Replaced single `openingTime`/`closingTime` pair with per-day blocks.
+  - Added `[Death Hours]` and `[HRP Hours]` sections.
+  - Welcome sound volume range extended to 10.0 to match other sound configs.
+  - All message placeholders unified: `{open}`, `{close}`, `{day}`, `{minutes}`.
+
+* **`RpEssentialsScheduleManager`:**
+  - Full rewrite. Now parses a `Map<DayOfWeek, DaySchedule>` at reload.
+  - `isServerOpen()` checks the current day against the map.
+  - `canPlayerJoin()` resolves and displays the next open day.
+  - `getTimeUntilNextEvent()` walks forward up to 7 days to find the next opening.
+  - HRP notification logic (`tickHrpNotifications`) is internal to `tick()` — no external call needed.
+  - `getSchedules()` exposed for display in `/rpessentials schedule`.
+  - `isInSlot()` public utility for cross-midnight time range checking, shared with Death Hours and HRP Hours.
+
+* **`giveLicense()` / `revokeLicense()`:**
+  - Added automatic vanilla tag management (`tag <player> add/remove <professionId>`).
+
+**Technical**
+
+* **New Classes:**
+  - `NametagConfig` — Server-side nametag config (`rpessentials-nametag.toml`).
+  - `SyncNametagDataPacket` — Server→client packet carrying display name, prefix, suffix, profession, isStaff.
+  - `ClientNametagCache` — Thread-safe client-side cache for nametag data received via packet.
+  - `NametagOcclusionCache` — Per-UUID raycast result cache with 50ms TTL.
+  - `NametagFormatter` — Token resolution for nametag format strings.
+  - `NametagEventHandler` — `@EventBusSubscriber(Dist.CLIENT)`, handles `RenderNameTagEvent`.
+
+* **Enhanced Classes:**
+  - `RpEssentials` — Registers `NametagConfig.SPEC`, fixed `onServerTick()` (see Improved).
+  - `RpEssentialsConfig` — Added `[Roles]` section.
+  - `ScheduleConfig` — Full rewrite (see Improved).
+  - `RpEssentialsScheduleManager` — Full rewrite (see Improved).
+  - `ModerationConfig` — Added `[Auto Unwhitelist]` section (`autoUnwhitelistEnabled`, `autoUnwhitelistDays`, `autoUnwhitelistExtraCommands`).
+  - `LastConnectionManager` — Added `tickAutoUnwhitelist()` with staff notification and clickable undo button.
+  - `RpEssentialsCommands` — Added `/setrole`, `/warn info <player> [id]`, `/warn remove <player> <id>`, `scheduleDay` config setter. Removed `setOpeningTime`/`setClosingTime` (replaced by `setDayTime`/`setDayEnabled`).
+  - `NetworkHandler` — Registered `SyncNametagDataPacket`.
+  - `NicknameManager` — `setNickname()`/`removeNickname()` now broadcast `SyncNametagDataPacket` to all players.
+  - `LicenseManager` — `addLicense()`/`removeLicense()` now broadcast `SyncNametagDataPacket` to all players.
+  - `ClientEventHandler` — Resets `ClientNametagCache` and `NametagOcclusionCache` on disconnect.
+  - `DeathRPManager` — `isDeathRPEnabled()` now checks Death Hours before applying the global state.
+  - `RpEssentialsEventHandler` — Broadcasts `SyncNametagDataPacket` for all online players on login.
+
+* **Data Storage:**
+  - No new files. Data directory path changed from `world/data/oneriamod/` to `world/data/rpessentials/` (migration automatic).
+
+* **Removed:**
+  - `commandadmin.js` (KubeJS) — replaced by `/rpessentials setrole`.
+
+**Configuration**
+
+* **New File: `rpessentials-nametag.toml`**
+
+| Section | Key | Default | Description |
+|---|---|---|---|
+| `[Behaviour]` | `enabled` | `false` | Master switch |
+| `[Behaviour]` | `hideBehindBlocks` | `true` | Block occlusion raycast |
+| `[Obfuscation]` | `obfuscationEnabled` | `true` | Distance obfuscation |
+| `[Obfuscation]` | `obfuscationDistance` | `10.0` | Distance threshold (blocks) |
+| `[Obfuscation]` | `obfuscationColor` | `&8` | Color of obfuscated name |
+| `[Obfuscation]` | `obfuscationLength` | `-1` | Fixed length (-1 = real name length) |
+| `[Format]` | `format` | `$prefix$name` | Readable format |
+| `[Format]` | `formatObfuscated` | `$obfuscated` | Obfuscated format |
+| `[Rendering]` | `renderDistance` | `-1.0` | Max render distance (-1 = vanilla) |
+| `[Rendering]` | `showWhileSneaking` | `false` | Show nametag while sneaking |
+| `[Staff]` | `staffAlwaysSeeReal` | `true` | Staff bypass all restrictions |
+
+* **New Section: `[Roles]` in `rpessentials-core.toml`**
+
+| Key | Default | Description |
+|---|---|---|
+| `roles` | `["admin;admin", "modo;modo", "builder;builder", "joueur;joueur"]` | Role definitions (`roleId;lpGroup`) |
+
+* **New Section: `[Auto Unwhitelist]` in `rpessentials-moderation.toml`**
+
+| Key | Default | Description |
+|---|---|---|
+| `autoUnwhitelistEnabled` | `false` | Enable auto-unwhitelist |
+| `autoUnwhitelistDays` | `30` | Days of inactivity threshold |
+| `autoUnwhitelistExtraCommands` | `[]` | Extra commands on removal (`{player}`, `{uuid}`) |
+
+* **New Sections in `rpessentials-schedule.toml`**
+
+  - `[Days.MONDAY]` through `[Days.SUNDAY]` — each with `enabled`, `open`, `close`.
+  - `[Death Hours]` — `deathHoursEnabled`, `deathHoursSlots`.
+  - `[HRP Hours]` — `enableHrpHours`, `hrpToleratedSlots`, `hrpAllowedSlots`, `hrpToleratedMessage`, `hrpAllowedMessage`, `hrpMessageMode`.
+
+**Migration Notes**
+
+* **Fully automatic** — `ConfigMigrator` handles all four migration phases on first launch:
+  - Phase 1: `oneriaserverutilities-server.toml` → `config/oneria/oneria-*.toml` (v1/v2).
+  - Phase 2: `config/oneria-professions.toml` → `config/oneria/` (v2 root).
+  - Phase 3: `config/oneria/oneria-*.toml` → `config/rpessentials/rpessentials-*.toml` (v3.x).
+  - Phase 4: `world/data/oneriamod/` → `world/data/rpessentials/` (all versions, triggered on `ServerStartingEvent`).
+* All original files are backed up as `.migrated.bak` — nothing is deleted.
+* `rpessentials-schedule.toml` is regenerated with new per-day structure. Previous `openingTime`/`closingTime` values are not migrated — set the new per-day fields manually after first launch.
+* The new `rpessentials-nametag.toml` is generated automatically with all defaults on first start.
+* Clients connecting to a v4.0.0 server must also run v4.0.0 — packet IDs changed with the modid rename.
+
 ## [3.2.0] - 2026-03-14
 
 **The mod is now fully translated into English. Every player-facing message is also configurable via a new dedicated config file.**

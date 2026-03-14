@@ -268,6 +268,11 @@ public class LicenseManager {
         ensureInitialized();
         playerLicenses.computeIfAbsent(playerUUID, k -> new ArrayList<>()).add(profession);
         saveToFile();
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
+            if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
+        }
     }
 
     public static void removeLicense(UUID playerUUID, String profession) {
@@ -279,6 +284,11 @@ public class LicenseManager {
                 playerLicenses.remove(playerUUID);
             }
             saveToFile();
+        }
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
+            if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
         }
     }
 

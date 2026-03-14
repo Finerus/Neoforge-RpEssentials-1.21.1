@@ -36,6 +36,16 @@ public class RpEssentialsEventHandler {
 
         ProfessionSyncHelper.syncToPlayer(player);
 
+        // Sync nametag data vers tous les joueurs connectés
+        SyncNametagDataPacket.broadcastForPlayer(player);
+        // Et envoyer les données des joueurs déjà connectés au nouveau joueur
+        for (ServerPlayer online : player.getServer().getPlayerList().getPlayers()) {
+            if (!online.getUUID().equals(player.getUUID())) {
+                net.neoforged.neoforge.network.PacketDistributor
+                        .sendToPlayer(player, SyncNametagDataPacket.from(online));
+            }
+        }
+
         try {
             if (ScheduleConfig.ENABLE_WELCOME != null && ScheduleConfig.ENABLE_WELCOME.get()) {
                 for (String line : ScheduleConfig.WELCOME_LINES.get()) {

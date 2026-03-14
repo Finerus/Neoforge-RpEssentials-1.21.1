@@ -24,6 +24,12 @@ public class NetworkHandler {
                 )
         );
 
+        registrar.playToClient(
+                SyncNametagDataPacket.TYPE,
+                SyncNametagDataPacket.CODEC,
+                SyncNametagDataPacket::handle
+        );
+
         // Packet pour synchroniser les restrictions de métiers
         registrar.playToClient(
                 SyncProfessionRestrictionsPacket.TYPE,

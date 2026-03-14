@@ -71,6 +71,96 @@ public class LastConnectionManager {
         }
     }
 
+    private static boolean hasDoneUnwhitelistToday = false;
+    private static int     lastUnwhitelistDay       = -1;
+
+    public static void tickAutoUnwhitelist(MinecraftServer server, int hour, int minute) {
+        try {
+            if (!ModerationConfig.AUTO_UNWHITELIST_ENABLED.get()) return;
+            if (!ModerationConfig.ENABLE_LAST_CONNECTION.get())   return;
+        } catch (IllegalStateException e) { return; }
+
+        int today = java.time.LocalDate.now().getDayOfYear();
+        if (today != lastUnwhitelistDay) {
+            hasDoneUnwhitelistToday = false;
+            lastUnwhitelistDay = today;
+        }
+        if (hasDoneUnwhitelistToday) return;
+        if (hour != 0 || minute > 1)  return;
+
+        hasDoneUnwhitelistToday = true;
+        RpEssentials.LOGGER.info("[AutoUnwhitelist] Starting daily sweep...");
+
+        int thresholdDays;
+        List<? extends String> extraCmds;
+        String dateFormat;
+        try {
+            thresholdDays = ModerationConfig.AUTO_UNWHITELIST_DAYS.get();
+            extraCmds     = ModerationConfig.AUTO_UNWHITELIST_EXTRA_COMMANDS.get();
+            dateFormat    = ModerationConfig.LAST_CONNECTION_DATE_FORMAT.get();
+        } catch (IllegalStateException e) { return; }
+
+        long thresholdMs = (long) thresholdDays * 86400_000L;
+        long nowMs       = System.currentTimeMillis();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(dateFormat);
+        int[] removed = {0};
+
+        for (Map.Entry<UUID, ConnectionEntry> e : new ArrayList<>(entries.entrySet())) {
+            UUID uuid = e.getKey();
+            ConnectionEntry entry = e.getValue();
+            if (entry.lastLogin == null || entry.mcName == null) continue;
+            if (server.getPlayerList().getPlayer(uuid) != null)  continue;
+            if (!server.getPlayerList().isWhiteListed(
+                    new com.mojang.authlib.GameProfile(uuid, entry.mcName))) continue;
+
+            long lastLoginMs;
+            try { lastLoginMs = sdf.parse(entry.lastLogin).getTime(); }
+            catch (java.text.ParseException ex) { continue; }
+
+            if (nowMs - lastLoginMs < thresholdMs) continue;
+
+            final String playerName   = entry.mcName;
+            final UUID   playerUUID   = uuid;
+            final long   inactiveDays = (nowMs - lastLoginMs) / 86400_000L;
+
+            server.execute(() -> {
+                server.getCommands().performPrefixedCommand(
+                        server.createCommandSourceStack(), "whitelist remove " + playerName);
+
+                for (ServerPlayer staff : server.getPlayerList().getPlayers()) {
+                    if (!RpEssentialsPermissions.isStaff(staff)) continue;
+                    net.minecraft.network.chat.MutableComponent msg =
+                            net.minecraft.network.chat.Component.literal(
+                                    MessagesConfig.get(MessagesConfig.AUTO_UNWHITELIST_STAFF_NOTIFY,
+                                            "player", playerName,
+                                            "days",   String.valueOf(inactiveDays)));
+                    net.minecraft.network.chat.MutableComponent undo =
+                            net.minecraft.network.chat.Component.literal("§a[Annuler]")
+                                    .withStyle(s -> s
+                                            .withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                                                    net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND,
+                                                    "/whitelist add " + playerName))
+                                            .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                                                    net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                                                    net.minecraft.network.chat.Component.literal(
+                                                            "Re-whitelist " + playerName))));
+                    staff.sendSystemMessage(msg.append(undo));
+                }
+
+                for (String cmd : extraCmds) {
+                    server.getCommands().performPrefixedCommand(
+                            server.createCommandSourceStack(),
+                            cmd.replace("{player}", playerName)
+                                    .replace("{uuid}",   playerUUID.toString()));
+                }
+                RpEssentials.LOGGER.info("[AutoUnwhitelist] Removed {} — inactive {} days",
+                        playerName, inactiveDays);
+            });
+            removed[0]++;
+        }
+        RpEssentials.LOGGER.info("[AutoUnwhitelist] Sweep done — {} player(s) removed.", removed[0]);
+    }
+
     // =========================================================================
     // LOAD
     // =========================================================================

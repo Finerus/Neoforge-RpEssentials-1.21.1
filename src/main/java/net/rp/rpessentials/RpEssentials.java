@@ -4,6 +4,8 @@ import com.mojang.logging.LogUtils;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -14,7 +16,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.slf4j.Logger;
 
-// ⚠ CHANGED: "RpEssentials" → "rpessentials"
+import java.util.EnumSet;
+
 @Mod("rpessentials")
 public class RpEssentials {
 
@@ -24,16 +27,15 @@ public class RpEssentials {
     private int tickCounter = 0;
 
     public RpEssentials(IEventBus modEventBus, ModContainer modContainer) {
-        // Migrer tous les anciens fichiers de config (phases 1→2→3) AVANT registerConfig()
         ConfigMigrator.migrateIfNeeded();
 
-        // ⚠ CHANGED: tous les chemins "oneria/oneria-*.toml" → "rpessentials/rpessentials-*.toml"
         modContainer.registerConfig(ModConfig.Type.SERVER, RpEssentialsConfig.SPEC,       "rpessentials/rpessentials-core.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ChatConfig.SPEC,         "rpessentials/rpessentials-chat.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ScheduleConfig.SPEC,     "rpessentials/rpessentials-schedule.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ModerationConfig.SPEC,   "rpessentials/rpessentials-moderation.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ProfessionConfig.SPEC,   "rpessentials/rpessentials-professions.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, MessagesConfig.SPEC,     "rpessentials/rpessentials-messages.toml");
+        modContainer.registerConfig(ModConfig.Type.SERVER, NametagConfig.SPEC,  "rpessentials/rpessentials-nametag.toml");
 
         RpEssentialsItems.ITEMS.register(modEventBus);
 
@@ -78,17 +80,38 @@ public class RpEssentials {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        tickCounter++;
+        if (event.getServer() == null) return;
+        MinecraftServer server = event.getServer();
 
-        // Tick planning (toutes les 20 ticks = 1 seconde)
-        if (tickCounter % 20 == 0) {
-            RpEssentialsScheduleManager.tick(event.getServer());
+        if (tickCounter % 40 == 0) {
+            try {
+                if (RpEssentialsConfig.ENABLE_BLUR.get()) {
+                    ClientboundPlayerInfoUpdatePacket packet = new ClientboundPlayerInfoUpdatePacket(
+                            EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),
+                            server.getPlayerList().getPlayers());
+                    server.getPlayerList().broadcastAll(packet);
+                }
+            } catch (IllegalStateException ignored) {}
         }
 
-        // Sweep midnight (toutes les 1200 ticks = 60 secondes)
+        if (tickCounter % 400 == 0) {
+            ProfessionRestrictionEventHandler.cleanupCaches();
+            CraftingAndArmorRestrictionEventHandler.cleanupCaches();
+        }
+
+        if (tickCounter % 20 == 0) {
+            RpEssentialsScheduleManager.tick(server);
+            WorldBorderManager.tick(server);
+        }
+
         if (tickCounter % 1200 == 0) {
-            RpEssentialsScheduleManager.tickMidnightSweep(event.getServer());
+            java.time.LocalTime now = java.time.LocalTime.now();
+            RpEssentialsScheduleManager.tickMidnightSweep(server);
+            TempLicenseExpirationManager.tickMidnightSweep(server, now.getHour(), now.getMinute());
+            LastConnectionManager.tickAutoUnwhitelist(server, now.getHour(), now.getMinute());
             tickCounter = 0;
         }
+
+        tickCounter++;
     }
 }

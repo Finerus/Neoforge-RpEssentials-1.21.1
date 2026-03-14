@@ -35,6 +35,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
+import net.minecraft.commands.SharedSuggestionProvider;
 
 import java.util.Map;
 
@@ -62,14 +63,46 @@ public class RpEssentialsCommands {
         return builder.buildFuture();
     };
 
+    private static UUID findUUIDByName(MinecraftServer server, String name) {
+        ServerPlayer online = server.getPlayerList().getPlayerByName(name);
+        if (online != null) return online.getUUID();
+        UUID fromLastConn = LastConnectionManager.findUUIDByName(name);
+        if (fromLastConn != null) return fromLastConn;
+        if (server.getProfileCache() != null)
+            return server.getProfileCache().get(name).map(p -> p.getId()).orElse(null);
+        return null;
+    }
+
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_WARNED_PLAYERS =
+            (ctx, builder) -> {
+                WarnManager.getAll().stream().map(w -> w.targetName).distinct().sorted()
+                        .forEach(builder::suggest);
+                return builder.buildFuture();
+            };
+
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_WARN_IDS =
+            (ctx, builder) -> {
+                String name;
+                try { name = StringArgumentType.getString(ctx, "player"); }
+                catch (Exception e) { return builder.buildFuture(); }
+                // Online d'abord, sinon LastConnectionManager
+                MinecraftServer server = ctx.getSource().getServer();
+                ServerPlayer online = server.getPlayerList().getPlayerByName(name);
+                UUID uuid = online != null ? online.getUUID() : LastConnectionManager.findUUIDByName(name);
+                if (uuid == null) return builder.buildFuture();
+                WarnManager.getWarns(uuid).forEach(w ->
+                        builder.suggest(w.id, Component.literal("#" + w.id + " — " + w.reason)));
+                return builder.buildFuture();
+            };
+
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 
         // =========================================================================
-        // MAIN COMMAND: /oneria
+        // MAIN COMMAND: /rpessentials
         // =========================================================================
-        var oneriaRoot = Commands.literal("oneria");
+        var rpessentialsRoot = Commands.literal("rpessentials");
 
         // -------------------------------------------------------------------------
         // 1. MODULE: CONFIGURATION (Requires OP Level 2)
@@ -117,14 +150,6 @@ public class RpEssentialsCommands {
         setNode.then(Commands.literal("enableSchedule")
                 .then(Commands.argument("value", BoolArgumentType.bool())
                         .executes(ctx -> updateConfigBool(ctx, ScheduleConfig.ENABLE_SCHEDULE, "Schedule System"))));
-
-        setNode.then(Commands.literal("openingTime")
-                .then(Commands.argument("time", StringArgumentType.greedyString())
-                        .executes(RpEssentialsCommands::setOpeningTime)));
-
-        setNode.then(Commands.literal("closingTime")
-                .then(Commands.argument("time", StringArgumentType.greedyString())
-                        .executes(RpEssentialsCommands::setClosingTime)));
 
         setNode.then(Commands.literal("kickNonStaff")
                 .then(Commands.argument("value", BoolArgumentType.bool())
@@ -374,7 +399,7 @@ public class RpEssentialsCommands {
                         .executes(ctx -> updateConfigString(ctx, RpEssentialsConfig.DEATH_RP_GLOBAL_TOGGLE_SOUND, "Death RP global toggle sound"))));
 
         configNode.then(setNode);
-        oneriaRoot.then(configNode);
+        rpessentialsRoot.then(configNode);
 
         // -------------------------------------------------------------------------
         // 2. MODULE: STAFF & MODERATION (Requires 'isStaff' permission)
@@ -447,7 +472,7 @@ public class RpEssentialsCommands {
                         )
                 ));
 
-        oneriaRoot.then(staffNode);
+        rpessentialsRoot.then(staffNode);
 
         // -------------------------------------------------------------------------
         // 3. MODULE: WHITELIST (Requires OP Level 2)
@@ -478,7 +503,7 @@ public class RpEssentialsCommands {
         whitelistNode.then(Commands.literal("list")
                 .executes(RpEssentialsCommands::listWhitelist));
 
-        oneriaRoot.then(whitelistNode);
+        rpessentialsRoot.then(whitelistNode);
 
         // -------------------------------------------------------------------------
         // 4. MODULE: BLACKLIST (Requires OP Level 2)
@@ -509,7 +534,7 @@ public class RpEssentialsCommands {
         blacklistNode.then(Commands.literal("list")
                 .executes(RpEssentialsCommands::listBlacklist));
 
-        oneriaRoot.then(blacklistNode);
+        rpessentialsRoot.then(blacklistNode);
 
         // -------------------------------------------------------------------------
         // 5. MODULE: ALWAYS VISIBLE LIST (Requires OP Level 2)
@@ -546,7 +571,7 @@ public class RpEssentialsCommands {
         alwaysVisibleNode.then(Commands.literal("list")
                 .executes(RpEssentialsCommands::listAlwaysVisible));
 
-        oneriaRoot.then(alwaysVisibleNode);
+        rpessentialsRoot.then(alwaysVisibleNode);
 
         // -------------------------------------------------------------------------
         // 6. MODULE: LICENSE (Requires OP Level 2)
@@ -657,7 +682,7 @@ public class RpEssentialsCommands {
                 )
         );
 
-        oneriaRoot.then(licenseNode);
+        rpessentialsRoot.then(licenseNode);
 
         // -------------------------------------------------------------------------
         // 7. MODULE: NICKNAME (Requires OP Level 2)
@@ -676,7 +701,7 @@ public class RpEssentialsCommands {
                 .executes(RpEssentialsCommands::listNicknames)
         );
 
-        oneriaRoot.then(nickNode);
+        rpessentialsRoot.then(nickNode);
 
         // -------------------------------------------------------------------------
         // 8. MODULE: WHOIS (Requires OP Level 2)
@@ -685,7 +710,7 @@ public class RpEssentialsCommands {
                 .requires(source -> source.hasPermission(2));
         whoisNode.then(Commands.argument("nickname", StringArgumentType.greedyString())
                 .executes(RpEssentialsCommands::whoisCommand));
-        oneriaRoot.then(whoisNode);
+        rpessentialsRoot.then(whoisNode);
 
         // Also register as standalone /whois
         dispatcher.register(Commands.literal("whois")
@@ -696,8 +721,27 @@ public class RpEssentialsCommands {
         // -------------------------------------------------------------------------
         // 9. MODULE: SCHEDULE (Public)
         // -------------------------------------------------------------------------
-        oneriaRoot.then(Commands.literal("schedule")
+        rpessentialsRoot.then(Commands.literal("schedule")
                 .executes(RpEssentialsCommands::showSchedule));
+
+        // Remplacer setOpeningTime et setClosingTime par :
+        setNode.then(Commands.literal("scheduleDay")
+                .then(Commands.argument("day", StringArgumentType.word())
+                        .suggests((ctx, builder) -> {
+                            java.util.Arrays.asList("MONDAY","TUESDAY","WEDNESDAY",
+                                            "THURSDAY","FRIDAY","SATURDAY","SUNDAY")
+                                    .forEach(builder::suggest);
+                            return builder.buildFuture();
+                        })
+                        .then(Commands.literal("open")
+                                .then(Commands.argument("time", StringArgumentType.word())
+                                        .executes(ctx -> setDayTime(ctx, "open"))))
+                        .then(Commands.literal("close")
+                                .then(Commands.argument("time", StringArgumentType.word())
+                                        .executes(ctx -> setDayTime(ctx, "close"))))
+                        .then(Commands.literal("enabled")
+                                .then(Commands.argument("value", BoolArgumentType.bool())
+                                        .executes(ctx -> setDayEnabled(ctx))))));
 
         // -------------------------------------------------------------------------
         // MODULE: MESSAGERIE PRIVÉE — remplace /msg /tell /w /whisper + /r
@@ -735,8 +779,8 @@ public class RpEssentialsCommands {
         dispatcher.register(Commands.literal("list")
                 .executes(RpEssentialsCommands::playerList));
 
-        // /oneria help
-        oneriaRoot.then(Commands.literal("help")
+        // /rpessentials help
+        rpessentialsRoot.then(Commands.literal("help")
                 .executes(RpEssentialsCommands::showHelp));
 
         // -------------------------------------------------------------------------
@@ -745,18 +789,18 @@ public class RpEssentialsCommands {
         var lastConnNode = Commands.literal("lastconnection")
                 .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()));
 
-        // /oneria lastconnection <player>
+        // /rpessentials lastconnection <player>
         lastConnNode.then(Commands.argument("player", StringArgumentType.word())
                 .executes(RpEssentialsCommands::lastConnectionPlayer));
 
-        // /oneria lastconnection list [count]
+        // /rpessentials lastconnection list [count]
         lastConnNode.then(Commands.literal("list")
                 .executes(ctx -> lastConnectionList(ctx, 20))
                 .then(Commands.argument("count", IntegerArgumentType.integer(1, 100))
                         .executes(ctx -> lastConnectionList(ctx, IntegerArgumentType.getInteger(ctx, "count"))))
         );
 
-        oneriaRoot.then(lastConnNode);
+        rpessentialsRoot.then(lastConnNode);
 
         // -------------------------------------------------------------------------
         // MODULE: WARN (Staff commands + player /mywarn)
@@ -764,63 +808,82 @@ public class RpEssentialsCommands {
         var warnNode = Commands.literal("warn")
                 .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()));
 
-        // /oneria warn add <player> <reason>
+        // /rpessentials warn add <player> <reason>
         warnNode.then(Commands.literal("add")
                 .then(Commands.argument("target", EntityArgument.player())
                         .then(Commands.argument("reason", StringArgumentType.greedyString())
                                 .executes(RpEssentialsCommands::warnAdd))));
 
-        // /oneria warn temp <player> <minutes> <reason>
+        // /rpessentials warn temp <player> <minutes> <reason>
         warnNode.then(Commands.literal("temp")
                 .then(Commands.argument("target", EntityArgument.player())
                         .then(Commands.argument("minutes", IntegerArgumentType.integer(1))
                                 .then(Commands.argument("reason", StringArgumentType.greedyString())
                                         .executes(RpEssentialsCommands::warnTemp)))));
 
-        // /oneria warn remove <warnId>
+        // /rpessentials warn remove <warnId>
         warnNode.then(Commands.literal("remove")
-                .then(Commands.argument("warnId", StringArgumentType.word())
-                        .executes(RpEssentialsCommands::warnRemove)));
+                .then(Commands.argument("player", StringArgumentType.word())
+                        .suggests(SUGGEST_WARNED_PLAYERS)
+                        .then(Commands.argument("warnId", StringArgumentType.word())
+                                .suggests(SUGGEST_WARN_IDS)
+                                .executes(RpEssentialsCommands::warnRemove))));
 
-        // /oneria warn list [player]  — staff peut voir n'importe qui
+        // /rpessentials warn list [player]  — staff peut voir n'importe qui
         warnNode.then(Commands.literal("list")
                 .executes(RpEssentialsCommands::warnListAll)
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(RpEssentialsCommands::warnListPlayer)));
 
-        // /oneria warn info <warnId>
+        // /rpessentials warn info <warnId>
         warnNode.then(Commands.literal("info")
-                .then(Commands.argument("warnId", StringArgumentType.word())
-                        .executes(RpEssentialsCommands::warnInfo)));
+                .then(Commands.argument("player", StringArgumentType.word())
+                        .suggests(SUGGEST_WARNED_PLAYERS)
+                        .executes(ctx -> {
+                            // Sans ID → affiche la liste des warns du joueur
+                            if (!warnSystemCheck(ctx)) return 0;
+                            String name = StringArgumentType.getString(ctx, "player");
+                            MinecraftServer srv = ctx.getSource().getServer();
+                            ServerPlayer op = srv.getPlayerList().getPlayerByName(name);
+                            UUID uuid = op != null ? op.getUUID() : LastConnectionManager.findUUIDByName(name);
+                            if (uuid == null) {
+                                ctx.getSource().sendFailure(Component.literal("§c[RPE] Joueur introuvable : " + name));
+                                return 0;
+                            }
+                            return displayWarnList(ctx, uuid, name, true);
+                        })
+                        .then(Commands.argument("warnId", StringArgumentType.word())
+                                .suggests(SUGGEST_WARN_IDS)
+                                .executes(RpEssentialsCommands::warnInfo))));
 
-        // /oneria warn clear <player>  — supprimer tous les warns d'un joueur
+        // /rpessentials warn clear <player>  — supprimer tous les warns d'un joueur
         warnNode.then(Commands.literal("clear")
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(RpEssentialsCommands::warnClear)));
 
-        // /oneria warn purge  — purger les warns expirés
+        // /rpessentials warn purge  — purger les warns expirés
         warnNode.then(Commands.literal("purge")
                 .executes(RpEssentialsCommands::warnPurge));
 
-        oneriaRoot.then(warnNode);
+        rpessentialsRoot.then(warnNode);
 
         // /mywarn — alias standalone accessible à tous les joueurs
         dispatcher.register(Commands.literal("mywarn")
                 .requires(src -> src.getEntity() instanceof net.minecraft.server.level.ServerPlayer)
                 .executes(RpEssentialsCommands::myWarn));
 
-        // ── Construction du sous-arbre /oneria deathrp ─────────────────────────────
+        // ── Construction du sous-arbre /rpessentials deathrp ─────────────────────────────
 
         var deathRpNode = Commands.literal("deathrp")
                 .requires(source -> source.hasPermission(2));
 
-        // /oneria deathrp enable <true|false>
+        // /rpessentials deathrp enable <true|false>
         deathRpNode.then(Commands.literal("enable")
                 .then(Commands.argument("value", BoolArgumentType.bool())
                         .executes(RpEssentialsCommands::deathRpSetGlobal)));
 
-        // /oneria deathrp player <joueur> enable <true|false>
-        // /oneria deathrp player <joueur> reset
+        // /rpessentials deathrp player <joueur> enable <true|false>
+        // /rpessentials deathrp player <joueur> reset
         var deathRpPlayerNode = Commands.literal("player")
                 .then(Commands.argument("joueur", EntityArgument.player())
                         .then(Commands.literal("enable")
@@ -831,17 +894,34 @@ public class RpEssentialsCommands {
 
         deathRpNode.then(deathRpPlayerNode);
 
-        // /oneria deathrp status
+        // /rpessentials deathrp status
         deathRpNode.then(Commands.literal("status")
                 .executes(RpEssentialsCommands::deathRpStatus));
 
-        oneriaRoot.then(deathRpNode);
+        rpessentialsRoot.then(deathRpNode);
 
+        // /rpessentials setrole <player> <role>
+        var setRoleNode = Commands.literal("setrole")
+                .requires(source -> source.hasPermission(3));
+
+        setRoleNode.then(Commands.argument("player", EntityArgument.player())
+                .then(Commands.argument("role", StringArgumentType.word())
+                        .suggests((ctx, builder) -> {
+                            try {
+                                RpEssentialsConfig.ROLES.get().stream()
+                                        .map(s -> s.split(";", 2)[0].trim())
+                                        .forEach(builder::suggest);
+                            } catch (IllegalStateException ignored) {}
+                            return builder.buildFuture();
+                        })
+                        .executes(RpEssentialsCommands::setRole)));
+
+        rpessentialsRoot.then(setRoleNode);
 
         // =========================================================================
         // Register root
         // =========================================================================
-        dispatcher.register(oneriaRoot);
+        dispatcher.register(rpessentialsRoot);
 
         // =========================================================================
         // COLORS COMMAND
@@ -915,32 +995,6 @@ public class RpEssentialsCommands {
         return 1;
     }
 
-    private static int setOpeningTime(CommandContext<CommandSourceStack> ctx) {
-        String time = StringArgumentType.getString(ctx, "time");
-        if (!time.matches("\\d{2}:\\d{2}")) {
-            ctx.getSource().sendFailure(Component.literal("§cInvalid format! Use HH:MM (e.g., 19:00)"));
-            return 0;
-        }
-        ScheduleConfig.OPENING_TIME.set(time);
-        RpEssentialsConfig.SPEC.save();
-        RpEssentialsScheduleManager.reload();
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[Oneria] Opening time set to: " + time), true);
-        return 1;
-    }
-
-    private static int setClosingTime(CommandContext<CommandSourceStack> ctx) {
-        String time = StringArgumentType.getString(ctx, "time");
-        if (!time.matches("\\d{2}:\\d{2}")) {
-            ctx.getSource().sendFailure(Component.literal("§cInvalid format! Use HH:MM (e.g., 23:59)"));
-            return 0;
-        }
-        ScheduleConfig.CLOSING_TIME.set(time);
-        RpEssentialsConfig.SPEC.save();
-        RpEssentialsScheduleManager.reload();
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[Oneria] Closing time set to: " + time), true);
-        return 1;
-    }
-
     private static int showStatus(CommandContext<CommandSourceStack> context) {
         try {
             final java.util.function.Function<java.util.function.Supplier<?>, String> safe = (supplier) -> {
@@ -976,9 +1030,6 @@ public class RpEssentialsCommands {
                             "§6║\n" +
                             "§6║ §7Schedule\n" +
                             "§6║  §eEnabled: §f" + safe.apply(() -> ScheduleConfig.ENABLE_SCHEDULE.get()) + "\n" +
-                            "§6║  §eStatus: " + scheduleStatus + "\n" +
-                            "§6║  §eOpening: §f" + safe.apply(() -> ScheduleConfig.OPENING_TIME.get()) + "\n" +
-                            "§6║  §eClosing: §f" + safe.apply(() -> ScheduleConfig.CLOSING_TIME.get()) + "\n" +
                             "§6║\n" +
                             "§6║ §7Mort RP\n" +
                             "§6║  §eMort RP global    : §f" + safe.apply(() -> RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get()) + "\n" +
@@ -1311,20 +1362,166 @@ public class RpEssentialsCommands {
         }
     }
 
+    private static int setRole(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        String roleId = StringArgumentType.getString(ctx, "role").toLowerCase();
+        MinecraftServer server = ctx.getSource().getServer();
+
+        List<? extends String> rolesConfig;
+        try {
+            rolesConfig = RpEssentialsConfig.ROLES.get();
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            return 0;
+        }
+
+        String lpGroup = null;
+        for (String entry : rolesConfig) {
+            String[] parts = entry.split(";", 2);
+            if (parts[0].trim().equalsIgnoreCase(roleId)) {
+                lpGroup = parts.length > 1 ? parts[1].trim() : roleId;
+                break;
+            }
+        }
+        if (lpGroup == null) {
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SETROLE_UNKNOWN, "role", roleId)));
+            return 0;
+        }
+
+        final String finalLpGroup = lpGroup;
+        final String name = target.getName().getString();
+
+        for (String entry : rolesConfig) {
+            String oldTag = entry.split(";", 2)[0].trim();
+            server.getCommands().performPrefixedCommand(
+                    server.createCommandSourceStack(), "tag " + name + " remove " + oldTag);
+        }
+        server.getCommands().performPrefixedCommand(
+                server.createCommandSourceStack(), "tag " + name + " add " + roleId);
+        server.getCommands().performPrefixedCommand(
+                server.createCommandSourceStack(), "lp user " + name + " parent set " + finalLpGroup);
+
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                MessagesConfig.get(MessagesConfig.SETROLE_SUCCESS_STAFF,
+                        "role", roleId, "player", name)), true);
+        target.sendSystemMessage(Component.literal(
+                MessagesConfig.get(MessagesConfig.SETROLE_SUCCESS_PLAYER, "role", roleId)));
+        return 1;
+    }
+
     // --- SCHEDULE HANDLER ---
 
+    private static int setDayTime(CommandContext<CommandSourceStack> ctx, String type) {
+        String day  = StringArgumentType.getString(ctx, "day").toUpperCase();
+        String time = StringArgumentType.getString(ctx, "time");
+        if (!time.matches("\\d{2}:\\d{2}")) {
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SCHEDULE_TIME_INVALID)));
+            return 0;
+        }
+        try {
+            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> cfg = switch (day + "_" + type.toUpperCase()) {
+                case "MONDAY_OPEN"     -> ScheduleConfig.MONDAY_OPEN;
+                case "MONDAY_CLOSE"    -> ScheduleConfig.MONDAY_CLOSE;
+                case "TUESDAY_OPEN"    -> ScheduleConfig.TUESDAY_OPEN;
+                case "TUESDAY_CLOSE"   -> ScheduleConfig.TUESDAY_CLOSE;
+                case "WEDNESDAY_OPEN"  -> ScheduleConfig.WEDNESDAY_OPEN;
+                case "WEDNESDAY_CLOSE" -> ScheduleConfig.WEDNESDAY_CLOSE;
+                case "THURSDAY_OPEN"   -> ScheduleConfig.THURSDAY_OPEN;
+                case "THURSDAY_CLOSE"  -> ScheduleConfig.THURSDAY_CLOSE;
+                case "FRIDAY_OPEN"     -> ScheduleConfig.FRIDAY_OPEN;
+                case "FRIDAY_CLOSE"    -> ScheduleConfig.FRIDAY_CLOSE;
+                case "SATURDAY_OPEN"   -> ScheduleConfig.SATURDAY_OPEN;
+                case "SATURDAY_CLOSE"  -> ScheduleConfig.SATURDAY_CLOSE;
+                case "SUNDAY_OPEN"     -> ScheduleConfig.SUNDAY_OPEN;
+                case "SUNDAY_CLOSE"    -> ScheduleConfig.SUNDAY_CLOSE;
+                default -> null;
+            };
+            if (cfg == null) {
+                ctx.getSource().sendFailure(Component.literal(
+                        MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_INVALID, "day", day)));
+                return 0;
+            }
+            cfg.set(time);
+            ScheduleConfig.SPEC.save();
+            RpEssentialsScheduleManager.reload();
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_UPDATED,
+                            "day", day, "type", type, "value", time)), true);
+            return 1;
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            return 0;
+        }
+    }
+
+    private static int setDayEnabled(CommandContext<CommandSourceStack> ctx) {
+        String day    = StringArgumentType.getString(ctx, "day").toUpperCase();
+        boolean value = BoolArgumentType.getBool(ctx, "value");
+        try {
+            net.neoforged.neoforge.common.ModConfigSpec.BooleanValue cfg = switch (day) {
+                case "MONDAY"    -> ScheduleConfig.MONDAY_ENABLED;
+                case "TUESDAY"   -> ScheduleConfig.TUESDAY_ENABLED;
+                case "WEDNESDAY" -> ScheduleConfig.WEDNESDAY_ENABLED;
+                case "THURSDAY"  -> ScheduleConfig.THURSDAY_ENABLED;
+                case "FRIDAY"    -> ScheduleConfig.FRIDAY_ENABLED;
+                case "SATURDAY"  -> ScheduleConfig.SATURDAY_ENABLED;
+                case "SUNDAY"    -> ScheduleConfig.SUNDAY_ENABLED;
+                default -> null;
+            };
+            if (cfg == null) {
+                ctx.getSource().sendFailure(Component.literal(
+                        MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_INVALID, "day", day)));
+                return 0;
+            }
+            cfg.set(value);
+            ScheduleConfig.SPEC.save();
+            RpEssentialsScheduleManager.reload();
+            String state = value ? "enabled" : "disabled";
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_ENABLED,
+                            "day", day, "state", state)), true);
+            return 1;
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            return 0;
+        }
+    }
+
     private static int showSchedule(CommandContext<CommandSourceStack> ctx) {
-        boolean isOpen = RpEssentialsScheduleManager.isServerOpen();
+        boolean isOpen  = RpEssentialsScheduleManager.isServerOpen();
         String timeInfo = RpEssentialsScheduleManager.getTimeUntilNextEvent();
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                "§8§m----------------------------------\n" +
-                        " §6§lSERVER SCHEDULE\n" +
-                        " §7Current Status: " + (isOpen ? "§a§lOPEN" : "§c§lCLOSED") + "\n" +
-                        " §7Opening: §e" + ScheduleConfig.OPENING_TIME.get() + "\n" +
-                        " §7Closing: §e" + ScheduleConfig.CLOSING_TIME.get() + "\n\n" +
-                        " §f" + timeInfo + "\n" +
-                        "§8§m----------------------------------"
-        ), false);
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+        java.time.DayOfWeek today = java.time.LocalDate.now().getDayOfWeek();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("§8§m----------------------------------\n");
+        sb.append(" §6§lSERVER SCHEDULE\n");
+        sb.append(" §7Status: ").append(isOpen ? "§a§lOUVERT" : "§c§lFERMÉ").append("\n\n");
+
+        for (java.time.DayOfWeek day : java.time.DayOfWeek.values()) {
+            RpEssentialsScheduleManager.DaySchedule s = RpEssentialsScheduleManager.getSchedules().get(day);
+            boolean isToday = day == today;
+            String prefix = isToday ? "§e▶ " : "§7  ";
+            String dayName = day.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.FRENCH);
+            if (s == null) {
+                sb.append(prefix).append("§7").append(dayName).append(" : §cFermé\n");
+            } else {
+                sb.append(prefix).append(isToday ? "§e" : "§7").append(dayName)
+                        .append(" : §a").append(s.open().format(fmt))
+                        .append("§7 → §c").append(s.close().format(fmt)).append("\n");
+            }
+        }
+
+        sb.append("\n §f").append(timeInfo).append("\n");
+        sb.append("§8§m----------------------------------");
+
+        String msg = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;
     }
 
@@ -1354,10 +1551,10 @@ public class RpEssentialsCommands {
     private static int giveLicense(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String professionId = StringArgumentType.getString(ctx, "profession");
+        MinecraftServer server = ctx.getSource().getServer();
 
         ProfessionRestrictionManager.ProfessionData professionData =
                 ProfessionRestrictionManager.getProfessionData(professionId);
-
         if (professionData == null) {
             ctx.getSource().sendFailure(Component.literal(
                     MessagesConfig.get(MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
@@ -1365,20 +1562,16 @@ public class RpEssentialsCommands {
         }
 
         String displayName = NicknameManager.getDisplayName(target);
-
         ItemStack license = new ItemStack(RpEssentialsItems.LICENSE.get());
-
         license.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
                 Component.literal(professionData.colorCode +
                         MessagesConfig.get(MessagesConfig.LICENSE_ITEM_NAME) +
                         professionData.displayName));
 
         java.util.List<Component> lore = new java.util.ArrayList<>();
-        lore.add(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_TO, "player", displayName)));
-        lore.add(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_LORE_DATE,
-                        "date", java.time.LocalDate.now().toString())));
+        lore.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_TO, "player", displayName)));
+        lore.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LORE_DATE,
+                "date", java.time.LocalDate.now().toString())));
         license.set(net.minecraft.core.component.DataComponents.LORE,
                 new net.minecraft.world.item.component.ItemLore(lore));
 
@@ -1387,57 +1580,57 @@ public class RpEssentialsCommands {
         license.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                 net.minecraft.world.item.component.CustomData.of(tag));
 
-        if (!target.getInventory().add(license)) {
-            target.drop(license, false);
-        }
+        if (!target.getInventory().add(license)) target.drop(license, false);
 
         LicenseManager.addLicense(target.getUUID(), professionId);
-
         ServerPlayer staff = ctx.getSource().getPlayer();
         LicenseManager.logAction("GIVE", staff, target, professionId, null);
-
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
+
+        // Tag vanilla automatique
+        server.getCommands().performPrefixedCommand(
+                server.createCommandSourceStack(),
+                "tag " + target.getName().getString() + " add " + professionId);
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 MessagesConfig.get(MessagesConfig.LICENSE_GIVE_STAFF,
                         "profession", professionData.getFormattedName(),
                         "player", displayName)), true);
-
         target.sendSystemMessage(Component.literal(
                 MessagesConfig.get(MessagesConfig.LICENSE_GIVE_PLAYER,
                         "profession", professionData.getFormattedName())));
-
         return 1;
     }
 
     private static int revokeLicense(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String profession = StringArgumentType.getString(ctx, "profession");
+        MinecraftServer server = ctx.getSource().getServer();
 
         LicenseManager.removeLicense(target.getUUID(), profession);
-
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
-
         ServerPlayer staff = ctx.getSource().getPlayer();
         LicenseManager.logAction("REVOKE", staff, target, profession, null);
-
         TempLicenseExpirationManager.markRevokedLicenseItems(target);
+
+        // Tag vanilla automatique
+        server.getCommands().performPrefixedCommand(
+                server.createCommandSourceStack(),
+                "tag " + target.getName().getString() + " remove " + profession);
 
         ProfessionRestrictionManager.ProfessionData profData =
                 ProfessionRestrictionManager.getProfessionData(profession);
-        String profDisplayName = profData != null ? profData.displayName : profession;
+        String profDisplayName = profData != null ? profData.getFormattedName() : profession;
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 MessagesConfig.get(MessagesConfig.LICENSE_REVOKE_STAFF,
                         "profession", profDisplayName,
                         "player", target.getName().getString())), true);
-
         target.sendSystemMessage(Component.literal(
                 MessagesConfig.get(MessagesConfig.LICENSE_REVOKE_PLAYER,
                         "profession", profDisplayName)));
-
         return 1;
     }
 
@@ -1775,11 +1968,11 @@ public class RpEssentialsCommands {
         if (isStaff) {
             sb.append("§6╠═══════════════════════════════════╣\n");
             sb.append(MessagesConfig.get(MessagesConfig.HELP_STAFF_SECTION)).append("\n");
-            sb.append("§6║ §e/oneria nick §8<player> <nick>\n");
-            sb.append("§6║ §e/oneria license give/revoke/list\n");
-            sb.append("§6║ §e/oneria staff tp/gamemode/effect\n");
+            sb.append("§6║ §e/rpessentials nick §8<player> <nick>\n");
+            sb.append("§6║ §e/rpessentials license give/revoke/list\n");
+            sb.append("§6║ §e/rpessentials staff tp/gamemode/effect\n");
             sb.append("§6║ §e/whois §8<nick>\n");
-            sb.append("§6║ §e/oneria config status/reload\n");
+            sb.append("§6║ §e/rpessentials config status/reload\n");
             sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_ENABLE)).append("\n");
             sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_PLAYER)).append("\n");
             sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_RESET)).append("\n");
@@ -1816,7 +2009,7 @@ public class RpEssentialsCommands {
     }
 
     /**
-     * /oneria deathrp enable <true|false>
+     * /rpessentials deathrp enable <true|false>
      * Active ou désactive le système de mort RP pour TOUS les joueurs sans override.
      */
     private static int deathRpSetGlobal(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -1853,7 +2046,7 @@ public class RpEssentialsCommands {
     }
 
     /**
-     * /oneria deathrp player <joueur> enable <true|false>
+     * /rpessentials deathrp player <joueur> enable <true|false>
      * Définit un override individuel pour le joueur spécifié.
      */
     private static int deathRpSetPlayer(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -1872,7 +2065,7 @@ public class RpEssentialsCommands {
     }
 
     /**
-     * /oneria deathrp player <joueur> reset
+     * /rpessentials deathrp player <joueur> reset
      * Supprime l'override individuel — le joueur suit à nouveau le global.
      */
     private static int deathRpResetPlayer(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -1885,7 +2078,7 @@ public class RpEssentialsCommands {
     }
 
     /**
-     * /oneria deathrp status
+     * /rpessentials deathrp status
      * Affiche l'état global + tous les overrides individuels.
      */
     private static int deathRpStatus(CommandContext<CommandSourceStack> ctx) {

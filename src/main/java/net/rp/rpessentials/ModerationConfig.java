@@ -41,6 +41,13 @@ public class ModerationConfig {
     public static final ModConfigSpec.ConfigValue<String> WARN_ADDED_BROADCAST_FORMAT;
     public static final ModConfigSpec.ConfigValue<String> WARN_REMOVED_BROADCAST_FORMAT;
 
+    // =========================================================================
+    // AUTO UNWHITELIST SYSTEM
+    // =========================================================================
+    public static ModConfigSpec.BooleanValue AUTO_UNWHITELIST_ENABLED;
+    public static ModConfigSpec.IntValue     AUTO_UNWHITELIST_DAYS;
+    public static ModConfigSpec.ConfigValue<List<? extends String>> AUTO_UNWHITELIST_EXTRA_COMMANDS;
+
     static {
         // ===============================================================================
         // CATEGORY: SILENT COMMANDS
@@ -169,6 +176,27 @@ public class ModerationConfig {
                 )
                 .define("removedBroadcastFormat",
                         "§6[STAFF][WARN] §e{staff} §7a supprimé le warn §e#{id}§7.");
+
+        BUILDER.pop();
+
+        // ===============================================================================
+        // CATEGORY: AUTO UNWHITELIST SYSTEM
+        // ===============================================================================
+        BUILDER.push("Auto Unwhitelist");
+
+        AUTO_UNWHITELIST_ENABLED = BUILDER
+                .comment("Auto-remove from whitelist players inactive for more than autoUnwhitelistDays days.",
+                        "Requires enableLastConnection = true. Runs once per day at midnight.")
+                .define("autoUnwhitelistEnabled", false);
+
+        AUTO_UNWHITELIST_DAYS = BUILDER
+                .comment("Days of inactivity before auto-unwhitelist.")
+                .defineInRange("autoUnwhitelistDays", 30, 1, 3650);
+
+        AUTO_UNWHITELIST_EXTRA_COMMANDS = BUILDER
+                .comment("Extra commands run for each removed player. Placeholders: {player} {uuid}")
+                .defineList("autoUnwhitelistExtraCommands",
+                        java.util.Collections.emptyList(), obj -> obj instanceof String);
 
         BUILDER.pop();
 

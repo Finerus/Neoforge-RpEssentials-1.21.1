@@ -143,6 +143,12 @@ public class NicknameManager {
             nicknames.put(playerUUID, nickname);
         }
 
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
+            if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
+        }
+
         saveToFile();
     }
 
@@ -194,6 +200,12 @@ public class NicknameManager {
         ensureInitialized();
         nicknames.remove(playerUUID);
         saveToFile();
+
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
+            if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
+        }
     }
 
     /**

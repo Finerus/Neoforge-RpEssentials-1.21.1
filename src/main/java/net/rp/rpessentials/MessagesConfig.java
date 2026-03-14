@@ -170,6 +170,18 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> LICENSE_LIST_ALL_HEADER;
     public static final ModConfigSpec.ConfigValue<String> LICENSE_LIST_ALL_NONE_FOR_PLAYER;
 
+    // =========================================================================
+    // CATEGORY: SETROLE
+    // =========================================================================
+    public static final ModConfigSpec.ConfigValue<String> SETROLE_UNKNOWN;
+    public static final ModConfigSpec.ConfigValue<String> SETROLE_SUCCESS_STAFF;
+    public static final ModConfigSpec.ConfigValue<String> SETROLE_SUCCESS_PLAYER;
+    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_UPDATED;
+    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_INVALID;
+    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_ENABLED;
+    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_TIME_INVALID;
+    public static final ModConfigSpec.ConfigValue<String> AUTO_UNWHITELIST_STAFF_NOTIFY;
+
     static {
         // =========================================================================
         BUILDER.push("System");
@@ -615,6 +627,36 @@ public class MessagesConfig {
                 .comment("Shown in the all-players list when a player has no active license.")
                 .define("listAllNoneForPlayer", "§8None");
 
+        BUILDER.pop();
+
+        BUILDER.push("Roles");
+        SETROLE_UNKNOWN = BUILDER
+                .comment("Shown when the role ID is not found. Placeholder: {role}")
+                .define("setroleUnknown", "§c[RPE] Unknown role: {role}.");
+        SETROLE_SUCCESS_STAFF = BUILDER
+                .comment("Staff feedback on /setrole. Placeholders: {role} {player}")
+                .define("setroleSuccessStaff", "§a[RPE] Role §e{role} §aassigned to §e{player}§a.");
+        SETROLE_SUCCESS_PLAYER = BUILDER
+                .comment("Message sent to the target. Placeholder: {role}")
+                .define("setroleSuccessPlayer", "§6[RPE] §fYour role has been updated: §e{role}");
+        BUILDER.pop();
+
+        BUILDER.push("Schedule Commands");
+        SCHEDULE_DAY_UPDATED = BUILDER
+                .comment("Shown when a day schedule value is updated. Placeholders: {day} {type} {value}")
+                .define("scheduleDayUpdated", "§a[RPE] §e{day} {type} §aupdated: §f{value}");
+        SCHEDULE_DAY_INVALID = BUILDER
+                .comment("Shown when an invalid day is provided. Placeholder: {day}")
+                .define("scheduleDayInvalid", "§c[RPE] Invalid day: {day}");
+        SCHEDULE_DAY_ENABLED = BUILDER
+                .comment("Shown when a day is enabled or disabled. Placeholders: {day} {state}")
+                .define("scheduleDayEnabled", "§a[RPE] §e{day} §a{state}.");
+        SCHEDULE_TIME_INVALID = BUILDER
+                .comment("Shown when the time format is invalid.")
+                .define("scheduleTimeInvalid", "§c[RPE] Invalid format. Use HH:MM (e.g. 19:00).");
+        AUTO_UNWHITELIST_STAFF_NOTIFY = BUILDER
+                .comment("Staff notification when a player is auto-unwhitelisted. Placeholders: {player} {days}")
+                .define("autoUnwhitelistStaffNotify", "§6[Auto-Unwhitelist] §e{player} §7removed ({days} days inactive). ");
         BUILDER.pop();
 
         SPEC = BUILDER.build();

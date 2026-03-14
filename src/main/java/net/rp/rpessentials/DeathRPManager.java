@@ -122,16 +122,36 @@ public class DeathRPManager {
 
     // ─── API publique ────────────────────────────────────────────────────────────
 
-    public static boolean isDeathRPEnabled(UUID playerUuid) {
-        ensureInitialized();
-        Boolean override = overrides.get(playerUuid);
-        if (override != null) return override;
+    public static boolean isDeathRPEnabled(UUID uuid) {
+        // Vérifier d'abord si le système global est actif
         try {
-            if (RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED == null) return false;
-            return RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get();
-        } catch (IllegalStateException e) {
-            return false;
-        }
+            if (!RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get()) {
+                // Si les horaires de mort sont configurés, les vérifier même sans global
+                try {
+                    if (ScheduleConfig.DEATH_HOURS_ENABLED.get() &&
+                            RpEssentialsScheduleManager.isDeathHour()) {
+                        // Horaire actif → appliquer quand même (sauf override individuel à false)
+                        Boolean override = overrides.get(uuid);
+                        return override == null || override;
+                    }
+                } catch (IllegalStateException ignored) {}
+                // Vérifier l'override individuel
+                Boolean override = overrides.get(uuid);
+                return override != null && override;
+            }
+        } catch (IllegalStateException e) { return false; }
+
+        // Système global actif : override individuel prioritaire
+        Boolean override = overrides.get(uuid);
+        if (override != null) return override;
+
+        // Sinon : si horaires configurés, vérifier l'heure
+        try {
+            if (ScheduleConfig.DEATH_HOURS_ENABLED.get())
+                return RpEssentialsScheduleManager.isDeathHour();
+        } catch (IllegalStateException ignored) {}
+
+        return true; // global actif, pas d'horaire configuré → toujours actif
     }
 
     public static void setOverride(UUID playerUuid, boolean enabled) {

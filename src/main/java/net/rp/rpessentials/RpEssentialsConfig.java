@@ -72,6 +72,8 @@ public class RpEssentialsConfig {
     public static ModConfigSpec.DoubleValue         DEATH_RP_GLOBAL_TOGGLE_SOUND_VOLUME;
     public static ModConfigSpec.DoubleValue         DEATH_RP_GLOBAL_TOGGLE_SOUND_PITCH;
 
+    public static ModConfigSpec.ConfigValue<List<? extends String>> ROLES;
+
     static {
         // ===============================================================================
         // CATEGORY: OBFUSCATION (TabList & Nametags)
@@ -321,6 +323,18 @@ public class RpEssentialsConfig {
         DEATH_RP_GLOBAL_TOGGLE_SOUND_PITCH = BUILDER
                 .comment("Pitch du son de toggle global (0.5 - 2.0).")
                 .defineInRange("globalToggleSoundPitch", 1.0, 0.5, 2.0);
+
+        BUILDER.push("Roles");
+        ROLES = BUILDER
+                .comment("Configurable roles for /rpessentials setrole.",
+                        "Format: roleId;lpGroup",
+                        "Example: [\"admin;admin\", \"modo;modo\", \"builder;builder\", \"joueur;joueur\"]",
+                        "The tag added = roleId. The LP parent set = lpGroup.",
+                        "All other role tags are removed automatically when setting a new role.")
+                .defineList("roles",
+                        java.util.Arrays.asList("admin;admin", "modo;modo", "builder;builder", "joueur;joueur"),
+                        obj -> obj instanceof String && ((String) obj).contains(";"));
+        BUILDER.pop();
 
         BUILDER.pop(); // globalToggle
 
