@@ -324,7 +324,7 @@ public class ProfessionRestrictionManager {
      */
     public static String getRequiredProfessions(ResourceLocation resourceId, List<? extends String> allowedList) {
         if (!ensureInitialized()) {
-            return "§cSystème non initialisé";
+            return MessagesConfig.get(MessagesConfig.PROFESSION_SYSTEM_NOT_INIT);
         }
 
         String resourceString = resourceId.toString();
@@ -348,7 +348,9 @@ public class ProfessionRestrictionManager {
             }
         }
 
-        return requiredProfessions.isEmpty() ? "§cAucun" : String.join("§7, ", requiredProfessions);
+        return requiredProfessions.isEmpty()
+                ? MessagesConfig.get(MessagesConfig.PROFESSION_NONE_AVAILABLE)
+                : String.join("§7, ", requiredProfessions);
     }
 
     /**
@@ -361,7 +363,7 @@ public class ProfessionRestrictionManager {
                     .replace("{item}", itemId.toString())
                     .replace("{profession}", professions);
         } catch (Exception e) {
-            return "§cCraft bloqué";
+            return MessagesConfig.get(MessagesConfig.PROFESSION_CRAFT_BLOCKED_FALLBACK);
         }
     }
 
@@ -375,7 +377,7 @@ public class ProfessionRestrictionManager {
                     .replace("{item}", blockId.toString())
                     .replace("{profession}", professions);
         } catch (Exception e) {
-            return "§cCasse bloquée";
+            return MessagesConfig.get(MessagesConfig.PROFESSION_BREAK_BLOCKED_FALLBACK);
         }
     }
 
@@ -389,7 +391,7 @@ public class ProfessionRestrictionManager {
                     .replace("{item}", itemId.toString())
                     .replace("{profession}", professions);
         } catch (Exception e) {
-            return "§cUtilisation bloquée";
+            return MessagesConfig.get(MessagesConfig.PROFESSION_USE_BLOCKED_FALLBACK);
         }
     }
 
@@ -403,7 +405,7 @@ public class ProfessionRestrictionManager {
                     .replace("{item}", itemId.toString())
                     .replace("{profession}", professions);
         } catch (Exception e) {
-            return "§cÉquipement bloqué";
+            return MessagesConfig.get(MessagesConfig.PROFESSION_EQUIP_BLOCKED_FALLBACK);
         }
     }
 

@@ -27,13 +27,15 @@ public class OneriaMessagingManager {
         String senderDisplay = (senderNick != null) ? senderNick : sender.getName().getString();
         String targetDisplay = (targetNick != null) ? targetNick : target.getName().getString();
 
+        String hoverText = MessagesConfig.get(MessagesConfig.MP_HOVER_REPLY);
+
         MutableComponent targetNameComponent = Component.literal(targetDisplay)
                 .withStyle(style -> style
                         .withBold(true)
                         .withItalic(true)
                         .withColor(0x999999)
                         .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("Cliquer pour répondre")))
+                                Component.literal(hoverText)))
                         .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
                                 "/msg " + target.getName().getString() + " ")));
 
@@ -43,20 +45,24 @@ public class OneriaMessagingManager {
                         .withItalic(true)
                         .withColor(0x999999)
                         .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("Cliquer pour répondre")))
+                                Component.literal(hoverText)))
                         .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
                                 "/msg " + sender.getName().getString() + " ")));
 
-        MutableComponent toSender = Component.literal("[MP] Vous écrivez à ")
+        // Split prefix and name so the clickable component stays separate
+        String toSenderPrefix = MessagesConfig.get(MessagesConfig.MP_TO_SENDER, "target", targetDisplay);
+        String fromTargetPrefix = MessagesConfig.get(MessagesConfig.MP_FROM_TARGET, "sender", senderDisplay);
+
+        MutableComponent toSender = Component.literal(toSenderPrefix)
                 .withStyle(style -> style.withColor(0x999999).withItalic(true))
                 .append(targetNameComponent)
                 .append(Component.literal(" : " + message)
                         .withStyle(style -> style.withColor(0x999999).withItalic(true)));
 
-        MutableComponent toTarget = Component.literal("[MP] ")
+        MutableComponent toTarget = Component.literal(fromTargetPrefix)
                 .withStyle(style -> style.withColor(0x999999).withItalic(true))
                 .append(senderNameComponent)
-                .append(Component.literal(" vous écrit : " + message)
+                .append(Component.literal(" : " + message)
                         .withStyle(style -> style.withColor(0x999999).withItalic(true)));
 
         sender.sendSystemMessage(toSender);
@@ -64,7 +70,7 @@ public class OneriaMessagingManager {
 
         try {
             if (ChatConfig.LOG_PRIVATE_MESSAGES.get()) {
-                OneriaServerUtilities.LOGGER.info("[MP] {} -> {}: {}",
+                OneriaServerUtilities.LOGGER.info("[PM] {} -> {}: {}",
                         sender.getName().getString(),
                         target.getName().getString(),
                         message);
@@ -77,13 +83,13 @@ public class OneriaMessagingManager {
     public static int reply(ServerPlayer sender, String message, MinecraftServer server) {
         UUID lastId = lastMessaged.get(sender.getUUID());
         if (lastId == null) {
-            sender.sendSystemMessage(Component.literal("[MP] Vous n'avez personne à qui répondre.")
+            sender.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.MP_NO_ONE_TO_REPLY))
                     .withStyle(style -> style.withColor(0xFF5555).withItalic(true)));
             return 0;
         }
         ServerPlayer target = server.getPlayerList().getPlayer(lastId);
         if (target == null) {
-            sender.sendSystemMessage(Component.literal("[MP] Ce joueur n'est plus connecté.")
+            sender.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.MP_TARGET_OFFLINE))
                     .withStyle(style -> style.withColor(0xFF5555).withItalic(true)));
             return 0;
         }

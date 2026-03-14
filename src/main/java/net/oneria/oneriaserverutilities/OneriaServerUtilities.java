@@ -33,6 +33,7 @@ public class OneriaServerUtilities {
         modContainer.registerConfig(ModConfig.Type.SERVER, ScheduleConfig.SPEC,     "oneria/oneria-schedule.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ModerationConfig.SPEC,   "oneria/oneria-moderation.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ProfessionConfig.SPEC,   "oneria/oneria-professions.toml");
+        modContainer.registerConfig(ModConfig.Type.SERVER, MessagesConfig.SPEC,     "oneria/oneria-messages.toml");
 
         OneriaItems.ITEMS.register(modEventBus);
 

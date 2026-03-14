@@ -51,8 +51,12 @@ public class TempLicenseExpirationManager {
                 List<net.minecraft.network.chat.Component> lore = new java.util.ArrayList<>();
                 var existing = stack.get(net.minecraft.core.component.DataComponents.LORE);
                 if (existing != null) lore.addAll(existing.lines());
-                lore.add(net.minecraft.network.chat.Component.literal("§c§l✖ PERMIS RÉVOQUÉ"));
-                lore.add(net.minecraft.network.chat.Component.literal("§cCe permis n'est plus valide."));
+                lore.add(net.minecraft.network.chat.Component.literal(
+                        net.oneria.oneriaserverutilities.MessagesConfig.get(
+                                net.oneria.oneriaserverutilities.MessagesConfig.LICENSE_REVOKED_TITLE)));
+                lore.add(net.minecraft.network.chat.Component.literal(
+                        net.oneria.oneriaserverutilities.MessagesConfig.get(
+                                net.oneria.oneriaserverutilities.MessagesConfig.LICENSE_REVOKED_BODY)));
                 stack.set(net.minecraft.core.component.DataComponents.LORE,
                         new net.minecraft.world.item.component.ItemLore(lore));
             }

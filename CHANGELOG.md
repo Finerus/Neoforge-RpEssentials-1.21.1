@@ -1,6 +1,59 @@
 # Changelog - Oneria Mod
 All notable changes to this project will be documented in this file.
 
+## [3.2.0] - 2026-03-14
+
+**The mod is now fully translated into English. Every player-facing message is also configurable via a new dedicated config file.**
+
+**Added**
+
+* **Full English Translation:** Every player-facing message in the mod has been translated to English — this was long overdue.
+  - All command feedback, warn notifications, private messaging prompts, last connection output, Death RP status, profession restriction messages, whois results, help menu, and player list are now in English.
+  - The `"Hors-ligne"` fallback in `/whois`, `"Aucun joueur avec le nickname"`, `"Cliquer pour répondre"`, `"[MP] Vous écrivez à"`, and every other French string have been replaced.
+  - The default value of `WARN_JOIN_MESSAGE` in `oneria-moderation.toml` is now in English for new installations.
+
+* **New Config File — `oneria-messages.toml`:** All translated messages are exposed as configurable values.
+  - Server admins can customize or re-translate every message without recompiling the mod.
+  - Fully supports `§` and `&` color codes in all values.
+  - Reloadable at runtime with `/oneria config reload` — no restart required.
+  - Generated automatically on first server start under `config/oneria/oneria-messages.toml`.
+  - Organized into clear sections: `[System]`, `[Private Messaging]`, `[Warn System]`, `[Last Connection]`, `[Death RP]`, `[Whois]`, `[Player List]`, `[Help]`, `[Profession Restrictions]`.
+
+**Technical**
+
+* **New Classes:**
+  - `MessagesConfig` — NeoForge `ModConfigSpec`-based config class exposing all user-facing strings as `ConfigValue<String>`. Includes `get(configValue, replacements...)` and `formatDuration(minutes)` helpers for placeholder substitution and duration formatting.
+
+* **Enhanced Classes:**
+  - `OneriaServerUtilities` — Registers `MessagesConfig.SPEC` under `oneria/oneria-messages.toml`.
+  - `OneriaCommands` — All French hardcoded strings replaced with `MessagesConfig.get(...)` calls across `warnSystemCheck()`, `updateConfigString()`, `updateConfigDouble()`, `showHelp()`, `playerList()`, `whoisCommand()`, `lastConnectionPlayer()`, `lastConnectionList()`, `warnAdd()`, `warnTemp()`, `warnRemove()`, `warnClear()`, `warnPurge()`, `myWarn()`, `displayWarnList()`, `warnInfo()`, `checkLicense()`, `deathRpSetGlobal()`, `deathRpSetPlayer()`, `deathRpResetPlayer()`, `deathRpStatus()`. All `config set deathRp*` labels also anglicised.
+  - `OneriaMessagingManager` — `"Cliquer pour répondre"`, `"[MP] Vous écrivez à"`, `"[MP] ... vous écrit"`, `"[MP] Vous n'avez personne à qui répondre."`, `"[MP] Ce joueur n'est plus connecté."` all replaced with `MessagesConfig` calls.
+  - `ProfessionRestrictionManager` — French fallback strings in `getCraftBlockedMessage()`, `getBlockBreakBlockedMessage()`, `getItemUseBlockedMessage()`, `getEquipmentBlockedMessage()`, and `getRequiredProfessions()` replaced with `MessagesConfig` calls.
+  - `ModerationConfig` — Default value of `WARN_JOIN_MESSAGE` updated to English.
+
+**Configuration**
+
+* **New File: `config/oneria/oneria-messages.toml`**
+
+| Section | Keys |
+|---|---|
+| `[System]` | `configNotLoaded`, `configUnavailable`, `configNotBuilt`, `configUpdated`, `commandPlayerOnly` |
+| `[Private Messaging]` | `hoverReply`, `toSender`, `fromTarget`, `noOneToReply`, `targetOffline`, `consoleTo`, `consoleFrom` |
+| `[Warn System]` | `receivedPermanent`, `receivedTemporary`, `notFound`, `removeFailed`, `removedPlayer`, `clearedPlayer`, `systemDisabled`, `systemDisabledConfig`, `listHeader`, `listNone`, `listNoneSelf`, `listNoneStaff`, `purgeDone`, `infoHeader`, label keys, type/tag keys, duration format keys |
+| `[Last Connection]` | `disabled`, `playerNotFound`, `noData`, `noDataList`, `online`, `offline`, `unknown`, box label keys, `listHeader` |
+| `[Death RP]` | `configUnavailable`, `globalEnabled`, `globalDisabled`, `playerEnabled`, `playerDisabled`, `overrideReset`, status display keys |
+| `[Whois]` | `notFound`, `resultsHeader` |
+| `[Player List]` | `header` |
+| `[Help]` | All help menu line keys |
+| `[Profession Restrictions]` | Fallback message keys, `noneAvailable`, `systemNotInit`, `hasLicense`, `noLicense` |
+
+**Migration Notes**
+
+* No breaking changes — fully backward compatible with 3.1.1.
+* The new `oneria-messages.toml` file is generated automatically on first start — no manual action required.
+* All existing config files (`oneria-core.toml`, `oneria-chat.toml`, etc.) are unchanged.
+* Servers already running 3.1.1 will retain their `WARN_JOIN_MESSAGE` French value from their existing `oneria-moderation.toml` — only new installations get the English default. To update, edit the `joinMessage` key in `oneria-moderation.toml` manually.
+
 ## [3.1.1] - 2026-03-12
 
 **Added**

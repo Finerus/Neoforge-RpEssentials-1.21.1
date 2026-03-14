@@ -136,7 +136,7 @@ public class ModerationConfig {
                         "Placeholders: {count} = number of active warns."
                 )
                 .define("joinMessage",
-                        "§c⚠ Vous avez §l{count} avertissement(s) actif(s)§r§c. Tapez §l/mywarn §r§cpour les consulter.");
+                        "§c⚠ You have §l{count} active warning(s)§r§c. Type §l/mywarn §r§cto view them.");
 
         WARN_MAX_TEMP_DAYS = BUILDER
                 .comment(

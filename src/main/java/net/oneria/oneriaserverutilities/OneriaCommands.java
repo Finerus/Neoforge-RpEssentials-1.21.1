@@ -301,7 +301,7 @@ public class OneriaCommands {
                         .executes(ctx -> {
                             String mode = StringArgumentType.getString(ctx, "mode").toUpperCase();
                             if (!mode.equals("IMMERSIVE") && !mode.equals("CHAT") && !mode.equals("ACTION_BAR")) {
-                                ctx.getSource().sendFailure(Component.literal("§cModes valides : IMMERSIVE, CHAT, ACTION_BAR"));
+                                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Valid modes: IMMERSIVE, CHAT, ACTION_BAR"));
                                 return 0;
                             }
                             OneriaConfig.ZONE_MESSAGE_MODE.set(mode);
@@ -312,67 +312,67 @@ public class OneriaCommands {
 
         setNode.then(Commands.literal("deathRpGlobalEnabled")
                 .then(Commands.argument("value", BoolArgumentType.bool())
-                        .executes(ctx -> updateConfigBool(ctx, OneriaConfig.DEATH_RP_GLOBAL_ENABLED, "Mort RP globale activee"))));
+                        .executes(ctx -> updateConfigBool(ctx, OneriaConfig.DEATH_RP_GLOBAL_ENABLED, "Global Death RP enabled"))));
 
         setNode.then(Commands.literal("deathRpWhitelistRemove")
                 .then(Commands.argument("value", BoolArgumentType.bool())
-                        .executes(ctx -> updateConfigBool(ctx, OneriaConfig.DEATH_RP_WHITELIST_REMOVE, "Retrait whitelist a la mort RP"))));
+                        .executes(ctx -> updateConfigBool(ctx, OneriaConfig.DEATH_RP_WHITELIST_REMOVE, "Death RP whitelist removal"))));
 
         setNode.then(Commands.literal("deathRpDeathMessage")
                 .then(Commands.argument("value", StringArgumentType.greedyString())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_DEATH_MESSAGE, "Message de mort RP"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_DEATH_MESSAGE, "Death RP death message"))));
 
         setNode.then(Commands.literal("deathRpDeathSound")
                 .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_DEATH_SOUND, "Son de mort RP"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_DEATH_SOUND, "Death RP death sound"))));
 
         setNode.then(Commands.literal("deathRpDeathSoundVolume")
                 .then(Commands.argument("value", DoubleArgumentType.doubleArg(0.0, 10.0))
-                        .executes(ctx -> updateConfigDouble(ctx, OneriaConfig.DEATH_RP_DEATH_SOUND_VOLUME, "Volume son mort RP"))));
+                        .executes(ctx -> updateConfigDouble(ctx, OneriaConfig.DEATH_RP_DEATH_SOUND_VOLUME, "Death RP death sound volume"))));
 
         setNode.then(Commands.literal("deathRpDeathSoundPitch")
                 .then(Commands.argument("value", DoubleArgumentType.doubleArg(0.5, 2.0))
-                        .executes(ctx -> updateConfigDouble(ctx, OneriaConfig.DEATH_RP_DEATH_SOUND_PITCH, "Pitch son mort RP"))));
+                        .executes(ctx -> updateConfigDouble(ctx, OneriaConfig.DEATH_RP_DEATH_SOUND_PITCH, "Death RP death sound pitch"))));
 
         setNode.then(Commands.literal("deathRpPlayerEnableMsg")
                 .then(Commands.argument("value", StringArgumentType.greedyString())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_ENABLE_MSG, "Message activation individuelle"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_ENABLE_MSG, "Death RP player enable message"))));
 
         setNode.then(Commands.literal("deathRpPlayerEnableMode")
                 .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_ENABLE_MODE, "Mode activation individuelle"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_ENABLE_MODE, "Death RP player enable mode"))));
 
         setNode.then(Commands.literal("deathRpPlayerDisableMsg")
                 .then(Commands.argument("value", StringArgumentType.greedyString())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_DISABLE_MSG, "Message desactivation individuelle"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_DISABLE_MSG, "Death RP player disable message"))));
 
         setNode.then(Commands.literal("deathRpPlayerDisableMode")
                 .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_DISABLE_MODE, "Mode desactivation individuelle"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_DISABLE_MODE, "Death RP player disable mode"))));
 
         setNode.then(Commands.literal("deathRpPlayerToggleSound")
                 .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_TOGGLE_SOUND, "Son toggle individuel"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_PLAYER_TOGGLE_SOUND, "Death RP player toggle sound"))));
 
         setNode.then(Commands.literal("deathRpGlobalEnableMsg")
                 .then(Commands.argument("value", StringArgumentType.greedyString())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_ENABLE_MSG, "Message activation globale"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_ENABLE_MSG, "Death RP global enable message"))));
 
         setNode.then(Commands.literal("deathRpGlobalEnableMode")
                 .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_ENABLE_MODE, "Mode activation globale"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_ENABLE_MODE, "Death RP global enable mode"))));
 
         setNode.then(Commands.literal("deathRpGlobalDisableMsg")
                 .then(Commands.argument("value", StringArgumentType.greedyString())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_DISABLE_MSG, "Message desactivation globale"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_DISABLE_MSG, "Death RP global disable message"))));
 
         setNode.then(Commands.literal("deathRpGlobalDisableMode")
                 .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_DISABLE_MODE, "Mode desactivation globale"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_DISABLE_MODE, "Death RP global disable mode"))));
 
         setNode.then(Commands.literal("deathRpGlobalToggleSound")
                 .then(Commands.argument("value", StringArgumentType.word())
-                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_TOGGLE_SOUND, "Son toggle global"))));
+                        .executes(ctx -> updateConfigString(ctx, OneriaConfig.DEATH_RP_GLOBAL_TOGGLE_SOUND, "Death RP global toggle sound"))));
 
         configNode.then(setNode);
         oneriaRoot.then(configNode);
@@ -715,9 +715,9 @@ public class OneriaCommands {
                                         if (ctx.getSource().getEntity() instanceof ServerPlayer sender) {
                                             OneriaMessagingManager.sendMessage(sender, target, msg);
                                         } else {
-                                            MutableComponent toTarget = Component.literal("§7[MP] §f§lServeur§r§7 vous écrit : " + msg);
+                                            MutableComponent toTarget = Component.literal(MessagesConfig.get(MessagesConfig.MP_CONSOLE_TO_PLAYER, "msg", msg));
                                             target.sendSystemMessage(toTarget);
-                                            ctx.getSource().sendSuccess(() -> Component.literal("§7[MP] Vous écrivez à §f§l" + target.getName().getString() + "§r§7 : " + msg), false);
+                                            ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.MP_CONSOLE_FROM_SERVER, "target", target.getName().getString(), "msg", msg)), false);
                                         }
                                         return 1;
                                     }))));
@@ -1269,16 +1269,20 @@ public class OneriaCommands {
         try {
             String value = StringArgumentType.getString(ctx, "value");
             if (configValue == null) {
-                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Config non disponible."));
+                ctx.getSource().sendFailure(Component.literal(
+                        MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_UNAVAILABLE)));
                 return 0;
             }
             configValue.set(value);
             configValue.save();
             ctx.getSource().sendSuccess(
-                    () -> Component.literal("§a[Oneria] §e" + label + " §amis a jour : §f" + value), true);
+                    () -> Component.literal(
+                            MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_UPDATED, "label", label, "value", value)),
+                    true);
             return 1;
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] La config n'est pas encore construite."));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_BUILT)));
             return 0;
         }
     }
@@ -1289,15 +1293,21 @@ public class OneriaCommands {
         try {
             double value = DoubleArgumentType.getDouble(ctx, "value");
             if (configValue == null) {
-                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Config non disponible."));
+                ctx.getSource().sendFailure(Component.literal(
+                        MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_UNAVAILABLE)));
                 return 0;
             }
             configValue.set(value);
             configValue.save();
-            ctx.getSource().sendSuccess(() -> Component.literal("§a[Oneria] " + label + " mis a jour : §f" + value), true);
+            ctx.getSource().sendSuccess(
+                    () -> Component.literal(
+                            MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_UPDATED,
+                                    "label", label, "value", String.valueOf(value))),
+                    true);
             return 1;
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] La config n'est pas encore construite."));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_BUILT)));
             return 0;
         }
     }
@@ -1350,7 +1360,8 @@ public class OneriaCommands {
                 ProfessionRestrictionManager.getProfessionData(professionId);
 
         if (professionData == null) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Metier inconnu: " + professionId));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
             return 0;
         }
 
@@ -1359,11 +1370,16 @@ public class OneriaCommands {
         ItemStack license = new ItemStack(OneriaItems.LICENSE.get());
 
         license.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
-                Component.literal(professionData.colorCode + "§lPermis de " + professionData.displayName));
+                Component.literal(professionData.colorCode +
+                        MessagesConfig.get(MessagesConfig.LICENSE_ITEM_NAME) +
+                        professionData.displayName));
 
         java.util.List<Component> lore = new java.util.ArrayList<>();
-        lore.add(Component.literal("§7Delivre a: §f" + displayName));
-        lore.add(Component.literal("§7Date: §f" + java.time.LocalDate.now().toString()));
+        lore.add(Component.literal(
+                MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_TO, "player", displayName)));
+        lore.add(Component.literal(
+                MessagesConfig.get(MessagesConfig.LICENSE_LORE_DATE,
+                        "date", java.time.LocalDate.now().toString())));
         license.set(net.minecraft.core.component.DataComponents.LORE,
                 new net.minecraft.world.item.component.ItemLore(lore));
 
@@ -1384,12 +1400,14 @@ public class OneriaCommands {
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
 
-        ctx.getSource().sendSuccess(() ->
-                Component.literal("§a[Oneria] Permis de " + professionData.getFormattedName() +
-                        "§a donne a §f" + displayName), true);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                MessagesConfig.get(MessagesConfig.LICENSE_GIVE_STAFF,
+                        "profession", professionData.getFormattedName(),
+                        "player", displayName)), true);
 
-        target.sendSystemMessage(Component.literal("§aVous avez recu un " + professionData.getFormattedName() +
-                "§6§l Permis§a !"));
+        target.sendSystemMessage(Component.literal(
+                MessagesConfig.get(MessagesConfig.LICENSE_GIVE_PLAYER,
+                        "profession", professionData.getFormattedName())));
 
         return 1;
     }
@@ -1398,10 +1416,8 @@ public class OneriaCommands {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String profession = StringArgumentType.getString(ctx, "profession");
 
-        // Retirer uniquement de licenses.json — l'item reste dans l'inventaire
         LicenseManager.removeLicense(target.getUUID(), profession);
 
-        // Invalider le cache + sync client immediat
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
 
@@ -1414,12 +1430,14 @@ public class OneriaCommands {
                 ProfessionRestrictionManager.getProfessionData(profession);
         String profDisplayName = profData != null ? profData.displayName : profession;
 
-        ctx.getSource().sendSuccess(() ->
-                Component.literal("§a[Oneria] Permis de §f" + profDisplayName +
-                        "§a revoque pour §f" + target.getName().getString()), true);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                MessagesConfig.get(MessagesConfig.LICENSE_REVOKE_STAFF,
+                        "profession", profDisplayName,
+                        "player", target.getName().getString())), true);
 
         target.sendSystemMessage(Component.literal(
-                "§cVotre permis de §f" + profDisplayName + "§c a ete revoque."));
+                MessagesConfig.get(MessagesConfig.LICENSE_REVOKE_PLAYER,
+                        "profession", profDisplayName)));
 
         return 1;
     }
@@ -1432,7 +1450,8 @@ public class OneriaCommands {
         ProfessionRestrictionManager.ProfessionData profData =
                 ProfessionRestrictionManager.getProfessionData(professionId);
         if (profData == null) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Métier inconnu: " + professionId));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
             return 0;
         }
 
@@ -1441,38 +1460,45 @@ public class OneriaCommands {
         String issued  = java.time.LocalDate.now().format(fmt);
         String expires = java.time.LocalDate.now().plusDays(days).format(fmt);
 
-        // Item
         ItemStack license = new ItemStack(OneriaItems.LICENSE.get());
         license.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
-                Component.literal(profData.colorCode + "§lPermis de " + profData.displayName));
+                Component.literal(profData.colorCode +
+                        MessagesConfig.get(MessagesConfig.LICENSE_ITEM_NAME) +
+                        profData.displayName));
+
         java.util.List<Component> lore = new java.util.ArrayList<>();
-        lore.add(Component.literal("§7Délivré à: §f" + displayName));
-        lore.add(Component.literal("§7Date de délivrance: §f" + issued));
-        lore.add(Component.literal("§7Valide jusqu'au: §f" + expires));
+        lore.add(Component.literal(
+                MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_TO, "player", displayName)));
+        lore.add(Component.literal(
+                MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_DATE, "date", issued)));
+        lore.add(Component.literal(
+                MessagesConfig.get(MessagesConfig.LICENSE_LORE_VALID_UNTIL, "date", expires)));
         license.set(net.minecraft.core.component.DataComponents.LORE,
                 new net.minecraft.world.item.component.ItemLore(lore));
         if (!target.getInventory().add(license)) target.drop(license, false);
 
-        // Donne les vraies permissions — retiré automatiquement à expiration
         LicenseManager.addLicense(target.getUUID(), professionId);
 
-        // Enregistre dans licenses-temp.json + audit
         ServerPlayer staff = ctx.getSource().getPlayer();
         LicenseManager.addTempLicense(staff, target, professionId, days, issued, expires);
         LicenseManager.logAction("GIVE_RP", staff, target, professionId,
-                days + " jours, expire le " + expires);
+                days + " days, expires " + expires);
 
-        // Invalider cache + sync client immédiat
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] Permis temporaire de " + profData.getFormattedName() +
-                        "§a donné à §f" + displayName +
-                        " §7(" + days + " jours, expire le " + expires + ")"), true);
+                MessagesConfig.get(MessagesConfig.LICENSE_GIVE_RP_STAFF,
+                        "profession", profData.getFormattedName(),
+                        "player", displayName,
+                        "days", String.valueOf(days),
+                        "date", expires)), true);
+
         target.sendSystemMessage(Component.literal(
-                "§aVous avez reçu un " + profData.getFormattedName() +
-                        "§6§l Permis §7valable jusqu'au §f" + expires));
+                MessagesConfig.get(MessagesConfig.LICENSE_GIVE_RP_PLAYER,
+                        "profession", profData.getFormattedName(),
+                        "date", expires)));
+
         return 1;
     }
 
@@ -1482,22 +1508,24 @@ public class OneriaCommands {
         List<String> licenses = LicenseManager.getLicenses(target.getUUID());
 
         if (licenses.isEmpty()) {
-            ctx.getSource().sendSuccess(() ->
-                    Component.literal("§e[Oneria] §f" + target.getName().getString() +
-                            "§e n'a aucun permis."), false);
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_NONE,
+                            "player", target.getName().getString())), false);
             return 1;
         }
 
         StringBuilder sb = new StringBuilder();
         sb.append("§6╔═══════════════════════════════════╗\n");
-        sb.append("§6║ §e§lPERMIS — §f").append(target.getName().getString()).append("\n");
+        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_HEADER,
+                "player", target.getName().getString())).append("\n");
         sb.append("§6╠═══════════════════════════════════╣\n");
 
         for (String profession : licenses) {
             String expiry = LicenseManager.getTempExpirationDate(target.getUUID(), profession);
             if (expiry != null) {
                 sb.append("§6║ §f").append(profession)
-                        .append(" §7(RP - expire le ").append(expiry).append(")\n");
+                        .append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry))
+                        .append("\n");
             } else {
                 sb.append("§6║ §f").append(profession).append("\n");
             }
@@ -1513,12 +1541,13 @@ public class OneriaCommands {
         var allLicenses = LicenseManager.getAllLicenses();
 
         if (allLicenses.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("§e[Oneria] Aucune licence enregistrée."), false);
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_ALL_NONE)), false);
             return 1;
         }
 
         StringBuilder result = new StringBuilder("§6╔═══════════════════════════════════╗\n");
-        result.append("§6║ §e§lLICENSES - TOUS LES JOUEURS §6║\n");
+        result.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_ALL_HEADER)).append("\n");
         result.append("§6╠═══════════════════════════════════╣\n");
 
         var server = ctx.getSource().getServer();
@@ -1527,7 +1556,6 @@ public class OneriaCommands {
             java.util.UUID uuid = entry.getKey();
             List<String> licenses = entry.getValue();
 
-            // Récupération sécurisée du nom
             ServerPlayer onlinePlayer = server.getPlayerList().getPlayer(uuid);
             String playerName = (onlinePlayer != null)
                     ? onlinePlayer.getName().getString()
@@ -1535,23 +1563,23 @@ public class OneriaCommands {
                     .map(com.mojang.authlib.GameProfile::getName)
                     .orElse(uuid.toString());
 
+            String noneStr = MessagesConfig.get(MessagesConfig.LICENSE_LIST_ALL_NONE_FOR_PLAYER);
             StringBuilder licLine = new StringBuilder();
             for (String lic : licenses) {
                 if (licLine.length() > 0) licLine.append("§7, ");
                 String expiry = LicenseManager.getTempExpirationDate(uuid, lic);
                 licLine.append("§f").append(lic);
                 if (expiry != null) {
-                    licLine.append(" §7(RP - ").append(expiry).append(")");
+                    licLine.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
                 }
             }
 
             result.append("§6║ §f").append(playerName).append("§7: ")
-                    .append(licLine.length() > 0 ? licLine : "§8Aucune").append("\n");
+                    .append(licLine.length() > 0 ? licLine : noneStr).append("\n");
         }
 
         result.append("§6╚═══════════════════════════════════╝");
         ctx.getSource().sendSuccess(() -> Component.literal(result.toString()), false);
-
         return 1;
     }
 
@@ -1561,9 +1589,11 @@ public class OneriaCommands {
 
         boolean has = LicenseManager.hasLicense(target.getUUID(), profession);
 
-        ctx.getSource().sendSuccess(() ->
-                Component.literal("§e[Oneria] §f" + target.getName().getString() +
-                        (has ? " §apossède" : " §cne possède pas") + "§e un permis de §f" + profession), false);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                MessagesConfig.get(
+                        has ? MessagesConfig.PROFESSION_HAS_LICENSE : MessagesConfig.PROFESSION_NO_LICENSE,
+                        "player", target.getName().getString(), "profession", profession)
+        ), false);
 
         return 1;
     }
@@ -1682,7 +1712,7 @@ public class OneriaCommands {
             if (!cleanNick.equalsIgnoreCase(searchNick)) continue;
 
             UUID uuid = entry.getKey();
-            String mcName = "Hors-ligne";
+            String mcName = "Offline";
 
             try {
                 ServerPlayer online = server.getPlayerList().getPlayer(uuid);
@@ -1708,7 +1738,7 @@ public class OneriaCommands {
             MutableComponent uuidComponent = Component.literal("§8" + finalUuid)
                     .withStyle(style -> style
                             .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                                    Component.literal("§7Cliquer pour ouvrir NameMC")))
+                                    Component.literal("§7Click to open NameMC")))
                             .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL,
                                     "https://namemc.com/profile/" + finalUuid)));
 
@@ -1720,11 +1750,13 @@ public class OneriaCommands {
         }
 
         if (results.isEmpty()) {
-            ctx.getSource().sendFailure(Component.literal("§c[Whois] Aucun joueur avec le nickname : §f" + searchNick));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.WHOIS_NOT_FOUND, "nick", searchNick)));
             return 0;
         }
 
-        ctx.getSource().sendSuccess(() -> Component.literal("§6[Whois] §7Résultats pour \"§f" + searchNick + "§7\" :"), false);
+        ctx.getSource().sendSuccess(() -> Component.literal(
+                MessagesConfig.get(MessagesConfig.WHOIS_RESULTS_HEADER, "nick", searchNick)), false);
         for (MutableComponent r : results) {
             ctx.getSource().sendSuccess(() -> r, false);
         }
@@ -1735,24 +1767,24 @@ public class OneriaCommands {
         boolean isStaff = OneriaPermissions.isStaff(ctx.getSource().getPlayer());
         StringBuilder sb = new StringBuilder();
         sb.append("§6╔═══════════════════════════════════╗\n");
-        sb.append("§6║ §e§lONERIA MOD §7— Commandes\n");
+        sb.append(MessagesConfig.get(MessagesConfig.HELP_TITLE)).append("\n");
         sb.append("§6╠═══════════════════════════════════╣\n");
-        sb.append("§6║ §e/list §7— Joueurs en ligne\n");
-        sb.append("§6║ §e/schedule §7— Horaires du serveur\n");
-        sb.append("§6║ §e/msg §8<joueur> <message> §7— MP\n");
-        sb.append("§6║ §e/r §8<message> §7— Répondre\n");
+        sb.append(MessagesConfig.get(MessagesConfig.HELP_CMD_LIST)).append("\n");
+        sb.append(MessagesConfig.get(MessagesConfig.HELP_CMD_SCHEDULE)).append("\n");
+        sb.append(MessagesConfig.get(MessagesConfig.HELP_CMD_MSG)).append("\n");
+        sb.append(MessagesConfig.get(MessagesConfig.HELP_CMD_REPLY)).append("\n");
         if (isStaff) {
             sb.append("§6╠═══════════════════════════════════╣\n");
-            sb.append("§6║ §c§lSTAFF\n");
-            sb.append("§6║ §e/oneria nick §8<joueur> <nick>\n");
+            sb.append(MessagesConfig.get(MessagesConfig.HELP_STAFF_SECTION)).append("\n");
+            sb.append("§6║ §e/oneria nick §8<player> <nick>\n");
             sb.append("§6║ §e/oneria license give/revoke/list\n");
             sb.append("§6║ §e/oneria staff tp/gamemode/effect\n");
             sb.append("§6║ §e/whois §8<nick>\n");
             sb.append("§6║ §e/oneria config status/reload\n");
-            sb.append("§6║ §e/oneria deathrp enable §8<true|false> §7— Activer/desactiver la mort RP globale\n");
-            sb.append("§6║ §e/oneria deathrp player §8<joueur> enable <true|false> §7— Override individuel\n");
-            sb.append("§6║ §e/oneria deathrp player §8<joueur> reset §7— Supprimer l'override\n");
-            sb.append("§6║ §e/oneria deathrp status §7— Voir l'etat du systeme et les overrides\n");
+            sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_ENABLE)).append("\n");
+            sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_PLAYER)).append("\n");
+            sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_RESET)).append("\n");
+            sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_STATUS)).append("\n");
         }
         sb.append("§6╚═══════════════════════════════════╝");
         String msg = sb.toString();
@@ -1763,7 +1795,7 @@ public class OneriaCommands {
     private static int playerList(CommandContext<CommandSourceStack> ctx) {
         var players = ctx.getSource().getServer().getPlayerList().getPlayers();
         StringBuilder sb = new StringBuilder();
-        sb.append("§eJoueurs en ligne (").append(players.size()).append(") : ");
+        sb.append(MessagesConfig.get(MessagesConfig.PLAYERLIST_HEADER, "count", String.valueOf(players.size())));
         for (int i = 0; i < players.size(); i++) {
             ServerPlayer p = players.get(i);
             String nick = NicknameManager.getNickname(p.getUUID());
@@ -1797,25 +1829,27 @@ public class OneriaCommands {
             staffName = "Console";
         }
 
-        // Mise à jour de la config en direct
         try {
             if (OneriaConfig.DEATH_RP_GLOBAL_ENABLED != null) {
                 OneriaConfig.DEATH_RP_GLOBAL_ENABLED.set(enabled);
                 OneriaConfig.DEATH_RP_GLOBAL_ENABLED.save();
             }
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] La config n'est pas encore disponible."));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.DEATHRP_CONFIG_UNAVAILABLE)));
             return 0;
         }
 
-        // Notification globale (message + son)
         MinecraftServer server = ctx.getSource().getServer();
         if (server != null) {
             DeathRPManager.broadcastGlobalToggle(staffName, enabled, server);
         }
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] Mort RP globale " + (enabled ? "activee" : "desactivee") + "."), true);
+                enabled
+                        ? MessagesConfig.get(MessagesConfig.DEATHRP_GLOBAL_ENABLED)
+                        : MessagesConfig.get(MessagesConfig.DEATHRP_GLOBAL_DISABLED)
+        ), true);
         return 1;
     }
 
@@ -1828,13 +1862,13 @@ public class OneriaCommands {
         boolean enabled = BoolArgumentType.getBool(ctx, "value");
 
         DeathRPManager.setOverride(target.getUUID(), enabled);
-
-        // Notification au joueur concerné
         DeathRPManager.notifyPlayerToggle(target, enabled);
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] Mort RP " + (enabled ? "activee" : "desactivee")
-                        + " pour §e" + target.getName().getString() + "§a."), true);
+                enabled
+                        ? MessagesConfig.get(MessagesConfig.DEATHRP_PLAYER_ENABLED, "player", target.getName().getString())
+                        : MessagesConfig.get(MessagesConfig.DEATHRP_PLAYER_DISABLED, "player", target.getName().getString())
+        ), true);
         return 1;
     }
 
@@ -1845,10 +1879,9 @@ public class OneriaCommands {
     private static int deathRpResetPlayer(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "joueur");
         DeathRPManager.removeOverride(target.getUUID());
-
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] Override de mort RP supprime pour §e"
-                        + target.getName().getString() + "§a. Il suit desormais le global."), true);
+                MessagesConfig.get(MessagesConfig.DEATHRP_OVERRIDE_RESET, "player", target.getName().getString())
+        ), true);
         return 1;
     }
 
@@ -1857,7 +1890,6 @@ public class OneriaCommands {
      * Affiche l'état global + tous les overrides individuels.
      */
     private static int deathRpStatus(CommandContext<CommandSourceStack> ctx) {
-        // Etat global
         boolean globalEnabled;
         try {
             globalEnabled = OneriaConfig.DEATH_RP_GLOBAL_ENABLED != null
@@ -1873,27 +1905,34 @@ public class OneriaCommands {
             whitelistRemove = false;
         }
 
+        String active   = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_ACTIVE);
+        String inactive = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_INACTIVE);
+        String yes      = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_YES);
+        String no       = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_NO);
+        String unknown  = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_UNKNOWN);
+
         StringBuilder sb = new StringBuilder();
-        sb.append("§6═══════════════════════════════\n");
-        sb.append("§6║ §eSystème de Mort RP\n");
+        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_HEADER)).append("\n");
         sb.append("§6╠═══════════════════════════════\n");
-        sb.append("§6║ §7Etat global    : ").append(globalEnabled ? "§aActive" : "§cDesactive").append("\n");
-        sb.append("§6║ §7Retrait WL     : ").append(whitelistRemove ? "§aOui" : "§7Non").append("\n");
+        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_GLOBAL,
+                "value", globalEnabled ? active : inactive)).append("\n");
+        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_WHITELIST,
+                "value", whitelistRemove ? yes : no)).append("\n");
         sb.append("§6╠═══════════════════════════════\n");
-        sb.append("§6║ §eOverrides individuels :\n");
+        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_OVERRIDES)).append("\n");
 
         Map<UUID, Boolean> overrides = DeathRPManager.getAllOverrides();
         MinecraftServer server = ctx.getSource().getServer();
 
         if (overrides.isEmpty()) {
-            sb.append("§6║  §7(aucun override)\n");
+            sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_NO_OVERRIDES)).append("\n");
         } else {
             for (Map.Entry<UUID, Boolean> entry : overrides.entrySet()) {
-                String name = "Inconnu";
+                String name = unknown;
                 if (server != null) {
-                    ServerPlayer online = server.getPlayerList().getPlayer(entry.getKey());
-                    if (online != null) {
-                        name = online.getName().getString();
+                    ServerPlayer onlineP = server.getPlayerList().getPlayer(entry.getKey());
+                    if (onlineP != null) {
+                        name = onlineP.getName().getString();
                     } else if (server.getProfileCache() != null) {
                         name = server.getProfileCache().get(entry.getKey())
                                 .map(com.mojang.authlib.GameProfile::getName)
@@ -1902,7 +1941,7 @@ public class OneriaCommands {
                 }
                 sb.append("§6║  §e").append(name)
                         .append(" §8(").append(entry.getKey()).append("§8)")
-                        .append(" §7→ ").append(entry.getValue() ? "§aActive" : "§cDesactive").append("\n");
+                        .append(" §7→ ").append(entry.getValue() ? active : inactive).append("\n");
             }
         }
         sb.append("§6═══════════════════════════════");
@@ -1919,53 +1958,56 @@ public class OneriaCommands {
     private static int lastConnectionPlayer(CommandContext<CommandSourceStack> ctx) {
         try {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
-                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Le suivi de connexion est désactivé dans la config."));
+                ctx.getSource().sendFailure(Component.literal(
+                        MessagesConfig.get(MessagesConfig.LASTCONN_DISABLED)));
                 return 0;
             }
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Config non chargée."));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }
 
         String targetName = StringArgumentType.getString(ctx, "player");
         MinecraftServer server = ctx.getSource().getServer();
 
-        // Chercher d'abord parmi les joueurs en ligne
         ServerPlayer online = server.getPlayerList().getPlayerByName(targetName);
         UUID targetUUID = null;
         if (online != null) {
             targetUUID = online.getUUID();
         } else {
-            // Chercher dans le cache de LastConnectionManager
             targetUUID = LastConnectionManager.findUUIDByName(targetName);
         }
 
         if (targetUUID == null) {
             ctx.getSource().sendFailure(Component.literal(
-                    "§c[Oneria] Joueur introuvable : §e" + targetName +
-                            "\n§7(Le joueur doit s'être déjà connecté au moins une fois pour apparaître ici.)"));
+                    MessagesConfig.get(MessagesConfig.LASTCONN_PLAYER_NOT_FOUND, "player", targetName)));
             return 0;
         }
 
-        // Capture finale nécessaire : targetUUID est réassigné dans le if/else ci-dessus
         final UUID finalTargetUUID = targetUUID;
-
         LastConnectionManager.ConnectionEntry entry = LastConnectionManager.getEntry(finalTargetUUID);
         if (entry == null) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Aucune donnée de connexion pour §e" + targetName));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.LASTCONN_NO_DATA, "player", targetName)));
             return 0;
         }
 
-        String status = online != null ? "§a● En ligne" : "§7○ Hors ligne";
-        String loginStr  = entry.lastLogin  != null ? "§f" + entry.lastLogin  : "§7Inconnu";
-        String logoutStr = entry.lastLogout != null ? "§f" + entry.lastLogout : "§7Inconnu";
+        String status   = online != null
+                ? MessagesConfig.get(MessagesConfig.LASTCONN_ONLINE)
+                : MessagesConfig.get(MessagesConfig.LASTCONN_OFFLINE);
+        String unknown  = MessagesConfig.get(MessagesConfig.LASTCONN_UNKNOWN);
+        String loginStr  = entry.lastLogin  != null ? "§f" + entry.lastLogin  : unknown;
+        String logoutStr = entry.lastLogout != null ? "§f" + entry.lastLogout : unknown;
+        String displayName = entry.mcName != null ? entry.mcName : targetName;
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§6╔═ Dernière connexion ═══════════════╗\n" +
-                        "§6║ §7Joueur : §e" + (entry.mcName != null ? entry.mcName : targetName) + " §8(" + finalTargetUUID + ")\n" +
-                        "§6║ §7Statut  : " + status + "\n" +
-                        "§6║ §7Login   : " + loginStr + "\n" +
-                        "§6║ §7Logout  : " + logoutStr + "\n" +
+                MessagesConfig.get(MessagesConfig.LASTCONN_BOX_HEADER) + "\n" +
+                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_PLAYER) +
+                        "§e" + displayName + " §8(" + finalTargetUUID + ")\n" +
+                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_STATUS) + status + "\n" +
+                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_LOGIN)  + loginStr + "\n" +
+                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_LOGOUT) + logoutStr + "\n" +
                         "§6╚════════════════════════════════════╝"
         ), false);
         return 1;
@@ -1974,11 +2016,13 @@ public class OneriaCommands {
     private static int lastConnectionList(CommandContext<CommandSourceStack> ctx, int count) {
         try {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
-                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Le suivi de connexion est désactivé dans la config."));
+                ctx.getSource().sendFailure(Component.literal(
+                        MessagesConfig.get(MessagesConfig.LASTCONN_DISABLED)));
                 return 0;
             }
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Config non chargée."));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }
 
@@ -1987,13 +2031,17 @@ public class OneriaCommands {
         int total = allEntries.size();
 
         if (total == 0) {
-            ctx.getSource().sendSuccess(() -> Component.literal("§7[Oneria] Aucune donnée de connexion enregistrée."), false);
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    MessagesConfig.get(MessagesConfig.LASTCONN_NO_DATA_LIST)), false);
             return 1;
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═ Dernières connexions (").append(Math.min(count, total)).append("/").append(total).append(") ══╗\n");
+        sb.append(MessagesConfig.get(MessagesConfig.LASTCONN_LIST_HEADER,
+                "shown", String.valueOf(Math.min(count, total)),
+                "total", String.valueOf(total))).append("\n");
 
+        String unknown = MessagesConfig.get(MessagesConfig.LASTCONN_UNKNOWN);
         int shown = 0;
         for (var e : allEntries) {
             if (shown >= count) break;
@@ -2001,8 +2049,10 @@ public class OneriaCommands {
             LastConnectionManager.ConnectionEntry entry = e.getValue();
             String name = entry.mcName != null ? entry.mcName : uuid.toString().substring(0, 8) + "...";
             boolean isOnline = server.getPlayerList().getPlayer(uuid) != null;
-            String bullet = isOnline ? "§a●" : "§7○";
-            String loginStr = entry.lastLogin != null ? entry.lastLogin : "§8Inconnu";
+            String bullet = isOnline
+                    ? MessagesConfig.get(MessagesConfig.LASTCONN_ONLINE).substring(0, 4)   // "§a●"
+                    : MessagesConfig.get(MessagesConfig.LASTCONN_OFFLINE).substring(0, 4);  // "§7○"
+            String loginStr = entry.lastLogin != null ? entry.lastLogin : unknown;
             sb.append("§6║ ").append(bullet).append(" §e").append(name)
                     .append("§7 — ").append(loginStr).append("\n");
             shown++;
@@ -2018,14 +2068,20 @@ public class OneriaCommands {
     // WARN — implémentation
     // =========================================================================
 
+    // =========================================================================
+    // WARN — warnSystemCheck (correction)
+    // =========================================================================
+
     private static boolean warnSystemCheck(CommandContext<CommandSourceStack> ctx) {
         try {
             if (!ModerationConfig.ENABLE_WARN_SYSTEM.get()) {
-                ctx.getSource().sendFailure(Component.literal("§c[Oneria] Le système de warns est désactivé dans la config."));
+                ctx.getSource().sendFailure(Component.literal(
+                        MessagesConfig.get(MessagesConfig.WARN_SYSTEM_DISABLED_CONFIG)));
                 return false;
             }
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Config non chargée."));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return false;
         }
         return true;
@@ -2058,16 +2114,11 @@ public class OneriaCommands {
         String warnId = WarnManager.addWarn(
                 target.getUUID(), target.getName().getString(),
                 issuerUUID, issuerName,
-                reason, null /* permanent */);
+                reason, null);
 
-        // Notifier la cible
         target.sendSystemMessage(Component.literal(
-                "§c⚠ §lVous avez reçu un avertissement §r§c(warn #" + warnId + ") !\n" +
-                        "§7Raison : §f" + reason + "\n" +
-                        "§7Durée  : §fPermanent\n" +
-                        "§7Tapez §l/mywarn §r§7pour voir tous vos avertissements."));
+                MessagesConfig.get(MessagesConfig.WARN_RECEIVED_PERM, "id", warnId, "reason", reason)));
 
-        // Notifier le staff
         try {
             String fmt = ModerationConfig.WARN_ADDED_BROADCAST_FORMAT.get();
             if (!fmt.isEmpty()) {
@@ -2081,10 +2132,8 @@ public class OneriaCommands {
             }
         } catch (IllegalStateException ignored) {}
 
-        // Feedback à l'émetteur (s'il n'est pas staff — pour éviter doublon)
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] Warn §e#" + warnId + "§a ajouté pour §e" + target.getName().getString() +
-                        "§a. Raison : §f" + reason), false);
+                "§a[Oneria] Warn §e#" + warnId + "§a added for §e" + target.getName().getString() + "§a."), false);
         return 1;
     }
 
@@ -2096,12 +2145,13 @@ public class OneriaCommands {
         String reason = StringArgumentType.getString(ctx, "reason");
         MinecraftServer server = ctx.getSource().getServer();
 
-        // Vérifier la limite de durée max
         try {
             int maxDays = ModerationConfig.WARN_MAX_TEMP_DAYS.get();
             if (maxDays > 0 && minutes > maxDays * 1440) {
                 ctx.getSource().sendFailure(Component.literal(
-                        "§c[Oneria] Durée maximale autorisée : " + maxDays + " jours (" + (maxDays * 1440) + " minutes)."));
+                        MessagesConfig.get(MessagesConfig.WARN_MAX_DURATION_EXCEEDED,
+                                "maxDays", String.valueOf(maxDays),
+                                "maxMinutes", String.valueOf(maxDays * 1440))));
                 return 0;
             }
         } catch (IllegalStateException ignored) {}
@@ -2114,26 +2164,16 @@ public class OneriaCommands {
         }
 
         long expiresAt = System.currentTimeMillis() + (long) minutes * 60_000;
-
         String warnId = WarnManager.addWarn(
                 target.getUUID(), target.getName().getString(),
-                issuerUUID, issuerName,
-                reason, expiresAt);
+                issuerUUID, issuerName, reason, expiresAt);
 
-        // Formater la durée pour l'affichage
-        String durationStr;
-        if (minutes < 60) durationStr = minutes + " minute(s)";
-        else if (minutes < 1440) durationStr = (minutes / 60) + "h " + (minutes % 60) + "min";
-        else durationStr = (minutes / 1440) + "j " + ((minutes % 1440) / 60) + "h";
+        String durationStr = MessagesConfig.formatDuration(minutes);
 
-        // Notifier la cible
         target.sendSystemMessage(Component.literal(
-                "§c⚠ §lVous avez reçu un avertissement temporaire §r§c(warn #" + warnId + ") !\n" +
-                        "§7Raison : §f" + reason + "\n" +
-                        "§7Durée  : §f" + durationStr + "\n" +
-                        "§7Tapez §l/mywarn §r§7pour voir tous vos avertissements."));
+                MessagesConfig.get(MessagesConfig.WARN_RECEIVED_TEMP,
+                        "id", warnId, "reason", reason, "duration", durationStr)));
 
-        // Notifier le staff
         try {
             String fmt = ModerationConfig.WARN_ADDED_BROADCAST_FORMAT.get();
             if (!fmt.isEmpty()) {
@@ -2149,8 +2189,8 @@ public class OneriaCommands {
 
         String finalDurationStr = durationStr;
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] Warn temporaire §e#" + warnId + "§a ajouté pour §e" + target.getName().getString() +
-                        "§a (" + finalDurationStr + "). Raison : §f" + reason), false);
+                "§a[Oneria] Temp warn §e#" + warnId + "§a added for §e" + target.getName().getString() +
+                        "§a (" + finalDurationStr + "). Reason: §f" + reason), false);
         return 1;
     }
 
@@ -2160,18 +2200,18 @@ public class OneriaCommands {
         String warnId = StringArgumentType.getString(ctx, "warnId");
         MinecraftServer server = ctx.getSource().getServer();
 
-        // Récupérer l'entrée avant suppression (pour le broadcast)
         Optional<WarnManager.WarnEntry> optEntry = WarnManager.getWarnById(warnId);
         if (optEntry.isEmpty()) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Warn introuvable : §e#" + warnId));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.WARN_NOT_FOUND, "id", warnId)));
             return 0;
         }
 
         WarnManager.WarnEntry entry = optEntry.get();
         boolean removed = WarnManager.removeWarn(warnId);
-
         if (!removed) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Échec de la suppression du warn §e#" + warnId));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.WARN_REMOVE_FAILED, "id", warnId)));
             return 0;
         }
 
@@ -2180,14 +2220,12 @@ public class OneriaCommands {
             staffName = issuer.getName().getString();
         }
 
-        // Notifier le joueur visé s'il est en ligne
-        ServerPlayer target = server.getPlayerList().getPlayer(UUID.fromString(entry.targetUUID));
-        if (target != null) {
-            target.sendSystemMessage(Component.literal(
-                    "§a✔ Votre avertissement §l#" + warnId + " §r§a a été retiré par le staff."));
+        ServerPlayer targetOnline = server.getPlayerList().getPlayer(UUID.fromString(entry.targetUUID));
+        if (targetOnline != null) {
+            targetOnline.sendSystemMessage(Component.literal(
+                    MessagesConfig.get(MessagesConfig.WARN_REMOVED_PLAYER, "id", warnId)));
         }
 
-        // Broadcast staff
         try {
             String fmt = ModerationConfig.WARN_REMOVED_BROADCAST_FORMAT.get();
             if (!fmt.isEmpty()) {
@@ -2196,7 +2234,7 @@ public class OneriaCommands {
         } catch (IllegalStateException ignored) {}
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] Warn §e#" + warnId + "§a supprimé (était pour §e" + entry.targetName + "§a)."), false);
+                "§a[Oneria] Warn §e#" + warnId + "§a removed (was for §e" + entry.targetName + "§a)."), false);
         return 1;
     }
 
@@ -2212,7 +2250,7 @@ public class OneriaCommands {
 
         var all = WarnManager.getAll();
         if (all.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("§7[Oneria] Aucun warn enregistré."), false);
+            ctx.getSource().sendSuccess(() -> Component.literal("§7[Oneria] No registered warn."), false);
             return 1;
         }
 
@@ -2235,24 +2273,28 @@ public class OneriaCommands {
         if (!warnSystemCheck(ctx)) return 0;
 
         String warnId = StringArgumentType.getString(ctx, "warnId");
-        Optional<WarnManager.WarnEntry> opt = WarnManager.getWarnById(warnId);
-
-        if (opt.isEmpty()) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Warn introuvable : §e#" + warnId));
+        Optional<WarnManager.WarnEntry> optW = WarnManager.getWarnById(warnId);
+        if (optW.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.WARN_NOT_FOUND, "id", warnId)));
             return 0;
         }
 
-        WarnManager.WarnEntry w = opt.get();
-        String typeStr = w.isPermanent() ? "§cPermanent" : (w.isExpired() ? "§8Expiré" : "§eTemporaire");
+        WarnManager.WarnEntry w = optW.get();
+        String typeStr = w.isPermanent()
+                ? MessagesConfig.get(MessagesConfig.WARN_TYPE_PERMANENT)
+                : (w.isExpired()
+                ? MessagesConfig.get(MessagesConfig.WARN_TYPE_EXPIRED)
+                : MessagesConfig.get(MessagesConfig.WARN_TYPE_TEMPORARY));
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§6╔═ Warn #" + w.id + " ═══════════════════════╗\n" +
-                        "§6║ §7Joueur    : §e" + w.targetName + " §8(" + w.targetUUID + ")\n" +
-                        "§6║ §7Staff     : §e" + w.issuerName + "\n" +
-                        "§6║ §7Raison    : §f" + w.reason + "\n" +
-                        "§6║ §7Date      : §f" + w.getFormattedDate() + "\n" +
-                        "§6║ §7Type      : " + typeStr + "\n" +
-                        "§6║ §7Expiration: §f" + w.getFormattedExpiry() + "\n" +
+                MessagesConfig.get(MessagesConfig.WARN_INFO_HEADER, "id", w.id) + "\n" +
+                        MessagesConfig.get(MessagesConfig.WARN_INFO_PLAYER_LABEL) + "§e" + w.targetName + " §8(" + w.targetUUID + ")\n" +
+                        MessagesConfig.get(MessagesConfig.WARN_INFO_STAFF_LABEL)  + "§e" + w.issuerName + "\n" +
+                        MessagesConfig.get(MessagesConfig.WARN_INFO_REASON_LABEL) + "§f" + w.reason + "\n" +
+                        MessagesConfig.get(MessagesConfig.WARN_INFO_DATE_LABEL)   + "§f" + w.getFormattedDate() + "\n" +
+                        MessagesConfig.get(MessagesConfig.WARN_INFO_TYPE_LABEL)   + typeStr + "\n" +
+                        MessagesConfig.get(MessagesConfig.WARN_INFO_EXPIRY_LABEL) + "§f" + w.getFormattedExpiry() + "\n" +
                         "§6╚════════════════════════════════════╝"
         ), false);
         return 1;
@@ -2266,51 +2308,53 @@ public class OneriaCommands {
 
         if (removed == 0) {
             ctx.getSource().sendSuccess(() -> Component.literal(
-                    "§7[Oneria] §e" + target.getName().getString() + " §7n'avait aucun warn."), false);
+                    MessagesConfig.get(MessagesConfig.WARN_LIST_NONE_STAFF,
+                            "player", target.getName().getString())), false);
             return 1;
         }
 
         target.sendSystemMessage(Component.literal(
-                "§a✔ Tous vos avertissements ont été effacés par le staff."));
+                MessagesConfig.get(MessagesConfig.WARN_CLEARED_PLAYER)));
 
         int finalRemoved = removed;
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] §e" + finalRemoved + " §awarn(s) supprimé(s) pour §e" + target.getName().getString() + "§a."), false);
+                "§a[Oneria] §e" + finalRemoved + "§a warn(s) removed for §e" +
+                        target.getName().getString() + "§a."), false);
         return 1;
     }
 
     private static int warnPurge(CommandContext<CommandSourceStack> ctx) {
         if (!warnSystemCheck(ctx)) return 0;
-
         int purged = WarnManager.purgeExpiredWarns();
         int finalPurged = purged;
         ctx.getSource().sendSuccess(() -> Component.literal(
-                "§a[Oneria] Purge terminée : §e" + finalPurged + " §awarn(s) expiré(s) supprimé(s)."), false);
+                MessagesConfig.get(MessagesConfig.WARN_PURGE_DONE,
+                        "count", String.valueOf(finalPurged))), false);
         return 1;
     }
 
-    /** /mywarn — joueur voit ses propres warns actifs */
+    /** /mywarn — player sees their own active warns */
     private static int myWarn(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) {
-            ctx.getSource().sendFailure(Component.literal("§c[Oneria] Cette commande ne peut être utilisée que par un joueur."));
+            ctx.getSource().sendFailure(Component.literal(
+                    MessagesConfig.get(MessagesConfig.COMMAND_PLAYER_ONLY)));
             return 0;
         }
-
         try {
             if (!ModerationConfig.ENABLE_WARN_SYSTEM.get()) {
-                player.sendSystemMessage(Component.literal("§c[Oneria] Le système de warns est désactivé."));
+                player.sendSystemMessage(Component.literal(
+                        MessagesConfig.get(MessagesConfig.WARN_SYSTEM_DISABLED)));
                 return 0;
             }
         } catch (IllegalStateException e) {
             return 0;
         }
-
         return displayWarnList(ctx, player.getUUID(), player.getName().getString(), false);
     }
 
     /**
-     * Affiche la liste des warns d'un joueur.
-     * @param showAll si true, montre aussi les expirés ; si false, uniquement les actifs.
+     * Displays the warn list for a player.
+     * @param showAll if true, includes expired warns; if false, only active ones.
      */
     private static int displayWarnList(CommandContext<CommandSourceStack> ctx,
                                        UUID uuid, String name, boolean showAll) {
@@ -2320,33 +2364,33 @@ public class OneriaCommands {
 
         if (list.isEmpty()) {
             String msg = showAll
-                    ? "§7[Oneria] §e" + name + " §7n'a aucun warn."
-                    : "§a✔ Vous n'avez aucun avertissement actif.";
+                    ? MessagesConfig.get(MessagesConfig.WARN_LIST_NONE, "player", name)
+                    : MessagesConfig.get(MessagesConfig.WARN_LIST_NONE_SELF);
             ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
             return 1;
         }
 
         long activeCount = list.stream().filter(w -> !w.isExpired()).count();
         StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═ Avertissements de §e").append(name).append(" §6(").append(activeCount).append(" actif(s)) ═╗\n");
+        sb.append(MessagesConfig.get(MessagesConfig.WARN_LIST_HEADER,
+                "player", name, "count", String.valueOf(activeCount))).append("\n");
 
         for (WarnManager.WarnEntry w : list) {
-            String status;
-            if (w.isExpired())      status = "§8[EXP]";
-            else if (w.isPermanent()) status = "§c[PERM]";
-            else                     status = "§e[TEMP]";
+            String tag;
+            if (w.isExpired())        tag = MessagesConfig.get(MessagesConfig.WARN_STATUS_EXPIRED_TAG);
+            else if (w.isPermanent()) tag = MessagesConfig.get(MessagesConfig.WARN_STATUS_PERM_TAG);
+            else                      tag = MessagesConfig.get(MessagesConfig.WARN_STATUS_TEMP_TAG);
 
-            sb.append("§6║ ").append(status)
+            sb.append("§6║ ").append(tag)
                     .append(" §7#").append(w.id)
                     .append(" §8(").append(w.getFormattedDate()).append(")")
-                    .append(" §7par §f").append(w.issuerName).append("\n")
+                    .append(" §7by §f").append(w.issuerName).append("\n")
                     .append("§6║   §7→ §f").append(w.reason)
                     .append(" §8| ").append(w.getFormattedExpiry()).append("\n");
         }
         sb.append("§6╚═══════════════════════════════════╝");
 
-        String finalMsg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(finalMsg), false);
+        ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;
     }
 
