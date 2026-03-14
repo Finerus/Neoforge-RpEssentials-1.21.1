@@ -1,8 +1,8 @@
-# Oneria Mod
+# Rp Essentials
 
-**Oneria Mod** is a comprehensive server-side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It provides a complete suite of RP tools — proximity-based name obfuscation, a profession and license system, a warn system, connection tracking, private messaging, schedule automation, staff moderation tools, advanced chat formatting, world border warnings, named zones, and deep LuckPerms integration — all configurable in real-time without restarts.
+**Rp Essentials** is a comprehensive server-side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It provides a complete suite of RP tools — proximity-based name obfuscation, a profession and license system, a warn system, connection tracking, private messaging, schedule automation, staff moderation tools, advanced chat formatting, world border warnings, named zones, and deep LuckPerms integration — all configurable in real-time without restarts.
 
-> Current version: **3.1.0** — See [CHANGELOG](CHANGELOG.md) for full history.
+> Current version: **4.0.0** — See [CHANGELOG](CHANGELOG.md) for full history.
 
 ---
 
@@ -98,7 +98,7 @@ Automatic recording of player connection history:
 
 Custom `/msg` system fully replacing vanilla messaging:
 
-- `/msg <player> <message>`, `/tell`, `/w`, `/whisper` — send private messages with Oneria formatting.
+- `/msg <player> <message>`, `/tell`, `/w`, `/whisper` — send private messages with Rp Essentials formatting.
 - `/r <message>` — reply to the last person who messaged you.
 - Nicknames are clickable — hover for prompt, click to auto-fill `/msg <player> `.
 - Last interlocutor tracked per player, reset on logout.
@@ -446,8 +446,7 @@ All saves are **asynchronous** via `CompletableFuture` — no server thread bloc
 ## Authors
 
 - **Finerus** — Development
-- **OneriaTeam** - Logo
 
 ---
 
-*All Rights Reserved — Oneria RP Community*
+*All Rights Reserved*

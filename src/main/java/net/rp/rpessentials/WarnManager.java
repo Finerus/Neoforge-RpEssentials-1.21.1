@@ -112,7 +112,7 @@ public class WarnManager {
             File worldFolder = new File("world");
             if (!worldFolder.exists()) worldFolder = new File(".");
 
-            File dataFolder = new File(worldFolder, "data/oneriamod");
+            File dataFolder = new File(worldFolder, "data/rpessentials");
             if (!dataFolder.exists()) dataFolder.mkdirs();
 
             dataFile = new File(dataFolder, "warns.json");

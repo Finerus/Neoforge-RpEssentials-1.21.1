@@ -38,7 +38,7 @@ public class NicknameManager {
                 worldFolder = new File(".");
             }
 
-            File dataFolder = new File(worldFolder, "data/oneriamod");
+            File dataFolder = new File(worldFolder, "data/rpessentials");
             if (!dataFolder.exists()) {
                 dataFolder.mkdirs();
             }

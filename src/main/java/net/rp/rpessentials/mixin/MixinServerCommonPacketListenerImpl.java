@@ -8,7 +8,6 @@ import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.rp.rpessentials.NicknameManager;
 import net.rp.rpessentials.RpEssentialsConfig;
-import net.rp.rpessentials.client.ClientNametagRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -86,7 +85,7 @@ public abstract class MixinServerCommonPacketListenerImpl {
             Component displayName;
 
             if (targetPlayer != null) {
-                String prefix = String.valueOf(ClientNametagRenderer.RpEssentials.getClass());
+                String prefix = net.rp.rpessentials.RpEssentials.getPlayerPrefix(targetPlayer);
                 String realName = targetPlayer.getGameProfile().getName();
                 boolean hasNickname = NicknameManager.hasNickname(targetPlayer.getUUID());
                 String nickname = null;

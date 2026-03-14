@@ -11,8 +11,6 @@ import net.rp.rpessentials.RpEssentials;
 @EventBusSubscriber(modid = RpEssentials.MODID, value = Dist.CLIENT)
 public class ClientNametagRenderer {
 
-    public static final Object RpEssentials = null;
-
     @SubscribeEvent
     public static void onRenderNameTag(RenderNameTagEvent event) {
         if (!ClientNametagConfig.hasReceivedServerConfig()) {
