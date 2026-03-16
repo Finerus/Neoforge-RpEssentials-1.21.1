@@ -1,6 +1,68 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [4.0.1] - 2026-03-17
+
+**Bug Fixes & English Translation Pass + Updated the in-game logo of the mod**
+
+### Fixed
+
+* **Welcome Message — Placeholders Not Replaced:** `{player}` and `{nickname}` were never substituted in welcome lines. The code was using `%player%` (legacy format) while the config defined `{player}`. Both placeholders are now correctly replaced.
+  - `{player}` → MC username
+  - `{nickname}` → RP nickname (falls back to MC username if no nickname is set)
+  - Affected file: `RpEssentialsEventHandler.java`
+
+* **Death RP Messages — Wrong Placeholder Format:** All Death RP message handlers were using `%..%` placeholders while every other system in the mod uses `{..}`. This caused death messages, toggle notifications, and global broadcasts to display raw placeholder text instead of the actual values.
+  - `%player%` → `{player}`, `%realname%` → `{realname}`, `%staff%` → `{staff}` in all `.replace()` calls
+  - Affected file: `DeathRPManager.java`
+
+* **Wrong Method Call in `onPlayerLogout`:** `RpEssentialsPermissions.clearCacheForPlayer()` was called but does not exist. Replaced with the correct `RpEssentialsPermissions.invalidateCache(UUID)`.
+  - Affected file: `RpEssentialsEventHandler.java`
+
+### Changed
+
+* **Full English Translation — Config Default Values:** All remaining French strings in config default values have been translated to English.
+
+  **`RpEssentialsConfig.java` — DeathRP section:**
+  | Before | After |
+  |---|---|
+  | `"&6[Mort RP] &fVotre mort RP a ete &aactivee..."` | `"&6[Death RP] &fYour RP death has been &aenabled..."` |
+  | `"&6[Mort RP] &fVotre mort RP a ete &cdesactivee..."` | `"&6[Death RP] &fYour RP death has been &cdisabled..."` |
+  | `"&6[Mort RP] &fLe systeme de mort RP a ete &aactive &fpar %staff%."` | `"&6[Death RP] &fThe Death RP system has been &aenabled &fby {staff}."` |
+  | `"&6[Mort RP] &fLe systeme de mort RP a ete &cdesactive &fpar %staff%."` | `"&6[Death RP] &fThe Death RP system has been &cdisabled &fby {staff}."` |
+  | `"&c[Mort RP] &f%player% &7(%realname%)..."` | `"&c[Death RP] &f{player} &7({realname})..."` |
+
+  **`ProfessionConfig.java` — Messages section:**
+  | Before | After |
+  |---|---|
+  | `"§c✘ Vous ne pouvez pas crafter cet objet ! §7Métier requis: §e{profession}"` | `"§c✘ You cannot craft this item. §7Required profession: §e{profession}"` |
+  | `"§c✘ Vous ne pouvez pas casser ce bloc ! §7Métier requis: §e{profession}"` | `"§c✘ You cannot break this block. §7Required profession: §e{profession}"` |
+  | `"§c✘ Vous ne pouvez pas utiliser cet objet ! §7Métier requis: §e{profession}"` | `"§c✘ You cannot use this item. §7Required profession: §e{profession}"` |
+  | `"§c✘ Vous ne pouvez pas équiper cet objet ! §7Métier requis: §e{profession}"` | `"§c✘ You cannot equip this item. §7Required profession: §e{profession}"` |
+
+  **`RpEssentialsCommands.java` — `config status` output:**
+  | Before | After |
+  |---|---|
+  | `§7Mort RP` | `§7Death RP` |
+  | `§eMort RP global` | `§eGlobal enabled` |
+  | `§eRetrait whitelist` | `§eWhitelist removal` |
+  | `§eSon de mort` | `§eDeath sound` |
+
+### Technical
+
+* **Modified Files:**
+  - `RpEssentialsEventHandler.java` — Welcome placeholder fix (`%player%` → `{player}`, added `{nickname}`), logout method fix (`clearCacheForPlayer` → `invalidateCache`)
+  - `DeathRPManager.java` — All `.replace()` calls updated from `%..%` to `{..}` format, internal log comments translated to English
+  - `RpEssentialsConfig.java` — 5 French default strings in `[DeathRP]` section translated and placeholder format unified
+  - `ProfessionConfig.java` — 4 French default strings in `[Messages]` section translated
+  - `RpEssentialsCommands.java` — 4 French labels in `showStatus()` translated
+
+### Migration Notes
+
+* **No breaking changes** — fully backward compatible with 4.0.0.
+* **Existing config files are not affected** — default value changes only apply to new installations or if a key is missing from an existing config. To update Death RP messages on an existing server, edit the relevant keys in `rpessentials-core.toml` under `[DeathRP.deathEvent]`, `[DeathRP.playerToggle]`, and `[DeathRP.globalToggle]`. To update profession restriction messages, edit `rpessentials-professions.toml` under `[Messages]`.
+* Clients connecting to a 4.0.1 server can still run 4.0.0 — no packet changes.
+
 ## [4.0.0]
 
 **⚠ Breaking Change:** The mod ID has changed from `oneriaserverutilities` to `rpessentials`. Automatic migration is included — no manual action required on first launch.

@@ -31,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Gestionnaire du système de Mort RP.
+ * Manager for the Death RP system.
  */
 public class DeathRPManager {
 
@@ -41,71 +41,58 @@ public class DeathRPManager {
     private static final ConcurrentHashMap<UUID, Boolean> overrides = new ConcurrentHashMap<>();
     private static File dataFile = null;
 
-    // ─── Initialisation lazy ────────────────────────────────────────────────────
+    // ─── Lazy init ──────────────────────────────────────────────────────────────
 
     private static synchronized void ensureInitialized() {
         if (dataFile != null) return;
         try {
-            File worldFolder = new File("world");
-            if (!worldFolder.exists()) worldFolder = new File(".");
-            File dataFolder = new File(worldFolder, "data/rpessentials");
-            if (!dataFolder.exists()) dataFolder.mkdirs();
-            dataFile = new File(dataFolder, "deathrp.json");
-            if (dataFile.exists()) loadFromFile();
-            LOGGER.info("[DeathRP] Initialise — fichier : {}", dataFile.getAbsolutePath());
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            File worldDir = server != null
+                    ? server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toFile()
+                    : new File("world");
+            File dataDir = new File(worldDir, "data/rpessentials");
+            dataDir.mkdirs();
+            dataFile = new File(dataDir, "deathrp.json");
+            loadFromFile();
         } catch (Exception e) {
-            LOGGER.error("[DeathRP] Echec de l'initialisation", e);
+            LOGGER.error("[DeathRP] Failed to initialize data file", e);
         }
     }
 
-    public static void reload() {
-        dataFile = null;
-        overrides.clear();
-        ensureInitialized();
-    }
-
-    // ─── Lecture / écriture ─────────────────────────────────────────────────────
-
     private static void loadFromFile() {
+        if (dataFile == null || !dataFile.exists()) return;
         try (FileReader reader = new FileReader(dataFile)) {
             Type type = new TypeToken<Map<String, Boolean>>() {}.getType();
-            Map<String, Boolean> data = GSON.fromJson(reader, type);
-            if (data == null) return;
-            for (Map.Entry<String, Boolean> entry : data.entrySet()) {
-                String key = entry.getKey();
-                String uuidStr = key.contains(" ") ? key.substring(0, key.indexOf(' ')) : key;
-                try {
-                    overrides.put(UUID.fromString(uuidStr), entry.getValue());
-                } catch (IllegalArgumentException e) {
-                    LOGGER.warn("[DeathRP] UUID invalide dans la cle : {}", key);
-                }
+            Map<String, Boolean> raw = GSON.fromJson(reader, type);
+            if (raw != null) {
+                overrides.clear();
+                raw.forEach((key, value) -> {
+                    // Support both "UUID (McName)" and bare UUID keys
+                    String uuidStr = key.contains(" ") ? key.substring(0, key.indexOf(' ')) : key;
+                    try { overrides.put(UUID.fromString(uuidStr), value); } catch (Exception ignored) {}
+                });
             }
-            LOGGER.info("[DeathRP] {} override(s) charge(s).", overrides.size());
         } catch (Exception e) {
-            LOGGER.error("[DeathRP] Impossible de lire {}", dataFile.getAbsolutePath(), e);
+            LOGGER.error("[DeathRP] Failed to load deathrp.json", e);
         }
     }
 
     private static void saveToFile() {
-        ensureInitialized();
-        if (dataFile == null) return;
-        Map<UUID, Boolean> snapshot = new HashMap<>(overrides);
-        File targetFile = dataFile;
         CompletableFuture.runAsync(() -> {
             try {
-                File parent = targetFile.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
+                ensureInitialized();
+                if (dataFile == null) return;
                 MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-                Map<String, Boolean> data = new HashMap<>();
-                for (Map.Entry<UUID, Boolean> entry : snapshot.entrySet()) {
-                    String mcName = resolveMcName(server, entry.getKey());
-                    data.put(entry.getKey() + " (" + mcName + ")", entry.getValue());
-                }
-                try (FileWriter writer = new FileWriter(targetFile)) {
-                    GSON.toJson(data, writer);
+                Map<String, Boolean> out = new HashMap<>();
+                overrides.forEach((uuid, val) -> {
+                    String mcName = resolveMcName(server, uuid);
+                    out.put(uuid + (mcName.equals("Unknown") ? "" : " (" + mcName + ")"), val);
+                });
+                try (FileWriter writer = new FileWriter(dataFile)) {
+                    GSON.toJson(out, writer);
                 }
             } catch (Exception e) {
-                LOGGER.error("[DeathRP] Echec de la sauvegarde", e);
+                LOGGER.error("[DeathRP] Failed to save deathrp.json", e);
             }
         });
     }
@@ -120,14 +107,14 @@ public class DeathRPManager {
         return "Unknown";
     }
 
-    // ─── API publique ────────────────────────────────────────────────────────────
+    // ─── Public API ─────────────────────────────────────────────────────────────
 
     public static boolean isDeathRPEnabled(UUID uuid) {
-        // Override individuel — priorité absolue
+        // Individual override — highest priority
         Boolean override = overrides.get(uuid);
         if (override != null) return override;
 
-        // Death Hours actives → force tout le monde à true
+        // Death Hours active → force everyone to true
         try {
             if (ScheduleConfig.DEATH_HOURS_ENABLED.get()
                     && RpEssentialsScheduleManager.isDeathHour()) {
@@ -135,7 +122,7 @@ public class DeathRPManager {
             }
         } catch (IllegalStateException ignored) {}
 
-        // Sinon état global
+        // Fall back to global state
         try {
             return RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED != null
                     && RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get();
@@ -166,70 +153,70 @@ public class DeathRPManager {
         return new HashMap<>(overrides);
     }
 
-    // ─── Gestion de la mort RP ──────────────────────────────────────────────────
+    // ─── Death handling ─────────────────────────────────────────────────────────
 
     public static void onPlayerDeathRP(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
 
-        // 1. Message de mort personnalisé à tous
+        // 1. Death message broadcast
         try {
             if (RpEssentialsConfig.DEATH_RP_DEATH_MESSAGE != null) {
                 String raw = RpEssentialsConfig.DEATH_RP_DEATH_MESSAGE.get()
-                        .replace("%player%",   NicknameManager.getDisplayName(player))
-                        .replace("%realname%", player.getName().getString());
+                        .replace("{player}",   NicknameManager.getDisplayName(player))
+                        .replace("{realname}", player.getName().getString());
                 Component component = ColorHelper.parseColors(raw);
                 for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                     p.sendSystemMessage(component);
                 }
             }
         } catch (IllegalStateException e) {
-            LOGGER.warn("[DeathRP] Config DEATH_MESSAGE non disponible", e);
+            LOGGER.warn("[DeathRP] Config DEATH_MESSAGE unavailable", e);
         }
 
-        // 2. Son de mort global
+        // 2. Death sound broadcast
         playSound(server, null,
                 RpEssentialsConfig.DEATH_RP_DEATH_SOUND,
                 RpEssentialsConfig.DEATH_RP_DEATH_SOUND_VOLUME,
                 RpEssentialsConfig.DEATH_RP_DEATH_SOUND_PITCH,
-                "son de mort");
+                "death sound");
 
-        // 3. Retrait whitelist (optionnel)
+        // 3. Optional whitelist removal
         try {
             if (RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE != null
                     && RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get()) {
                 UserWhiteList whitelist = server.getPlayerList().getWhiteList();
                 whitelist.remove(new UserWhiteListEntry(player.getGameProfile()));
-                LOGGER.info("[DeathRP] {} retire de la whitelist.", player.getName().getString());
+                LOGGER.info("[DeathRP] {} removed from whitelist.", player.getName().getString());
             }
         } catch (IllegalStateException e) {
-            LOGGER.warn("[DeathRP] Config WHITELIST_REMOVE non disponible", e);
+            LOGGER.warn("[DeathRP] Config WHITELIST_REMOVE unavailable", e);
         } catch (Exception e) {
-            LOGGER.error("[DeathRP] Impossible de retirer {} de la whitelist", player.getName().getString(), e);
+            LOGGER.error("[DeathRP] Could not remove {} from whitelist", player.getName().getString(), e);
         }
     }
 
-    // ─── Notifications de toggle ─────────────────────────────────────────────────
+    // ─── Toggle notifications ────────────────────────────────────────────────────
 
     public static void broadcastGlobalToggle(String staffName, boolean enabled, MinecraftServer server) {
         try {
             var msgConfig  = enabled ? RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLE_MSG  : RpEssentialsConfig.DEATH_RP_GLOBAL_DISABLE_MSG;
             var modeConfig = enabled ? RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLE_MODE : RpEssentialsConfig.DEATH_RP_GLOBAL_DISABLE_MODE;
             if (msgConfig == null || modeConfig == null) return;
-            String raw  = msgConfig.get().replace("%staff%", staffName);
+            String raw  = msgConfig.get().replace("{staff}", staffName);
             String mode = modeConfig.get();
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                 sendMessageToPlayer(p, raw, mode);
             }
         } catch (IllegalStateException e) {
-            LOGGER.warn("[DeathRP] Config GLOBAL_TOGGLE_MSG non disponible", e);
+            LOGGER.warn("[DeathRP] Config GLOBAL_TOGGLE_MSG unavailable", e);
         }
 
         playSound(server, null,
                 RpEssentialsConfig.DEATH_RP_GLOBAL_TOGGLE_SOUND,
                 RpEssentialsConfig.DEATH_RP_GLOBAL_TOGGLE_SOUND_VOLUME,
                 RpEssentialsConfig.DEATH_RP_GLOBAL_TOGGLE_SOUND_PITCH,
-                "son de toggle global");
+                "global toggle sound");
     }
 
     public static void notifyPlayerToggle(ServerPlayer target, boolean enabled) {
@@ -238,22 +225,22 @@ public class DeathRPManager {
             var modeConfig = enabled ? RpEssentialsConfig.DEATH_RP_PLAYER_ENABLE_MODE : RpEssentialsConfig.DEATH_RP_PLAYER_DISABLE_MODE;
             if (msgConfig == null || modeConfig == null) return;
             String raw  = msgConfig.get()
-                    .replace("%player%",   NicknameManager.getDisplayName(target))
-                    .replace("%realname%", target.getName().getString());
+                    .replace("{player}",   NicknameManager.getDisplayName(target))
+                    .replace("{realname}", target.getName().getString());
             String mode = modeConfig.get();
             sendMessageToPlayer(target, raw, mode);
         } catch (IllegalStateException e) {
-            LOGGER.warn("[DeathRP] Config PLAYER_TOGGLE_MSG non disponible", e);
+            LOGGER.warn("[DeathRP] Config PLAYER_TOGGLE_MSG unavailable", e);
         }
 
         playSound(target.getServer(), target,
                 RpEssentialsConfig.DEATH_RP_PLAYER_TOGGLE_SOUND,
                 RpEssentialsConfig.DEATH_RP_PLAYER_TOGGLE_SOUND_VOLUME,
                 RpEssentialsConfig.DEATH_RP_PLAYER_TOGGLE_SOUND_PITCH,
-                "son de toggle individuel");
+                "individual toggle sound");
     }
 
-    // ─── Son ─────────────────────────────────────────────────────────────────────
+    // ─── Sound ──────────────────────────────────────────────────────────────────
 
     private static void playSound(
             MinecraftServer server,
@@ -274,7 +261,7 @@ public class DeathRPManager {
 
             ResourceLocation rl = ResourceLocation.tryParse(soundId);
             if (rl == null) {
-                LOGGER.warn("[DeathRP] Identifiant de son invalide pour {} : {}", label, soundId);
+                LOGGER.warn("[DeathRP] Invalid sound ID for {}: {}", label, soundId);
                 return;
             }
             Holder<SoundEvent> holder = Holder.direct(SoundEvent.createVariableRangeEvent(rl));
@@ -293,21 +280,17 @@ public class DeathRPManager {
                 }
             }
         } catch (IllegalStateException e) {
-            LOGGER.warn("[DeathRP] Config {} non disponible", label, e);
+            LOGGER.warn("[DeathRP] Config {} unavailable", label, e);
         } catch (Exception e) {
-            LOGGER.error("[DeathRP] Erreur lors de la lecture du {}", label, e);
+            LOGGER.error("[DeathRP] Error playing {}", label, e);
         }
     }
 
-    // ─── Utilitaire d'affichage ──────────────────────────────────────────────────
+    // ─── Display utility ────────────────────────────────────────────────────────
 
     /**
-     * Envoie un message brut (codes §/&) à un joueur selon le mode spécifié.
-     * <p>
-     * Modes : TITLE, ACTION_BAR, IMMERSIVE (fallback ACTION_BAR), CHAT (défaut).
-     * <p>
-     * Identique au pattern de WorldBorderManager : le builder ImmersiveMessage
-     * reçoit la String brute, pas le Component.
+     * Sends a raw message (§/& codes) to a player using the specified display mode.
+     * Modes: TITLE, ACTION_BAR, IMMERSIVE (fallback ACTION_BAR), CHAT (default).
      */
     public static void sendMessageToPlayer(ServerPlayer player, String rawMessage, String mode) {
         Component component = ColorHelper.parseColors(rawMessage);

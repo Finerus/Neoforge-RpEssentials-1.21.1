@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Configuration dédiée aux métiers et restrictions
- * Fichier: serverconfig/oneria-professions.toml
+ * Configuration for professions and restrictions.
+ * File: config/rpessentials/rpessentials-professions.toml
  */
 public class ProfessionConfig {
     public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
@@ -18,26 +18,16 @@ public class ProfessionConfig {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSIONS;
 
     // ===============================================================================
-    // GLOBAL RESTRICTIONS (Ce qui est INTERDIT par défaut pour TOUS)
+    // GLOBAL RESTRICTIONS
     // ===============================================================================
-
-    // Crafts interdits globalement
     public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_CRAFTS;
-
-    // Blocs incassables globalement
     public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_UNBREAKABLE_BLOCKS;
-
-    // Items inutilisables globalement
     public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_ITEMS;
-
-    // Items non équipables globalement (armures, outils)
     public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_EQUIPMENT;
 
     // ===============================================================================
-    // PROFESSION OVERRIDES (Ce qui est AUTORISÉ par métier spécifique)
+    // PROFESSION OVERRIDES
     // ===============================================================================
-
-    // Format: profession;item1,item2,item3
     public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_CRAFTS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_BLOCKS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_ITEMS;
@@ -64,7 +54,7 @@ public class ProfessionConfig {
                 "",
                 "Format for profession definitions:",
                 "  id;DisplayName;ColorCode",
-                "  Example: chasseur;Chasseur;§a (green hunter)",
+                "  Example: hunter;Hunter;§a (green hunter)",
                 "",
                 "Format for restrictions:",
                 "  - Use Minecraft resource locations (namespace:path)",
@@ -73,7 +63,7 @@ public class ProfessionConfig {
                 "",
                 "Format for profession overrides:",
                 "  profession_id;item1,item2,item3",
-                "  Example: mineur;minecraft:iron_pickaxe,minecraft:diamond_pickaxe",
+                "  Example: miner;minecraft:iron_pickaxe,minecraft:diamond_pickaxe",
                 "",
                 "═══════════════════════════════════════════════════════════════"
         ).push("Profession System");
@@ -99,22 +89,22 @@ public class ProfessionConfig {
                 "  §f = White",
                 "",
                 "Examples:",
-                "  chasseur;Chasseur;§a           (Green hunter)",
-                "  forgeron;Forgeron;§c           (Red blacksmith)",
-                "  alchimiste;Alchimiste;§5       (Purple alchemist)"
+                "  hunter;Hunter;§a           (Green hunter)",
+                "  blacksmith;Blacksmith;§c   (Red blacksmith)",
+                "  alchemist;Alchemist;§5     (Purple alchemist)"
         );
 
         PROFESSIONS = BUILDER
                 .defineList("professions",
                         Arrays.asList(
-                                "chasseur;Chasseur;§a",
-                                "pecheur;Pêcheur;§b",
-                                "mineur;Mineur;§8",
-                                "bucheron;Bûcheron;§6",
-                                "forgeron;Forgeron;§c",
-                                "alchimiste;Alchimiste;§5",
-                                "marchand;Marchand;§e",
-                                "garde;Garde;§9"
+                                "hunter;Hunter;§a",
+                                "fisher;Fisher;§b",
+                                "miner;Miner;§8",
+                                "lumberjack;Lumberjack;§6",
+                                "blacksmith;Blacksmith;§c",
+                                "alchemist;Alchemist;§5",
+                                "merchant;Merchant;§e",
+                                "guard;Guard;§9"
                         ),
                         obj -> obj instanceof String && ((String) obj).split(";").length == 3
                 );
@@ -134,8 +124,8 @@ public class ProfessionConfig {
                 "Players with specific professions can override these via",
                 "the profession override lists below.",
                 "",
-                "Use Minecraft resource locations (namespace:item_name)",
-                "Supports wildcards with * at the end of namespace or path."
+                "Use Minecraft resource locations (namespace:item_name).",
+                "Supports wildcards: minecraft:*_sword, minecraft:diamond_*"
         ).push("Global Restrictions");
 
         GLOBAL_BLOCKED_CRAFTS = BUILDER
@@ -166,8 +156,7 @@ public class ProfessionConfig {
                         "",
                         "Examples:",
                         "  minecraft:diamond_ore        - Cannot mine diamond ore",
-                        "  minecraft:ancient_debris     - Cannot mine ancient debris",
-                        "  minecraft:*_ore              - Cannot mine any ore"
+                        "  minecraft:ancient_debris     - Cannot mine ancient debris"
                 )
                 .defineList("globalUnbreakableBlocks",
                         Arrays.asList(
@@ -236,9 +225,9 @@ public class ProfessionConfig {
                 "The profession_id must match the id from the profession definitions above.",
                 "",
                 "Examples:",
-                "  mineur;minecraft:iron_pickaxe,minecraft:diamond_pickaxe",
-                "  forgeron;minecraft:diamond_sword,minecraft:anvil",
-                "  bucheron;minecraft:iron_axe,minecraft:diamond_axe"
+                "  miner;minecraft:iron_pickaxe,minecraft:diamond_pickaxe",
+                "  blacksmith;minecraft:diamond_sword,minecraft:anvil",
+                "  lumberjack;minecraft:iron_axe,minecraft:diamond_axe"
         ).push("Profession Overrides");
 
         PROFESSION_ALLOWED_CRAFTS = BUILDER
@@ -249,9 +238,8 @@ public class ProfessionConfig {
                 )
                 .defineList("professionAllowedCrafts",
                         Arrays.asList(
-                                "mineur;minecraft:iron_pickaxe,minecraft:diamond_pickaxe",
-                                "forgeron;minecraft:diamond_sword,minecraft:iron_sword,minecraft:anvil",
-                                "bucheron;minecraft:iron_axe,minecraft:diamond_axe"
+                                "blacksmith;minecraft:diamond_sword,minecraft:diamond_pickaxe",
+                                "miner;minecraft:diamond_pickaxe,minecraft:iron_pickaxe"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";")
                 );
@@ -259,13 +247,12 @@ public class ProfessionConfig {
         PROFESSION_ALLOWED_BLOCKS = BUILDER
                 .comment(
                         "",
-                        "Blocks that each profession IS ALLOWED to break.",
-                        "Overrides global unbreakable blocks."
+                        "Blocks that each profession IS ALLOWED to mine.",
+                        "Overrides global unbreakable block restrictions."
                 )
                 .defineList("professionAllowedBlocks",
                         Arrays.asList(
-                                "mineur;minecraft:diamond_ore,minecraft:deepslate_diamond_ore,minecraft:iron_ore,minecraft:gold_ore",
-                                "bucheron;minecraft:oak_log,minecraft:birch_log,minecraft:spruce_log"
+                                "miner;minecraft:diamond_ore,minecraft:deepslate_diamond_ore,minecraft:iron_ore,minecraft:deepslate_iron_ore"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";")
                 );
@@ -274,26 +261,23 @@ public class ProfessionConfig {
                 .comment(
                         "",
                         "Items that each profession IS ALLOWED to use.",
-                        "Overrides global blocked items."
+                        "Overrides global item use restrictions."
                 )
                 .defineList("professionAllowedItems",
-                        Arrays.asList(
-                                "alchimiste;minecraft:brewing_stand,minecraft:cauldron",
-                                "garde;minecraft:flint_and_steel"
-                        ),
+                        Arrays.asList(),
                         obj -> obj instanceof String && ((String) obj).contains(";")
                 );
 
         PROFESSION_ALLOWED_EQUIPMENT = BUILDER
                 .comment(
                         "",
-                        "Equipment that each profession IS ALLOWED to use/wear.",
+                        "Equipment that each profession IS ALLOWED to wear/wield.",
                         "Overrides global blocked equipment."
                 )
                 .defineList("professionAllowedEquipment",
                         Arrays.asList(
-                                "garde;minecraft:diamond_sword,minecraft:diamond_helmet,minecraft:diamond_chestplate",
-                                "mineur;minecraft:diamond_pickaxe,minecraft:iron_pickaxe"
+                                "guard;minecraft:diamond_sword,minecraft:diamond_helmet,minecraft:diamond_chestplate",
+                                "miner;minecraft:diamond_pickaxe,minecraft:iron_pickaxe"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";")
                 );
@@ -316,24 +300,24 @@ public class ProfessionConfig {
         ).push("Messages");
 
         MSG_CRAFT_BLOCKED = BUILDER
-                .comment("Message shown when a craft is blocked")
+                .comment("Message shown when a craft is blocked. Variables: {item}, {profession}")
                 .define("craftBlockedMessage",
-                        "§c✘ Vous ne pouvez pas crafter cet objet ! §7Métier requis: §e{profession}");
+                        "§c✘ You cannot craft this item. §7Required profession: §e{profession}");
 
         MSG_BLOCK_BREAK_BLOCKED = BUILDER
-                .comment("Message shown when block breaking is blocked")
+                .comment("Message shown when block breaking is blocked. Variables: {item}, {profession}")
                 .define("blockBreakBlockedMessage",
-                        "§c✘ Vous ne pouvez pas casser ce bloc ! §7Métier requis: §e{profession}");
+                        "§c✘ You cannot break this block. §7Required profession: §e{profession}");
 
         MSG_ITEM_USE_BLOCKED = BUILDER
-                .comment("Message shown when item usage is blocked")
+                .comment("Message shown when item usage is blocked. Variables: {item}, {profession}")
                 .define("itemUseBlockedMessage",
-                        "§c✘ Vous ne pouvez pas utiliser cet objet ! §7Métier requis: §e{profession}");
+                        "§c✘ You cannot use this item. §7Required profession: §e{profession}");
 
         MSG_EQUIPMENT_BLOCKED = BUILDER
-                .comment("Message shown when equipment is blocked")
+                .comment("Message shown when equipment is blocked. Variables: {item}, {profession}")
                 .define("equipmentBlockedMessage",
-                        "§c✘ Vous ne pouvez pas équiper cet objet ! §7Métier requis: §e{profession}");
+                        "§c✘ You cannot equip this item. §7Required profession: §e{profession}");
 
         BUILDER.pop();
 

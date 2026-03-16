@@ -26,18 +26,24 @@ public class RpEssentialsEventHandler {
 
         ProfessionSyncHelper.syncToPlayer(player);
 
+        // ── Welcome message ───────────────────────────────────────────────────────
         try {
             if (ScheduleConfig.ENABLE_WELCOME != null && ScheduleConfig.ENABLE_WELCOME.get()) {
+                String playerName = player.getName().getString();
+                String nickname   = NicknameManager.getDisplayName(player);
                 for (String line : ScheduleConfig.WELCOME_LINES.get()) {
-                    String formatted = line.replace("%player%", player.getName().getString());
+                    String formatted = line
+                            .replace("{player}",   playerName)
+                            .replace("{nickname}", nickname);
                     player.sendSystemMessage(ColorHelper.parseColors(
                             ColorHelper.translateAlternateColorCodes(formatted)));
                 }
             }
         } catch (IllegalStateException e) {
-            // config pas encore chargée
+            // config not yet loaded
         }
 
+        // ── Welcome sound ─────────────────────────────────────────────────────────
         try {
             String soundId = ScheduleConfig.WELCOME_SOUND.get();
             if (soundId != null && !soundId.isBlank()) {
@@ -54,24 +60,24 @@ public class RpEssentialsEventHandler {
                 }
             }
         } catch (IllegalStateException e) {
-            // config pas encore chargée
+            // config not yet loaded
         }
 
-        // Envoi legacy hideNametags (conservé pour rétrocompatibilité)
+        // ── Legacy nametag hide packet (backwards compat) ─────────────────────────
         try {
             boolean hideNametags = RpEssentialsConfig.HIDE_NAMETAGS.get();
             PacketDistributor.sendToPlayer(player, new HideNametagsPacket(hideNametags));
         } catch (IllegalStateException e) {
-            // config pas encore chargée
+            // config not yet loaded
         }
 
-        // Sync nametag avancé : envoi après 500 ms pour laisser le client finir de charger
+        // ── Advanced nametag sync (delayed 500ms to let the client finish loading) ─
         CompletableFuture.runAsync(() -> {
             try { Thread.sleep(500); } catch (InterruptedException ignored) {}
             server.execute(() -> {
-                // Envoie la config + la liste de tous les autres joueurs au nouveau joueur
+                // Send config + all other players' data to the newly joined player
                 NametagSyncHelper.sendTo(player, server);
-                // Met à jour tous les autres joueurs pour qu'ils connaissent le nouveau
+                // Update all other players so they know about the new player
                 for (ServerPlayer other : server.getPlayerList().getPlayers()) {
                     if (!other.getUUID().equals(player.getUUID())) {
                         NametagSyncHelper.sendTo(other, server);
@@ -86,16 +92,7 @@ public class RpEssentialsEventHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
         LastConnectionManager.recordLogout(player);
+        RpEssentialsPermissions.invalidateCache(player.getUUID());
         RpEssentialsMessagingManager.clearCache(player.getUUID());
-
-        // Met à jour tous les joueurs restants pour retirer le joueur parti de leurs données
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            server.execute(() -> {
-                for (ServerPlayer other : server.getPlayerList().getPlayers()) {
-                    NametagSyncHelper.sendTo(other, server);
-                }
-            });
-        }
     }
 }

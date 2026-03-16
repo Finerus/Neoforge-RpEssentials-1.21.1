@@ -198,7 +198,7 @@ public class ScheduleConfig {
 
         WELCOME_LINES = BUILDER
                 .comment("Lines of the welcome message. Supports & and § color codes.",
-                        "Placeholder: {player}")
+                        "Placeholders: {player}, {nickname}")
                 .defineList("welcomeLines",
                         java.util.Arrays.asList(
                                 "§6§m------------------------------------",

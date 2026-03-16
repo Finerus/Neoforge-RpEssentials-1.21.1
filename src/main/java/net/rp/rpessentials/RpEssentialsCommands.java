@@ -1157,7 +1157,7 @@ public class RpEssentialsCommands {
 
             String statusMessage =
                     "§6╔═══════════════════════════════════╗\n" +
-                            "§6║  §e§lONERIA MOD - STATUS§r          §6║\n" +
+                            "§6║  §e§lRPESSENTIALS - STATUS§r         §6║\n" +
                             "§6╠═══════════════════════════════════╣\n" +
                             "§6║ §7Obfuscation\n" +
                             "§6║  §eBlur: §f" + safe.apply(() -> RpEssentialsConfig.ENABLE_BLUR.get()) + "\n" +
@@ -1170,12 +1170,12 @@ public class RpEssentialsCommands {
                             "§6║  §eAlways Visible: §f" + safe.apply(() -> RpEssentialsConfig.ALWAYS_VISIBLE_LIST.get().size()) + " players\n" +
                             "§6║\n" +
                             "§6║ §7Schedule\n" +
-                            "§6║  §eEnabled: §f" + safe.apply(() -> ScheduleConfig.ENABLE_SCHEDULE.get()) + "\n" +
+                            "§6║  §eEnabled: §f" + scheduleStatus + "\n" +
                             "§6║\n" +
-                            "§6║ §7Mort RP\n" +
-                            "§6║  §eMort RP global    : §f" + safe.apply(() -> RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get()) + "\n" +
-                            "§6║  §eRetrait whitelist : §f" + safe.apply(() -> RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get()) + "\n" +
-                            "§6║  §eSon de mort       : §f" + safe.apply(() -> RpEssentialsConfig.DEATH_RP_DEATH_SOUND.get()) + "\n" +
+                            "§6║ §7Death RP\n" +
+                            "§6║  §eGlobal enabled    : §f" + safe.apply(() -> RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get()) + "\n" +
+                            "§6║  §eWhitelist removal : §f" + safe.apply(() -> RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get()) + "\n" +
+                            "§6║  §eDeath sound       : §f" + safe.apply(() -> RpEssentialsConfig.DEATH_RP_DEATH_SOUND.get()) + "\n" +
                             "§6║\n" +
                             "§6║ §7Chat System\n" +
                             "§6║  §eChat Format: §f" + safe.apply(() -> ChatConfig.ENABLE_CHAT_FORMAT.get()) + "\n" +

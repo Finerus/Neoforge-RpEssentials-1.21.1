@@ -222,9 +222,9 @@ public class RpEssentialsConfig {
 
         DEATH_RP_DEATH_MESSAGE = BUILDER
                 .comment("Message broadcast to all players on RP death.",
-                        "Variables: %player% (nickname), %realname% (MC name). Supports & and § color codes.")
+                        "Variables: {player} (nickname), {realname} (MC name). Supports & and § color codes.")
                 .define("deathMessage",
-                        "&c[Mort RP] &f%player% &7(%realname%) &cvient de perdre la vie de facon permanente.");
+                        "&c[Death RP] &f{player} &7({realname}) &chas permanently lost their life.");
 
         DEATH_RP_DEATH_SOUND = BUILDER
                 .comment("Sound played to all players on RP death. Format: namespace:sound_id. 'none' to disable.")
@@ -244,9 +244,9 @@ public class RpEssentialsConfig {
 
         DEATH_RP_PLAYER_ENABLE_MSG = BUILDER
                 .comment("Message sent to the player when their RP death is individually enabled.",
-                        "Variables: %player%, %realname%.")
+                        "Variables: {player}, {realname}.")
                 .define("enableMessage",
-                        "&6[Mort RP] &fVotre mort RP a ete &aactivee&f. Votre prochaine mort sera definitive.");
+                        "&6[Death RP] &fYour RP death has been &aenabled&f. Your next death will be permanent.");
 
         DEATH_RP_PLAYER_ENABLE_MODE = BUILDER
                 .comment("Display mode for individual enable message: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
@@ -254,8 +254,9 @@ public class RpEssentialsConfig {
 
         DEATH_RP_PLAYER_DISABLE_MSG = BUILDER
                 .comment("Message sent to the player when their RP death is individually disabled.",
-                        "Variables: %player%, %realname%.")
-                .define("disableMessage", "&6[Mort RP] &fVotre mort RP a ete &cdesactivee&f.");
+                        "Variables: {player}, {realname}.")
+                .define("disableMessage",
+                        "&6[Death RP] &fYour RP death has been &cdisabled&f.");
 
         DEATH_RP_PLAYER_DISABLE_MODE = BUILDER
                 .comment("Display mode for individual disable message: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
@@ -279,9 +280,9 @@ public class RpEssentialsConfig {
 
         DEATH_RP_GLOBAL_ENABLE_MSG = BUILDER
                 .comment("Message broadcast when the Death RP system is globally enabled.",
-                        "Variables: %staff%.")
+                        "Variables: {staff}.")
                 .define("enableMessage",
-                        "&6[Mort RP] &fLe systeme de mort RP a ete &aactive &fpar %staff%.");
+                        "&6[Death RP] &fThe Death RP system has been &aenabled &fby {staff}.");
 
         DEATH_RP_GLOBAL_ENABLE_MODE = BUILDER
                 .comment("Display mode for global enable message: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
@@ -289,9 +290,9 @@ public class RpEssentialsConfig {
 
         DEATH_RP_GLOBAL_DISABLE_MSG = BUILDER
                 .comment("Message broadcast when the Death RP system is globally disabled.",
-                        "Variables: %staff%.")
+                        "Variables: {staff}.")
                 .define("disableMessage",
-                        "&6[Mort RP] &fLe systeme de mort RP a ete &cdesactive &fpar %staff%.");
+                        "&6[Death RP] &fThe Death RP system has been &cdisabled &fby {staff}.");
 
         DEATH_RP_GLOBAL_DISABLE_MODE = BUILDER
                 .comment("Display mode for global disable message: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
@@ -313,7 +314,9 @@ public class RpEssentialsConfig {
 
         BUILDER.pop(); // DeathRP
 
-        // ── Nametag Advanced System ──────────────────────────────────────────────────
+        // =========================================================================
+        // NAMETAG ADVANCED SYSTEM
+        // =========================================================================
         BUILDER.push("Nametag Settings");
 
         NAMETAG_ADVANCED_ENABLED = BUILDER
@@ -376,7 +379,7 @@ public class RpEssentialsConfig {
                         "Other filters (distance, block occlusion, sneak) still apply.")
                 .define("nametagObfuscationEnabled", true);
 
-        BUILDER.pop();
+        BUILDER.pop(); // Nametag Settings
 
         // =========================================================================
         // ROLES
