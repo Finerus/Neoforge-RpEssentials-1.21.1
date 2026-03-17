@@ -1,4 +1,4 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -55,7 +55,7 @@ public class ModerationConfig {
         BUILDER.push("Silent Commands");
 
         ENABLE_SILENT_COMMANDS = BUILDER
-                .comment("Enable /oneria staff gm/tp/effect commands.")
+                .comment("Enable /RpEssentials staff gm/tp/effect commands.")
                 .define("enableSilentCommands", true);
 
         LOG_TO_STAFF = BUILDER
@@ -78,14 +78,14 @@ public class ModerationConfig {
         BUILDER.push("Teleportation Platforms");
 
         ENABLE_PLATFORMS = BUILDER
-                .comment("Enable the /oneria staff platform command.")
+                .comment("Enable the /RpEssentials staff platform command.")
                 .define("enablePlatforms", true);
 
         PLATFORMS = BUILDER
                 .comment("List of TP platforms.",
                         "Format: id;DisplayName;dimension;x;y;z",
                         "Example: spawn;The Spawn;minecraft:overworld;0;100;0")
-                .defineList("platforms", Arrays.asList("platform1;Platform 1;oneria:quartier;7217;18;-1321"), obj -> obj instanceof String);
+                .defineList("platforms", Arrays.asList("platform1;Platform 1;RpEssentials:quartier;7217;18;-1321"), obj -> obj instanceof String);
 
         BUILDER.pop();
 
@@ -97,8 +97,8 @@ public class ModerationConfig {
         ENABLE_LAST_CONNECTION = BUILDER
                 .comment(
                         "Enable tracking of each player's last connection/disconnection.",
-                        "Data is stored in: world/data/oneriamod/lastconnection.json",
-                        "Commands: /oneria lastconnection <player>  |  /oneria lastconnection list [count]"
+                        "Data is stored in: world/data/RpEssentialsmod/lastconnection.json",
+                        "Commands: /RpEssentials lastconnection <player>  |  /RpEssentials lastconnection list [count]"
                 )
                 .define("enableLastConnection", true);
 
@@ -124,8 +124,8 @@ public class ModerationConfig {
         ENABLE_WARN_SYSTEM = BUILDER
                 .comment(
                         "Enable the warn system.",
-                        "Warns are stored in: world/data/oneriamod/warns.json",
-                        "Staff commands: /oneria warn add|temp|remove|list|info|clear|purge",
+                        "Warns are stored in: world/data/RpEssentialsmod/warns.json",
+                        "Staff commands: /RpEssentials warn add|temp|remove|list|info|clear|purge",
                         "Player command:  /mywarn"
                 )
                 .define("enableWarnSystem", true);
@@ -147,7 +147,7 @@ public class ModerationConfig {
 
         WARN_MAX_TEMP_DAYS = BUILDER
                 .comment(
-                        "Maximum duration (in days) allowed for a /oneria warn temp.",
+                        "Maximum duration (in days) allowed for a /RpEssentials warn temp.",
                         "Set to 0 to disable the limit (allow any duration)."
                 )
                 .defineInRange("maxTempDays", 30, 0, 3650);

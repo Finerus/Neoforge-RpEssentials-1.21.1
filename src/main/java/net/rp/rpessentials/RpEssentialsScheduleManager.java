@@ -3,6 +3,10 @@ package net.rp.rpessentials;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.config.RpEssentialsConfig;
+import net.rp.rpessentials.config.ScheduleConfig;
+import net.rp.rpessentials.moderation.DeathRPManager;
 
 import java.time.DayOfWeek;
 import java.time.Duration;

@@ -1,3 +1,6 @@
 {
-  "item.rpessentials.license": "Permis Professionnel"
+  "item.rpessentials.license": "Permis Professionnel",
+  "key.categories.rpessentials": "Oneria RP",
+  "key.rpessentials.open_profession_gui": "Ouvrir l'éditeur de professions [Admin]",
+  "key.rpessentials.open_player_profile_gui": "Ouvrir le gestionnaire de profils RP [Admin]"
 }

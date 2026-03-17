@@ -1,4 +1,4 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.moderation;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -6,6 +6,10 @@ import com.google.gson.reflect.TypeToken;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.config.ModerationConfig;
 
 import java.io.*;
 import java.lang.reflect.Type;

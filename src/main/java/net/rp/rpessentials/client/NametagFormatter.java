@@ -1,7 +1,7 @@
 package net.rp.rpessentials.client;
 
 import net.rp.rpessentials.ColorHelper;
-import net.rp.rpessentials.NametagConfig;
+import net.rp.rpessentials.config.NametagConfig;
 
 /**
  * Résout les tokens du format nametag configuré.

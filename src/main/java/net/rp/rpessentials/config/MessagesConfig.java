@@ -1,13 +1,13 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * Configuration file for all user-facing messages in the Oneria mod.
+ * Configuration file for all user-facing messages in the RpEssentials mod.
  * Allows server admins to customize or translate every message without recompiling.
  *
- * File: config/oneria/oneria-messages.toml
- * Reload: /oneria config reload
+ * File: config/RpEssentials/RpEssentials-messages.toml
+ * Reload: /RpEssentials config reload
  *
  * Supports § and & color codes in all message values.
  */
@@ -224,24 +224,24 @@ public class MessagesConfig {
 
         SYSTEM_CONFIG_NOT_LOADED = BUILDER
                 .comment("Message shown when the config is not yet loaded.")
-                .define("configNotLoaded", "§c[Oneria] Config not loaded.");
+                .define("configNotLoaded", "§c[RpEssentials] Config not loaded.");
 
         SYSTEM_CONFIG_UNAVAILABLE = BUILDER
                 .comment("Message shown when a specific config value is unavailable.")
-                .define("configUnavailable", "§c[Oneria] Config unavailable.");
+                .define("configUnavailable", "§c[RpEssentials] Config unavailable.");
 
         SYSTEM_CONFIG_NOT_BUILT = BUILDER
                 .comment("Message shown when the config spec is not yet built.")
-                .define("configNotBuilt", "§c[Oneria] Config not yet initialized.");
+                .define("configNotBuilt", "§c[RpEssentials] Config not yet initialized.");
 
         SYSTEM_CONFIG_UPDATED = BUILDER
                 .comment("Message shown when a config value is successfully updated.",
                         "Placeholders: {label} = option name, {value} = new value.")
-                .define("configUpdated", "§a[Oneria] §e{label} §aupdated: §f{value}");
+                .define("configUpdated", "§a[RpEssentials] §e{label} §aupdated: §f{value}");
 
         COMMAND_PLAYER_ONLY = BUILDER
                 .comment("Message shown when a player-only command is run from console.")
-                .define("commandPlayerOnly", "§c[Oneria] This command can only be used by a player.");
+                .define("commandPlayerOnly", "§c[RpEssentials] This command can only be used by a player.");
 
         BUILDER.pop();
 
@@ -305,11 +305,11 @@ public class MessagesConfig {
 
         WARN_NOT_FOUND = BUILDER
                 .comment("Message shown when a warn ID cannot be found. Placeholder: {id}.")
-                .define("notFound", "§c[Oneria] Warn not found: §e#{id}");
+                .define("notFound", "§c[RpEssentials] Warn not found: §e#{id}");
 
         WARN_REMOVE_FAILED = BUILDER
                 .comment("Message shown when a warn cannot be removed. Placeholder: {id}.")
-                .define("removeFailed", "§c[Oneria] Failed to remove warn §e#{id}");
+                .define("removeFailed", "§c[RpEssentials] Failed to remove warn §e#{id}");
 
         WARN_REMOVED_PLAYER = BUILDER
                 .comment("Message sent to the warned player when their warn is removed. Placeholder: {id}.")
@@ -321,11 +321,11 @@ public class MessagesConfig {
 
         WARN_SYSTEM_DISABLED = BUILDER
                 .comment("Message shown to the player when the warn system is disabled (via /mywarn).")
-                .define("systemDisabled", "§c[Oneria] The warn system is disabled.");
+                .define("systemDisabled", "§c[RpEssentials] The warn system is disabled.");
 
         WARN_SYSTEM_DISABLED_CONFIG = BUILDER
                 .comment("Message shown to staff when the warn system is disabled in config.")
-                .define("systemDisabledConfig", "§c[Oneria] The warn system is disabled in config.");
+                .define("systemDisabledConfig", "§c[RpEssentials] The warn system is disabled in config.");
 
         WARN_LIST_HEADER = BUILDER
                 .comment("Header line of the warn list.",
@@ -334,7 +334,7 @@ public class MessagesConfig {
 
         WARN_LIST_NONE = BUILDER
                 .comment("Message shown to staff when a player has no warns. Placeholder: {player}.")
-                .define("listNone", "§7[Oneria] §e{player} §7has no warnings.");
+                .define("listNone", "§7[RpEssentials] §e{player} §7has no warnings.");
 
         WARN_LIST_NONE_SELF = BUILDER
                 .comment("Message shown to a player when they have no active warns.")
@@ -342,11 +342,11 @@ public class MessagesConfig {
 
         WARN_LIST_NONE_STAFF = BUILDER
                 .comment("Message shown to staff when clearing a player who had no warns. Placeholder: {player}.")
-                .define("listNoneStaff", "§7[Oneria] §e{player} §7had no warnings.");
+                .define("listNoneStaff", "§7[RpEssentials] §e{player} §7had no warnings.");
 
         WARN_PURGE_DONE = BUILDER
                 .comment("Message shown after a purge. Placeholder: {count} = purged count.")
-                .define("purgeDone", "§a[Oneria] Purge complete: §e{count} §aexpired warn(s) removed.");
+                .define("purgeDone", "§a[RpEssentials] Purge complete: §e{count} §aexpired warn(s) removed.");
 
         WARN_INFO_HEADER = BUILDER
                 .comment("Header of the warn info box. Placeholder: {id}.")
@@ -371,7 +371,7 @@ public class MessagesConfig {
                 .comment("Message shown when temp warn duration exceeds the maximum.",
                         "Placeholders: {maxDays}, {maxMinutes}.")
                 .define("maxDurationExceeded",
-                        "§c[Oneria] Maximum allowed duration: {maxDays} days ({maxMinutes} minutes).");
+                        "§c[RpEssentials] Maximum allowed duration: {maxDays} days ({maxMinutes} minutes).");
 
         WARN_DURATION_MINUTES = BUILDER
                 .comment("Duration format for < 1 hour. Placeholder: {min}.")
@@ -392,21 +392,21 @@ public class MessagesConfig {
 
         LASTCONN_DISABLED = BUILDER
                 .comment("Message shown when the last connection system is disabled in config.")
-                .define("disabled", "§c[Oneria] Last connection tracking is disabled in config.");
+                .define("disabled", "§c[RpEssentials] Last connection tracking is disabled in config.");
 
         LASTCONN_PLAYER_NOT_FOUND = BUILDER
                 .comment("Message shown when a player cannot be found.",
                         "Placeholders: {player} = player name.")
                 .define("playerNotFound",
-                        "§c[Oneria] Player not found: §e{player}\n§7(The player must have connected at least once.)");
+                        "§c[RpEssentials] Player not found: §e{player}\n§7(The player must have connected at least once.)");
 
         LASTCONN_NO_DATA = BUILDER
                 .comment("Message shown when no connection data exists for a player. Placeholder: {player}.")
-                .define("noData", "§c[Oneria] No connection data for §e{player}");
+                .define("noData", "§c[RpEssentials] No connection data for §e{player}");
 
         LASTCONN_NO_DATA_LIST = BUILDER
                 .comment("Message shown when no connection data exists at all.")
-                .define("noDataList", "§7[Oneria] No connection data recorded yet.");
+                .define("noDataList", "§7[RpEssentials] No connection data recorded yet.");
 
         LASTCONN_ONLINE  = BUILDER.comment("Status label for an online player.").define("online",  "§a● Online");
         LASTCONN_OFFLINE = BUILDER.comment("Status label for an offline player.").define("offline", "§7○ Offline");
@@ -432,31 +432,31 @@ public class MessagesConfig {
 
         DEATHRP_CONFIG_UNAVAILABLE = BUILDER
                 .comment("Message shown when the DeathRP config is not yet available.")
-                .define("configUnavailable", "§c[Oneria] Config not yet available.");
+                .define("configUnavailable", "§c[RpEssentials] Config not yet available.");
 
         DEATHRP_GLOBAL_ENABLED = BUILDER
                 .comment("Staff feedback when the global DeathRP system is enabled.")
-                .define("globalEnabled", "§a[Oneria] Global Death RP enabled.");
+                .define("globalEnabled", "§a[RpEssentials] Global Death RP enabled.");
 
         DEATHRP_GLOBAL_DISABLED = BUILDER
                 .comment("Staff feedback when the global DeathRP system is disabled.")
-                .define("globalDisabled", "§c[Oneria] Global Death RP disabled.");
+                .define("globalDisabled", "§c[RpEssentials] Global Death RP disabled.");
 
         DEATHRP_PLAYER_ENABLED = BUILDER
                 .comment("Staff feedback when Death RP is enabled for a specific player.",
                         "Placeholder: {player} = player name.")
-                .define("playerEnabled", "§a[Oneria] Death RP enabled for §e{player}§a.");
+                .define("playerEnabled", "§a[RpEssentials] Death RP enabled for §e{player}§a.");
 
         DEATHRP_PLAYER_DISABLED = BUILDER
                 .comment("Staff feedback when Death RP is disabled for a specific player.",
                         "Placeholder: {player} = player name.")
-                .define("playerDisabled", "§c[Oneria] Death RP disabled for §e{player}§c.");
+                .define("playerDisabled", "§c[RpEssentials] Death RP disabled for §e{player}§c.");
 
         DEATHRP_OVERRIDE_RESET = BUILDER
                 .comment("Staff feedback when the individual override is removed.",
                         "Placeholder: {player} = player name.")
                 .define("overrideReset",
-                        "§a[Oneria] Death RP override removed for §e{player}§a. They now follow the global setting.");
+                        "§a[RpEssentials] Death RP override removed for §e{player}§a. They now follow the global setting.");
 
         DEATHRP_STATUS_HEADER    = BUILDER.comment("Header of the deathrp status box.").define("statusHeader",    "§6═══════════════════════════════\n§6║ §eDeath RP System");
         DEATHRP_STATUS_GLOBAL    = BUILDER.comment("'Global state' label. Placeholder: {value}.").define("statusGlobal",    "§6║ §7Global state  : {value}");
@@ -499,17 +499,17 @@ public class MessagesConfig {
         // =========================================================================
         BUILDER.push("Help");
 
-        HELP_TITLE       = BUILDER.comment("Title of the /oneria help box.").define("title",      "§6║ §e§lONERIA MOD §7— Commands");
+        HELP_TITLE       = BUILDER.comment("Title of the /RpEssentials help box.").define("title",      "§6║ §e§lRpEssentials MOD §7— Commands");
         HELP_CMD_LIST     = BUILDER.comment("Help entry for /list.").define("cmdList",     "§6║ §e/list §7— Online players");
         HELP_CMD_SCHEDULE = BUILDER.comment("Help entry for /schedule.").define("cmdSchedule", "§6║ §e/schedule §7— Server schedule");
         HELP_CMD_MSG      = BUILDER.comment("Help entry for /msg.").define("cmdMsg",      "§6║ §e/msg §8<player> <message> §7— PM");
         HELP_CMD_REPLY    = BUILDER.comment("Help entry for /r.").define("cmdReply",    "§6║ §e/r §8<message> §7— Reply");
         HELP_STAFF_SECTION = BUILDER.comment("Staff section header in help.").define("staffSection", "§6║ §c§lSTAFF");
 
-        HELP_DEATHRP_ENABLE  = BUILDER.comment("Help entry for /oneria deathrp enable.").define("deathRpEnable",  "§6║ §e/oneria deathrp enable §8<true|false> §7— Toggle global Death RP");
-        HELP_DEATHRP_PLAYER  = BUILDER.comment("Help entry for /oneria deathrp player ... enable.").define("deathRpPlayer",  "§6║ §e/oneria deathrp player §8<player> enable <true|false> §7— Individual override");
-        HELP_DEATHRP_RESET   = BUILDER.comment("Help entry for /oneria deathrp player ... reset.").define("deathRpReset",   "§6║ §e/oneria deathrp player §8<player> reset §7— Remove override");
-        HELP_DEATHRP_STATUS  = BUILDER.comment("Help entry for /oneria deathrp status.").define("deathRpStatus",  "§6║ §e/oneria deathrp status §7— View system state and overrides");
+        HELP_DEATHRP_ENABLE  = BUILDER.comment("Help entry for /RpEssentials deathrp enable.").define("deathRpEnable",  "§6║ §e/RpEssentials deathrp enable §8<true|false> §7— Toggle global Death RP");
+        HELP_DEATHRP_PLAYER  = BUILDER.comment("Help entry for /RpEssentials deathrp player ... enable.").define("deathRpPlayer",  "§6║ §e/RpEssentials deathrp player §8<player> enable <true|false> §7— Individual override");
+        HELP_DEATHRP_RESET   = BUILDER.comment("Help entry for /RpEssentials deathrp player ... reset.").define("deathRpReset",   "§6║ §e/RpEssentials deathrp player §8<player> reset §7— Remove override");
+        HELP_DEATHRP_STATUS  = BUILDER.comment("Help entry for /RpEssentials deathrp status.").define("deathRpStatus",  "§6║ §e/RpEssentials deathrp status §7— View system state and overrides");
 
         BUILDER.pop();
 
@@ -661,12 +661,12 @@ public class MessagesConfig {
         LICENSE_UNKNOWN_PROFESSION = BUILDER
                 .comment("Error shown when an unknown profession ID is provided.",
                         "Placeholder: {profession} = the unknown ID.")
-                .define("unknownProfession", "§c[Oneria] Unknown profession: {profession}");
+                .define("unknownProfession", "§c[RpEssentials] Unknown profession: {profession}");
 
         LICENSE_GIVE_STAFF = BUILDER
                 .comment("Staff feedback after issuing a permanent license.",
                         "Placeholders: {profession} = formatted profession name, {player} = recipient name.")
-                .define("giveStaff", "§a[Oneria] License for {profession} §aissued to §f{player}");
+                .define("giveStaff", "§a[RpEssentials] License for {profession} §aissued to §f{player}");
 
         LICENSE_GIVE_PLAYER = BUILDER
                 .comment("Notification sent to the player when they receive a permanent license.",
@@ -677,7 +677,7 @@ public class MessagesConfig {
                 .comment("Staff feedback after issuing an RP (temporary) license.",
                         "Placeholders: {profession}, {player}, {days}, {date} = expiration date.")
                 .define("giveRpStaff",
-                        "§a[Oneria] Temporary license for {profession} §aissued to §f{player} §7({days} days, expires {date})");
+                        "§a[RpEssentials] Temporary license for {profession} §aissued to §f{player} §7({days} days, expires {date})");
 
         LICENSE_GIVE_RP_PLAYER = BUILDER
                 .comment("Notification sent to the player when they receive an RP license.",
@@ -687,7 +687,7 @@ public class MessagesConfig {
         LICENSE_REVOKE_STAFF = BUILDER
                 .comment("Staff feedback after revoking a license.",
                         "Placeholders: {profession} = profession display name, {player} = player name.")
-                .define("revokeStaff", "§a[Oneria] License for §f{profession} §arevoked for §f{player}");
+                .define("revokeStaff", "§a[RpEssentials] License for §f{profession} §arevoked for §f{player}");
 
         LICENSE_REVOKE_PLAYER = BUILDER
                 .comment("Notification sent to the player when their license is revoked.",
@@ -697,7 +697,7 @@ public class MessagesConfig {
         LICENSE_LIST_NONE = BUILDER
                 .comment("Message shown when a player has no licenses.",
                         "Placeholder: {player} = player name.")
-                .define("listNone", "§e[Oneria] §f{player} §ehas no licenses.");
+                .define("listNone", "§e[RpEssentials] §f{player} §ehas no licenses.");
 
         LICENSE_LIST_HEADER = BUILDER
                 .comment("Header title of the license list box.",
@@ -711,7 +711,7 @@ public class MessagesConfig {
 
         LICENSE_LIST_ALL_NONE = BUILDER
                 .comment("Message shown when no licenses are registered at all.")
-                .define("listAllNone", "§e[Oneria] No licenses registered.");
+                .define("listAllNone", "§e[RpEssentials] No licenses registered.");
 
         LICENSE_LIST_ALL_HEADER = BUILDER
                 .comment("Header title line of the all-players license list.")

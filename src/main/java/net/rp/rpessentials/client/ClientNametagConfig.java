@@ -1,6 +1,6 @@
 package net.rp.rpessentials.client;
 
-import net.rp.rpessentials.NametagSyncPacket;
+import net.rp.rpessentials.network.NametagSyncPacket;
 
 import java.util.HashMap;
 import java.util.Map;

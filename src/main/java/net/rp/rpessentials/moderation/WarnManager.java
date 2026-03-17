@@ -1,8 +1,9 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.moderation;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import net.rp.rpessentials.RpEssentials;
 
 import java.io.*;
 import java.lang.reflect.Type;

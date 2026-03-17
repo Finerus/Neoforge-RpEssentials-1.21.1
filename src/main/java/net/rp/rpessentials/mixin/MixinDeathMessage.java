@@ -3,7 +3,7 @@ package net.rp.rpessentials.mixin;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.rp.rpessentials.DeathRPManager;
+import net.rp.rpessentials.moderation.DeathRPManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;

@@ -1,4 +1,4 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.profession;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -11,6 +11,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerContainerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.rp.rpessentials.RpEssentials;
 
 import java.util.Map;
 import java.util.UUID;

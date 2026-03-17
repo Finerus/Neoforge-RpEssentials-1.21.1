@@ -1,7 +1,129 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
-## [4.0.1] - 2026-03-17
+## [4.1.0]
+
+**Admin GUI System — Two new in-game interfaces for server staff to manage professions and player RP profiles without editing config files.**
+
+---
+
+**Added**
+
+* **Admin GUI — Profession Editor:** New in-game interface for creating and editing professions.
+  - Browse all existing professions in a scrollable left-panel list with item count indicator.
+  - Create new professions or edit existing ones with live preview.
+  - Fields: ID (locked after creation), display name, color selector.
+  - Color selector displays each option in its own Minecraft color with bold highlight on the selected one.
+  - Live name preview rendered in the selected color next to the color buttons.
+  - Per-profession restriction overrides split into four tabs: Crafts, Blocs, Items, Équipement.
+  - Dynamic autocompletion for restriction entries, populated from `BuiltInRegistries.ITEM` and `BuiltInRegistries.BLOCK` — compatible with all loaded mods.
+  - Wildcard entries (e.g. `minecraft:*_sword`) fully supported.
+  - Scroll indicator on the profession list shows remaining hidden entries: `▼ (N de plus)`.
+  - Changes saved immediately to `rpessentials-professions.toml` on disk.
+
+* **Admin GUI — RP Profile Manager:** New in-game interface for configuring a player's RP profile in one click.
+  - Lists all currently connected players with their active nickname (if any).
+  - Select a player to load their current nickname, role, and primary license.
+  - Set nickname with color selector (10 colors, live preview with `→ colored name`).
+  - Set role via free-text field or one-click shortcut buttons built from the configured roles list.
+  - Select primary profession with `◀ / ▶` navigation and `N/Total` counter.
+  - Apply button sends all three changes to the server simultaneously.
+  - Scroll support for large player lists with `▼ (N de plus)` indicator.
+
+* **Keybindings:** Two configurable key mappings added under the `Oneria RP` category in Options → Controls.
+  - `key.rpessentials.open_profession_gui` — Open Profession Editor (no default key).
+  - `key.rpessentials.open_player_profile_gui` — Open RP Profile Manager (no default key).
+  - No default bindings to avoid conflicts — staff assign their own keys.
+
+* **New Packets (6 total):**
+  - `RequestOpenGuiPacket` (Client→Server) — Staff keypress triggers a request; server validates `isStaff()` before responding.
+  - `OpenProfessionGuiPacket` (Server→Client) — Sends full profession list with all override data.
+  - `OpenPlayerProfileGuiPacket` (Server→Client) — Sends online player list, available professions, and available roles.
+  - `SaveProfessionPacket` (Client→Server) — Saves a created or modified profession to config.
+  - `SetPlayerProfilePacket` (Client→Server) — Applies nickname, role, and license to a target player.
+  - All packets validated server-side with `isStaff()` — client cannot bypass the permission check.
+
+* **New Classes:**
+  - `RpKeyBindings` — Key mapping definitions, registered via `modEventBus.addListener()`.
+  - `RpClientTickHandler` — Client tick handler detecting key presses and sending request packets.
+  - `ClientGuiOpener` — `@OnlyIn(Dist.CLIENT)` indirection class to open Screens from packet handlers without loading client classes on the server.
+  - `ProfessionEditorScreen` — Full profession editor GUI.
+  - `PlayerProfileScreen` — Full RP profile manager GUI.
+  - All five packet classes under `net.rp.rpessentials.network`.
+
+* **Lang keys** (add to `fr_fr.json` and `en_us.json`):
+  - `key.categories.rpessentials`
+  - `key.rpessentials.open_profession_gui`
+  - `key.rpessentials.open_player_profile_gui`
+
+---
+
+**Fixed**
+
+* **`RpEssentialsPermissions` — Server crash on login when LuckPerms is absent:**
+  - `checkStaffStatus()` was calling `LuckPermsProvider.get()` inside a `catch (Exception e)` block.
+  - `NoClassDefFoundError` is a `java.lang.Error`, not an `Exception` — it was never caught, causing an unhandled crash that killed the server on every player login.
+  - Fixed by adding an explicit `catch (NoClassDefFoundError e)` before the existing exception catches.
+  - LuckPerms imports removed from the class header and replaced with fully-qualified references inside the method body, preventing the classloader from attempting to resolve LuckPerms classes at startup.
+
+* **Profession GUI — Config not persisted after save:**
+  - `SaveProfessionPacket` was calling `configValue.set()` without calling `configValue.save()`.
+  - In NeoForge, `.set()` only updates the in-memory value — `.save()` is required to write the change to the `.toml` file on disk.
+  - All five `ConfigValue` writes (`PROFESSIONS`, `PROFESSION_ALLOWED_CRAFTS`, `PROFESSION_ALLOWED_BLOCKS`, `PROFESSION_ALLOWED_ITEMS`, `PROFESSION_ALLOWED_EQUIPMENT`) now call both `.set()` and `.save()` via the new `setAndSave()` helper.
+
+* **GUI Screens — All fields reset on every button click:**
+  - All mutable form state is now stored in instance variables (`stateNick`, `stateName`, `stateRole`, `stateColorIndex`, etc.).
+  - `EditBox` widgets use `setResponder()` to update state on each keystroke without triggering a full rebuild.
+  - `rebuild()` is called only from button click handlers — never from `setResponder()`.
+  - Fields are restored from state on every `init()` call, so clicking any button no longer clears typed text.
+
+* **GUI Screens — Blur effect applied over the interface:**
+  - `renderBackground()` from `Screen` was being called, which applies Minecraft's background blur effect on top of all GUI content.
+  - Fixed by overriding `renderBackground()` with an empty body in both screens, and replacing the call in `render()` with a manual `g.fill(0, 0, width, height, 0x99000000)`.
+
+* **Keybinding — Constructor error `Cannot resolve constructor 'KeyMapping(String, Type, Key, String)'`:**
+  - `InputConstants.UNKNOWN` is a `Key` object, not an `int`.
+  - Fixed by using `InputConstants.UNKNOWN.getValue()` to pass the underlying `int` to the `KeyMapping` constructor.
+
+* **Keybinding — Category and key names displayed as raw translation keys:**
+  - Lang keys `key.categories.rpessentials`, `key.rpessentials.open_profession_gui`, and `key.rpessentials.open_player_profile_gui` were missing from the language files.
+
+* **`@EventBusSubscriber(bus = Bus.MOD/GAME)` deprecation warnings:**
+  - `bus = EventBusSubscriber.Bus.MOD` and `Bus.GAME` are deprecated since NeoForge 1.21.1.
+  - `RpKeyBindings` no longer uses `@EventBusSubscriber` — `RegisterKeyMappingsEvent` is now registered via `modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings)` in the `RpEssentials` constructor.
+  - `RpClientTickHandler` retains `@EventBusSubscriber` but without the `bus` parameter (GAME bus is the default).
+
+* **`PlayerProfileScreen` — Compile error `package net.rp.rpessentials.RpEssentialsConfig does not exist`:**
+  - `PlayerProfileScreen` is `@OnlyIn(Dist.CLIENT)` and cannot access server-side config classes.
+  - Available roles are now sent by the server inside `OpenPlayerProfileGuiPacket` (alongside professions and player data) and passed to the screen via constructor.
+  - `RpEssentialsConfig.ROLES` is read exclusively in `RequestOpenGuiPacket.handlePlayerProfileGui()`, which runs on the server thread.
+
+---
+
+**Technical**
+
+* **Enhanced Classes:**
+  - `NetworkHandler` — Five new packet registrations (two `playToServer`, three `playToClient`).
+  - `RpEssentials` — Added `modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings)`.
+  - `RpEssentialsPermissions` — `checkStaffStatus()` rewritten with three-tier catch (`NoClassDefFoundError`, `IllegalStateException`, `Exception`) and fully-qualified LuckPerms references.
+  - `SaveProfessionPacket` — New `setAndSave()` helper ensures every `ConfigValue` write is immediately persisted to disk.
+  - `SetPlayerProfilePacket` — `applyRole()` extracted as a private method, mirrors the logic of `/rpessentials setrole` exactly.
+  - `OpenPlayerProfileGuiPacket` — Added `List<String> availableRoles` field, serialized in the existing `StreamCodec`.
+
+**Security**
+
+* All five new packets validate `RpEssentialsPermissions.isStaff()` server-side before processing.
+* Non-staff players receive no response and no error message — the GUI system is invisible to them.
+* Config writes are only possible via server-side packet handlers — the client never writes directly to config.
+
+**Migration Notes**
+
+* No breaking changes — fully backward compatible with 4.0.1.
+* No new config files.
+* Add the three lang keys above to your `fr_fr.json` / `en_us.json` if you use custom language files.
+* Clients connecting to a 4.1.0 server must also run 4.1.0 (new packet IDs).
+
+## [4.0.1] 
 
 **Bug Fixes & English Translation Pass + Updated the in-game logo of the mod**
 

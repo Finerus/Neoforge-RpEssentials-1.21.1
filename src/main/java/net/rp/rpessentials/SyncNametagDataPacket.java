@@ -6,6 +6,8 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.profession.LicenseManager;
 
 import java.util.UUID;
 

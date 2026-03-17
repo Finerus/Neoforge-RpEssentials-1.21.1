@@ -1,4 +1,4 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
@@ -40,8 +40,8 @@ public class RpConfig {
 
         AFK_DIMENSION = BUILDER
                 .comment("Dimension to teleport to when using /rp afk.",
-                         "Use the resource location of the dimension (e.g. oneria:afk, minecraft:overworld).")
-                .define("dimension", "oneria:afk");
+                         "Use the resource location of the dimension (e.g. RpEssentials:afk, minecraft:overworld).")
+                .define("dimension", "RpEssentials:afk");
 
         AFK_X = BUILDER
                 .comment("X coordinate of the AFK destination.")

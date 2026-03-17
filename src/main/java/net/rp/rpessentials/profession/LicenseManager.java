@@ -1,10 +1,12 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.profession;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.SyncNametagDataPacket;
 
 import java.io.File;
 import java.io.FileReader;

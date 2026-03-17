@@ -1,3 +1,6 @@
 {
-  "item.rpessentials.license": "Professional License"
+  "item.rpessentials.license": "Professional License",
+  "key.categories.rpessentials": "Oneria RP",
+  "key.rpessentials.open_profession_gui": "Open Profession Editor [Admin]",
+  "key.rpessentials.open_player_profile_gui": "Open RP Profile Manager [Admin]"
 }

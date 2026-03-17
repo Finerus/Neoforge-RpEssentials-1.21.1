@@ -1,7 +1,11 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.profession;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.RpEssentialsPatternUtils;
+import net.rp.rpessentials.network.SyncProfessionRestrictionsPacket;
+import net.rp.rpessentials.config.ProfessionConfig;
 
 import java.util.HashSet;
 import java.util.List;

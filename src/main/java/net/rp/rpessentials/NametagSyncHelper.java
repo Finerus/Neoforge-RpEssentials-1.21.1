@@ -3,6 +3,9 @@ package net.rp.rpessentials;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.config.RpEssentialsConfig;
+import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.network.NametagSyncPacket;
 
 import java.util.ArrayList;
 import java.util.List;

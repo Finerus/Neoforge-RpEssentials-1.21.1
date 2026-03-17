@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.util.*;
 

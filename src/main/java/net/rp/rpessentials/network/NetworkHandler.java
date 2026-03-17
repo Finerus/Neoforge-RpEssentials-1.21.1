@@ -1,10 +1,12 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.network;
 
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.SyncNametagDataPacket;
 import net.rp.rpessentials.client.ClientNametagConfig;
 import net.rp.rpessentials.client.ClientProfessionRestrictions;
 
@@ -25,7 +27,7 @@ public class NetworkHandler {
                 )
         );
 
-        // ── Nouveau packet : sync complète config + données joueurs ───────────────
+        // ── Sync complète config + données joueurs ────────────────────────────────
         registrar.playToClient(
                 NametagSyncPacket.TYPE,
                 NametagSyncPacket.STREAM_CODEC,
@@ -44,9 +46,73 @@ public class NetworkHandler {
                         null
                 )
         );
+
+        // ── Sync nametag data par joueur ─────────────────────────────────────────
+        registrar.playToClient(
+                SyncNametagDataPacket.TYPE,
+                SyncNametagDataPacket.CODEC,
+                new DirectionalPayloadHandler<>(
+                        SyncNametagDataPacket::handle,
+                        null
+                )
+        );
+
+        // =====================================================================
+        // GUI ADMIN — 4 nouveaux packets
+        // =====================================================================
+
+        // Client → Serveur : demande d'ouverture d'un GUI
+        registrar.playToServer(
+                RequestOpenGuiPacket.TYPE,
+                RequestOpenGuiPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        null,
+                        RequestOpenGuiPacket::handleOnServer
+                )
+        );
+
+        // Serveur → Client : données GUI profession
+        registrar.playToClient(
+                OpenProfessionGuiPacket.TYPE,
+                OpenProfessionGuiPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        OpenProfessionGuiPacket::handleOnClient,
+                        null
+                )
+        );
+
+        // Serveur → Client : données GUI profil joueur
+        registrar.playToClient(
+                OpenPlayerProfileGuiPacket.TYPE,
+                OpenPlayerProfileGuiPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        OpenPlayerProfileGuiPacket::handleOnClient,
+                        null
+                )
+        );
+
+        // Client → Serveur : sauvegarder une profession
+        registrar.playToServer(
+                SaveProfessionPacket.TYPE,
+                SaveProfessionPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        null,
+                        SaveProfessionPacket::handleOnServer
+                )
+        );
+
+        // Client → Serveur : appliquer un profil RP
+        registrar.playToServer(
+                SetPlayerProfilePacket.TYPE,
+                SetPlayerProfilePacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        null,
+                        SetPlayerProfilePacket::handleOnServer
+                )
+        );
     }
 
-    // ── Handlers ──────────────────────────────────────────────────────────────────
+    // ── Handlers existants ────────────────────────────────────────────────────
 
     private static void handleHideNametags(HideNametagsPacket packet,
                                            net.neoforged.neoforge.network.handling.IPayloadContext ctx) {

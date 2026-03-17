@@ -1,4 +1,4 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.profession;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -17,6 +17,8 @@ import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.config.ProfessionConfig;
 
 import java.util.Map;
 import java.util.UUID;

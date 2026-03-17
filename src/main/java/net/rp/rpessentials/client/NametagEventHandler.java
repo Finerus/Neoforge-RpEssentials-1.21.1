@@ -14,7 +14,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderNameTagEvent;
 import net.neoforged.neoforge.common.util.TriState;
-import net.rp.rpessentials.NametagConfig;
+import net.rp.rpessentials.config.NametagConfig;
 import net.rp.rpessentials.RpEssentials;
 
 import java.util.UUID;

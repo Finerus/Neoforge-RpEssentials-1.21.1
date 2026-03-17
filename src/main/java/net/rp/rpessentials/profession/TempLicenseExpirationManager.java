@@ -1,7 +1,9 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.profession;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.items.LicenseItem;
 
 import java.time.LocalDate;

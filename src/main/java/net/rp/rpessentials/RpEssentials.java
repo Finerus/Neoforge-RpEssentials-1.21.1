@@ -14,6 +14,13 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.rp.rpessentials.client.RpKeyBindings;
+import net.rp.rpessentials.config.*;
+import net.rp.rpessentials.moderation.LastConnectionManager;
+import net.rp.rpessentials.profession.CraftingAndArmorRestrictionEventHandler;
+import net.rp.rpessentials.profession.ProfessionRestrictionEventHandler;
+import net.rp.rpessentials.profession.ProfessionRestrictionManager;
+import net.rp.rpessentials.profession.TempLicenseExpirationManager;
 import org.slf4j.Logger;
 
 import java.time.DayOfWeek;
@@ -38,6 +45,7 @@ public class RpEssentials {
         modContainer.registerConfig(ModConfig.Type.SERVER, ProfessionConfig.SPEC,       "rpessentials/rpessentials-professions.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, MessagesConfig.SPEC,         "rpessentials/rpessentials-messages.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, NametagConfig.SPEC,          "rpessentials/rpessentials-nametag.toml");
+        modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings);
 
         RpEssentialsItems.ITEMS.register(modEventBus);
 

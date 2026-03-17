@@ -9,6 +9,13 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.config.RpEssentialsConfig;
+import net.rp.rpessentials.config.ScheduleConfig;
+import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.identity.RpEssentialsMessagingManager;
+import net.rp.rpessentials.moderation.LastConnectionManager;
+import net.rp.rpessentials.network.HideNametagsPacket;
+import net.rp.rpessentials.profession.ProfessionSyncHelper;
 
 import java.util.concurrent.CompletableFuture;
 

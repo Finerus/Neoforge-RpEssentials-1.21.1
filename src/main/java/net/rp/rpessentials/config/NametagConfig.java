@@ -1,4 +1,4 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 

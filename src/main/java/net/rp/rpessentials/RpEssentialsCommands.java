@@ -35,7 +35,18 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
-import net.minecraft.commands.SharedSuggestionProvider;
+import net.rp.rpessentials.config.*;
+import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.identity.RpEssentialsChatFormatter;
+import net.rp.rpessentials.identity.RpEssentialsMessagingManager;
+import net.rp.rpessentials.moderation.DeathRPManager;
+import net.rp.rpessentials.moderation.LastConnectionManager;
+import net.rp.rpessentials.moderation.WarnManager;
+import net.rp.rpessentials.network.HideNametagsPacket;
+import net.rp.rpessentials.profession.LicenseManager;
+import net.rp.rpessentials.profession.ProfessionRestrictionManager;
+import net.rp.rpessentials.profession.ProfessionSyncHelper;
+import net.rp.rpessentials.profession.TempLicenseExpirationManager;
 
 import java.util.Map;
 

@@ -1,7 +1,11 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.profession;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.config.ProfessionConfig;
+import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

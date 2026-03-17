@@ -1,4 +1,4 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 import java.util.Arrays;
@@ -44,7 +44,7 @@ public class ProfessionConfig {
     static {
         BUILDER.comment(
                 "═══════════════════════════════════════════════════════════════",
-                "  ONERIA - PROFESSION & RESTRICTION SYSTEM",
+                "  RpEssentials - PROFESSION & RESTRICTION SYSTEM",
                 "═══════════════════════════════════════════════════════════════",
                 "",
                 "This configuration file manages:",

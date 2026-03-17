@@ -1,4 +1,4 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.identity;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.chat.Component;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.SyncNametagDataPacket;
+import net.rp.rpessentials.config.RpEssentialsConfig;
 
 /**
  * Gestionnaire de nicknames avec sauvegarde automatique

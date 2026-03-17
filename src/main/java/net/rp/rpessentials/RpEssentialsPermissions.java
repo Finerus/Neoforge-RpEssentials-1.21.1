@@ -1,9 +1,7 @@
 package net.rp.rpessentials;
 
-import net.luckperms.api.LuckPerms;
-import net.luckperms.api.LuckPermsProvider;
-import net.luckperms.api.model.user.User;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.util.Map;
 import java.util.UUID;
@@ -11,9 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class RpEssentialsPermissions {
 
-    // Cache to avoid checking every time
     private static final Map<UUID, CacheEntry> staffCache = new ConcurrentHashMap<>();
-    private static final long CACHE_DURATION = 30000; // 30 seconds
+    private static final long CACHE_DURATION = 30000; // 30 secondes
 
     private static class CacheEntry {
         boolean isStaff;
@@ -30,84 +27,93 @@ public class RpEssentialsPermissions {
     }
 
     /**
-     * Checks if a player is considered staff
-     * Verification hierarchy:
-     * 1. Vanilla Tags (admin, modo, staff, builder, etc.)
-     * 2. OP Level
-     * 3. LuckPerms Groups (if enabled)
+     * Vérifie si un joueur est staff.
+     * Hiérarchie : Tags vanilla → Niveau OP → Groupes LuckPerms (optionnel)
      */
     public static boolean isStaff(ServerPlayer player) {
         if (player == null) return false;
 
-        // Check cache
         CacheEntry cached = staffCache.get(player.getUUID());
         if (cached != null && cached.isValid()) {
             return cached.isStaff;
         }
 
         boolean result = checkStaffStatus(player);
-
-        // Update cache
         staffCache.put(player.getUUID(), new CacheEntry(result));
-
         return result;
     }
 
     private static boolean checkStaffStatus(ServerPlayer player) {
-        // 1. Check Vanilla Tags
-        for (String tag : RpEssentialsConfig.STAFF_TAGS.get()) {
-            if (player.getTags().contains(tag)) {
+
+        // ── 1. Tags vanilla scoreboard ────────────────────────────────────────
+        try {
+            for (String tag : RpEssentialsConfig.STAFF_TAGS.get()) {
+                if (player.getTags().contains(tag)) {
+                    return true;
+                }
+            }
+        } catch (IllegalStateException e) {
+            RpEssentials.LOGGER.debug("[Permissions] Config not loaded yet for tag check");
+        }
+
+        // ── 2. Niveau OP ──────────────────────────────────────────────────────
+        try {
+            int opLevel = RpEssentialsConfig.OP_LEVEL_BYPASS.get();
+            if (opLevel > 0 && player.hasPermissions(opLevel)) {
                 return true;
             }
+        } catch (IllegalStateException e) {
+            RpEssentials.LOGGER.debug("[Permissions] Config not loaded yet for OP level check");
         }
 
-        // 2. Check OP Level
-        int opLevel = RpEssentialsConfig.OP_LEVEL_BYPASS.get();
-        if (opLevel > 0 && player.hasPermissions(opLevel)) {
-            return true;
-        }
+        // ── 3. Groupes LuckPerms (entièrement optionnel) ──────────────────────
+        // Utilise NoClassDefFoundError ET Exception pour couvrir tous les cas :
+        //   - NoClassDefFoundError : LuckPerms absent du classpath
+        //   - IllegalStateException : LuckPerms présent mais pas encore initialisé
+        //   - Exception : toute autre erreur LuckPerms
+        try {
+            boolean useLp = RpEssentialsConfig.USE_LUCKPERMS_GROUPS.get();
+            if (!useLp) return false;
 
-        // 3. Check LuckPerms (if enabled AND available)
-        if (RpEssentialsConfig.USE_LUCKPERMS_GROUPS.get()) {
-            try {
-                LuckPerms luckPerms = LuckPermsProvider.get();
-                User user = luckPerms.getUserManager().getUser(player.getUUID());
-                if (user != null) {
-                    String primaryGroup = user.getPrimaryGroup();
-                    if (RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS.get().contains(primaryGroup)) {
-                        return true;
-                    }
+            net.luckperms.api.LuckPerms lp = net.luckperms.api.LuckPermsProvider.get();
+            net.luckperms.api.model.user.User user = lp.getUserManager().getUser(player.getUUID());
 
-                    // Check inherited groups as well
-                    for (String group : RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS.get()) {
-                        if (user.getInheritedGroups(user.getQueryOptions()).stream()
-                                .anyMatch(g -> g.getName().equals(group))) {
-                            return true;
-                        }
-                    }
-                }
-            } catch (IllegalStateException e) {
-                // LuckPerms not loaded - silently continue
-            } catch (Exception e) {
-                // LuckPerms error - log once and continue
-                if (e.getMessage() != null && !e.getMessage().contains("not loaded")) {
-                    RpEssentials.LOGGER.debug("LuckPerms check failed: {}", e.getMessage());
+            if (user == null) return false;
+
+            // Vérifie le groupe primaire
+            String primary = user.getPrimaryGroup();
+            for (String staffGroup : RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS.get()) {
+                if (staffGroup.equalsIgnoreCase(primary)) return true;
+            }
+
+            // Vérifie les groupes hérités
+            for (net.luckperms.api.model.group.Group group :
+                    user.getInheritedGroups(user.getQueryOptions())) {
+                for (String staffGroup : RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS.get()) {
+                    if (staffGroup.equalsIgnoreCase(group.getName())) return true;
                 }
             }
+
+        } catch (NoClassDefFoundError e) {
+            // LuckPerms absent — normal, on continue sans lui
+        } catch (IllegalStateException e) {
+            // LuckPerms pas encore chargé — normal au démarrage
+        } catch (Exception e) {
+            RpEssentials.LOGGER.debug("[Permissions] LuckPerms check failed: {}", e.getMessage());
         }
 
         return false;
     }
 
     /**
-     * Invalidates cache for a player (call on logout)
+     * Invalide le cache pour un joueur (appeler à la déconnexion).
      */
     public static void invalidateCache(UUID playerUUID) {
         staffCache.remove(playerUUID);
     }
 
     /**
-     * Clears entire cache (useful for config reload)
+     * Vide tout le cache (appeler lors d'un reload de config).
      */
     public static void clearCache() {
         staffCache.clear();

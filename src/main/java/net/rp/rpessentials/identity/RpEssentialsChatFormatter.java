@@ -1,7 +1,10 @@
-package net.rp.rpessentials;
+package net.rp.rpessentials.identity;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.config.ChatConfig;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
