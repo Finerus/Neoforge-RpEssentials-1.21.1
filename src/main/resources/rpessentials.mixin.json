@@ -10,6 +10,14 @@
     "MixinServerGamePacketListenerImpl",
     "MixinPlayerList",
     "MixinEntity",
+    "MixinResultSlot",
+    "ArmorSlotAccessor",
+    "MixinArmorSlot",
+    "MixinArmorItemUse",
+    "MixinAnvilMenu",
+    "MixinSmithingMenu",
+    "MixinItemCombinerMenuBase",
+    "MixinServerPlayerGameMode",
     "MixinDeathMessage"
   ],
   "client": [

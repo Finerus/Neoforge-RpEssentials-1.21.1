@@ -1,6 +1,119 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [4.1.2]
+
+**Profession & Restriction System — Complete Overhaul**
+
+Complete rewrite of the profession restriction enforcement system. The old tick-based polling approach has been replaced with event-driven handlers and Mixin injection points, eliminating all performance overhead and fixing several long-standing bugs.
+
+---
+
+### Added
+
+* **`/myprofession` command (alias `/myjob`):** New player-facing command to view active licenses without needing staff.
+  - Displays all active licenses with their formatted profession name and color.
+  - Distinguishes permanent licenses (`[Permanent]`) from RP temporary licenses (`[RP] expires on dd/MM/yyyy`).
+  - Accessible to all players — no permission required.
+
+* **Container Open Restrictions:** New restriction type allowing admins to block specific containers from being opened without the required profession.
+  - New config key `containerOpenRestrictions` in `rpessentials-professions.toml`.
+  - Format: `block_id;profession1,profession2` — e.g. `minecraft:anvil;forgeron`.
+  - Wildcard support (e.g. `minecraft:*_shulker_box`).
+  - Implemented via `MixinServerPlayerGameMode` — fires exactly once per open attempt, zero overhead.
+  - New message key `containerOpenBlockedMessage` in `[Messages]` section of `rpessentials-professions.toml`.
+  - New methods in `ProfessionRestrictionManager`: `canOpenContainer()`, `getContainerOpenBlockedMessage()`, `getContainerRequiredProfessions()`.
+
+* **New Mixins — Craft restrictions extended to all workstations:**
+  - `MixinResultSlot` — Injects into `Slot.mayPickup()` to block pickup from any result slot whose container is a `ResultContainer` (covers `GrindstoneMenu`, `StonecutterMenu`, `LoomMenu`, `CartographyTableMenu`) or whose slot type is `ResultSlot` (vanilla crafting table). Zero tick polling.
+  - `MixinItemCombinerMenuBase` — Abstract Mixin base declaring `@Shadow protected ResultContainer resultSlots`, shared by the two concrete subclass mixins below.
+  - `MixinSmithingMenu` — Injects into `SmithingMenu.mayPickup()` to block netherite upgrades at the smithing table.
+  - `MixinAnvilMenu` — Injects into `AnvilMenu.mayPickup()` to block repair/enchant results at the anvil.
+  - `MixinServerPlayerGameMode` — Injects into the container open flow to enforce `containerOpenRestrictions`.
+
+* **New Mixins — Armor equip restrictions:**
+  - `ArmorSlotAccessor` — `@Mixin(targets = "net.minecraft.world.inventory.ArmorSlot")` accessor interface exposing the `owner` field via `@Accessor`. Required because `ArmorSlot` is package-private.
+  - `MixinArmorSlot` — `@Mixin(targets = "net.minecraft.world.inventory.ArmorSlot")` injecting into `mayPlace(ItemStack)` to block armor from being dragged into an armor slot.
+  - `MixinArmorItemUse` — `@Mixin(ArmorItem.class)` injecting into `use()` to block armor equip via right-click. Runs on **both sides**: client-side uses `ClientProfessionRestrictions` (synced at login) to prevent the equip animation before it starts; server-side enforces the restriction authoritatively. Eliminates the visual bug where armor briefly appeared equipped before being removed.
+
+---
+
+### Changed
+
+* **`ProfessionRestrictionManager` — Simplified via generic `canPerformAction()`:**
+  - `canCraft()`, `canBreakBlock()`, `canUseItem()`, `canEquip()` all previously duplicated the same guard logic (init check, exemption check, global block check, permission check). All four now delegate to a single private `canPerformAction(player, resourceId, globalList, allowedList)` method, reducing the class by ~60 lines.
+  - Added `sendCraftBlockedMessage()` utility used by the new mixins.
+  - No behavior change — all existing functionality preserved.
+
+* **`ProfessionRestrictionEventHandler` — Refactored and bug-fixed:**
+  - **Bug fix:** `onBlockBreak`, `onLeftClickBlock`, and `onAttackEntity` were missing the `if (player.isCreative()) return;` guard. Creative mode players were incorrectly blocked by profession restrictions.
+  - `onRightClickItem` and `onRightClickBlock` now share a single `checkItemUse()` helper — eliminates duplicated logic.
+  - Removed `onEquipmentChange` (`LivingEquipmentChangeEvent`) entirely — replaced by `MixinArmorSlot` which is event-driven and has no visual artifacts.
+  - Removed `lastEquipmentWarning` cache and `EQUIPMENT_WARNING_COOLDOWN` constant (no longer needed).
+  - `cleanupCaches()` updated accordingly.
+
+* **`ProfessionConfig` — New entries:**
+  - `containerOpenRestrictions` (List) — blocks container opening by profession. Default: empty.
+  - `msgContainerOpenBlocked` (String) — message shown when container open is blocked. Variables: `{profession}`. Supports color codes.
+
+* **`rpessentials.mixin.json` — New entries:**
+  - `MixinResultSlot`
+  - `ArmorSlotAccessor`
+  - `MixinArmorSlot`
+  - `MixinArmorItemUse`
+  - `MixinItemCombinerMenuBase`
+  - `MixinSmithingMenu`
+  - `MixinAnvilMenu`
+  - `MixinServerPlayerGameMode`
+
+---
+
+### Removed
+
+* **`CraftingAndArmorRestrictionEventHandler`** — Entirely deleted.
+  - Previously polled the craft result slot every 5 ticks for every player with a crafting menu open.
+  - Tracked container open/close events (`PlayerContainerEvent.Open/Close`) to filter active players.
+  - Replaced by `MixinResultSlot` which fires only when the player actually attempts to pick up the result — zero polling overhead.
+  - `cleanupCaches()` call removed from `RpEssentials.onServerTick()`.
+
+---
+
+### Fixed
+
+* **Creative mode bypass:** Creative players were incorrectly blocked by block break, left-click, and attack restrictions. All three handlers now return early for creative players.
+* **Smithing Table (netherite upgrade) not restricted:** Upgrading items with netherite bypassed all profession restrictions because `SmithingMenu` uses `ItemCombinerMenu.mayPickup()` rather than `ResultSlot`. Fixed via `MixinSmithingMenu`.
+* **Anvil not restricted:** Same root cause as smithing table. Fixed via `MixinAnvilMenu`.
+* **Grindstone, Stonecutter, Loom, Cartography Table not restricted:** These menus use anonymous `Slot` subclasses with `ResultContainer` as their container — not `ResultSlot`. `MixinResultSlot` now also checks `slot.container instanceof ResultContainer` to cover all these cases.
+* **Armor equip visual bug:** The previous `LivingEquipmentChangeEvent` approach removed armor server-side after it had already been equipped client-side, causing a visible flash. `MixinArmorItemUse` now blocks the equip on both sides simultaneously — the client never starts the equip animation.
+* **Schedule system:** The previous version was not checking the schedule time on player login, it is now fixed and checks properly when a player login.
+
+---
+
+### Technical
+
+**Mixin design notes:**
+
+- `MixinItemCombinerMenuBase` exists solely to expose `@Shadow protected ResultContainer resultSlots` to `MixinSmithingMenu` and `MixinAnvilMenu` via Mixin inheritance. Direct `@Shadow` on a field declared in a parent class is not supported by the Mixin processor — the base abstract mixin pattern is the correct workaround.
+- `ArmorSlot` is package-private (`class ArmorSlot` without `public`) — direct Java references to it cause compile errors. Both `ArmorSlotAccessor` and `MixinArmorSlot` use `@Mixin(targets = "net.minecraft.world.inventory.ArmorSlot")` (string form) to avoid this.
+- All `@Inject` annotations on mapped methods use `remap = false` to avoid obfuscation mapping failures during compilation.
+- All new mixins guard against creative mode and client-side execution where appropriate.
+
+**Performance comparison:**
+
+| System | Before | After |
+|:-------|:-------|:------|
+| Craft restriction check | Every 5 ticks per player with open menu | On pickup attempt only |
+| Armor equip restriction | Every tick via `LivingEquipmentChangeEvent` | On `mayPlace()` / `use()` only |
+| Container open restriction | Not implemented | On open attempt only |
+| Total tick overhead | ~12 checks/sec/player (crafting) + continuous armor | Zero |
+
+**Migration Notes:**
+
+- No breaking changes — fully backward compatible with 4.1.1.
+- `CraftingAndArmorRestrictionEventHandler` is gone — remove any external references if you have custom patches.
+- New config keys (`containerOpenRestrictions`, `msgContainerOpenBlocked`) are generated automatically on first launch with empty defaults.
+- Clients connecting to a 4.1.2 server must also run 4.1.2 — `MixinArmorItemUse` adds a client-side restriction path that requires the `SyncProfessionRestrictionsPacket` already sent since 4.0.0.
+
 ## [4.1.1]
 
 **Nametag system overhaul — Realistic Nametag behavior + nickname sync fix**

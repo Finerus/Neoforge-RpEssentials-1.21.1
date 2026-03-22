@@ -1,5 +1,6 @@
 package net.rp.rpessentials;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,6 +31,13 @@ public class RpEssentialsEventHandler {
         if (server == null) return;
 
         ProfessionSyncHelper.syncToPlayer(player);
+
+        // Vérification schedule — kick si serveur fermé
+        Component canJoin = RpEssentialsScheduleManager.canPlayerJoin(player);
+        if (canJoin != null) {
+            player.connection.disconnect(canJoin);
+            return;
+        }
 
         // ── Sync nametag (délai pour que le client finisse de charger) ────────────
         CompletableFuture.runAsync(() -> {

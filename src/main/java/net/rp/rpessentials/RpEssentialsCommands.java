@@ -983,6 +983,15 @@ public class RpEssentialsCommands {
                 .requires(src -> src.getEntity() instanceof net.minecraft.server.level.ServerPlayer)
                 .executes(RpEssentialsCommands::myWarn));
 
+        dispatcher.register(Commands.literal("myprofession")
+                .requires(src -> src.getEntity() instanceof ServerPlayer)
+                .executes(RpEssentialsCommands::myProfession));
+
+        // Alias
+        dispatcher.register(Commands.literal("myjob")
+                .requires(src -> src.getEntity() instanceof ServerPlayer)
+                .executes(RpEssentialsCommands::myProfession));
+
         // ── Construction du sous-arbre /rpessentials deathrp ─────────────────────────────
 
         var deathRpNode = Commands.literal("deathrp")
@@ -2726,6 +2735,47 @@ public class RpEssentialsCommands {
             return 0;
         }
         return displayWarnList(ctx, player.getUUID(), player.getName().getString(), false);
+    }
+
+    private static int myProfession(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        List<String> licenses = LicenseManager.getLicenses(player.getUUID());
+
+        if (licenses.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_NONE,
+                            "player", player.getName().getString())
+            ), false);
+            return 0;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("§6╔═══════════════════════════════════╗\n");
+        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_HEADER,
+                "player", player.getName().getString())).append("\n");
+        sb.append("§6╠═══════════════════════════════════╣\n");
+
+        for (String licenseId : licenses) {
+            ProfessionRestrictionManager.ProfessionData data =
+                    ProfessionRestrictionManager.getProfessionData(licenseId);
+            String expiry = LicenseManager.getTempExpirationDate(player.getUUID(), licenseId);
+
+            if (data != null) {
+                sb.append("§6║ ").append(data.getFormattedName());
+            } else {
+                sb.append("§6║ §f").append(licenseId);
+            }
+
+            if (expiry != null) {
+                sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
+            }
+            sb.append("\n");
+        }
+
+        sb.append("§6╚═══════════════════════════════════╝");
+        String msg = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        return 1;
     }
 
     /**

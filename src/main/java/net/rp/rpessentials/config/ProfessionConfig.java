@@ -4,10 +4,6 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Configuration for professions and restrictions.
- * File: config/rpessentials/rpessentials-professions.toml
- */
 public class ProfessionConfig {
     public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
     public static final ModConfigSpec SPEC;
@@ -24,10 +20,7 @@ public class ProfessionConfig {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_UNBREAKABLE_BLOCKS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_ITEMS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_EQUIPMENT;
-
-    // ===============================================================================
-    // PROFESSION OVERRIDES
-    // ===============================================================================
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> CONTAINER_OPEN_RESTRICTIONS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_CRAFTS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_BLOCKS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_ITEMS;
@@ -40,6 +33,7 @@ public class ProfessionConfig {
     public static final ModConfigSpec.ConfigValue<String> MSG_BLOCK_BREAK_BLOCKED;
     public static final ModConfigSpec.ConfigValue<String> MSG_ITEM_USE_BLOCKED;
     public static final ModConfigSpec.ConfigValue<String> MSG_EQUIPMENT_BLOCKED;
+    public static final ModConfigSpec.ConfigValue<String> MSG_CONTAINER_OPEN_BLOCKED;
 
     static {
         BUILDER.comment(
@@ -49,7 +43,7 @@ public class ProfessionConfig {
                 "",
                 "This configuration file manages:",
                 "  - Profession definitions (name, color, display)",
-                "  - Global restrictions (crafts, blocks, items, equipment)",
+                "  - Global restrictions (crafts, blocks, items, equipment, containers)",
                 "  - Profession-specific permissions (overrides)",
                 "",
                 "Format for profession definitions:",
@@ -86,12 +80,7 @@ public class ProfessionConfig {
                 "  §6 = Gold        §7 = Gray         §8 = Dark Gray",
                 "  §9 = Blue        §a = Green        §b = Aqua",
                 "  §c = Red         §d = Light Purple §e = Yellow",
-                "  §f = White",
-                "",
-                "Examples:",
-                "  hunter;Hunter;§a           (Green hunter)",
-                "  blacksmith;Blacksmith;§c   (Red blacksmith)",
-                "  alchemist;Alchemist;§5     (Purple alchemist)"
+                "  §f = White"
         );
 
         PROFESSIONS = BUILDER
@@ -156,7 +145,8 @@ public class ProfessionConfig {
                         "",
                         "Examples:",
                         "  minecraft:diamond_ore        - Cannot mine diamond ore",
-                        "  minecraft:ancient_debris     - Cannot mine ancient debris"
+                        "  minecraft:ancient_debris     - Cannot mine ancient debris",
+                        "  minecraft:*_ore              - Cannot mine any ore"
                 )
                 .defineList("globalUnbreakableBlocks",
                         Arrays.asList(
@@ -208,6 +198,26 @@ public class ProfessionConfig {
                         obj -> obj instanceof String
                 );
 
+        CONTAINER_OPEN_RESTRICTIONS = BUILDER
+                .comment(
+                        "",
+                        "Blocks that can only be opened by specific professions.",
+                        "Format: block_id;profession1,profession2",
+                        "",
+                        "Examples:",
+                        "  minecraft:anvil;blacksmith",
+                        "  minecraft:brewing_stand;alchemist",
+                        "  minecraft:enchanting_table;alchemist,blacksmith"
+                )
+                .defineList("containerOpenRestrictions",
+                        Arrays.asList(
+                                "minecraft:anvil;blacksmith",
+                                "minecraft:brewing_stand;alchemist",
+                                "minecraft:enchanting_table;alchemist,blacksmith"
+                        ),
+                        obj -> obj instanceof String && ((String) obj).contains(";")
+                );
+
         BUILDER.pop();
 
         // -----------------------------------------------------------------------
@@ -238,8 +248,9 @@ public class ProfessionConfig {
                 )
                 .defineList("professionAllowedCrafts",
                         Arrays.asList(
-                                "blacksmith;minecraft:diamond_sword,minecraft:diamond_pickaxe",
-                                "miner;minecraft:diamond_pickaxe,minecraft:iron_pickaxe"
+                                "blacksmith;minecraft:diamond_sword,minecraft:diamond_pickaxe,minecraft:diamond_axe,minecraft:netherite_sword,minecraft:netherite_pickaxe",
+                                "miner;minecraft:diamond_pickaxe,minecraft:iron_pickaxe",
+                                "lumberjack;minecraft:diamond_axe,minecraft:iron_axe"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";")
                 );
@@ -252,7 +263,7 @@ public class ProfessionConfig {
                 )
                 .defineList("professionAllowedBlocks",
                         Arrays.asList(
-                                "miner;minecraft:diamond_ore,minecraft:deepslate_diamond_ore,minecraft:iron_ore,minecraft:deepslate_iron_ore"
+                                "miner;minecraft:diamond_ore,minecraft:deepslate_diamond_ore,minecraft:iron_ore,minecraft:deepslate_iron_ore,minecraft:gold_ore,minecraft:deepslate_gold_ore"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";")
                 );
@@ -264,7 +275,10 @@ public class ProfessionConfig {
                         "Overrides global item use restrictions."
                 )
                 .defineList("professionAllowedItems",
-                        Arrays.asList(),
+                        Arrays.asList(
+                                "alchemist;minecraft:flint_and_steel,minecraft:fire_charge",
+                                "guard;minecraft:flint_and_steel"
+                        ),
                         obj -> obj instanceof String && ((String) obj).contains(";")
                 );
 
@@ -276,8 +290,8 @@ public class ProfessionConfig {
                 )
                 .defineList("professionAllowedEquipment",
                         Arrays.asList(
-                                "guard;minecraft:diamond_sword,minecraft:diamond_helmet,minecraft:diamond_chestplate",
-                                "miner;minecraft:diamond_pickaxe,minecraft:iron_pickaxe"
+                                "guard;minecraft:diamond_sword,minecraft:diamond_helmet,minecraft:diamond_chestplate,minecraft:diamond_leggings,minecraft:diamond_boots",
+                                "miner;minecraft:diamond_pickaxe"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";")
                 );
@@ -318,6 +332,11 @@ public class ProfessionConfig {
                 .comment("Message shown when equipment is blocked. Variables: {item}, {profession}")
                 .define("equipmentBlockedMessage",
                         "§c✘ You cannot equip this item. §7Required profession: §e{profession}");
+
+        MSG_CONTAINER_OPEN_BLOCKED = BUILDER
+                .comment("Message shown when opening a container is blocked. Variables: {block}, {profession}")
+                .define("containerOpenBlockedMessage",
+                        "§c✘ You cannot open this block. §7Required profession: §e{profession}");
 
         BUILDER.pop();
 

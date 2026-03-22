@@ -17,7 +17,6 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.rp.rpessentials.client.RpKeyBindings;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.moderation.LastConnectionManager;
-import net.rp.rpessentials.profession.CraftingAndArmorRestrictionEventHandler;
 import net.rp.rpessentials.profession.ProfessionRestrictionEventHandler;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 import net.rp.rpessentials.profession.TempLicenseExpirationManager;
@@ -114,7 +113,6 @@ public class RpEssentials {
         // ── Schedule + caches — toutes les 400 ticks (20s) ───────────────────
         if (tickCounter % 400 == 0) {
             ProfessionRestrictionEventHandler.cleanupCaches();
-            CraftingAndArmorRestrictionEventHandler.cleanupCaches();
 
             LocalTime now   = LocalTime.now();
             DayOfWeek today = LocalDate.now().getDayOfWeek();
