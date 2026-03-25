@@ -43,6 +43,7 @@ public class RpEssentials {
         modContainer.registerConfig(ModConfig.Type.SERVER, ModerationConfig.SPEC,       "rpessentials/rpessentials-moderation.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ProfessionConfig.SPEC,       "rpessentials/rpessentials-professions.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, MessagesConfig.SPEC,         "rpessentials/rpessentials-messages.toml");
+        modContainer.registerConfig(ModConfig.Type.SERVER, RpConfig.SPEC,         "rpessentials/rpessentials-rp.toml");
         modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings);
 
         RpEssentialsItems.ITEMS.register(modEventBus);
@@ -90,7 +91,7 @@ public class RpEssentials {
     public void onServerTick(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
 
-        // ── TabList blur — toutes les 40 ticks (2s) ───────────────────────────
+        // ── TabList blur — toutes les 40 ticks ───────────────────────────────
         if (tickCounter % 40 == 0) {
             try {
                 if (RpEssentialsConfig.ENABLE_BLUR.get()) {
@@ -102,35 +103,26 @@ public class RpEssentials {
             } catch (IllegalStateException ignored) {}
         }
 
-        // ── World Border — intervalle configurable (défaut 40 ticks = 2s) ───────
+        // ── World Border — offset +13 pour éviter le pic au tick 0 ───────────
         int wbInterval = 40;
         try { wbInterval = RpEssentialsConfig.WORLD_BORDER_CHECK_INTERVAL.get(); }
         catch (IllegalStateException ignored) {}
-        if (tickCounter % wbInterval == 0) {
+        if ((tickCounter + 13) % wbInterval == 0) {
             WorldBorderManager.tick(server);
         }
 
-        if (tickCounter % 400 == 0) {
+        // ── Cleanup + Schedule — offset +37 ──────────────────────────────────
+        if ((tickCounter + 37) % 400 == 0) {
             ProfessionRestrictionEventHandler.cleanupCaches();
+            RpEssentialsPermissions.clearExpiredCache(); // Bug 12
 
-            LocalTime now   = LocalTime.now();
-            DayOfWeek today = LocalDate.now().getDayOfWeek(); // still needed for other calls
+            LocalTime now = LocalTime.now();
 
-            // ── Schedule principal ─────────────────────────────────────────
             try {
                 if (ScheduleConfig.ENABLE_SCHEDULE.get() && !RpEssentialsScheduleManager.getSchedules().isEmpty()) {
+                    RpEssentialsScheduleManager.DaySchedule active = RpEssentialsScheduleManager.getActiveSchedule();
+                    RpEssentialsScheduleManager.DaySchedule todayS = RpEssentialsScheduleManager.getTodaySchedule();
 
-                    // Use getActiveSchedule() — handles cross-midnight transparently.
-                    // It returns yesterday's schedule if its cross-midnight session is still open,
-                    // or today's schedule if today's session is open, or null if server is closed.
-                    RpEssentialsScheduleManager.DaySchedule active =
-                            RpEssentialsScheduleManager.getActiveSchedule();
-
-                    // Also keep a reference to today's schedule for opening-time detection
-                    RpEssentialsScheduleManager.DaySchedule todayS =
-                            RpEssentialsScheduleManager.getTodaySchedule();
-
-                    // Opening detection: fire when we hit today's open time
                     if (!RpEssentialsScheduleManager.hasOpenedToday()
                             && todayS != null
                             && now.getHour()   == todayS.open().getHour()
@@ -139,12 +131,10 @@ public class RpEssentials {
                         RpEssentialsScheduleManager.sendOpeningMessage(server, todayS);
                     }
 
-                    // Warning + closing: driven by the ACTIVE session (may be yesterday's cross-midnight)
                     if (active != null) {
                         RpEssentialsScheduleManager.checkWarnings(server, now, active);
                     }
 
-                    // Closing detection: active was open last tick, now closed
                     if (!RpEssentialsScheduleManager.hasClosedToday() && active == null) {
                         RpEssentialsScheduleManager.markClosedToday();
                         RpEssentialsScheduleManager.closeServer(server);
@@ -152,15 +142,12 @@ public class RpEssentials {
                 }
             } catch (IllegalStateException ignored) {}
 
-            // ── Death Hours ────────────────────────────────────────────────
             RpEssentialsScheduleManager.tickDeathHoursNotifications(server, now);
-
-            // ── HRP Hours ─────────────────────────────────────────────────
             RpEssentialsScheduleManager.tickHrpNotifications(server, now);
         }
 
-        // ── Midnight sweep — toutes les 1200 ticks (60s) ─────────────────────
-        if (tickCounter % 1200 == 0) {
+        // ── Midnight sweep — offset +97 ──────────────────────────────────────
+        if ((tickCounter + 97) % 1200 == 0) {
             LocalTime now = LocalTime.now();
             RpEssentialsScheduleManager.tickMidnightSweep(server);
             TempLicenseExpirationManager.tickMidnightSweep(server, now.getHour(), now.getMinute());
@@ -169,5 +156,13 @@ public class RpEssentials {
 
         tickCounter++;
         if (tickCounter >= 1200) tickCounter = 0;
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        WorldBorderManager.clearAllCache();
+        RpEssentialsPermissions.clearCache();
+        RpEssentialsScheduleManager.reload();
+        RpEssentials.LOGGER.info("[RPEssentials] Static caches cleared on server stop.");
     }
 }

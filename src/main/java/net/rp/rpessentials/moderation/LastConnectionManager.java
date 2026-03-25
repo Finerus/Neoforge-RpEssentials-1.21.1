@@ -7,6 +7,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.RpEssentialsDataPaths;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
@@ -60,10 +61,7 @@ public class LastConnectionManager {
     private static synchronized void ensureInitialized() {
         if (dataFile != null) return;
         try {
-            File worldFolder = new File("world");
-            if (!worldFolder.exists()) worldFolder = new File(".");
-
-            File dataFolder = new File(worldFolder, "data/rpessentials");
+            File dataFolder = RpEssentialsDataPaths.getDataFolder();
             if (!dataFolder.exists()) dataFolder.mkdirs();
 
             dataFile = new File(dataFolder, "lastconnection.json");
@@ -196,37 +194,35 @@ public class LastConnectionManager {
     // SAVE (async)
     // =========================================================================
 
+
     private static void saveToFile() {
         ensureInitialized();
         if (dataFile == null) return;
 
         Map<UUID, ConnectionEntry> snapshot = new HashMap<>(entries);
-        File targetFile = dataFile;
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
 
-        CompletableFuture.runAsync(() -> {
+        Map<String, ConnectionEntry> data = new java.util.LinkedHashMap<>();
+        for (Map.Entry<UUID, ConnectionEntry> e : snapshot.entrySet()) {
+            UUID uuid = e.getKey();
+            ConnectionEntry entry = e.getValue();
+            String mcName = entry.mcName != null ? entry.mcName : "Unknown";
+            if (server != null) {
+                ServerPlayer online = server.getPlayerList().getPlayer(uuid);
+                if (online != null) mcName = online.getName().getString();
+            }
+            data.put(uuid.toString() + " (" + mcName + ")", entry);
+        }
+
+        File targetFile = dataFile;
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
             try {
                 File parent = targetFile.getParentFile();
                 if (parent != null && !parent.exists()) parent.mkdirs();
-
-                MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-                Map<String, ConnectionEntry> data = new LinkedHashMap<>();
-
-                for (Map.Entry<UUID, ConnectionEntry> e : snapshot.entrySet()) {
-                    UUID uuid = e.getKey();
-                    ConnectionEntry entry = e.getValue();
-                    String mcName = entry.mcName != null ? entry.mcName : "Unknown";
-
-                    if (server != null) {
-                        ServerPlayer online = server.getPlayerList().getPlayer(uuid);
-                        if (online != null) mcName = online.getName().getString();
-                    }
-                    data.put(uuid.toString() + " (" + mcName + ")", entry);
-                }
-
-                try (FileWriter writer = new FileWriter(targetFile)) {
+                try (java.io.FileWriter writer = new java.io.FileWriter(targetFile)) {
                     GSON.toJson(data, writer);
                 }
-                RpEssentials.LOGGER.debug("[LastConnectionManager] Saved {} entries", snapshot.size());
+                RpEssentials.LOGGER.debug("[LastConnectionManager] Saved {} entries", data.size());
             } catch (Exception e) {
                 RpEssentials.LOGGER.error("[LastConnectionManager] Failed to save", e);
             }

@@ -1,10 +1,7 @@
 package net.rp.rpessentials.mixin;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.rp.rpessentials.ColorHelper;
-import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.RpEssentials;
 import org.spongepowered.asm.mixin.Mixin;
@@ -16,11 +13,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(PlayerList.class)
 public class MixinPlayerList {
 
+    /**
+     * Flag interne pour laisser passer nos propres messages custom.
+     * Toujours false sauf pendant broadcastCustomMessage().
+     */
     @Unique
-    private boolean oneria$isSendingCustomMessage = false;
+    private boolean rpessentials$isSendingCustomMessage = false;
 
     /**
-     * Intercepte TOUS les messages système pour filtrer join/leave vanilla
+     * Intercepte les messages vanilla join/leave et les annule si le
+     * système custom est activé. L'envoi du message custom est délégué
+     * à RpEssentialsEventHandler via PlayerLoggedInEvent / PlayerLoggedOutEvent,
+     * où l'on dispose directement de l'objet ServerPlayer (Bug 13 fix).
      */
     @Inject(
             method = "broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V",
@@ -29,161 +33,59 @@ public class MixinPlayerList {
             remap = false
     )
     public void onBroadcastSystemMessage(Component component, boolean bl, CallbackInfo ci) {
-        // Si on envoie notre propre message, laisser passer
-        if (oneria$isSendingCustomMessage) {
-            return;
-        }
-
-        String messageText = component.getString();
+        // Laisser passer nos propres messages custom (évite la récursion)
+        if (rpessentials$isSendingCustomMessage) return;
 
         try {
-            if (ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE == null ||
-                    !ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE.get()) {
-                return; // Système désactivé, laisser vanilla
-            }
-
-            // Détecter message de connexion
-            if (messageText.contains("joined the game") ||
-                    messageText.contains("a rejoint la partie")) {
-
-                ci.cancel(); // Cancel le message vanilla
-
-                String joinMsg = ChatConfig.JOIN_MESSAGE.get();
-                if (!joinMsg.equalsIgnoreCase("none")) {
-                    // Extraire le nom du joueur du message vanilla
-                    String playerName = extractPlayerName(messageText, true);
-                    sendCustomJoinMessage(playerName);
-                }
-
-                RpEssentials.LOGGER.debug("[Join] Cancelled vanilla, sent custom for {}",
-                        extractPlayerName(messageText, true));
-            }
-            // Détecter message de déconnexion
-            else if (messageText.contains("left the game") ||
-                    messageText.contains("a quitté la partie")) {
-
-                ci.cancel(); // Cancel le message vanilla
-
-                String leaveMsg = ChatConfig.LEAVE_MESSAGE.get();
-                if (!leaveMsg.equalsIgnoreCase("none")) {
-                    // Extraire le nom du joueur du message vanilla
-                    String playerName = extractPlayerName(messageText, false);
-                    sendCustomLeaveMessage(playerName);
-                }
-
-                RpEssentials.LOGGER.debug("[Leave] Cancelled vanilla, sent custom for {}",
-                        extractPlayerName(messageText, false));
+            if (ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE == null
+                    || !ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE.get()) {
+                return; // Système désactivé → comportement vanilla
             }
         } catch (Exception e) {
-            RpEssentials.LOGGER.error("[JoinLeave] Error handling message: {}", e.getMessage());
+            return; // Config pas encore chargée → comportement vanilla
         }
-    }
 
-    /**
-     * Extrait le nom du joueur depuis le message vanilla
-     */
-    @Unique
-    private String extractPlayerName(String message, boolean isJoin) {
-        // Format: "PlayerName joined the game" ou "PlayerName left the game"
+        String text = component.getString();
+
+        // Bug 10 fix — on ne parse plus le texte pour extraire le nom.
+        // On annule juste le message vanilla ; le custom est envoyé
+        // depuis PlayerLoggedInEvent / PlayerLoggedOutEvent.
+        boolean isJoin  = text.contains("joined the game")
+                || text.contains("a rejoint la partie");
+        boolean isLeave = text.contains("left the game")
+                || text.contains("a quitté la partie");
+
         if (isJoin) {
-            if (message.contains("joined the game")) {
-                return message.replace(" joined the game", "").trim();
-            } else if (message.contains("a rejoint la partie")) {
-                return message.replace(" a rejoint la partie", "").trim();
-            }
-        } else {
-            if (message.contains("left the game")) {
-                return message.replace(" left the game", "").trim();
-            } else if (message.contains("a quitté la partie")) {
-                return message.replace(" a quitté la partie", "").trim();
-            }
-        }
-        return "Unknown";
-    }
-
-    /**
-     * Envoie le message de connexion custom
-     */
-    @Unique
-    private void sendCustomJoinMessage(String playerName) {
-        try {
-            String joinMsg = ChatConfig.JOIN_MESSAGE.get();
-
-            // Trouver le joueur pour obtenir son nickname
-            ServerPlayer player = findPlayerByName(playerName);
-            String nickname = player != null ? NicknameManager.getDisplayName(player) : playerName;
-
-            String formatted = joinMsg
-                    .replace("{player}", playerName)
-                    .replace("{nickname}", nickname);
-
-            Component message = ColorHelper.parseColors(formatted);
-
-            // Envoyer le message custom
-            oneria$isSendingCustomMessage = true;
-            try {
-                PlayerList playerList = (PlayerList)(Object)this;
-                playerList.broadcastSystemMessage(message, false);
-            } finally {
-                oneria$isSendingCustomMessage = false;
-            }
-
-            RpEssentials.LOGGER.debug("[Join] Sent custom message for {}", playerName);
-        } catch (Exception e) {
-            oneria$isSendingCustomMessage = false;
-            RpEssentials.LOGGER.error("[Join] Error sending custom message", e);
+            ci.cancel();
+            String joinMsg;
+            try { joinMsg = ChatConfig.JOIN_MESSAGE.get(); }
+            catch (Exception e) { return; }
+            // "none" = désactivé explicitement
+            if ("none".equalsIgnoreCase(joinMsg)) return;
+            // Le message est envoyé par RpEssentialsEventHandler,
+            // ici on se contente d'annuler le vanilla.
+            RpEssentials.LOGGER.debug("[JoinLeave] Vanilla join message cancelled.");
+        } else if (isLeave) {
+            ci.cancel();
+            String leaveMsg;
+            try { leaveMsg = ChatConfig.LEAVE_MESSAGE.get(); }
+            catch (Exception e) { return; }
+            if ("none".equalsIgnoreCase(leaveMsg)) return;
+            RpEssentials.LOGGER.debug("[JoinLeave] Vanilla leave message cancelled.");
         }
     }
 
     /**
-     * Envoie le message de déconnexion custom
+     * Méthode utilitaire appelée depuis RpEssentialsEventHandler pour
+     * broadcaster un message custom sans déclencher notre propre filtre.
      */
     @Unique
-    private void sendCustomLeaveMessage(String playerName) {
+    public void rpessentials$broadcastCustomMessage(Component message) {
+        rpessentials$isSendingCustomMessage = true;
         try {
-            String leaveMsg = ChatConfig.LEAVE_MESSAGE.get();
-
-            // Trouver le joueur pour obtenir son nickname
-            ServerPlayer player = findPlayerByName(playerName);
-            String nickname = player != null ? NicknameManager.getDisplayName(player) : playerName;
-
-            String formatted = leaveMsg
-                    .replace("{player}", playerName)
-                    .replace("{nickname}", nickname);
-
-            Component message = ColorHelper.parseColors(formatted);
-
-            // Envoyer le message custom
-            oneria$isSendingCustomMessage = true;
-            try {
-                PlayerList playerList = (PlayerList)(Object)this;
-                playerList.broadcastSystemMessage(message, false);
-            } finally {
-                oneria$isSendingCustomMessage = false;
-            }
-
-            RpEssentials.LOGGER.debug("[Leave] Sent custom message for {}", playerName);
-        } catch (Exception e) {
-            oneria$isSendingCustomMessage = false;
-            RpEssentials.LOGGER.error("[Leave] Error sending custom message", e);
+            ((PlayerList)(Object)this).broadcastSystemMessage(message, false);
+        } finally {
+            rpessentials$isSendingCustomMessage = false;
         }
-    }
-
-    /**
-     * Trouve un joueur par son nom
-     */
-    @Unique
-    private ServerPlayer findPlayerByName(String name) {
-        try {
-            PlayerList playerList = (PlayerList)(Object)this;
-            for (ServerPlayer player : playerList.getPlayers()) {
-                if (player.getName().getString().equals(name)) {
-                    return player;
-                }
-            }
-        } catch (Exception e) {
-            // Ignore
-        }
-        return null;
     }
 }

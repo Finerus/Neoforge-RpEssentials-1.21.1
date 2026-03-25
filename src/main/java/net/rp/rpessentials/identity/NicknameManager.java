@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.chat.Component;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.RpEssentialsDataPaths;
 import net.rp.rpessentials.SyncNametagDataPacket;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
@@ -34,23 +35,12 @@ public class NicknameManager {
      */
     private static synchronized void ensureInitialized() {
         if (nicknameFile != null) return;
-
         try {
-            File worldFolder = new File("world");
-            if (!worldFolder.exists()) {
-                worldFolder = new File(".");
-            }
-
-            File dataFolder = new File(worldFolder, "data/rpessentials");
-            if (!dataFolder.exists()) {
-                dataFolder.mkdirs();
-            }
+            File dataFolder = RpEssentialsDataPaths.getDataFolder();
+            if (!dataFolder.exists()) dataFolder.mkdirs();
 
             nicknameFile = new File(dataFolder, "nicknames.json");
-
-            if (nicknameFile.exists()) {
-                loadFromFile();
-            }
+            if (nicknameFile.exists()) loadFromFile();
 
             RpEssentials.LOGGER.info("[NicknameManager] Initialized - File: {}", nicknameFile.getAbsolutePath());
         } catch (Exception e) {
@@ -96,38 +86,35 @@ public class NicknameManager {
         ensureInitialized();
         if (nicknameFile == null) return;
 
-        // Snapshot immédiat sur le thread serveur (rapide)
+        // Bug 7 — résolution des noms sur le thread serveur avant d'aller async
         Map<UUID, String> snapshot = new HashMap<>(nicknames);
-        File targetFile = nicknameFile;
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
 
-        // L'écriture disque se fait sur un thread séparé
+        Map<String, String> data = new java.util.LinkedHashMap<>();
+        for (Map.Entry<UUID, String> entry : snapshot.entrySet()) {
+            UUID uuid = entry.getKey();
+            String mcName = "Unknown";
+            if (server != null) {
+                ServerPlayer online = server.getPlayerList().getPlayer(uuid);
+                if (online != null) {
+                    mcName = online.getName().getString();
+                } else if (server.getProfileCache() != null) {
+                    mcName = server.getProfileCache().get(uuid)
+                            .map(p -> p.getName()).orElse("Unknown");
+                }
+            }
+            data.put(uuid.toString() + " (" + mcName + ")", entry.getValue());
+        }
+
+        File targetFile = nicknameFile;
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             try {
                 File parent = targetFile.getParentFile();
                 if (parent != null && !parent.exists()) parent.mkdirs();
-
-                Map<String, String> data = new HashMap<>();
-                MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-
-                for (Map.Entry<UUID, String> entry : snapshot.entrySet()) {
-                    UUID uuid = entry.getKey();
-                    String mcName = "Unknown";
-                    if (server != null) {
-                        ServerPlayer online = server.getPlayerList().getPlayer(uuid);
-                        if (online != null) {
-                            mcName = online.getName().getString();
-                        } else if (server.getProfileCache() != null) {
-                            mcName = server.getProfileCache().get(uuid)
-                                    .map(p -> p.getName()).orElse("Unknown");
-                        }
-                    }
-                    data.put(uuid.toString() + " (" + mcName + ")", entry.getValue());
-                }
-
-                try (FileWriter writer = new FileWriter(targetFile)) {
+                try (java.io.FileWriter writer = new java.io.FileWriter(targetFile)) {
                     GSON.toJson(data, writer);
                 }
-                RpEssentials.LOGGER.debug("[NicknameManager] Saved {} nicknames", snapshot.size());
+                RpEssentials.LOGGER.debug("[NicknameManager] Saved {} nicknames", data.size());
             } catch (Exception e) {
                 RpEssentials.LOGGER.error("[NicknameManager] Failed to save nicknames", e);
             }

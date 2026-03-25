@@ -37,6 +37,12 @@ public class NetworkHandler {
                 )
         );
 
+        registrar.playToServer(
+                DiceRollPacket.TYPE,
+                DiceRollPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, DiceRollPacket::handleOnServer)
+        );
+
         // ── Restrictions métiers ──────────────────────────────────────────────────
         registrar.playToClient(
                 SyncProfessionRestrictionsPacket.TYPE,

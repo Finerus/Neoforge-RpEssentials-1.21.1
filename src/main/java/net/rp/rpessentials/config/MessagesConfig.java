@@ -222,6 +222,26 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> LICENSE_REISSUE_PLAYER;
     public static final ModConfigSpec.ConfigValue<String> LICENSE_REISSUE_NOT_FOUND;
 
+    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_FORMAT;
+    public static final ModConfigSpec.ConfigValue<String> MUTE_RECEIVED;
+    public static final ModConfigSpec.ConfigValue<String> MUTE_EXPIRED;
+    public static final ModConfigSpec.ConfigValue<String> MUTE_NOTIFY_ON_JOIN;
+    public static final ModConfigSpec.ConfigValue<String> MUTE_BLOCKED_MESSAGE;
+    public static final ModConfigSpec.ConfigValue<String> MUTE_STAFF_ADDED;
+    public static final ModConfigSpec.ConfigValue<String> MUTE_STAFF_REMOVED;
+    public static final ModConfigSpec.ConfigValue<String> MUTE_AUTO_NOTIFY;
+    public static final ModConfigSpec.ConfigValue<String> NOTE_ADDED;
+    public static final ModConfigSpec.ConfigValue<String> NOTE_REMOVED;
+    public static final ModConfigSpec.ConfigValue<String> NOTE_NONE;
+    public static final ModConfigSpec.ConfigValue<String> NOTE_LIST_HEADER;
+    public static final ModConfigSpec.ConfigValue<String> DEATHRP_HISTORY_HEADER;
+    public static final ModConfigSpec.ConfigValue<String> DEATHRP_HISTORY_NONE;
+    public static final ModConfigSpec.ConfigValue<String> DEATHRP_HISTORY_ENTRY;
+    public static final ModConfigSpec.ConfigValue<String> RP_COOLDOWN_MESSAGE;
+    public static final ModConfigSpec.ConfigValue<String> STATS_HEADER;
+    public static final ModConfigSpec.ConfigValue<String> DICE_ROLL_FORMAT;
+    public static final ModConfigSpec.ConfigValue<String> DICE_ROLL_SPY_FORMAT;
+
     static {
         // =========================================================================
         BUILDER.push("System");
@@ -827,6 +847,93 @@ public class MessagesConfig {
         AUTO_UNWHITELIST_STAFF_NOTIFY = BUILDER
                 .comment("Staff notification when a player is auto-unwhitelisted. Placeholders: {player} {days}")
                 .define("autoUnwhitelistStaffNotify", "§6[Auto-Unwhitelist] §e{player} §7removed ({days} days inactive). ");
+        BUILDER.pop();
+
+        BUILDER.push("Proximity Chat");
+        PROXIMITY_CHAT_SPY_FORMAT = BUILDER
+                .comment("Format shown to staff outside proximity range.",
+                        "Placeholders: {player}, {msg}, {distance}")
+                .define("proximityChatSpyFormat",
+                        "§7[PROX-SPY] §e{player} §7(§f{distance}m§7)§7: {msg}");
+        BUILDER.pop();
+
+        BUILDER.push("Mute System");
+        MUTE_RECEIVED = BUILDER
+                .comment("Message sent to the muted player. Placeholders: {reason} {duration}")
+                .define("muteReceived",
+                        "§c[MUTE] You have been muted. Reason: §f{reason}§c. Duration: §f{duration}§c.");
+        MUTE_EXPIRED = BUILDER
+                .comment("Message sent when mute expires.")
+                .define("muteExpired", "§a[MUTE] Your mute has expired. You can chat again.");
+        MUTE_NOTIFY_ON_JOIN = BUILDER
+                .comment("Shown to muted player on login. Placeholders: {reason} {expiry}")
+                .define("muteNotifyOnJoin",
+                        "§c[MUTE] You are currently muted. Reason: §f{reason}§c. Expires: §f{expiry}§c.");
+        MUTE_BLOCKED_MESSAGE = BUILDER
+                .comment("Shown when muted player tries to chat. Placeholder: {expiry}")
+                .define("muteBlockedMessage", "§c[MUTE] You cannot chat. Mute expires: §f{expiry}§c.");
+        MUTE_STAFF_ADDED = BUILDER
+                .comment("Staff feedback when muting. Placeholders: {player} {duration} {reason}")
+                .define("muteStaffAdded",
+                        "§a[MUTE] §e{player} §amuted for §f{duration}§a. Reason: §f{reason}");
+        MUTE_STAFF_REMOVED = BUILDER
+                .comment("Staff feedback when unmuting. Placeholder: {player}")
+                .define("muteStaffRemoved", "§a[MUTE] §e{player} §ahas been unmuted.");
+        MUTE_AUTO_NOTIFY = BUILDER
+                .comment("Staff broadcast when auto-mute triggers. Placeholders: {player} {count} {duration}")
+                .define("muteAutoNotify",
+                        "§6[AUTO-MUTE] §e{player} §7auto-muted ({count} active warns, {duration}).");
+        BUILDER.pop();
+
+        BUILDER.push("Staff Notes");
+        NOTE_ADDED = BUILDER
+                .comment("Feedback when a note is added. Placeholders: {player} {id}")
+                .define("noteAdded", "§a[NOTE] Note §e#{id} §aadded for §e{player}§a.");
+        NOTE_REMOVED = BUILDER
+                .comment("Feedback when a note is removed. Placeholders: {player} {id}")
+                .define("noteRemoved", "§a[NOTE] Note §e#{id} §aremoved for §e{player}§a.");
+        NOTE_NONE = BUILDER
+                .comment("Shown when player has no notes. Placeholder: {player}")
+                .define("noteNone", "§7[NOTE] No notes for §e{player}§7.");
+        NOTE_LIST_HEADER = BUILDER
+                .comment("Header of the note list. Placeholder: {player}")
+                .define("noteListHeader", "§6╔═ Notes for §e{player} §6═╗");
+        BUILDER.pop();
+
+        BUILDER.push("Death RP History");
+        DEATHRP_HISTORY_HEADER = BUILDER
+                .comment("Header of the death history. Placeholder: {player}")
+                .define("deathHistoryHeader", "§6╔═ Death RP History — §e{player} §6═╗");
+        DEATHRP_HISTORY_NONE = BUILDER
+                .comment("Shown when player has no death history. Placeholder: {player}")
+                .define("deathHistoryNone", "§7No death RP recorded for §e{player}§7.");
+        DEATHRP_HISTORY_ENTRY = BUILDER
+                .comment("Format of each history entry. Placeholders: {index} {date} {cause}")
+                .define("deathHistoryEntry", "§6║ §e#{index} §7— §f{date} §7— {cause}");
+        BUILDER.pop();
+
+        BUILDER.push("RP Cooldowns");
+        RP_COOLDOWN_MESSAGE = BUILDER
+                .comment("Shown when a player is on cooldown. Placeholders: {command} {seconds}")
+                .define("rpCooldownMessage",
+                        "§c[RP] Please wait §e{seconds}s §cbefore using §f/{command} §cagain.");
+        BUILDER.pop();
+
+        BUILDER.push("Stats");
+        STATS_HEADER = BUILDER
+                .comment("Header of the /rpessentials stats command.")
+                .define("statsHeader", "§6╔═════════ §e§lRP Essentials Stats §6═════════╗");
+        BUILDER.pop();
+
+        BUILDER.push("Dice");
+        DICE_ROLL_FORMAT = BUILDER
+                .comment("Format of the dice roll broadcast. Placeholders: {player} {dice} {result}")
+                .define("diceRollFormat",
+                        "§8[🎲] §e{player} §7rolled §6{dice} §7and got §a§l{result}§7!");
+        DICE_ROLL_SPY_FORMAT = BUILDER
+                .comment("Format shown to staff outside dice range. Placeholders: {player} {dice} {result}")
+                .define("diceRollSpyFormat",
+                        "§7[DICE-SPY] §e{player} §7rolled §6{dice}§7: §f{result}");
         BUILDER.pop();
 
         SPEC = BUILDER.build();

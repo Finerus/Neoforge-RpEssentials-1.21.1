@@ -11,8 +11,9 @@ import java.util.*;
 
 public class WorldBorderManager {
 
-    private static final Map<UUID, Boolean> hasBeenWarned   = new HashMap<>();
-    private static final Map<UUID, Set<String>> playerZoneState = new HashMap<>();
+    private static final Map<UUID, Boolean>      hasBeenWarned   = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<UUID, Set<String>>  playerZoneState = new java.util.concurrent.ConcurrentHashMap<>();
+
     private static boolean systemInitialized = false;
 
     public static void tick(MinecraftServer server) {
@@ -76,7 +77,8 @@ public class WorldBorderManager {
         } catch (Exception e) { return; }
 
         UUID uuid = player.getUUID();
-        Set<String> currentZones = playerZoneState.computeIfAbsent(uuid, k -> new HashSet<>());
+        Set<String> currentZones = playerZoneState.computeIfAbsent(
+                uuid, k -> java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>()));
 
         for (String zoneDef : zones) {
             String[] parts = zoneDef.split(";");

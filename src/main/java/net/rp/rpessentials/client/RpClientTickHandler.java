@@ -21,11 +21,12 @@ public class RpClientTickHandler {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
-
-        // Ne rien faire si pas en jeu ou si un écran est déjà ouvert
         if (mc.player == null || mc.screen != null) return;
 
-        // ── Touche GUI Profession ────────────────────────────────────────────
+        if (mc.player.tickCount % 200 == 0) {
+            ClientNametagCache.evictDisconnected();
+        }
+
         while (RpKeyBindings.OPEN_PROFESSION_GUI != null
                 && RpKeyBindings.OPEN_PROFESSION_GUI.consumeClick()) {
             PacketDistributor.sendToServer(
@@ -33,12 +34,20 @@ public class RpClientTickHandler {
             RpEssentials.LOGGER.debug("[RPEssentials] Sent PROFESSION GUI request to server");
         }
 
-        // ── Touche GUI Profil Joueur ─────────────────────────────────────────
         while (RpKeyBindings.OPEN_PLAYER_PROFILE_GUI != null
                 && RpKeyBindings.OPEN_PLAYER_PROFILE_GUI.consumeClick()) {
             PacketDistributor.sendToServer(
                     new RequestOpenGuiPacket(RequestOpenGuiPacket.GuiType.PLAYER_PROFILE));
             RpEssentials.LOGGER.debug("[RPEssentials] Sent PLAYER_PROFILE GUI request to server");
+        }
+
+        while (RpKeyBindings.OPEN_DICE_GUI != null
+                && RpKeyBindings.OPEN_DICE_GUI.consumeClick()) {
+            try {
+                if (net.rp.rpessentials.config.RpConfig.ENABLE_DICE_SYSTEM.get()) {
+                    mc.setScreen(new net.rp.rpessentials.client.gui.DiceSelectionScreen());
+                }
+            } catch (IllegalStateException ignored) {}
         }
     }
 }

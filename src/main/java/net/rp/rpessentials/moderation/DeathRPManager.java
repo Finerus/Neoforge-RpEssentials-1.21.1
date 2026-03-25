@@ -18,6 +18,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.RpEssentialsDataPaths;
 import net.rp.rpessentials.RpEssentialsScheduleManager;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.config.ScheduleConfig;
@@ -46,16 +47,90 @@ public class DeathRPManager {
     private static final ConcurrentHashMap<UUID, Boolean> overrides = new ConcurrentHashMap<>();
     private static File dataFile = null;
 
+    // ── Historique ──────────────────────────────────────────────────────────────
+
+    public static class DeathHistoryEntry {
+        public String playerName;
+        public String playerUUID;
+        public String timestamp;
+        public String damageCause;
+        public String broadcastMessage;
+
+        public DeathHistoryEntry() {}
+
+        public DeathHistoryEntry(String playerName, String playerUUID,
+                                 String damageCause, String broadcastMessage) {
+            this.playerName       = playerName;
+            this.playerUUID       = playerUUID;
+            this.damageCause      = damageCause;
+            this.broadcastMessage = broadcastMessage;
+            this.timestamp        = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
+        }
+    }
+
+    private static final java.util.List<DeathHistoryEntry> history =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+    private static File historyFile = null;
+
+    private static void ensureHistoryInitialized() {
+        if (historyFile != null) return;
+        try {
+            File dataDir = RpEssentialsDataPaths.getDataFolder();
+            dataDir.mkdirs();
+            historyFile = new File(dataDir, "deathrp-history.json");
+            if (historyFile.exists()) loadHistory();
+        } catch (Exception e) {
+            LOGGER.error("[DeathRP] Failed to init history file", e);
+        }
+    }
+
+    private static void loadHistory() {
+        try (FileReader reader = new FileReader(historyFile)) {
+            com.google.gson.reflect.TypeToken<java.util.List<DeathHistoryEntry>> type =
+                    new com.google.gson.reflect.TypeToken<>(){};
+            java.util.List<DeathHistoryEntry> data = GSON.fromJson(reader, type.getType());
+            if (data != null) {
+                history.clear();
+                history.addAll(data);
+            }
+        } catch (Exception e) {
+            LOGGER.error("[DeathRP] Failed to load history", e);
+        }
+    }
+
+    private static void saveHistory() {
+        ensureHistoryInitialized();
+        java.util.List<DeathHistoryEntry> snapshot = new java.util.ArrayList<>(history);
+        File target = historyFile;
+        CompletableFuture.runAsync(() -> {
+            try (FileWriter writer = new FileWriter(target)) {
+                GSON.toJson(snapshot, writer);
+            } catch (Exception e) {
+                LOGGER.error("[DeathRP] Failed to save history", e);
+            }
+        });
+    }
+
+    public static java.util.List<DeathHistoryEntry> getHistory(UUID playerUUID) {
+        ensureHistoryInitialized();
+        String uuidStr = playerUUID.toString();
+        return history.stream()
+                .filter(e -> uuidStr.equals(e.playerUUID))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    public static java.util.List<DeathHistoryEntry> getAllHistory() {
+        ensureHistoryInitialized();
+        return new java.util.ArrayList<>(history);
+    }
+
     // ─── Lazy init ──────────────────────────────────────────────────────────────
 
     private static synchronized void ensureInitialized() {
         if (dataFile != null) return;
         try {
-            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-            File worldDir = server != null
-                    ? server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toFile()
-                    : new File("world");
-            File dataDir = new File(worldDir, "data/rpessentials");
+            File dataDir = RpEssentialsDataPaths.getDataFolder();
             dataDir.mkdirs();
             dataFile = new File(dataDir, "deathrp.json");
             loadFromFile();
@@ -83,17 +158,31 @@ public class DeathRPManager {
     }
 
     private static void saveToFile() {
+        Map<UUID, Boolean> snapshot = new HashMap<>(overrides);
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+
+        Map<String, Boolean> out = new HashMap<>();
+        for (Map.Entry<UUID, Boolean> entry : snapshot.entrySet()) {
+            UUID uuid = entry.getKey();
+            String mcName = "Unknown";
+            if (server != null) {
+                ServerPlayer online = server.getPlayerList().getPlayer(uuid);
+                if (online != null) {
+                    mcName = online.getName().getString();
+                } else if (server.getProfileCache() != null) {
+                    mcName = server.getProfileCache().get(uuid)
+                            .map(com.mojang.authlib.GameProfile::getName)
+                            .orElse("Unknown");
+                }
+            }
+            out.put(uuid + (mcName.equals("Unknown") ? "" : " (" + mcName + ")"), entry.getValue());
+        }
+
         CompletableFuture.runAsync(() -> {
             try {
                 ensureInitialized();
                 if (dataFile == null) return;
-                MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-                Map<String, Boolean> out = new HashMap<>();
-                overrides.forEach((uuid, val) -> {
-                    String mcName = resolveMcName(server, uuid);
-                    out.put(uuid + (mcName.equals("Unknown") ? "" : " (" + mcName + ")"), val);
-                });
-                try (FileWriter writer = new FileWriter(dataFile)) {
+                try (java.io.FileWriter writer = new java.io.FileWriter(dataFile)) {
                     GSON.toJson(out, writer);
                 }
             } catch (Exception e) {
@@ -164,13 +253,15 @@ public class DeathRPManager {
         MinecraftServer server = player.getServer();
         if (server == null) return;
 
+        String rawDeathMsg = "";
+
         // 1. Death message broadcast
         try {
             if (RpEssentialsConfig.DEATH_RP_DEATH_MESSAGE != null) {
-                String raw = RpEssentialsConfig.DEATH_RP_DEATH_MESSAGE.get()
+                rawDeathMsg = RpEssentialsConfig.DEATH_RP_DEATH_MESSAGE.get()
                         .replace("{player}",   NicknameManager.getDisplayName(player))
                         .replace("{realname}", player.getName().getString());
-                Component component = ColorHelper.parseColors(raw);
+                Component component = ColorHelper.parseColors(rawDeathMsg);
                 for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                     p.sendSystemMessage(component);
                 }
@@ -179,25 +270,45 @@ public class DeathRPManager {
             LOGGER.warn("[DeathRP] Config DEATH_MESSAGE unavailable", e);
         }
 
-        // 2. Death sound broadcast
+        // 2. Death sound
         playSound(server, null,
                 RpEssentialsConfig.DEATH_RP_DEATH_SOUND,
                 RpEssentialsConfig.DEATH_RP_DEATH_SOUND_VOLUME,
                 RpEssentialsConfig.DEATH_RP_DEATH_SOUND_PITCH,
                 "death sound");
 
-        // 3. Optional whitelist removal
+        // 3. Whitelist removal
         try {
             if (RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE != null
                     && RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get()) {
-                UserWhiteList whitelist = server.getPlayerList().getWhiteList();
-                whitelist.remove(new UserWhiteListEntry(player.getGameProfile()));
+                net.minecraft.server.players.UserWhiteList whitelist =
+                        server.getPlayerList().getWhiteList();
+                whitelist.remove(new net.minecraft.server.players.UserWhiteListEntry(
+                        player.getGameProfile()));
                 LOGGER.info("[DeathRP] {} removed from whitelist.", player.getName().getString());
             }
-        } catch (IllegalStateException e) {
-            LOGGER.warn("[DeathRP] Config WHITELIST_REMOVE unavailable", e);
         } catch (Exception e) {
-            LOGGER.error("[DeathRP] Could not remove {} from whitelist", player.getName().getString(), e);
+            LOGGER.error("[DeathRP] Could not remove {} from whitelist",
+                    player.getName().getString(), e);
+        }
+
+        // Feature 5 — enregistrement dans l'historique
+        try {
+            String cause = player.getLastDamageSource() != null
+                    ? player.getLastDamageSource().typeHolder()
+                    .unwrapKey().map(k -> k.location().getPath()).orElse("unknown")
+                    : "unknown";
+
+            ensureHistoryInitialized();
+            history.add(new DeathHistoryEntry(
+                    player.getName().getString(),
+                    player.getUUID().toString(),
+                    cause,
+                    rawDeathMsg));
+            saveHistory();
+            LOGGER.info("[DeathRP] Death recorded in history for {}", player.getName().getString());
+        } catch (Exception e) {
+            LOGGER.error("[DeathRP] Failed to record death history", e);
         }
     }
 

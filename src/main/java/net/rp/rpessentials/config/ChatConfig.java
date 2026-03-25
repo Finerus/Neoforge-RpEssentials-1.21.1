@@ -22,6 +22,13 @@ public class ChatConfig {
     public static final ModConfigSpec.ConfigValue<String> JOIN_MESSAGE;
     public static final ModConfigSpec.ConfigValue<String> LEAVE_MESSAGE;
 
+    // === PROXIMITY CHAT ===
+    public static final ModConfigSpec.BooleanValue ENABLE_PROXIMITY_CHAT;
+    public static final ModConfigSpec.IntValue PROXIMITY_CHAT_DISTANCE;
+    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_BYPASS_PREFIX;
+    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_FORMAT;
+    public static final ModConfigSpec.ConfigValue<String> GLOBAL_CHAT_FORMAT;
+
     static {
         // ===============================================================================
         // CATEGORY: CHAT SYSTEM
@@ -70,6 +77,30 @@ public class ChatConfig {
                 .comment("Enable markdown styling in chat",
                         "**bold**, *italic*, __underline__, ~~strikethrough~~")
                 .define("markdownEnabled", true);
+
+        ENABLE_PROXIMITY_CHAT = BUILDER
+                .comment("If true, chat messages are only visible to players within proximityChatDistance blocks.",
+                        "Use the bypass prefix (default: !) to send a global message.")
+                .define("enableProximityChat", false);
+
+        PROXIMITY_CHAT_DISTANCE = BUILDER
+                .comment("Radius in blocks within which proximity chat messages are visible.")
+                .defineInRange("proximityChatDistance", 32, 1, 256);
+
+        PROXIMITY_CHAT_BYPASS_PREFIX = BUILDER
+                .comment("Prefix to bypass proximity chat and send a global message.",
+                        "The prefix is stripped from the message before sending.")
+                .define("proximityChatBypassPrefix", "!");
+
+        PROXIMITY_CHAT_FORMAT = BUILDER
+                .comment("Format for proximity chat messages.",
+                        "Variables: $time, $name, $msg")
+                .define("proximityChatFormat", "[$time] $name: $msg");
+
+        GLOBAL_CHAT_FORMAT = BUILDER
+                .comment("Format for global chat messages (when using bypass prefix or proximity disabled).",
+                        "Variables: $time, $name, $msg")
+                .define("globalChatFormat", "[$time] §f$name§r: $msg");
 
         ENABLE_COLORS_COMMAND = BUILDER
                 .comment("Enable /colors command to show available colors")

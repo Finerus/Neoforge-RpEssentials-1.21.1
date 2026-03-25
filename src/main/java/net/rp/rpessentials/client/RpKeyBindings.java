@@ -17,6 +17,7 @@ public class RpKeyBindings {
 
     public static KeyMapping OPEN_PROFESSION_GUI;
     public static KeyMapping OPEN_PLAYER_PROFILE_GUI;
+    public static KeyMapping OPEN_DICE_GUI;
 
     public static final String CATEGORY = "key.categories.rpessentials";
 
@@ -28,12 +29,17 @@ public class RpKeyBindings {
         OPEN_PROFESSION_GUI = new KeyMapping(
                 "key.rpessentials.open_profession_gui",
                 InputConstants.Type.KEYSYM,
-                InputConstants.UNKNOWN.getValue(),  // -1 = aucune touche par défaut
+                InputConstants.UNKNOWN.getValue(),
                 CATEGORY
         );
-
         OPEN_PLAYER_PROFILE_GUI = new KeyMapping(
                 "key.rpessentials.open_player_profile_gui",
+                InputConstants.Type.KEYSYM,
+                InputConstants.UNKNOWN.getValue(),
+                CATEGORY
+        );
+        OPEN_DICE_GUI = new KeyMapping(
+                "key.rpessentials.open_dice_gui",
                 InputConstants.Type.KEYSYM,
                 InputConstants.UNKNOWN.getValue(),
                 CATEGORY
@@ -41,7 +47,8 @@ public class RpKeyBindings {
 
         event.register(OPEN_PROFESSION_GUI);
         event.register(OPEN_PLAYER_PROFILE_GUI);
+        event.register(OPEN_DICE_GUI);
 
-        RpEssentials.LOGGER.debug("[RPEssentials] GUI keybindings registered");
+        RpEssentials.LOGGER.debug("[RPEssentials] Keybindings registered");
     }
 }

@@ -26,6 +26,10 @@ public class RpEssentialsPermissions {
         }
     }
 
+    public static void clearExpiredCache() {
+        staffCache.entrySet().removeIf(entry -> !entry.getValue().isValid());
+    }
+
     /**
      * Vérifie si un joueur est staff.
      * Hiérarchie : Tags vanilla → Niveau OP → Groupes LuckPerms (optionnel)

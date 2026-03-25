@@ -122,11 +122,31 @@ public class RpEssentialsScheduleManager {
             net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> close) {
         if (!enabled.get()) return null;
         try {
-            return new DaySchedule(LocalTime.parse(open.get(), FMT), LocalTime.parse(close.get(), FMT));
+            String openStr  = open.get();
+            String closeStr = close.get();
+
+            // Validation format HH:MM
+            if (!isValidTimeFormat(openStr)) {
+                RpEssentials.LOGGER.error("[Schedule] Invalid open time format '{}' — expected HH:MM. Day disabled.", openStr);
+                return null;
+            }
+            if (!isValidTimeFormat(closeStr)) {
+                RpEssentials.LOGGER.error("[Schedule] Invalid close time format '{}' — expected HH:MM. Day disabled.", closeStr);
+                return null;
+            }
+
+            return new DaySchedule(
+                    LocalTime.parse(openStr, FMT),
+                    LocalTime.parse(closeStr, FMT));
         } catch (Exception e) {
             RpEssentials.LOGGER.warn("[Schedule] Invalid time format — day disabled. Error: {}", e.getMessage());
             return null;
         }
+    }
+
+    private static boolean isValidTimeFormat(String time) {
+        if (time == null) return false;
+        return time.matches("^([01]\\d|2[0-3]):[0-5]\\d$");
     }
 
     // =========================================================================

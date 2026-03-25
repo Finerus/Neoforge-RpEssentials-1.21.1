@@ -48,6 +48,14 @@ public class ModerationConfig {
     public static ModConfigSpec.IntValue     AUTO_UNWHITELIST_DAYS;
     public static ModConfigSpec.ConfigValue<List<? extends String>> AUTO_UNWHITELIST_EXTRA_COMMANDS;
 
+    // =========================================================================
+    // MUTE SYSTEM
+    // =========================================================================
+    public static final ModConfigSpec.BooleanValue ENABLE_MUTE_SYSTEM;
+    public static final ModConfigSpec.BooleanValue MUTE_AUTO_FROM_WARNS;
+    public static final ModConfigSpec.IntValue MUTE_AUTO_WARN_COUNT;
+    public static final ModConfigSpec.IntValue MUTE_AUTO_DURATION_MINUTES;
+
     static {
         // ===============================================================================
         // CATEGORY: SILENT COMMANDS
@@ -176,6 +184,29 @@ public class ModerationConfig {
                 )
                 .define("removedBroadcastFormat",
                         "§6[STAFF][WARN] §e{staff} §7a supprimé le warn §e#{id}§7.");
+
+        BUILDER.pop();
+
+        // ===============================================================================
+        // CATEGORY: MUTE SYSTEM
+        // ===============================================================================
+        BUILDER.push("Mute System");
+
+        ENABLE_MUTE_SYSTEM = BUILDER
+                .comment("Enable the mute system.")
+                .define("enableMuteSystem", true);
+
+        MUTE_AUTO_FROM_WARNS = BUILDER
+                .comment("If true, players are automatically muted when they reach muteAutoWarnCount active warns.")
+                .define("muteAutoFromWarns", false);
+
+        MUTE_AUTO_WARN_COUNT = BUILDER
+                .comment("Number of active warns that triggers an automatic mute.")
+                .defineInRange("muteAutoWarnCount", 3, 1, 100);
+
+        MUTE_AUTO_DURATION_MINUTES = BUILDER
+                .comment("Duration of the automatic mute in minutes (0 = permanent).")
+                .defineInRange("muteAutoDurationMinutes", 60, 0, 43200);
 
         BUILDER.pop();
 

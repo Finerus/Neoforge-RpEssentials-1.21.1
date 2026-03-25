@@ -1,6 +1,130 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [4.1.4]
+
+**Bug blitz & RP features — proximity chat, mute system, staff notes, dice rolls, and more.**
+
+---
+
+### Fixed
+
+* **Wrong `SPEC.save()` calls in command setters:** Every config setter in `RpEssentialsCommands` that modified a value belonging to `ChatConfig`, `ScheduleConfig`, or `ModerationConfig` was incorrectly calling `RpEssentialsConfig.SPEC.save()` instead of the owning spec. This silently discarded every in-game config change (`joinMessage`, `leaveMessage`, `chatMessageColor`, `enableTimestamp`, all schedule and moderation setters) on server restart. Each setter now calls `configValue.save()` directly, which resolves to the correct spec.
+
+* **`MixinServerCommonPacketListenerImpl` — crash on early packet:** The blur guard `RpEssentialsConfig.ENABLE_BLUR.get()` was called at the top of `modifyPacket` with no try/catch. Any packet arriving before the config spec was built (e.g. during server startup) would throw an `IllegalStateException` and crash the server. Wrapped in `try/catch (IllegalStateException)`.
+
+* **`opsSeeAll` ignoring `OP_LEVEL_BYPASS` config:** The admin-exemption check was hardcoded to `receiver.hasPermissions(2)` regardless of the configured `opLevelBypass` value (0–4). A server with `opLevelBypass = 3` would grant full name visibility to any OP2+ player. The check now reads `RpEssentialsConfig.OP_LEVEL_BYPASS.get()`.
+
+* **Double nametag handler — `NicknameNametagHandler` + `ClientNametagRenderer`:** Both classes subscribed to `RenderNameTagEvent` on the same player entities and both called `event.setContent()`. The result was a race between the two handlers on every nametag render frame. `NicknameNametagHandler` has been removed; `ClientNametagRenderer` is now the sole handler.
+
+* **Hardcoded world data path in all managers:** `NicknameManager`, `LicenseManager`, `WarnManager`, `LastConnectionManager`, and `DeathRPManager` all used `new File("world")` as the world root — a path that is only valid in vanilla dedicated server layouts. All managers now delegate to the new `RpEssentialsDataPaths.getDataFolder()` utility which correctly calls `server.getWorldPath(LevelResource.ROOT)`.
+
+* **`Thread.sleep()` blocking the ForkJoinPool common pool:** The 500ms nametag sync delay in `RpEssentialsEventHandler.onPlayerLogin` used `CompletableFuture.runAsync(() -> { Thread.sleep(500); ... })`, which blocks one of the shared pool's threads for 500ms per player login. Replaced with `CompletableFuture.delayedExecutor(500, TimeUnit.MILLISECONDS)` — zero threads blocked.
+
+* **Async `saveToFile()` accessing non-thread-safe server state:** `LicenseManager`, `NicknameManager`, and `DeathRPManager` called `ServerLifecycleHooks.getCurrentServer()` and `server.getProfileCache()` from async `CompletableFuture` threads. `ProfileCache` is not thread-safe. The player name snapshot is now taken synchronously on the server thread before the async write begins.
+
+* **`WorldBorderManager` non-concurrent maps:** `hasBeenWarned` and `playerZoneState` were plain `HashMap` instances written from the server tick thread. Converted to `ConcurrentHashMap`.
+
+* **Fallback AFK coordinates hardcoded to a specific server:** The `/rp afk` command had compile-time fallback coordinates (`x = -2408.5, y = 127.0, z = 588.5, yaw = 138.29f`) that would teleport players to an arbitrary location on any other server where `RpConfig` wasn't loaded. The fallback now uses `(0, 255, 0)` with neutral yaw/pitch.
+
+* **`extractPlayerName` fragile string parsing in `MixinPlayerList` (Bugs 10 & 13):** The join/leave message system relied on `message.replace(" joined the game", "").trim()` to extract the player name from the vanilla broadcast, and then called `findPlayerByName()` to look up the player — who might not yet be in `getPlayers()` at that point. The mixin now only cancels the vanilla broadcast; the custom message is sent from `RpEssentialsEventHandler.onPlayerLogin`/`onPlayerLogout` where the `ServerPlayer` object is guaranteed valid. A new `IRpPlayerList` interface exposed as a mixin on `PlayerList` carries the two helper methods that `RpEssentialsEventHandler` now calls via a cast.
+
+* **Static maps surviving server reloads:** `WorldBorderManager.hasBeenWarned`, `playerZoneState`, and `systemInitialized` are static fields that persist in the JVM across server restarts in the same process. A new `@SubscribeEvent` handler on `ServerStoppingEvent` calls `WorldBorderManager.clearAllCache()` to ensure a clean state on the next start.
+
+* **`RpEssentialsPermissions.staffCache` unbounded growth:** The staff permission cache never evicted entries for players who disconnected abnormally (without `invalidateCache` being called). A new `clearExpiredCache()` method removes all entries whose TTL has expired; it is called every 400 ticks from `onServerTick`.
+
+* **Tick-0 load spike:** At server start, `tickCounter = 0` caused all three tick buckets (every 40, every 400, every 1200 ticks) to fire simultaneously on the very first tick. The world border check is now offset by `+13` and the schedule/cleanup block by `+37` to spread the initial load.
+
+* **Registered missing config:** The config `rpessentials-rp.toml` wasn't registered in the RpEssentials.java causing it to not generate in the files. It is now correctly registered.
+
+---
+
+### Added
+
+* **Proximity Chat:** Chat messages are now optionally limited to a configurable radius.
+  - New config option `enableProximityChat` (default: `false`) in `rpessentials-chat.toml`.
+  - `proximityChatDistance` — radius in blocks (default: 32, range 1–256).
+  - `proximityChatBypassPrefix` — prefix to send a global message despite proximity mode (default: `!`). The prefix is stripped before broadcasting.
+  - Two separate format strings: `proximityChatFormat` (proximity) and `globalChatFormat` (global / bypass).
+  - Staff members outside radius see a spy-log line (configurable via `MessagesConfig.PROXIMITY_CHAT_SPY_FORMAT`).
+
+* **Mute System:** New staff moderation tool for silencing players in chat.
+  - `/rpessentials mute <player> [minutes] [reason]` — mute permanently or temporarily.
+  - `/rpessentials unmute <player>` — remove mute.
+  - `/rpessentials mute list` — list all active mutes.
+  - Muted players cannot send chat messages, use `/rp action`, `/rp commerce`, or `/rp incognito`. Staff members are always exempt.
+  - Mutes are persisted in `world/data/rpessentials/mutes.json` and survive server restarts.
+  - Auto-expiration on player login and via midnight sweep.
+  - **Auto-mute from warns:** Optional automatic mute when a player accumulates a configurable number of active warns (`muteAutoFromWarns`, `muteAutoWarnCount`, `muteAutoDurationMinutes` in `rpessentials-moderation.toml`).
+  - Players are notified on login if they are still muted (configurable message `MUTE_NOTIFY_ON_JOIN`).
+
+* **Staff Notes:** Permanent per-player notes visible only to staff.
+  - `/rpessentials note add <player> <text>` — add a note to a player's file.
+  - `/rpessentials note list <player>` — show all notes for a player (also displayed in `/whois` output).
+  - `/rpessentials note remove <player> <noteId>` — delete a specific note.
+  - Notes stored in `world/data/rpessentials/notes.json`.
+  - Requires OP level 2.
+
+* **Death RP History:** Every RP death is now permanently logged.
+  - Stores timestamp, player name, UUID, and the broadcast message in `world/data/rpessentials/deathrp-history.json`.
+  - `/rpessentials deathrp history [player]` — view all RP deaths (optionally filtered to one player). Requires staff.
+
+* **Silent Staff Broadcast:** New command to send a message visible only to online staff.
+  - `/rpessentials staff broadcast <message>` — full color code and `§`/`&` support.
+  - Logged to console with a `[STAFF-BROADCAST]` prefix.
+
+* **Staff Statistics Dashboard:** One-command overview of server moderation state.
+  - `/rpessentials stats` — displays: online player count with professions, total active warns, mutes, licenses expiring within 7 days, and the 5 most recent player connections.
+
+* **Dice Roll System:** In-game random number generator for RP scenarios.
+  - `/rp dice [diceType]` — roll the specified die and broadcast the result to nearby players.
+  - Configurable dice types in `rpessentials-rp.toml`: format `name;maxValue` (e.g. `d6;6`) or custom faces `name;face1,face2,face3` (e.g. `coin;Heads,Tails`). Default set: d4, d6, d8, d10, d12, d20, d100.
+  - `diceRollDistance` — broadcast radius in blocks (-1 = global, default: 32).
+  - Staff outside radius see a spy-log line.
+  - Result format and spy format fully configurable via `MessagesConfig` (`DICE_ROLL_FORMAT`, `DICE_ROLL_SPY_FORMAT`).
+
+* **RP Command Cooldowns:** Prevent spam on `/rp action`, `/rp commerce`, and `/rp incognito`.
+  - Three independent cooldowns in `rpessentials-rp.toml`: `actionCooldownSeconds`, `commerceCooldownSeconds`, `incognitoCooldownSeconds` (default: 0 = disabled).
+  - Cooldown is per-player, stored in-memory, cleared on disconnect.
+  - Blocked uses show an action-bar message with remaining time.
+
+---
+
+### Changed
+
+* **`SyncNametagDataPacket` → `SyncFullPlayerStatePacket`:** The two existing nametag packets (`SyncNametagDataPacket` and `HideNametagsPacket`) have been merged into a single `SyncFullPlayerStatePacket`. The new packet carries: UUID, display name, prefix, suffix, profession, isStaff, and the `hideNametags` flag in one payload. This eliminates the race condition where `HideNametagsPacket` and `SyncNametagDataPacket` could arrive in any order and cause a nametag flicker. All senders and `NetworkHandler` registrations updated accordingly. `ClientNametagCache` updated to store the new record type.
+
+* **`RpEssentials.onServerTick` — spread tick offsets:** The three periodic buckets now use `(tickCounter + offset) % period` with offsets of `0`, `+13`, and `+37` respectively to prevent the tick-0 multi-burst.
+
+---
+
+### Technical
+
+**New classes:**
+- `RpEssentialsDataPaths` — shared utility for world data path resolution.
+- `MuteManager` — mute lifecycle management (add, remove, check, persist, expire).
+- `StaffNoteManager` — staff notes lifecycle management.
+- `IRpPlayerList` — mixin interface exposing `rpSendCustomJoinMessage(ServerPlayer)` and `rpSendCustomLeaveMessage(ServerPlayer)` from `MixinPlayerList` to `RpEssentialsEventHandler`.
+- `SyncFullPlayerStatePacket` — replaces `SyncNametagDataPacket` + `HideNametagsPacket`.
+
+**Modified configs:**
+- `rpessentials-chat.toml` — new `[Proximity Chat]` section.
+- `rpessentials-moderation.toml` — new `[Mute System]` section.
+- `rpessentials-rp.toml` — new `[Dice System]` and `[RP Cooldowns]` sections.
+- `rpessentials-messages.toml` — new keys: `PROXIMITY_CHAT_SPY_FORMAT`, `MUTE_RECEIVED`, `MUTE_EXPIRED`, `MUTE_NOTIFY_ON_JOIN`, `DICE_ROLL_FORMAT`, `DICE_ROLL_SPY_FORMAT`, `ACTION_COOLDOWN_REMAINING`, `NOTE_*` family, `DEATHRP_HISTORY_*` family.
+
+**`rpessentials.mixin.json`** — `MixinPlayerList` no longer uses `@Invoker`; `MixinPlayerListAccessor` removed. `IRpPlayerList` used instead.
+
+---
+
+### Migration Notes
+
+* No breaking changes for existing servers.
+* All new systems are disabled by default — no behavior change unless explicitly configured.
+* `SyncNametagDataPacket` and `HideNametagsPacket` are gone — clients connecting to a 4.1.4 server **must** also run 4.1.4.
+* `mutes.json`, `notes.json`, and `deathrp-history.json` are created automatically on first use.
+* The wrong-SPEC-save fix means some config values that appeared to save but didn't will now actually persist. Review your `rpessentials-chat.toml`, `rpessentials-schedule.toml`, and `rpessentials-moderation.toml` after the first start to confirm values are as expected.
+
 ## [4.1.3]
 
 **GUI overhaul, cross-midnight schedule, tooltip fixes, license system improvements.**

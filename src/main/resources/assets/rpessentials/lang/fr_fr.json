@@ -59,5 +59,6 @@
   "rpessentials.gui.player_profile.summary":            "Nick: %s §8| Rôle: %s §8| Prof: %s",
   "rpessentials.gui.player_profile.btn_revoke":         "§c✖ Révoquer le permis",
   "rpessentials.gui.player_profile.btn_apply":          "§a✔ Appliquer le profil",
-  "rpessentials.gui.player_profile.btn_close":          "§cFermer"
+  "rpessentials.gui.player_profile.btn_close":          "§cFermer",
+  "key.rpessentials.open_dice_gui": "Ouvrir le lanceur de dés"
 }

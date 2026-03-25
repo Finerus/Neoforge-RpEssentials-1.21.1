@@ -30,7 +30,7 @@ public class NicknameNametagHandler {
         if (!(entity instanceof Player player)) return;
 
         // Ne pas toucher au nametag du joueur local
-        if (player.getUUID().equals(mc.player.getUUID())) return;
+        // if (player.getUUID().equals(mc.player.getUUID())) return;
 
         UUID uuid = player.getUUID();
         String realName = player.getGameProfile().getName();

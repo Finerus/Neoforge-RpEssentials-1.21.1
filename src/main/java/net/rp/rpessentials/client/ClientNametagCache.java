@@ -1,22 +1,15 @@
 package net.rp.rpessentials.client;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.rp.rpessentials.SyncNametagDataPacket;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Cache côté CLIENT des données nametag reçues via SyncNametagDataPacket.
- *
- * Mis à jour par handle() à chaque réception de packet.
- * Consulté par NametagEventHandler à chaque frame de rendu.
- *
- * Thread-safe : ConcurrentHashMap (tick thread + render thread).
- */
 public class ClientNametagCache {
 
-    // UUID du joueur cible → ses données nametag
     private static final Map<UUID, NametagData> cache = new ConcurrentHashMap<>();
 
     public static void update(SyncNametagDataPacket packet) {
@@ -37,14 +30,23 @@ public class ClientNametagCache {
         return cache.containsKey(uuid);
     }
 
-    /** Appelé à la déconnexion du client (ClientEventHandler). */
+    /**
+     * Amélioration 10 — Nettoie les entrées des joueurs qui ne sont plus
+     * dans la liste du serveur (déconnectés pendant que le client reste connecté).
+     * Appelé périodiquement depuis RpClientTickHandler.
+     */
+    public static void evictDisconnected() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getConnection() == null) return;
+
+        cache.keySet().removeIf(uuid ->
+                mc.getConnection().getPlayerInfo(uuid) == null);
+    }
+
+    /** Appelé à la déconnexion du client. */
     public static void reset() {
         cache.clear();
     }
-
-    // =========================================================================
-    // DATA CLASS
-    // =========================================================================
 
     public record NametagData(
             String displayName,

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.RpEssentialsDataPaths;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -110,10 +111,7 @@ public class WarnManager {
     private static synchronized void ensureInitialized() {
         if (dataFile != null) return;
         try {
-            File worldFolder = new File("world");
-            if (!worldFolder.exists()) worldFolder = new File(".");
-
-            File dataFolder = new File(worldFolder, "data/rpessentials");
+            File dataFolder = RpEssentialsDataPaths.getDataFolder();
             if (!dataFolder.exists()) dataFolder.mkdirs();
 
             dataFile = new File(dataFolder, "warns.json");

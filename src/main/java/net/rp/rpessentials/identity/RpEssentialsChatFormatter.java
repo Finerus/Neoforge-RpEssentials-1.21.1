@@ -21,17 +21,16 @@ public class RpEssentialsChatFormatter {
     private static final Pattern MARKDOWN_STRIKETHROUGH = Pattern.compile("~~(.+?)~~");
 
     /**
-     * Formate un message de chat complet
+     * Formate un message avec indicateur global/proximité.
+     * @param isGlobal true = format global, false = format proximité
      */
-    public static Component formatChatMessage(ServerPlayer sender, String message) {
+    public static Component formatChatMessage(ServerPlayer sender, String message, boolean isGlobal) {
         if (!ChatConfig.ENABLE_CHAT_FORMAT.get()) {
             return Component.literal("<" + sender.getName().getString() + "> " + message);
         }
 
-        // 1. Obtenir le nom formaté (contient déjà un §r à la fin)
         String playerName = formatPlayerName(sender);
 
-        // 2. Obtenir le timestamp
         String timestamp = "";
         if (ChatConfig.ENABLE_TIMESTAMP.get()) {
             try {
@@ -42,24 +41,30 @@ public class RpEssentialsChatFormatter {
             }
         }
 
-        // 3. Appliquer le markdown et la couleur du message
-        String formattedBody = message;
-        if (ChatConfig.MARKDOWN_ENABLED.get()) {
-            formattedBody = applyMarkdown(message);
-        }
-
-        // On récupère la couleur du message et on l'applique au corps du message
+        String formattedBody = ChatConfig.MARKDOWN_ENABLED.get() ? applyMarkdown(message) : message;
         String messageColor = getColorCode(ChatConfig.CHAT_MESSAGE_COLOR.get());
         String finalMessageBody = messageColor + formattedBody;
 
-        // 4. Construire le format final
-        String chatFormat = ChatConfig.CHAT_MESSAGE_FORMAT.get();
+        // Feature 1 — sélection du format selon global/proximité
+        String chatFormat;
+        try {
+            chatFormat = isGlobal
+                    ? ChatConfig.GLOBAL_CHAT_FORMAT.get()
+                    : ChatConfig.PROXIMITY_CHAT_FORMAT.get();
+        } catch (IllegalStateException e) {
+            chatFormat = ChatConfig.CHAT_MESSAGE_FORMAT.get();
+        }
+
         chatFormat = chatFormat.replace("$time", timestamp);
         chatFormat = chatFormat.replace("$name", playerName);
-        chatFormat = chatFormat.replace("$msg", finalMessageBody);
+        chatFormat = chatFormat.replace("$msg",  finalMessageBody);
 
-        // ✅ Utiliser ColorHelper avec translateAlternateColorCodes pour supporter & et §
         return ColorHelper.parseColors(ColorHelper.translateAlternateColorCodes(chatFormat));
+    }
+
+    // Garder l'ancienne signature comme delegate pour ne pas casser les appels existants
+    public static Component formatChatMessage(ServerPlayer sender, String message) {
+        return formatChatMessage(sender, message, true);
     }
 
     /**
