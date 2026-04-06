@@ -24,6 +24,18 @@ base {
     archivesName = mod_id
 }
 
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = mod_group_id
+            artifactId = mod_id
+            version = mod_version
+            artifact jar
+        }
+    }
+    // repositories {} vide = publie dans ~/.m2/repository par défaut
+}
+
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 runs {
