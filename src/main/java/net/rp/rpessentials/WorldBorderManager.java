@@ -28,7 +28,7 @@ public class WorldBorderManager {
             if (!RpEssentialsConfig.ENABLE_WORLD_BORDER_WARNING.get()) return;
             if (!systemInitialized) {
                 systemInitialized = true;
-                RpEssentials.LOGGER.info("[WorldBorder] System initialized");
+                RpEssentials.LOGGER.info("[RpEssentials] System initialized. Hi, have a great day! - Finerus");
             }
         } catch (Exception e) { return; }
 

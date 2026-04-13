@@ -53,7 +53,7 @@ public class RpEssentials {
                 ProfessionRestrictionManager.reloadCache();
                 // Invalider le cache des presets Immersive au reload de config
                 ImmersivePresetHelper.clearCache();
-                LOGGER.info("[RPEssentials] Config loaded — schedule, professions & immersive presets initialized.");
+                LOGGER.info("[RPEssentials] Config loaded: schedule, professions & immersive presets initialized.");
             }
         });
     }
@@ -173,6 +173,6 @@ public class RpEssentials {
         RpEssentialsScheduleManager.reload();
         ImmersivePresetHelper.clearCache();
         PlaytimeManager.clearAll();
-        LOGGER.info("[RPEssentials] Static caches cleared on server stop.");
+        LOGGER.info("[RPEssentials] Static caches cleared on server stop. Bye! - Finerus");
     }
 }

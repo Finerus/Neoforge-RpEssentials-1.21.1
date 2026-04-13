@@ -1,8 +1,8 @@
 # Rp Essentials
 
-**Rp Essentials** is a comprehensive server-side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It provides a complete suite of RP tools — proximity-based name obfuscation, a profession and license system, a warn system, connection tracking, private messaging, schedule automation, staff moderation tools, advanced chat formatting, world border warnings, named zones, Death RP, and deep LuckPerms integration — all configurable in real-time without restarts.
+**Rp Essentials** is a comprehensive server-side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It provides a complete suite of RP tools: proximity-based name obfuscation, a profession and license system, a warn system, connection tracking, private messaging, schedule automation, staff moderation tools, advanced chat formatting, world border warnings, named zones, Death RP, and deep LuckPerms integration. All configurable in real-time without restarts.
 
-> Current version: **4.1.1** — See [CHANGELOG](CHANGELOG.md) for the full history.
+> Current version: **4.1.6**: See [CHANGELOG](https://modrinth.com/mod/rp-essentials/changelog) for the full history.
 
 ---
 
@@ -11,7 +11,7 @@
 | Dependency | Version | Side | Required |
 |:-----------|:--------|:-----|:---------|
 | Minecraft | 1.21.1 | Both | ✅ |
-| NeoForge | 21.1.215+ | Both | ✅ |
+| NeoForge | 21.1.219+ | Both | ✅ |
 | LuckPerms | Any | Server | ⬜ Optional |
 | ImmersiveMessages | neoforge-1.21.1:1.0.18 | Client | ⬜ Optional |
 | TxniLib | neoforge-1.21.1:1.0.24 | Client | ⬜ Optional |
@@ -25,8 +25,8 @@
 1. Download the latest `rpessentials-X.X.X.jar` from the releases page.
 2. Place the JAR in your server's `mods/` folder.
 3. *(Optional)* Install [LuckPerms](https://luckperms.net/) for prefix/suffix and group-based staff permissions.
-4. Start the server — all config files are generated automatically under `config/rpessentials/`.
-5. Edit the relevant config files (see [Configuration](#configuration) below).
+4. Start the server: all config files are generated automatically under `config/rpessentials/`.
+5. Edit the relevant config files (see 'Configuration' below).
 6. Reload in-game with `/rpessentials config reload` or restart the server.
 
 ---
@@ -61,14 +61,13 @@ Persistent RP nicknames fully integrated across all mod systems:
 
 Realistic nametag behavior integrated with the nickname system:
 
-- **Block occlusion:** Nametags are hidden when a block is between the viewer and the target. Implemented by switching `Font.DisplayMode` from `SEE_THROUGH` to `NORMAL`, activating the GPU depth test — same technique as the Realistic Nametag mod. No raycast, no performance overhead.
+- **Block occlusion:** Nametags are hidden when a block is between the viewer and the target. Implemented by switching `Font.DisplayMode` from `SEE_THROUGH` to `NORMAL`, activating the GPU depth test, same technique as the Realistic Nametag mod. No raycast, no performance overhead.
 - **Server nickname on nametag:** The nametag displays the nickname set on the server (via `/rpessentials nick`), with the LuckPerms prefix and full color code support. Never uses a locally cached nickname.
 - **Global hide toggle:** All nametags can be hidden server-wide via `hideNametags = true` in `rpessentials-core.toml` or `/rpessentials config set hideNametags true/false`.
-- Sneak behavior is preserved — the nametag turns semi-transparent while crouching, as in vanilla.
 
 ### Profession & License System
 
-A complete job and economy restriction system for RP servers:
+A complete job restriction system for RP servers:
 
 - Define unlimited professions with custom names and color codes.
 - Physical **license items** are given to players, carrying profession metadata and issuance date.
@@ -102,7 +101,7 @@ Full staff warning system for moderation:
 Automatic recording of player connection history:
 
 - Records last login and last logout for every player.
-- Data stored in `world/data/rpessentials/lastconnection.json` — human-readable `UUID (McUsername)` key format.
+- Data stored in `world/data/rpessentials/lastconnection.json`: human-readable `UUID (McUsername)` key format.
 - Staff can look up any player's last connection time, even for offline players.
 - List view shows the N most recent connections sorted by date.
 
@@ -110,8 +109,8 @@ Automatic recording of player connection history:
 
 Custom `/msg` system fully replacing vanilla messaging:
 
-- `/msg <player> <message>`, `/tell`, `/w`, `/whisper` — send private messages with Rp Essentials formatting.
-- `/r <message>` — reply to the last person who messaged you.
+- `/msg <player> <message>`, `/tell`, `/w`, `/whisper`: send private messages with Rp Essentials formatting.
+- `/r <message>`: reply to the last person who messaged you.
 - Messages formatted with nicknames, LuckPerms prefixes/suffixes, and color codes.
 - Clickable "Click to reply" button in received messages.
 - Console-to-player messaging supported.
@@ -130,7 +129,7 @@ Full chat formatting system:
   - `__text__` → Underline
   - `~~text~~` → Strikethrough
 - `/colors` displays all available colors and formatting codes with a visual preview.
-- Full integration with the nickname system — nicknames appear in chat automatically.
+- Full integration with the nickname system, nicknames appear in chat automatically.
 
 ### Join / Leave Messages
 
@@ -169,7 +168,7 @@ An optional schedule layer for out-of-roleplay (HRP) period management:
 - Two tiers: tolerated (noted but not punished) and allowed (fully free).
 - Broadcast message sent once per slot start to all connected players.
 - Configurable display mode: `CHAT`, `ACTION_BAR`, `TITLE`, `IMMERSIVE`.
-- Disabled by default — entirely ignored when `enableHrpHours = false`.
+- Disabled by default, entirely ignored when `enableHrpHours = false`.
 
 ### Death RP
 
@@ -193,7 +192,7 @@ Permanent death system for RP servers:
 
 Silent staff commands with full logging:
 
-- Silent gamemode, teleport, and effect commands — invisible to other players.
+- Silent gamemode, teleport, and effect commands: invisible to other players.
 - All actions logged to console and broadcast to other online staff (configurable).
 - Target notification disabled by default (stealth mode).
 
@@ -226,7 +225,7 @@ Automatic removal of inactive players from the whitelist:
 
 Multi-layered staff detection for maximum reliability:
 
-- Scoreboard tags (`admin`, `modo`, `staff`, `builder` — configurable).
+- Scoreboard tags (`admin`, `modo`, `staff`, `builder`: configurable).
 - Minimum OP level bypass (configurable from 0 to 4).
 - LuckPerms group integration (configurable).
 - Results cached for better performance (30-second cache).
@@ -238,7 +237,7 @@ Every player-facing string in the mod is exposed as a configurable value via `on
 
 - Full English translation of all messages out of the box.
 - `§` and `&` color code support in all values.
-- Reloadable at runtime with `/rpessentials config reload` — no restart required.
+- Reloadable at runtime with `/rpessentials config reload` (no restart required).
 - Organized into clear sections: `[System]`, `[Private Messaging]`, `[Warn System]`, `[Last Connection]`, `[Death RP]`, `[Whois]`, `[Player List]`, `[Help]`, `[Profession Restrictions]`.
 
 ---
@@ -425,7 +424,7 @@ The mod uses **6 config files** under `config/rpessentials/`, generated automati
 
 ### rpessentials-schedule.toml
 
-#### [Schedule System — Per Day]
+#### [Schedule System | Per Day]
 Each day of the week (`MONDAY` through `SUNDAY`) has its own fields:
 
 | Option | Default | Description |
@@ -557,21 +556,6 @@ All persistent data is stored in the world folder. Files are human-readable JSON
 
 ---
 
-## Migration
-
-The mod includes an automatic migration system (`ConfigMigrator`) that handles all migration phases on first launch:
-
-- **Phase 1:** `oneriaserverutilities-server.toml` → `config/oneria/oneria-*.toml` (v1/v2)
-- **Phase 2:** `config/oneria-professions.toml` → `config/oneria/` (v2 root)
-- **Phase 3:** `config/oneria/oneria-*.toml` → `config/rpessentials/rpessentials-*.toml` (v3.x)
-- **Phase 4:** `world/data/oneriamod/` → `world/data/rpessentials/` (all versions)
-
-All original files are backed up as `.migrated.bak` — nothing is deleted.
-
-> **Note:** `rpessentials-schedule.toml` is regenerated with the new per-day structure. Previous `openingTime`/`closingTime` values are not migrated — set the new per-day fields manually after the first launch.
-
----
-
 ## LuckPerms Integration
 
 LuckPerms is **optional**. The mod works fully without it, with graceful fallback:
@@ -585,12 +569,12 @@ LuckPerms is **optional**. The mod works fully without it, with graceful fallbac
 ## Performance
 
 - Permission checks: 30-second cache (~90% overhead reduction).
-- Profession restriction checks: ~0.1ms per check (cached).
+- Profession restriction checks: ~0.1ms per check (cached) (most of the verification is now event-based so almost no impact).
 - License database queries: ~0.5ms (with caching).
 - Network sync: ~1KB packet per player on login.
 - Cache cleanup runs every 20 seconds to prevent memory leaks.
-- Nametag block occlusion: zero raycast overhead — handled entirely by GPU depth test.
-- Estimated total overhead: <1% CPU usage on active servers.
+- Nametag block occlusion: zero raycast overhead, handled entirely by GPU depth test.
+- **Estimated total overhead: <1% CPU usage on active servers.**
 
 ---
 
@@ -600,7 +584,7 @@ LuckPerms is **optional**. The mod works fully without it, with graceful fallbac
 |:------|:------|
 | Mod ID | `rpessentials` |
 | Group ID | `net.rp.rpessentials` |
-| Version | 4.1.1 |
+| Version | 4.1.6 |
 | MC Version | 1.21.1 |
-| NeoForge | 21.1.215+ |
+| NeoForge | 21.1.219+ |
 | Java | 21 |
