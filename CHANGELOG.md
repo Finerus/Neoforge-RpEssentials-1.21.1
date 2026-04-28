@@ -1,6 +1,25 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+---
+
+## [4.1.7]
+
+**Hotfix nametag visibility**
+
+### Fixed
+
+* **Nametags always transparent in multiplayer:** The `rpessentials$forceDepthTest` injection in `MixinEntityRenderer` was forcing `Font.DisplayMode.NORMAL` on all nametag draw calls. This caused nametags to render as semi-transparent grey boxes regardless of config (including with blur disabled). The injection has been removed.
+
+### Removed
+
+* **Nametag block occlusion:** The feature that hid nametags behind opaque blocks (introduced in 4.1.1) has been removed. It was implemented by switching `Font.DisplayMode` from `SEE_THROUGH` to `NORMAL`, which broke the second "bright" draw pass that vanilla uses to render nametags at full opacity. The result was visually broken nametags for all users on any server running this mod with other players nearby. The vanilla nametag rendering behaviour is now fully restored.
+
+### Migration Notes
+
+* No config changes required.
+* Nametags will now behave exactly as in vanilla when not obfuscated. If you want the functionality back, you can always go back to 4.1.6 or install Realistic Nametag! 
+
 ## [4.1.6]
 
 **Enriched name variables in chat, unified profile GUI with licenses, ImmersiveMessages presets, config change history, extended profession restrictions, and a playtime system.**
