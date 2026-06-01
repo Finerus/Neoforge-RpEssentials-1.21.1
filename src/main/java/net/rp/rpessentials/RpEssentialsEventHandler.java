@@ -13,10 +13,12 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
+import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.config.ScheduleConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.api.IRpPlayerList;
 import net.rp.rpessentials.moderation.*;
+import net.rp.rpessentials.network.HideNametagsPacket;
 import net.rp.rpessentials.profession.ProfessionSyncHelper;
 import net.rp.rpessentials.profession.TempLicenseExpirationManager;
 
@@ -94,6 +96,12 @@ public class RpEssentialsEventHandler {
                 if (count > 0) player.sendSystemMessage(ColorHelper.parseColors(
                         ModerationConfig.WARN_JOIN_MESSAGE.get().replace("{count}", String.valueOf(count))));
             }
+        } catch (IllegalStateException ignored) {}
+
+        // Sync hideNametags state to the joining player
+        try {
+            boolean hideNametags = RpEssentialsConfig.HIDE_NAMETAGS.get();
+            PacketDistributor.sendToPlayer(player, new HideNametagsPacket(hideNametags));
         } catch (IllegalStateException ignored) {}
 
         try {

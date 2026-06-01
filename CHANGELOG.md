@@ -1,6 +1,11 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [4.1.10] - _HOTFIX_
+
+- `HideNametag` config was not persisted for all the players. It is now persisted!
+- Updated the in-game description.
+
 ## [4.1.10]
 
 **Performance overhaul, a lot of bug fix on nametag rendering and production crashes, complete config reload, new schedule commands.**
