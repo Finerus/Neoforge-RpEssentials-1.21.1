@@ -46,9 +46,10 @@ public class ProfessionEditorScreen extends Screen {
 
     private int profListScroll = 0;
 
-    private static final char[]   COLOR_CHARS = { 'f','e','6','c','a','b','9','d','7','8' };
+    private static final char[]   COLOR_CHARS = { 0, 'f','e','6','c','a','b','9','d','7','8','0','1','2','3','4','5' };
     private static final String[] COLOR_KEYS  = {
-            "white","yellow","gold","red","green","cyan","blue","pink","gray","dark_gray"
+            "none","white","yellow","gold","red","green","cyan","blue","pink","gray","dark_gray",
+            "black","dark_blue","dark_green","dark_aqua","dark_red","dark_purple"
     };
     private static final String[] TAB_KEYS = { "crafts", "blocks", "items", "equipment" };
 
@@ -111,7 +112,9 @@ public class ProfessionEditorScreen extends Screen {
             int col = i % colCols;
             int row = i / colCols;
             String colorLabel = I18n.get("rpessentials.gui.color." + COLOR_KEYS[i]);
-            String btnLabel = (i == stateColorIndex ? "§l" : "") + "§" + COLOR_CHARS[i] + colorLabel;
+            String btnLabel = i == 0
+                    ? (i == stateColorIndex ? "§l" : "") + "§7" + colorLabel
+                    : (i == stateColorIndex ? "§l" : "") + "§" + COLOR_CHARS[i] + colorLabel;
             addRenderableWidget(Button.builder(Component.literal(btnLabel),
                             btn -> { stateColorIndex = idx; rebuild(); })
                     .pos(formX + col * (colBtnW + 2), y + 14 + row * (colBtnH + 2))
@@ -304,8 +307,12 @@ public class ProfessionEditorScreen extends Screen {
         y += 46;
 
         g.drawString(this.font, I18n.get("rpessentials.gui.profession_editor.color_label"), formX, y + 4, 0x888888, false);
-        if (!stateName.isEmpty())
-            g.drawString(this.font, Component.literal("§" + COLOR_CHARS[stateColorIndex] + stateName), formX + 70, y + 4, 0xFFFFFF, false);
+        if (!stateName.isEmpty()) {
+            String preview = stateColorIndex == 0
+                    ? stateName
+                    : "§" + COLOR_CHARS[stateColorIndex] + stateName;
+            g.drawString(this.font, Component.literal(preview), formX + 70, y + 4, 0xFFFFFF, false);
+        }
 
         int colBtnW = 58, colBtnH = 16;
         int colCols = Math.max(1, Math.min(5, formW / (colBtnW + 2)));
@@ -418,7 +425,7 @@ public class ProfessionEditorScreen extends Screen {
         String id   = stateId.trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
         String name = stateName.trim();
         if (id.isEmpty() || name.isEmpty()) return;
-        String colorCode = "&" + COLOR_CHARS[stateColorIndex];
+        String colorCode = stateColorIndex == 0 ? "" : "&" + COLOR_CHARS[stateColorIndex];
         PacketDistributor.sendToServer(new SaveProfessionPacket(id, name, colorCode,
                 new ArrayList<>(allowedCrafts), new ArrayList<>(allowedBlocks),
                 new ArrayList<>(allowedItems), new ArrayList<>(allowedEquipment), stateIsNew));
@@ -443,8 +450,10 @@ public class ProfessionEditorScreen extends Screen {
         stateName = e.displayName();
         stateColorIndex = 0;
         String codeChar = e.color().replace("&", "").replace("§", "");
-        for (int i = 0; i < COLOR_CHARS.length; i++)
-            if (String.valueOf(COLOR_CHARS[i]).equals(codeChar)) { stateColorIndex = i; break; }
+        if (!codeChar.isEmpty()) {
+            for (int i = 1; i < COLOR_CHARS.length; i++)
+                if (String.valueOf(COLOR_CHARS[i]).equals(codeChar)) { stateColorIndex = i; break; }
+        }
         allowedCrafts    = new ArrayList<>(e.allowedCrafts());
         allowedBlocks    = new ArrayList<>(e.allowedBlocks());
         allowedItems     = new ArrayList<>(e.allowedItems());

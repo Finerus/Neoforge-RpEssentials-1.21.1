@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -82,34 +83,38 @@ public class LicenseCardRenderer {
         float textX = -HALF_W + 8f;
 
         drawCentered(font, bufferSource, poseStack,
-                revoked ? "§c§l✗  REVOKED  ✗" : "§6§l✦  LICENSE  ✦",
+                revoked
+                        ? "§c§l" + I18n.get("rpessentials.license.card.revoked")
+                        : "§6§l" + I18n.get("rpessentials.license.card.title"),
                 0f, -HALF_H + 8f, light);
 
         float y = -HALF_H + 22f;
 
-        drawLeft(font, bufferSource, poseStack, "§8Profession", textX, y, light);
+        drawLeft(font, bufferSource, poseStack, "§8" + I18n.get("rpessentials.license.card.profession"), textX, y, light);
         y += 7f;
         drawLeft(font, bufferSource, poseStack, "§f" + profId, textX + 6f, y, light);
         y += 10f;
 
-        drawLeft(font, bufferSource, poseStack, "§8Holder", textX, y, light);
+        drawLeft(font, bufferSource, poseStack, "§8" + I18n.get("rpessentials.license.card.holder"), textX, y, light);
         y += 7f;
         drawLeft(font, bufferSource, poseStack, "§f" + holder, textX + 6f, y, light);
         y += 10f;
 
-        drawLeft(font, bufferSource, poseStack, "§8Issue Date", textX, y, light);
+        drawLeft(font, bufferSource, poseStack, "§8" + I18n.get("rpessentials.license.card.issued"), textX, y, light);
         y += 7f;
         drawLeft(font, bufferSource, poseStack, "§f" + issueDate, textX + 6f, y, light);
         y += 10f;
 
         if (expiryDate != null) {
-            drawLeft(font, bufferSource, poseStack, "§8Valid Until", textX, y, light);
+            drawLeft(font, bufferSource, poseStack, "§8" + I18n.get("rpessentials.license.card.until"), textX, y, light);
             y += 7f;
             drawLeft(font, bufferSource, poseStack, "§f" + expiryDate, textX + 6f, y, light);
         }
 
         drawCentered(font, bufferSource, poseStack,
-                revoked ? "§c✗ This license is no longer valid" : "§a✓ This license is valid",
+                revoked
+                        ? "§c" + I18n.get("rpessentials.license.card.invalid")
+                        : "§a" + I18n.get("rpessentials.license.card.valid"),
                 0f, HALF_H - 14f, light);
 
         poseStack.popPose();

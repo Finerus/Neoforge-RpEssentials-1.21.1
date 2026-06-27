@@ -64,15 +64,7 @@ public class RpLicenseCommands {
 
         licenseNode.then(Commands.literal("check")
                 .then(Commands.argument("player", EntityArgument.player())
-                        .then(Commands.argument("profession", StringArgumentType.word())
-                                .suggests((ctx, builder) -> {
-                                    try {
-                                        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
-                                        LicenseManager.getLicenses(target.getUUID()).forEach(builder::suggest);
-                                    } catch (Exception ignored) {}
-                                    return builder.buildFuture();
-                                })
-                                .executes(RpLicenseCommands::checkLicense))));
+                        .executes(RpLicenseCommands::checkLicenseAll)));
 
         licenseNode.then(Commands.literal("giverp")
                 .then(Commands.argument("player", EntityArgument.player())
@@ -239,13 +231,31 @@ public class RpLicenseCommands {
         return 1;
     }
 
-    private static int checkLicense(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    private static int checkLicenseAll(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
-        String profession = StringArgumentType.getString(ctx, "profession");
-        boolean has = LicenseManager.hasLicense(target.getUUID(), profession);
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                MessagesConfig.get(has ? MessagesConfig.PROFESSION_HAS_LICENSE : MessagesConfig.PROFESSION_NO_LICENSE,
-                        "player", target.getName().getString(), "profession", profession)), false);
+        List<String> licenses = LicenseManager.getLicenses(target.getUUID());
+        String name = target.getName().getString();
+
+        if (licenses.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_NONE, "player", name)), false);
+            return 1;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("§6╔═════════════════════════════════╗\n");
+        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_HEADER, "player", name)).append("\n");
+        sb.append("§6╠═════════════════════════════════╣\n");
+        for (String profession : licenses) {
+            String expiry = LicenseManager.getTempExpirationDate(target.getUUID(), profession);
+            ProfessionRestrictionManager.ProfessionData data = ProfessionRestrictionManager.getProfessionData(profession);
+            sb.append("§6║ ").append(data != null ? data.getFormattedName() : "§f" + profession);
+            if (expiry != null) sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
+            sb.append("\n");
+        }
+        sb.append("§6╚═════════════════════════════════╝");
+        String msg = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;
     }
 

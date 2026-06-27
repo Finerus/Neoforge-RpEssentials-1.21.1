@@ -64,6 +64,13 @@ public class ScheduleConfig {
     public static final ModConfigSpec.ConfigValue<String> MSG_CLOSING_IMMINENT;
 
     // =========================================================================
+    // FORCE CLOSE
+    // =========================================================================
+    public static ModConfigSpec.ConfigValue<String> FORCE_STATE;
+    public static ModConfigSpec.ConfigValue<String> FORCE_CLOSED_MESSAGE;
+    public static ModConfigSpec.ConfigValue<java.util.List<? extends String>> SCHEDULE_WHITELIST;
+
+    // =========================================================================
     // WELCOME
     // =========================================================================
     public static final ModConfigSpec.BooleanValue ENABLE_WELCOME;
@@ -186,6 +193,27 @@ public class ScheduleConfig {
                         "Placeholders: {minutes} {close}")
                 .define("msgClosingImminent",
                         "§c§lThe server closes in {minutes} minute(s)! Finish what you're doing!");
+
+        BUILDER.pop();
+
+        // ─── Force Close ──────────────────────────────────────────────────────────
+        BUILDER.push("Forced State");
+
+        FORCE_STATE = BUILDER
+                .comment("Forced server state. NONE = follow schedule, FORCE_OPEN = always open, FORCE_CLOSED = always closed.",
+                        "Managed by /opennow and /closenow. Do not edit manually while the server is running.")
+                .define("forceState", "NONE");
+
+        FORCE_CLOSED_MESSAGE = BUILDER
+                .comment("Message shown to non-staff players trying to connect when the server is forcibly closed.",
+                        "Supports & and § color codes.")
+                .define("forceClosedMessage",
+                        "§c§lThe server is exceptionally closed. Please check back later.");
+
+        SCHEDULE_WHITELIST = BUILDER
+                .comment("Players in this list can connect even when the server is forcibly or schedule-closed.",
+                        "Also bypasses FORCE_CLOSED. Staff members are always exempt regardless of this list.")
+                .defineList("scheduleWhitelist", java.util.List.of(), obj -> obj instanceof String);
 
         BUILDER.pop();
 

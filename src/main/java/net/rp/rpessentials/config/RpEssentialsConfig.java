@@ -35,6 +35,10 @@ public class RpEssentialsConfig {
     // === WORLD BORDER & ZONES ===
     public static final ModConfigSpec.BooleanValue ENABLE_WORLD_BORDER_WARNING;
     public static final ModConfigSpec.IntValue WORLD_BORDER_DISTANCE;
+    public static final ModConfigSpec.BooleanValue WORLD_BORDER_TELEPORT_ENABLED;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> WORLD_BORDER_DIMENSION_OVERRIDES;
+    public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_PREWARN_MESSAGE;
+    public static final ModConfigSpec.IntValue WORLD_BORDER_PREWARN_DISTANCE;
     public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_MESSAGE;
     public static final ModConfigSpec.IntValue WORLD_BORDER_CHECK_INTERVAL;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> NAMED_ZONES;
@@ -130,7 +134,7 @@ public class RpEssentialsConfig {
                 .define("blurSpectators", true);
 
         WHITELIST_EXEMPT_PROFESSIONS = BUILDER
-                .comment("If true, whitelisted players are also exempt from profession restrictions.")
+                .comment("If true, tab-whitelisted players are also exempted from profession restrictions.")
                 .define("whitelistExemptProfessions", false);
 
         BUILDER.pop(); // Obfuscation Settings
@@ -168,12 +172,45 @@ public class RpEssentialsConfig {
         BUILDER.push("World Border Warning");
 
         ENABLE_WORLD_BORDER_WARNING = BUILDER
-                .comment("Enable warning when players reach the world border distance.")
+                .comment("Enable warning when players reach the world border distance. Since the 4.2.0, if the value is set to false, the world border will now be completely disabled.")
                 .define("enableWorldBorderWarning", true);
 
         WORLD_BORDER_DISTANCE = BUILDER
                 .comment("Distance from spawn (blocks) before warning is triggered.")
                 .defineInRange("worldBorderDistance", 1500, 100, 100000);
+
+        WORLD_BORDER_TELEPORT_ENABLED = BUILDER
+                .comment("If true, players reaching the world border are teleported to the opposite side.")
+                .define("worldBorderTeleportEnabled", false);
+
+        WORLD_BORDER_DIMENSION_OVERRIDES = BUILDER
+                .comment(
+                        "Per-dimension world border overrides.",
+                        "Format: dimension;distance;teleport;prewarnDistance",
+                        "  dimension      : resource location (e.g. minecraft:overworld)",
+                        "  distance       : border distance in blocks from spawn (0 = use global value)",
+                        "  teleport       : true/false (overrides global worldBorderTeleportEnabled)",
+                        "  prewarnDistance: pre-warning distance (0 = use global value)",
+                        "Example: minecraft:the_nether;1000;false;800"
+                )
+                .defineList("worldBorderDimensionOverrides",
+                        List.of(),
+                        obj -> obj instanceof String && ((String) obj).contains(";"));
+
+        WORLD_BORDER_PREWARN_DISTANCE = BUILDER
+                .comment(
+                        "Distance from spawn at which the pre-warning is sent, before the hard border.",
+                        "Must be less than worldBorderDistance. Set to 0 to disable."
+                )
+                .defineInRange("worldBorderPrewarnDistance", 0, 0, 100000);
+
+        WORLD_BORDER_PREWARN_MESSAGE = BUILDER
+                .comment(
+                        "Message sent when a player reaches the pre-warning distance.",
+                        "Variables: {distance}, {player}, {border}"
+                )
+                .define("worldBorderPrewarnMessage",
+                        "§e⚠ You are approaching the world border ({distance} blocks from center). Limit: {border} blocks.");
 
         WORLD_BORDER_MESSAGE = BUILDER
                 .comment("Message displayed when player reaches border. Variables: {distance}, {player}")

@@ -6,6 +6,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
@@ -94,12 +95,14 @@ public class ConfigManagerScreen extends Screen {
     private int     deferredTooltipX       = 0;
     private int     deferredTooltipY       = 0;
 
+    private boolean pendingRebuild = false;
+
     // =========================================================================
     // CONSTRUCTOR
     // =========================================================================
 
     public ConfigManagerScreen(List<ConfigGuiFilesPacket.FileEntry> files) {
-        super(Component.literal("§6✦ Config Manager"));
+        super(Component.translatable("rpessentials.gui.config.title"));
         this.files = files;
         // Auto-select first file
         if (!files.isEmpty()) {
@@ -167,7 +170,9 @@ public class ConfigManagerScreen extends Screen {
         int cy = this.height / 2;
         // No widget needed — text drawn in render()
         // Just add a cancel button
-        addRenderableWidget(Button.builder(Component.literal("§cClose"), btn -> onClose())
+        addRenderableWidget(Button.builder(
+                        Component.translatable("rpessentials.gui.config.btn_close_loading"),
+                        btn -> onClose())
                 .pos(cx - 30, cy + 20).size(60, 18).build());
     }
 
@@ -216,7 +221,9 @@ public class ConfigManagerScreen extends Screen {
             case BOOLEAN -> {
                 // Toggle button
                 boolean boolVal = "true".equalsIgnoreCase(currentEdit);
-                String label = boolVal ? "§a§l✔ ON" : "§c§l✗ OFF";
+                String label = boolVal
+                        ? I18n.get("rpessentials.gui.config.bool_on")
+                        : I18n.get("rpessentials.gui.config.bool_off");
                 addRenderableWidget(Button.builder(Component.literal(label), btn -> {
                     boolean cur = "true".equalsIgnoreCase(
                             editBoxValues.getOrDefault(entry.fullPath(), entry.currentValue()));
@@ -254,7 +261,6 @@ public class ConfigManagerScreen extends Screen {
             }
 
             case LIST_STRING, LIST_INT -> {
-                // Comma-separated EditBox + "Edit" button
                 int btnW = 40;
                 int boxW = formW - labelWidth(entry.key()) - btnW - 16;
                 boxW = Math.max(boxW, 80);
@@ -267,7 +273,9 @@ public class ConfigManagerScreen extends Screen {
                 box.setResponder(val -> markChange(entry.fullPath(), val, entry.currentValue()));
                 if (!entry.comment().isBlank()) {
                     box.setTooltip(Tooltip.create(
-                            Component.literal("§8Comma-separated. " + firstLine(entry.comment()))));
+                            Component.literal(String.format(
+                                    I18n.get("rpessentials.gui.config.comma_separated"),
+                                    firstLine(entry.comment())))));
                 }
                 addRenderableWidget(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
@@ -275,7 +283,8 @@ public class ConfigManagerScreen extends Screen {
                 // "Edit List" button — opens the list editor sub-screen
                 final String path      = entry.fullPath();
                 final String entryKey  = entry.key();
-                addRenderableWidget(Button.builder(Component.literal("§7Edit"),
+                addRenderableWidget(Button.builder(Component.literal(
+                                        I18n.get("rpessentials.gui.config.edit_list")),
                                 btn -> openListEditor(path, entryKey, currentEdit))
                         .pos(boxX + boxW + 2, widgetY).size(btnW, 16).build());
             }
@@ -337,23 +346,19 @@ public class ConfigManagerScreen extends Screen {
         int mid = (FILE_PANEL_W + MARGIN * 3 + this.width) / 2;
 
         // Apply button
-        boolean hasPending = !pendingChanges.isEmpty();
-        String applyLabel  = hasPending
-                ? "§a§lApply " + pendingChanges.size() + " change(s)"
-                : "§7No changes";
-        addRenderableWidget(Button.builder(Component.literal(applyLabel), btn -> {
+        addRenderableWidget(Button.builder(Component.literal(""), btn -> {
             if (!pendingChanges.isEmpty()) applyChanges();
         }).pos(mid - 110, y).size(160, 20).build());
 
         // Discard
-        addRenderableWidget(Button.builder(Component.literal("§cDiscard"), btn -> {
+        addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.btn_discard"), btn -> {
             pendingChanges.clear();
             editBoxValues.clear();
             rebuild();
         }).pos(mid + 54, y).size(60, 20).build());
 
         // Close
-        addRenderableWidget(Button.builder(Component.literal("§8Close"), btn -> onClose())
+        addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.btn_close"), btn -> onClose())
                 .pos(this.width - MARGIN - 52, y).size(52, 20).build());
     }
 
@@ -363,6 +368,9 @@ public class ConfigManagerScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        if (pendingRebuild) {
+            pendingRebuild = false;
+        }
         // Dim background
         g.fill(0, 0, this.width, this.height, 0x99000000);
 
@@ -370,7 +378,7 @@ public class ConfigManagerScreen extends Screen {
         int panelRight = FILE_PANEL_W + MARGIN * 2;
         g.fill(MARGIN - 2, PANEL_TOP, panelRight + 2, this.height - 6, 0xBB111111);
         g.fill(MARGIN - 2, PANEL_TOP, panelRight + 2, PANEL_TOP + 2, 0xFF8B6914);
-        g.drawString(this.font, "§6§lConfig Files", MARGIN + 2, PANEL_TOP + 4, 0xFFD700, false);
+        g.drawString(this.font, I18n.get("rpessentials.gui.config.files_header"), MARGIN + 2, PANEL_TOP + 4, 0xFFD700, false);
 
         // ── Entries panel background ─────────────────────────────────────────
         int formX = FILE_PANEL_W + MARGIN * 3;
@@ -379,13 +387,13 @@ public class ConfigManagerScreen extends Screen {
 
         // Title + file name
         String title = selectedFileId != null
-                ? "§6✦ Config Manager  §8— §e" + selectedFileId
-                : "§6✦ Config Manager";
+                ? String.format(I18n.get("rpessentials.gui.config.title_with_file"), selectedFileId)
+                : I18n.get("rpessentials.gui.config.title");
         g.drawString(this.font, title, formX, PANEL_TOP + 5, 0xFFD700, false);
 
         // Pending indicator
         if (!pendingChanges.isEmpty()) {
-            g.drawString(this.font, "§e⚠ " + pendingChanges.size() + " unsaved",
+            g.drawString(this.font, String.format(I18n.get("rpessentials.gui.config.unsaved"), pendingChanges.size()),
                     formX, PANEL_TOP + 14, 0xFFDD44, false);
         }
 
@@ -394,12 +402,12 @@ public class ConfigManagerScreen extends Screen {
         deferredTooltipComment = null;
 
         if (loading) {
-            g.drawCenteredString(this.font, "§7Loading…",
+            g.drawCenteredString(this.font, I18n.get("rpessentials.gui.config.loading"),
                     (formX + this.width) / 2, this.height / 2 - 10, 0x888888);
         } else if (currentEntries != null) {
             renderEntries(g, formX, this.width - MARGIN, mouseX, mouseY);
         } else {
-            g.drawCenteredString(this.font, "§8Select a config file on the left.",
+            g.drawCenteredString(this.font, I18n.get("rpessentials.gui.config.select_file"),
                     (formX + this.width) / 2, this.height / 2, 0x666666);
         }
 
@@ -409,6 +417,13 @@ public class ConfigManagerScreen extends Screen {
 
         // Render all widgets (EditBox, Button…) first
         super.render(g, mouseX, mouseY, delta);
+
+        int applyBtnX = (FILE_PANEL_W + MARGIN * 3 + this.width) / 2 - 110;
+        int applyBtnY = this.height - FOOTER_H + 4;
+        String applyLabel = !pendingChanges.isEmpty()
+                ? String.format(I18n.get("rpessentials.gui.config.btn_apply"), pendingChanges.size())
+                : I18n.get("rpessentials.gui.config.btn_no_change");
+        g.drawCenteredString(this.font, applyLabel, applyBtnX + 80, applyBtnY + 6, 0xFFFFFF);
 
         // ── Deferred comment tooltip — drawn LAST so it appears above all widgets ──
         if (deferredTooltipComment != null) {
@@ -488,12 +503,14 @@ public class ConfigManagerScreen extends Screen {
 
         // Scroll indicators
         if (scrollOffset > 0) {
-            g.drawCenteredString(this.font, "§8▲ (" + scrollOffset + " more above)",
+            g.drawCenteredString(this.font,
+                    String.format(I18n.get("rpessentials.gui.config.scroll_above"), scrollOffset),
                     (formX + formRight) / 2, clipTop, 0x444444);
         }
         long below = currentEntries.stream().skip(last + 1).count();
         if (below > 0) {
-            g.drawCenteredString(this.font, "§8▼ (" + below + " more below)",
+            g.drawCenteredString(this.font,
+                    String.format(I18n.get("rpessentials.gui.config.scroll_below"), below),
                     (formX + formRight) / 2, clipBottom - 8, 0x444444);
         }
     }
@@ -571,7 +588,8 @@ public class ConfigManagerScreen extends Screen {
             pendingChanges.put(fullPath, newValue);
         }
         editBoxValues.put(fullPath, newValue);
-        // Don't rebuild here — EditBox responder is called too frequently
+
+        pendingRebuild = true;
     }
 
     private void applyChanges() {
@@ -709,7 +727,8 @@ public class ConfigManagerScreen extends Screen {
 
         ListEditorSubScreen(ConfigManagerScreen parent, String fullPath,
                             String key, String commaValue) {
-            super(Component.literal("§6Edit List: §e" + ConfigManagerScreen.formatKeyName(key)));
+            super(Component.literal(String.format(I18n.get("rpessentials.gui.config.list.title"),
+                    ConfigManagerScreen.formatKeyName(key))));
             this.parent        = parent;
             this.fullPath      = fullPath;
             this.originalComma = commaValue;
@@ -774,12 +793,12 @@ public class ConfigManagerScreen extends Screen {
                         .pos(midX - 170, startY + (last - first) * rowH).size(16, 18).build());
 
             // Add new entry
-            addRenderableWidget(Button.builder(Component.literal("§a+ Add entry"),
+            addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_add"),
                             btn -> { items.add(""); rebuild(); })
                     .pos(midX - 170, btnY).size(110, 20).build());
 
             // Save
-            addRenderableWidget(Button.builder(Component.literal("§aSave list"), btn -> {
+            addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_save"), btn -> {
                 // Remove empty entries
                 items.removeIf(String::isBlank);
                 String result = String.join(", ", items);
@@ -787,7 +806,7 @@ public class ConfigManagerScreen extends Screen {
             }).pos(midX - 55, btnY).size(110, 20).build());
 
             // Cancel
-            addRenderableWidget(Button.builder(Component.literal("§cCancel"),
+            addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_cancel"),
                             btn -> net.minecraft.client.Minecraft.getInstance().setScreen(parent))
                     .pos(midX + 59, btnY).size(70, 20).build());
         }
@@ -795,12 +814,28 @@ public class ConfigManagerScreen extends Screen {
         private void rebuild() { clearWidgets(); init(); }
 
         @Override
+        public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
+            int visMax = (this.height - 40 - 60) / 22;
+            int maxScroll = Math.max(0, items.size() - visMax);
+            if (scrollY < 0 && scrollOffset < maxScroll) {
+                scrollOffset++;
+                rebuild();
+                return true;
+            } else if (scrollY > 0 && scrollOffset > 0) {
+                scrollOffset = Math.max(0, scrollOffset - 1);
+                rebuild();
+                return true;
+            }
+            return super.mouseScrolled(mx, my, scrollX, scrollY);
+        }
+
+        @Override
         public void render(GuiGraphics g, int mx, int my, float delta) {
             renderBackground(g, mx, my, delta);
             super.render(g, mx, my, delta);
             g.drawCenteredString(this.font, this.title, this.width / 2, 14, 0xFFD700);
             g.drawCenteredString(this.font,
-                    "§7" + items.size() + " entries  (empty entries are ignored on save)",
+                    String.format(I18n.get("rpessentials.gui.config.list.entries"), items.size()),
                     this.width / 2, 26, 0x666666);
         }
 

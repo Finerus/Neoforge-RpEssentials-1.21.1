@@ -45,25 +45,39 @@ public class TempLicenseExpirationManager {
      */
     public static void markRevokedLicenseItems(ServerPlayer player) {
         List<String> activeLicenses = LicenseManager.getLicenses(player.getUUID());
+
+        // inventaire vanilla
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-            net.minecraft.world.item.ItemStack stack = player.getInventory().getItem(i);
-            if (stack.isEmpty() || !(stack.getItem() instanceof LicenseItem)) continue;
-            if (!stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) continue;
+            markStackIfRevoked(player.getInventory().getItem(i), activeLicenses);
+        }
 
-            net.minecraft.nbt.CompoundTag tag =
-                    stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA).copyTag();
-            String profId = tag.getString("professionId");
-            if (profId.isEmpty()) continue;
+        // slots Curios (optionnel)
+        try {
+            top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).ifPresent(handler ->
+                    handler.getCurios().forEach((slotId, stacksHandler) -> {
+                        for (int i = 0; i < stacksHandler.getSlots(); i++) {
+                            markStackIfRevoked(stacksHandler.getStacks().getStackInSlot(i), activeLicenses);
+                        }
+                    }));
+        } catch (NoClassDefFoundError ignored) {}
+    }
 
-            boolean isActive = activeLicenses.stream().anyMatch(l -> l.equalsIgnoreCase(profId));
-            boolean alreadyRevoked = tag.getBoolean("revoked");
+    private static void markStackIfRevoked(net.minecraft.world.item.ItemStack stack, List<String> activeLicenses) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof net.rp.rpessentials.items.LicenseItem)) return;
+        if (!stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) return;
 
-            if (!isActive && !alreadyRevoked) {
-                // Mark as revoked — LicenseItem.appendHoverText() will show the message.
-                tag.putBoolean("revoked", true);
-                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                        net.minecraft.world.item.component.CustomData.of(tag));
-            }
+        net.minecraft.nbt.CompoundTag tag =
+                stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA).copyTag();
+        String profId = tag.getString("professionId");
+        if (profId.isEmpty()) return;
+
+        boolean isActive = activeLicenses.stream().anyMatch(l -> l.equalsIgnoreCase(profId));
+        boolean alreadyRevoked = tag.getBoolean("revoked");
+
+        if (!isActive && !alreadyRevoked) {
+            tag.putBoolean("revoked", true);
+            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                    net.minecraft.world.item.component.CustomData.of(tag));
         }
     }
 

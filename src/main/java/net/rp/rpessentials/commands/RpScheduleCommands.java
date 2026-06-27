@@ -25,14 +25,101 @@ import java.util.List;
 public class RpScheduleCommands {
 
     public static void registerAliases(com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("schedule").executes(RpScheduleCommands::showSchedule));
-        dispatcher.register(Commands.literal("horaires").executes(RpScheduleCommands::showSchedule));
-        dispatcher.register(Commands.literal("opennow")
-                .requires(src -> src.hasPermission(2))
-                .executes(RpScheduleCommands::forceOpen));
-        dispatcher.register(Commands.literal("closenow")
-                .requires(src -> src.hasPermission(2))
-                .executes(RpScheduleCommands::forceClose));
+        dispatcher.register(Commands.literal("schedule")
+                .executes(RpScheduleCommands::showSchedule)
+                .then(Commands.literal("forceopen")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceOpen))
+                .then(Commands.literal("forceclose")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceClose))
+                .then(Commands.literal("resetforcestate")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceReset))
+                .then(Commands.literal("whitelist")
+                        .requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("add")
+                                .then(Commands.argument("player", StringArgumentType.word())
+                                        .suggests((ctx, builder) -> {
+                                            ctx.getSource().getServer().getPlayerList().getPlayers()
+                                                    .forEach(p -> builder.suggest(p.getName().getString()));
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(RpScheduleCommands::scheduleWhitelistAdd)))
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("player", StringArgumentType.word())
+                                        .suggests((ctx, builder) -> {
+                                            try { ScheduleConfig.SCHEDULE_WHITELIST.get().forEach(builder::suggest); }
+                                            catch (IllegalStateException ignored) {}
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(RpScheduleCommands::scheduleWhitelistRemove)))
+                        .then(Commands.literal("list")
+                                .executes(RpScheduleCommands::scheduleWhitelistList))));
+
+        dispatcher.register(Commands.literal("calendar")
+                .executes(RpScheduleCommands::showSchedule)
+                .then(Commands.literal("forceopen")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceOpen))
+                .then(Commands.literal("forceclose")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceClose))
+                .then(Commands.literal("resetforcestate")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceReset))
+                .then(Commands.literal("whitelist")
+                        .requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("add")
+                                .then(Commands.argument("player", StringArgumentType.word())
+                                        .suggests((ctx, builder) -> {
+                                            ctx.getSource().getServer().getPlayerList().getPlayers()
+                                                    .forEach(p -> builder.suggest(p.getName().getString()));
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(RpScheduleCommands::scheduleWhitelistAdd)))
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("player", StringArgumentType.word())
+                                        .suggests((ctx, builder) -> {
+                                            try { ScheduleConfig.SCHEDULE_WHITELIST.get().forEach(builder::suggest); }
+                                            catch (IllegalStateException ignored) {}
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(RpScheduleCommands::scheduleWhitelistRemove)))
+                        .then(Commands.literal("list")
+                                .executes(RpScheduleCommands::scheduleWhitelistList))));
+
+        dispatcher.register(Commands.literal("horaires")
+                .executes(RpScheduleCommands::showSchedule)
+                .then(Commands.literal("forceopen")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceOpen))
+                .then(Commands.literal("forceclose")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceClose))
+                .then(Commands.literal("resetforcestate")
+                        .requires(src -> src.hasPermission(2))
+                        .executes(RpScheduleCommands::forceReset))
+                .then(Commands.literal("whitelist")
+                        .requires(src -> src.hasPermission(2))
+                        .then(Commands.literal("add")
+                                .then(Commands.argument("player", StringArgumentType.word())
+                                        .suggests((ctx, builder) -> {
+                                            ctx.getSource().getServer().getPlayerList().getPlayers()
+                                                    .forEach(p -> builder.suggest(p.getName().getString()));
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(RpScheduleCommands::scheduleWhitelistAdd)))
+                        .then(Commands.literal("remove")
+                                .then(Commands.argument("player", StringArgumentType.word())
+                                        .suggests((ctx, builder) -> {
+                                            try { ScheduleConfig.SCHEDULE_WHITELIST.get().forEach(builder::suggest); }
+                                            catch (IllegalStateException ignored) {}
+                                            return builder.buildFuture();
+                                        })
+                                        .executes(RpScheduleCommands::scheduleWhitelistRemove)))
+                        .then(Commands.literal("list")
+                                .executes(RpScheduleCommands::scheduleWhitelistList))));
     }
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildSetRole() {
@@ -103,19 +190,33 @@ public class RpScheduleCommands {
         boolean schedEnabled;
         try { schedEnabled = ScheduleConfig.ENABLE_SCHEDULE.get(); } catch (IllegalStateException e) { schedEnabled = false; }
         boolean isOpen = RpEssentialsScheduleManager.isServerOpen();
+        boolean isForceClosed  = false;
+        boolean isForceOpen    = false;
+        try {
+            String state = ScheduleConfig.FORCE_STATE.get();
+            isForceClosed = "FORCE_CLOSED".equals(state);
+            isForceOpen   = "FORCE_OPEN".equals(state);
+        } catch (IllegalStateException ignored) {}
         String timeInfo = schedEnabled ? RpEssentialsScheduleManager.getTimeUntilNextEvent() : MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_OPEN) + " (disabled)";
 
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HEADER)).append("\n §6§lSERVER SCHEDULE\n §7Status: ")
-                .append(isOpen ? MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_OPEN) : MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_CLOSED))
-                .append("\n\n");
+        String statusLabel;
+        if (isForceClosed) {
+            statusLabel = "§c§lFORCIBLY CLOSED";
+        } else if (isForceOpen) {
+            statusLabel = "§a§lFORCIBLY OPEN";
+        } else {
+            statusLabel = isOpen
+                    ? MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_OPEN)
+                    : MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_CLOSED);
+        }
 
         if (schedEnabled) {
             for (java.time.DayOfWeek day : java.time.DayOfWeek.values()) {
                 RpEssentialsScheduleManager.DaySchedule s = RpEssentialsScheduleManager.getSchedules().get(day);
                 boolean isToday = day == today;
                 String prefix = isToday ? MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_TODAY_PREFIX) : MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_OTHER_PREFIX);
-                String dayName = day.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
+                String dayName = RpEssentialsScheduleManager.getDayName(day);
                 if (s == null) sb.append(prefix).append(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_CLOSED_FORMAT, "day", dayName)).append("\n");
                 else sb.append(prefix).append(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_OPEN_FORMAT, "day", dayName, "open", s.open().format(fmt), "close", s.close().format(fmt))).append("\n");
             }
@@ -283,10 +384,36 @@ public class RpScheduleCommands {
         return 1;
     }
 
+    private static int forceReset(CommandContext<CommandSourceStack> ctx) {
+        MinecraftServer server = ctx.getSource().getServer();
+        try {
+            ScheduleConfig.FORCE_STATE.set("NONE");
+            ScheduleConfig.SPEC.save();
+        } catch (IllegalStateException ignored) {}
+
+        RpEssentialsScheduleManager.resetDailyFlags();
+
+        Component staffMsg = Component.literal("§e[Schedule] Forced state cleared by §f"
+                + ctx.getSource().getTextName()
+                + "§e. Schedule resumes normally.");
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (RpEssentialsPermissions.isStaff(p))
+                p.sendSystemMessage(staffMsg);
+        }
+
+        return 1;
+    }
+
     private static int forceOpen(CommandContext<CommandSourceStack> ctx) {
         MinecraftServer server = ctx.getSource().getServer();
+        try {
+            ScheduleConfig.FORCE_STATE.set("FORCE_OPEN");
+            ScheduleConfig.SPEC.save();
+        } catch (IllegalStateException ignored) {}
+
         RpEssentialsScheduleManager.resetDailyFlags();
         RpEssentialsScheduleManager.markOpenedToday();
+
         try {
             String msg = ScheduleConfig.MSG_SERVER_OPENED.get()
                     .replace("{open}",  "now")
@@ -297,17 +424,112 @@ public class RpScheduleCommands {
             server.getPlayerList().broadcastSystemMessage(
                     net.rp.rpessentials.ColorHelper.parseColors(msg), false);
         } catch (IllegalStateException ignored) {}
-        ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
-                "§a[Schedule] Server forcibly opened."), true);
+
+        // Notification staff
+        Component staffMsg = Component.literal("§a[Schedule] Server forcibly opened by §e"
+                + ctx.getSource().getTextName() + "§a.");
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (net.rp.rpessentials.RpEssentialsPermissions.isStaff(p))
+                p.sendSystemMessage(staffMsg);
+        }
+
         return 1;
     }
 
     private static int forceClose(CommandContext<CommandSourceStack> ctx) {
         MinecraftServer server = ctx.getSource().getServer();
+        try {
+            ScheduleConfig.FORCE_STATE.set("FORCE_CLOSED");
+            ScheduleConfig.SPEC.save();
+        } catch (IllegalStateException ignored) {}
+
         RpEssentialsScheduleManager.markClosedToday();
-        RpEssentialsScheduleManager.closeServer(server);
-        ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(
-                "§c[Schedule] Server forcibly closed."), true);
+
+        String kickMsg;
+        try {
+            kickMsg = ScheduleConfig.FORCE_CLOSED_MESSAGE.get();
+        } catch (IllegalStateException e) {
+            kickMsg = "§cThe server is exceptionally closed.";
+        }
+        String finalKickMsg = kickMsg;
+
+        // Kick non-staff
+        java.util.List<ServerPlayer> toKick = new java.util.ArrayList<>();
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (!net.rp.rpessentials.RpEssentialsPermissions.isStaff(p)) toKick.add(p);
+        }
+        for (ServerPlayer p : toKick) {
+            p.connection.disconnect(net.rp.rpessentials.ColorHelper.parseColors(finalKickMsg));
+        }
+
+        // Notification staff
+        Component staffMsg = Component.literal("§c[Schedule] Server forcibly closed by §e"
+                + ctx.getSource().getTextName()
+                + "§c. §8(" + toKick.size() + " player(s) kicked)");
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (net.rp.rpessentials.RpEssentialsPermissions.isStaff(p))
+                p.sendSystemMessage(staffMsg);
+        }
+
         return 1;
+    }
+
+    private static int scheduleWhitelistAdd(CommandContext<CommandSourceStack> ctx) {
+        String name = StringArgumentType.getString(ctx, "player");
+        try {
+            java.util.List<String> list = new java.util.ArrayList<>(ScheduleConfig.SCHEDULE_WHITELIST.get());
+            if (list.contains(name)) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "§c[Schedule] §f" + name + " §cis already in the schedule whitelist."));
+                return 0;
+            }
+            list.add(name);
+            ScheduleConfig.SCHEDULE_WHITELIST.set(list);
+            ScheduleConfig.SPEC.save();
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "§a[Schedule] §f" + name + " §aadded to the schedule whitelist."), true);
+            return 1;
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal("§c[Schedule] Config not loaded."));
+            return 0;
+        }
+    }
+
+    private static int scheduleWhitelistRemove(CommandContext<CommandSourceStack> ctx) {
+        String name = StringArgumentType.getString(ctx, "player");
+        try {
+            java.util.List<String> list = new java.util.ArrayList<>(ScheduleConfig.SCHEDULE_WHITELIST.get());
+            if (!list.remove(name)) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "§c[Schedule] §f" + name + " §cis not in the schedule whitelist."));
+                return 0;
+            }
+            ScheduleConfig.SCHEDULE_WHITELIST.set(list);
+            ScheduleConfig.SPEC.save();
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "§a[Schedule] §f" + name + " §aremoved from the schedule whitelist."), true);
+            return 1;
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal("§c[Schedule] Config not loaded."));
+            return 0;
+        }
+    }
+
+    private static int scheduleWhitelistList(CommandContext<CommandSourceStack> ctx) {
+        try {
+            java.util.List<? extends String> list = ScheduleConfig.SCHEDULE_WHITELIST.get();
+            if (list.isEmpty()) {
+                ctx.getSource().sendSuccess(() -> Component.literal(
+                        "§e[Schedule] Schedule whitelist is empty."), false);
+                return 1;
+            }
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "§e[Schedule] Whitelist §8(" + list.size() + ")§e: §f"
+                            + String.join("§7, §f", list)), false);
+            return 1;
+        } catch (IllegalStateException e) {
+            ctx.getSource().sendFailure(Component.literal("§c[Schedule] Config not loaded."));
+            return 0;
+        }
     }
 }

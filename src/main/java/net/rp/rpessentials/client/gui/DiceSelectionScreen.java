@@ -25,7 +25,7 @@ public class DiceSelectionScreen extends Screen {
     private static final int PAD   = 6;
 
     public DiceSelectionScreen() {
-        super(Component.literal("§6Roll a dice"));
+        super(Component.translatable("rpessentials.gui.dice.title"));
     }
 
     @Override
@@ -62,7 +62,7 @@ public class DiceSelectionScreen extends Screen {
         }
 
         // Bouton fermer
-        addRenderableWidget(Button.builder(Component.literal("§cCancel"), btn -> onClose())
+        addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.dice.cancel"), btn -> onClose())
                 .pos((this.width - 60) / 2, startY + totalH + PAD + 4)
                 .size(60, BTN_H).build());
     }

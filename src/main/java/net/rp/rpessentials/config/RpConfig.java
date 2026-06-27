@@ -62,22 +62,11 @@ public class RpConfig {
     // =========================================================================
     public static final ModConfigSpec.ConfigValue<List<? extends String>> IMMERSIVE_PRESETS;
 
-    // =========================================================================
-    // MOD COMPAT — JEI / REI / EMI
-    // =========================================================================
-    /**
-     * Mode d'intégration JEI/REI/EMI pour les restrictions de licences.
-     *   HIDE_BLOCKED  — masque complètement les items et recettes bloqués
-     *   GREY_OUT      — affiche les items mais grise les recettes bloquées
-     *   SHOW_ALL      — comportement vanilla (pas de filtrage)
-     */
-    public static final ModConfigSpec.ConfigValue<String> JEI_INTEGRATION_MODE;
-
     static {
 
         // ── AFK ───────────────────────────────────────────────────────────────
         BUILDER.push("AFK");
-        AFK_DIMENSION = BUILDER.comment("Dimension to teleport to when using /rp afk.").define("dimension", "rpessentials:afk");
+        AFK_DIMENSION = BUILDER.comment("Dimension to teleport to when using /rp afk.").define("dimension", "minecraft:overworld");
         AFK_X     = BUILDER.comment("X coordinate.").defineInRange("x",     0, -30000000.0, 30000000.0);
         AFK_Y     = BUILDER.comment("Y coordinate.").defineInRange("y",   255, -64.0, 320.0);
         AFK_Z     = BUILDER.comment("Z coordinate.").defineInRange("z",     0, -30000000.0, 30000000.0);
@@ -166,23 +155,6 @@ public class RpConfig {
                                 "title;5.0;1.0;1.0"
                         ),
                         obj -> obj instanceof String && ((String)obj).contains(";"));
-        BUILDER.pop();
-
-        // ── MOD COMPAT ────────────────────────────────────────────────────────
-        BUILDER.push("Mod Compatibility");
-        JEI_INTEGRATION_MODE = BUILDER
-                .comment(
-                        "Profession restriction integration with JEI / REI / EMI.",
-                        "",
-                        "  HIDE_BLOCKED — hides items and recipes blocked for the current player.",
-                        "                 Uses client-side restriction cache (SyncProfessionRestrictionsPacket).",
-                        "  GREY_OUT     — shows items but marks blocked recipes with a red overlay.",
-                        "                 (JEI/REI only — EMI uses HIDE_BLOCKED as fallback)",
-                        "  SHOW_ALL     — no filtering, vanilla behaviour.",
-                        "",
-                        "Default: SHOW_ALL (opt-in to avoid surprising admins on first install)."
-                )
-                .define("jeiIntegrationMode", "SHOW_ALL");
         BUILDER.pop();
 
         SPEC = BUILDER.build();

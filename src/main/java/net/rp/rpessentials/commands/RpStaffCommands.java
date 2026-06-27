@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -86,6 +87,21 @@ public class RpStaffCommands {
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(RpStaffCommands::staffBroadcast)));
 
+        staffNode.then(Commands.literal("proximityspy")
+                .then(Commands.argument("value", BoolArgumentType.bool())
+                        .executes(ctx -> {
+                            boolean newVal = BoolArgumentType.getBool(ctx, "value");
+                            try {
+                                ChatConfig.ENABLE_PROXIMITY_SPY.set(newVal);
+                                ChatConfig.SPEC.save();
+                            } catch (IllegalStateException ignored) { return 0; }
+                            ctx.getSource().getPlayerOrException().sendSystemMessage(Component.literal(
+                                    MessagesConfig.get(newVal
+                                            ? MessagesConfig.PROXIMITY_CHAT_SPY_ENABLED
+                                            : MessagesConfig.PROXIMITY_CHAT_SPY_DISABLED)));
+                            return 1;
+                        })));
+
         return staffNode;
     }
 
@@ -95,18 +111,41 @@ public class RpStaffCommands {
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("platform_name", StringArgumentType.word())
                         .then(Commands.argument("dimension", ResourceLocationArgument.id())
+                                .suggests((ctx, builder) -> {
+                                    ctx.getSource().getServer().levelKeys().forEach(key ->
+                                            builder.suggest(key.location().toString()));
+                                    return builder.buildFuture();
+                                })
                                 .then(Commands.argument("x", IntegerArgumentType.integer())
+                                        .suggests((ctx, builder) -> {
+                                            try {
+                                                builder.suggest((int) ctx.getSource().getPosition().x);
+                                            } catch (Exception ignored) {}
+                                            return builder.buildFuture();
+                                        })
                                         .then(Commands.argument("y", IntegerArgumentType.integer())
+                                                .suggests((ctx, builder) -> {
+                                                    try {
+                                                        builder.suggest((int) ctx.getSource().getPosition().y);
+                                                    } catch (Exception ignored) {}
+                                                    return builder.buildFuture();
+                                                })
                                                 .then(Commands.argument("z", IntegerArgumentType.integer())
+                                                        .suggests((ctx, builder) -> {
+                                                            try {
+                                                                builder.suggest((int) ctx.getSource().getPosition().z);
+                                                            } catch (Exception ignored) {}
+                                                            return builder.buildFuture();
+                                                        })
                                                         .executes(RpStaffCommands::setPlatform)))))));
 
         dispatcher.register(Commands.literal("platform")
                 .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
                 .executes(RpStaffCommands::platformSelf)
-                .then(Commands.argument("target", EntityArgument.player())
-                        .executes(RpStaffCommands::platformTarget)
-                        .then(Commands.argument("platform_id", StringArgumentType.word())
-                                .suggests(PLATFORM_SUGGESTIONS)
+                .then(Commands.argument("platform_id", StringArgumentType.word())
+                        .suggests(PLATFORM_SUGGESTIONS)
+                        .executes(RpStaffCommands::platformSpecificSelf)
+                        .then(Commands.argument("target", EntityArgument.player())
                                 .executes(RpStaffCommands::platformTargetSpecific))));
     }
 
@@ -191,6 +230,10 @@ public class RpStaffCommands {
 
     private static int platformTarget(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         return teleportToPlatform(ctx.getSource(), ctx.getSource().getPlayerOrException(), EntityArgument.getPlayer(ctx, "target"), "platform1");
+    }
+
+    private static int platformSpecificSelf(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return teleportToPlatform(ctx.getSource(), ctx.getSource().getPlayerOrException(), null, StringArgumentType.getString(ctx, "platform_id"));
     }
 
     private static int platformTargetSpecific(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

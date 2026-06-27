@@ -128,7 +128,19 @@ public class LastConnectionManager {
 
             final String playerName   = entry.mcName;
             final UUID   playerUUID   = uuid;
-            final long   inactiveDays = (nowMs - lastLoginMs) / 86400_000L;
+            final long inactiveDays = (nowMs - lastLoginMs) / 86400_000L;
+
+            long totalPlaytimeMs = getTotalPlaytimeMs(uuid);
+            List<String> licenses = net.rp.rpessentials.profession.LicenseManager.getLicenses(uuid);
+            String lastLogin = entry.lastLogin != null ? entry.lastLogin : "Unknown";
+
+            AutoUnwhitelistHistory.record(
+                    playerName,
+                    playerUUID.toString(),
+                    lastLogin,
+                    totalPlaytimeMs,
+                    licenses,
+                    inactiveDays);
 
             server.execute(() -> {
                 server.getCommands().performPrefixedCommand(

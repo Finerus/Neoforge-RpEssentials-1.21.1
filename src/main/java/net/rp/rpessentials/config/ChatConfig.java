@@ -25,6 +25,7 @@ public class ChatConfig {
 
     // === PROXIMITY CHAT ===
     public static final ModConfigSpec.BooleanValue ENABLE_PROXIMITY_CHAT;
+    public static final ModConfigSpec.BooleanValue ENABLE_PROXIMITY_SPY;
     public static final ModConfigSpec.IntValue PROXIMITY_CHAT_DISTANCE;
     public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_BYPASS_PREFIX;
     public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_FORMAT;
@@ -106,6 +107,10 @@ public class ChatConfig {
                 .comment("If true, chat messages are only visible within proximityChatDistance blocks.",
                         "Use the bypass prefix (default: !) to send a global message.")
                 .define("enableProximityChat", false);
+
+        ENABLE_PROXIMITY_SPY = BUILDER
+                .comment("If true, staff outside proximity range receive a spy log of nearby chat messages.")
+                .define("enableProximitySpy", true);
 
         PROXIMITY_CHAT_DISTANCE = BUILDER
                 .comment("Radius in blocks for proximity chat.")

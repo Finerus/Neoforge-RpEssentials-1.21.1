@@ -23,6 +23,7 @@ import net.rp.rpessentials.profession.ProfessionRestrictionEventHandler;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 import net.rp.rpessentials.profession.TempLicenseExpirationManager;
 import org.slf4j.Logger;
+import net.rp.rpessentials.compat.CuriosCompat;
 
 import java.time.LocalTime;
 import java.util.EnumSet;
@@ -49,6 +50,12 @@ public class RpEssentials {
 
         modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings);
         RpEssentialsItems.ITEMS.register(modEventBus);
+        try {
+            CuriosCompat.register(modEventBus);
+            LOGGER.info("[RPEssentials] Curios compatibility enabled.");
+        } catch (NoClassDefFoundError e) {
+            LOGGER.info("[RPEssentials] Curios not found, skipping compatibility.");
+        }
         NeoForge.EVENT_BUS.register(this);
 
         modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading event) -> {
@@ -163,8 +170,12 @@ public class RpEssentials {
                     }
 
                     if (!RpEssentialsScheduleManager.hasClosedToday() && active == null) {
-                        RpEssentialsScheduleManager.markClosedToday();
-                        RpEssentialsScheduleManager.closeServer(server);
+                        try {
+                            if (!"FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) {
+                                RpEssentialsScheduleManager.markClosedToday();
+                                RpEssentialsScheduleManager.closeServer(server);
+                            }
+                        } catch (IllegalStateException ignored) {}
                     }
                 }
             } catch (IllegalStateException ignored) {}

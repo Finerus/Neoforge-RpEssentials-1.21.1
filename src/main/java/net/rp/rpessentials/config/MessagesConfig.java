@@ -119,20 +119,6 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> PLAYERLIST_HEADER;
 
     // =========================================================================
-    // CATEGORY: HELP
-    // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> HELP_TITLE;
-    public static final ModConfigSpec.ConfigValue<String> HELP_CMD_LIST;
-    public static final ModConfigSpec.ConfigValue<String> HELP_CMD_SCHEDULE;
-    public static final ModConfigSpec.ConfigValue<String> HELP_CMD_MSG;
-    public static final ModConfigSpec.ConfigValue<String> HELP_CMD_REPLY;
-    public static final ModConfigSpec.ConfigValue<String> HELP_STAFF_SECTION;
-    public static final ModConfigSpec.ConfigValue<String> HELP_DEATHRP_ENABLE;
-    public static final ModConfigSpec.ConfigValue<String> HELP_DEATHRP_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> HELP_DEATHRP_RESET;
-    public static final ModConfigSpec.ConfigValue<String> HELP_DEATHRP_STATUS;
-
-    // =========================================================================
     // CATEGORY: PROFESSION RESTRICTIONS (fallbacks)
     // =========================================================================
     public static final ModConfigSpec.ConfigValue<String> PROFESSION_CRAFT_BLOCKED_FALLBACK;
@@ -204,6 +190,14 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_NOTIFY;
     public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_NOTIFY_MODE;
 
+    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_MONDAY;
+    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_TUESDAY;
+    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_WEDNESDAY;
+    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_THURSDAY;
+    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_FRIDAY;
+    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_SATURDAY;
+    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_SUNDAY;
+
     // =========================================================================
     // CATEGORY: RP COMMANDS
     // =========================================================================
@@ -230,6 +224,9 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> LICENSE_REISSUE_NOT_FOUND;
 
     public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_FORMAT;
+    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_ENABLED;
+    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_DISABLED;
+
     public static final ModConfigSpec.ConfigValue<String> MUTE_RECEIVED;
     public static final ModConfigSpec.ConfigValue<String> MUTE_EXPIRED;
     public static final ModConfigSpec.ConfigValue<String> MUTE_NOTIFY_ON_JOIN;
@@ -530,23 +527,6 @@ public class MessagesConfig {
         BUILDER.pop();
 
         // =========================================================================
-        BUILDER.push("Help");
-
-        HELP_TITLE       = BUILDER.comment("Title of the /RpEssentials help box.").define("title",      "§6║ §e§lRpEssentials MOD §7— Commands");
-        HELP_CMD_LIST     = BUILDER.comment("Help entry for /list.").define("cmdList",     "§6║ §e/list §7— Online players");
-        HELP_CMD_SCHEDULE = BUILDER.comment("Help entry for /schedule.").define("cmdSchedule", "§6║ §e/schedule §7— Server schedule");
-        HELP_CMD_MSG      = BUILDER.comment("Help entry for /msg.").define("cmdMsg",      "§6║ §e/msg §8<player> <message> §7— PM");
-        HELP_CMD_REPLY    = BUILDER.comment("Help entry for /r.").define("cmdReply",    "§6║ §e/r §8<message> §7— Reply");
-        HELP_STAFF_SECTION = BUILDER.comment("Staff section header in help.").define("staffSection", "§6║ §c§lSTAFF");
-
-        HELP_DEATHRP_ENABLE  = BUILDER.comment("Help entry for /RpEssentials deathrp enable.").define("deathRpEnable",  "§6║ §e/RpEssentials deathrp enable §8<true|false> §7— Toggle global Death RP");
-        HELP_DEATHRP_PLAYER  = BUILDER.comment("Help entry for /RpEssentials deathrp player ... enable.").define("deathRpPlayer",  "§6║ §e/RpEssentials deathrp player §8<player> enable <true|false> §7— Individual override");
-        HELP_DEATHRP_RESET   = BUILDER.comment("Help entry for /RpEssentials deathrp player ... reset.").define("deathRpReset",   "§6║ §e/RpEssentials deathrp player §8<player> reset §7— Remove override");
-        HELP_DEATHRP_STATUS  = BUILDER.comment("Help entry for /RpEssentials deathrp status.").define("deathRpStatus",  "§6║ §e/RpEssentials deathrp status §7— View system state and overrides");
-
-        BUILDER.pop();
-
-        // =========================================================================
         BUILDER.push("Profession Restrictions");
 
         PROFESSION_CRAFT_BLOCKED_FALLBACK = BUILDER
@@ -611,6 +591,15 @@ public class MessagesConfig {
         SCHEDULE_FOOTER = BUILDER
                 .comment("Footer line of /schedule.")
                 .define("scheduleFooter", "§8§m----------------------------------");
+
+        SCHEDULE_DAY_MONDAY    = BUILDER.comment("Day name for Monday.")   .define("dayMonday",    "Monday");
+        SCHEDULE_DAY_TUESDAY   = BUILDER.comment("Day name for Tuesday.")  .define("dayTuesday",   "Tuesday");
+        SCHEDULE_DAY_WEDNESDAY = BUILDER.comment("Day name for Wednesday.").define("dayWednesday", "Wednesday");
+        SCHEDULE_DAY_THURSDAY  = BUILDER.comment("Day name for Thursday.") .define("dayThursday",  "Thursday");
+        SCHEDULE_DAY_FRIDAY    = BUILDER.comment("Day name for Friday.")   .define("dayFriday",    "Friday");
+        SCHEDULE_DAY_SATURDAY  = BUILDER.comment("Day name for Saturday.") .define("daySaturday",  "Saturday");
+        SCHEDULE_DAY_SUNDAY    = BUILDER.comment("Day name for Sunday.")   .define("daySunday",    "Sunday");
+
         SCHEDULE_DEATH_HOURS_LABEL = BUILDER
                 .comment("Label for the Death Hours section.")
                 .define("scheduleDeathHoursLabel", "§c☠ Death Hours");
@@ -886,6 +875,12 @@ public class MessagesConfig {
                         "Placeholders: {player}, {msg}, {distance}")
                 .define("proximityChatSpyFormat",
                         "§7[PROX-SPY] §e{player} §7(§f{distance}m§7)§7: {msg}");
+        PROXIMITY_CHAT_SPY_ENABLED = BUILDER
+                .comment("Message sent to staff when they enable proximity spy.")
+                .define("proximityChatSpyEnabled", "§a[SPY] Proximity chat spy enabled.");
+        PROXIMITY_CHAT_SPY_DISABLED = BUILDER
+                .comment("Message sent to staff when they disable proximity spy.")
+                .define("proximityChatSpyDisabled", "§c[SPY] Proximity chat spy disabled.");
         BUILDER.pop();
 
         BUILDER.push("Mute System");

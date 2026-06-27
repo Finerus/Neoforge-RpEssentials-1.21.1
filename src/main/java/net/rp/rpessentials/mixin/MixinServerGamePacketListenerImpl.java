@@ -11,6 +11,7 @@ import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.identity.RpEssentialsChatFormatter;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.moderation.MuteManager;
+import net.rp.rpessentials.moderation.ProximityChatSpyManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -77,8 +78,11 @@ public abstract class MixinServerGamePacketListenerImpl {
             player.getServer().getPlayerList().broadcastSystemMessage(formatted, false);
         } else {
             int distance;
-            try { distance = ChatConfig.PROXIMITY_CHAT_DISTANCE.get(); }
-            catch (IllegalStateException e) { distance = 32; }
+            try {
+                distance = ChatConfig.PROXIMITY_CHAT_DISTANCE.get();
+            } catch (IllegalStateException e) {
+                distance = 32;
+            }
             double distSq = (double) distance * distance;
 
             for (ServerPlayer p : player.getServer().getPlayerList().getPlayers()) {
@@ -89,18 +93,23 @@ public abstract class MixinServerGamePacketListenerImpl {
             }
 
             String nickForSpy = NicknameManager.getNickname(player.getUUID());
+            try {
+                if (!ChatConfig.ENABLE_PROXIMITY_SPY.get()) return;
+            } catch (IllegalStateException ignored) {
+                return;
+            }
+
             String rawSpy = MessagesConfig.get(MessagesConfig.PROXIMITY_CHAT_SPY_FORMAT,
-                    "msg",      actualMessage,
+                    "msg", actualMessage,
                     "distance", String.valueOf(distance));
-            rawSpy = RpEssentialsChatFormatter.resolveRpPlaceholders(rawSpy, player, nickForSpy);
+            rawSpy = RpEssentialsChatFormatter.resolveRpPlaceholders(rawSpy, player);
             Component spyComp = ColorHelper.parseColors(rawSpy);
 
             for (ServerPlayer p : player.getServer().getPlayerList().getPlayers()) {
-                if (RpEssentialsPermissions.isStaff(p)
-                        && !p.getUUID().equals(player.getUUID())
-                        && (p.level() != player.level() || p.distanceToSqr(player) > distSq)) {
-                    p.sendSystemMessage(spyComp);
-                }
+                if (!RpEssentialsPermissions.isStaff(p)) continue;
+                if (p.getUUID().equals(player.getUUID())) continue;
+                if (p.level() == player.level() && p.distanceToSqr(player) <= distSq) continue;
+                p.sendSystemMessage(spyComp);
             }
         }
     }

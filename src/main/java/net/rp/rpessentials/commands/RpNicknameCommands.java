@@ -40,6 +40,14 @@ public class RpNicknameCommands {
         return Commands.literal("whois")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("nickname", StringArgumentType.greedyString())
+                        .suggests((ctx, builder) -> {
+                            NicknameManager.getAllNicknames().values().stream()
+                                    .filter(Objects::nonNull)
+                                    .map(n -> n.replaceAll("§[0-9a-fk-orA-FK-OR]", "").trim())
+                                    .filter(n -> !n.isEmpty())
+                                    .forEach(builder::suggest);
+                            return builder.buildFuture();
+                        })
                         .executes(RpNicknameCommands::whoisCommand));
     }
 
@@ -48,6 +56,14 @@ public class RpNicknameCommands {
         dispatcher.register(Commands.literal("whois")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("nickname", StringArgumentType.greedyString())
+                        .suggests((ctx, builder) -> {
+                            NicknameManager.getAllNicknames().values().stream()
+                                    .filter(Objects::nonNull)
+                                    .map(n -> n.replaceAll("§[0-9a-fk-orA-FK-OR]", "").trim())
+                                    .filter(n -> !n.isEmpty())
+                                    .forEach(builder::suggest);
+                            return builder.buildFuture();
+                        })
                         .executes(RpNicknameCommands::whoisCommand)));
 
         dispatcher.getRoot().getChildren().removeIf(node -> node.getName().equals("list"));
@@ -65,8 +81,10 @@ public class RpNicknameCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildHelp() {
         return Commands.literal("help")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
-                .executes(ctx -> showHelpPublic(ctx, true));
+                .executes(ctx -> {
+                    boolean isStaff = RpEssentialsPermissions.isStaff(ctx.getSource().getPlayer());
+                    return showHelpPublic(ctx, isStaff);
+                });
     }
 
     // =========================================================================
@@ -224,27 +242,30 @@ public class RpNicknameCommands {
 
     public static int showHelpPublic(CommandContext<CommandSourceStack> ctx, boolean isStaff) {
         StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═══════════════════════════════════╗\n");
-        sb.append(MessagesConfig.get(MessagesConfig.HELP_TITLE)).append("\n");
-        sb.append("§6╠═══════════════════════════════════╣\n");
-        sb.append(MessagesConfig.get(MessagesConfig.HELP_CMD_LIST)).append("\n");
-        sb.append(MessagesConfig.get(MessagesConfig.HELP_CMD_SCHEDULE)).append("\n");
-        sb.append(MessagesConfig.get(MessagesConfig.HELP_CMD_MSG)).append("\n");
-        sb.append(MessagesConfig.get(MessagesConfig.HELP_CMD_REPLY)).append("\n");
+        sb.append("§6§lRpEssentials §8— §7Commands\n");
+        sb.append("§6§m                              §r\n");
+        sb.append("§e/list: §7Online players with nicknames\n");
+        sb.append("§e/schedule: §7Server schedule & status\n");
+        sb.append("§e/msg §8<player> <msg>: §7Private message\n");
+        sb.append("§e/r §8<msg>: §7Reply to last message\n");
+        sb.append("§e/roll §8[dice]: §7Roll a dice\n");
+        sb.append("§e/rp action §8<action>: §7RP action (/me)\n");
+        sb.append("§e/rp commerce §8<msg>: §7Commerce broadcast\n");
+        sb.append("§e/rp selfnick §8[nick]: §7Set your own nickname\n");
         if (isStaff) {
-            sb.append("§6╠═══════════════════════════════════╣\n");
-            sb.append(MessagesConfig.get(MessagesConfig.HELP_STAFF_SECTION)).append("\n");
-            sb.append("§6║ §e/rpessentials nick §8<player> <nick>\n");
-            sb.append("§6║ §e/rpessentials license give/revoke/list\n");
-            sb.append("§6║ §e/rpessentials staff tp/gamemode/effect\n");
-            sb.append("§6║ §e/whois §8<nick>\n");
-            sb.append("§6║ §e/rpessentials config status/reload\n");
-            sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_ENABLE)).append("\n");
-            sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_PLAYER)).append("\n");
-            sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_RESET)).append("\n");
-            sb.append(MessagesConfig.get(MessagesConfig.HELP_DEATHRP_STATUS)).append("\n");
+            sb.append("§6§m                              §r\n");
+            sb.append("§c§lStaff\n");
+            sb.append("§e/rpessentials nick §8<player> [nick]: §7Set nickname\n");
+            sb.append("§e/rpessentials license §8give/revoke/list: §7Licenses (jobs)\n");
+            sb.append("§e/rpessentials warn §8add/temp/remove: §7Warns\n");
+            sb.append("§e/rpessentials deathrp §8enable/player: §7Death RP\n");
+            sb.append("§e/rpessentials config §8reload/status/set: §7Config\n");
+            sb.append("§e/whois §8<nick>: §7Find player behind a nickname\n");
+            sb.append("§e/setrole §8<player> <role>: §7Assign a role\n");
+            sb.append("§e/rpessentials inspect §8<player>: §7Full player info\n");
+            sb.append("§c For further information, check the mod page or the config!\n");
         }
-        sb.append("§6╚═══════════════════════════════════╝");
+        sb.append("§6§m                              §r");
         String msg = sb.toString();
         ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;

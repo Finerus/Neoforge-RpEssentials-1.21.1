@@ -46,6 +46,16 @@ public class RpEssentialsEventHandler {
         // Message join — cast via IRpPlayerList (interface injectée par MixinPlayerList)
         sendJoinLeaveMessage(server, player, true);
 
+        if (RpEssentialsPermissions.isStaff(player)) {
+            try {
+                if ("FORCE_CLOSED".equals(ScheduleConfig.FORCE_STATE.get())) {
+                    player.sendSystemMessage(Component.literal(
+                            "§c§l[Schedule] ⚠ The server is currently FORCIBLY CLOSED. "
+                                    + "Use §f/opennow §c§lto reopen it."));
+                }
+            } catch (IllegalStateException ignored) {}
+        }
+
         try {
             if (ModerationConfig.ENABLE_MUTE_SYSTEM.get() && MuteManager.isMuted(player.getUUID())) {
                 MuteManager.MuteEntry entry = MuteManager.getEntry(player.getUUID());
@@ -128,6 +138,7 @@ public class RpEssentialsEventHandler {
 
         PlaytimeManager.onLogout(player.getUUID());
         LastConnectionManager.recordLogout(player);
+        ProximityChatSpyManager.onLogout(player.getUUID());
 
         MinecraftServer server = player.getServer();
         if (server != null) sendJoinLeaveMessage(server, player, false);
@@ -164,6 +175,7 @@ public class RpEssentialsEventHandler {
                 net.rp.rpessentials.moderation.WarnManager.getAll().size(),
                 net.rp.rpessentials.moderation.MuteManager.getAllMutes().size(),
                 dataFolder);
+        AfkPlatformInitializer.tryPlace(event.getServer());
     }
 
     // =========================================================================

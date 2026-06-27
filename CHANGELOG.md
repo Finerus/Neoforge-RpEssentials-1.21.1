@@ -1,6 +1,68 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [4.2.0]
+
+### Changed
+
+* **`/rpessentials help` reworked:** The command now shows a compact list of
+  commands with a one-line description each. The staff section is conditionally
+  shown based on the caller's permissions. All dependency on `MessagesConfig`
+  keys has been removed.
+
+* **`/rpessentials license check <player>`:** The profession argument has been
+  removed. The command now lists all licenses held by the target player,
+  formatted with colors and RP expiry dates, making a separate `/license list`
+  call unnecessary.
+
+* **Color palette in Profession Editor and Player Profile GUIs:** Both screens
+  now expose all 16 Minecraft colors plus a neutral (default) option (no color prefix).
+  Previously only 10 colors were available and a color was always forced.
+
+* **`/platform` behavior**: the command is now `/platform <platformid> <player>` and no longer `/platform <player> <platformid>`. 
+
+* In addition to the platform improvement, the first time the platform is created, a 4x4 square will now spawn at the position of the platform.
+
+* **Curios compatibility**: The license item is now compatible with Curios API! You can equip it in the curios assigned slot, there will be 2 license base slots, and if the license is equipped in one of those slot, it will stay in it even when you die.
+
+* You can now **spy the proximity** chat as an admin.
+
+* The worldborder can now entirely be disabled with the `enableWorldBorderWarning` if set to `false`.
+
+* The worldborder can now TP at the opposite when reached and have a new prewarn message.
+
+* The days of the week can now be translated in the `rpessentials-messages.toml`.
+
+### Added
+
+* **`/whois` autocomplete:** The command now suggests existing nicknames
+  (color codes stripped) as the player types.
+
+* **`/setplatform` autocomplete:** The command now suggests existing dimensions and the coordinates you are standing at when writing the command.
+
+* **The list editor subscreen is now scrollable**, this modification was asked because traveling through this GUI was a nightmare...
+
+* **Auto unwhitelist history**: you can find it in the ./world/data/rpessentials/auto-unwhitelist-history.json
+
+* New aliases for the `/schedule` and the `/horaires` command called `/calendar`
+
+* The `/opennow` and `/closenow` is not in WIP anymore: the commands are now registered as sub-command of the `/schedule` ; `/calendar` ; `/horaires` commands and are now called `/calendar forceclose` ; `/calendar forceopen` ; `/calendar resetforcestate`.
+
+* A whitelist is now available for the server schedule to bypass it: `/calendar whitelist add/remove/list <player>`.
+
+### Removed
+
+* **REI, JEI and EMI integrations removed.** The three compatibility plugins
+  (`JeiIntegrationPlugin`, `ReiIntegrationPlugin`, `EmiIntegrationPlugin`) and
+  their associated build dependencies and Maven repositories have been deleted.
+  The `JEI_INTEGRATION_MODE` config key in `rpessentials-rp.toml` is also gone.
+
+### Improved
+
+* **Config Screen**: Editing a text value will now trigger the "Apply change" button.
+
+* **Translation was extended to all GUIs and the License item**.
+
 ## [4.1.10] - _HOTFIX_
 
 - `HideNametag` config was not persisted for all the players. It is now persisted!
