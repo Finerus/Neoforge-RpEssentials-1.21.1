@@ -189,12 +189,11 @@ public class RpEssentialsEventHandler {
      */
     private static void sendJoinLeaveMessage(MinecraftServer server, ServerPlayer player, boolean isJoin) {
         PlayerList pl = server.getPlayerList();
-        // Cast via l'interface injectée par le mixin — ne plante jamais car
-        // MixinPlayerList implémente toujours IRpPlayerList sur PlayerList au runtime.
+
         if (pl instanceof IRpPlayerList rpl) {
-            rpl.rpe$sendCustomJoinLeaveMessage(player, isJoin);
+            rpl.sendCustomJoinLeaveMessage(player, isJoin);
         } else {
-            RpEssentials.LOGGER.warn("[JoinLeave] IRpPlayerList not available on PlayerList — mixin missing?");
+            RpEssentials.LOGGER.warn("[JoinLeave] IRpPlayerList not available on PlayerList");
         }
     }
 }

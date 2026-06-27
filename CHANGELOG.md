@@ -63,6 +63,10 @@ All notable changes to this project will be documented in this file.
 
 * **Translation was extended to all GUIs and the License item**.
 
+### Fixed (hotfix)
+
+* The join and leave messages are now correctly sent.
+
 ## [4.1.10] - _HOTFIX_
 
 - `HideNametag` config was not persisted for all the players. It is now persisted!

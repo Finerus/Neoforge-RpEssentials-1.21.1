@@ -23,10 +23,10 @@ public interface IRpPlayerList {
      * @param player  le joueur concerné
      * @param isJoin  true = message join, false = message leave
      */
-    void rpe$sendCustomJoinLeaveMessage(ServerPlayer player, boolean isJoin);
+    void sendCustomJoinLeaveMessage(ServerPlayer player, boolean isJoin);
 
     /**
      * Envoie un Component brut sans déclencher le filtre vanilla.
      */
-    void rpe$broadcastCustomMessage(Component message);
+    void broadcastCustomMessage(Component message);
 }

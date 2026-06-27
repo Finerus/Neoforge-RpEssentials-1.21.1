@@ -28,7 +28,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @org.spongepowered.asm.mixin.Implements(
         @org.spongepowered.asm.mixin.Interface(
                 iface = net.rp.rpessentials.api.IRpPlayerList.class,
-                prefix = "rpe$"
+                prefix = "rpe$",
+                unique = true
         )
 )
 public abstract class MixinPlayerList implements IRpPlayerList {
@@ -70,7 +71,6 @@ public abstract class MixinPlayerList implements IRpPlayerList {
     // IMPLÉMENTATION IRpPlayerList
     // =========================================================================
 
-    @Override
     public void rpe$sendCustomJoinLeaveMessage(
             net.minecraft.server.level.ServerPlayer player, boolean isJoin) {
         try {
@@ -88,7 +88,6 @@ public abstract class MixinPlayerList implements IRpPlayerList {
         }
     }
 
-    @Override
     public void rpe$broadcastCustomMessage(Component message) {
         rpessentials$isSendingCustomMessage = true;
         try {
