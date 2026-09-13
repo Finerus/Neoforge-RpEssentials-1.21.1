@@ -46,6 +46,9 @@ public class WorldBorderManager {
     // DISTANCE + TELEPORT
     // =========================================================================
     private static void checkPlayerDistance(MinecraftServer server, ServerPlayer player) {
+        if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.BYPASS_WORLD_BORDER))
+            return;
+
         String dimId = player.level().dimension().location().toString();
         DimBorderConfig cfg = resolveDimConfig(dimId);
 

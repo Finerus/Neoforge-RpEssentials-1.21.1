@@ -1,8 +1,8 @@
 package net.rp.rpessentials.client.gui;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
@@ -19,6 +19,8 @@ import java.time.LocalDate;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import net.minecraft.client.gui.components.Button;
 
 @OnlyIn(Dist.CLIENT)
 public class PlayerProfileScreen extends Screen {
@@ -156,13 +158,13 @@ public class PlayerProfileScreen extends Screen {
             addRenderableWidget(Button.builder(
                             Component.translatable("rpessentials.gui.player_profile.btn_apply"),
                             btn -> applyProfile())
-                    .pos(formX, this.height - 28).size(150, 20).build());
+                    .pos(formX, this.height - 35).size(150, 20).build());
         }
 
         addRenderableWidget(Button.builder(
                         Component.translatable("rpessentials.gui.player_profile.btn_close"),
                         btn -> onClose())
-                .pos(this.width - MARGIN - 60, this.height - 28).size(60, 20).build());
+                .pos(this.width - MARGIN - 65, this.height - 35).size(60, 20).build());
     }
 
     // =========================================================================
@@ -172,14 +174,35 @@ public class PlayerProfileScreen extends Screen {
     private void buildProfileTab(int formX, int formW, int y) {
 
         // --- Nickname ---
-        EditBox nickBox = new EditBox(this.font, formX, y + 16,
-                Math.min(formW - 4, 200), 18,
+        int nickBoxY = y + 16;
+        int nickBoxW = Math.min(formW - 4, 200);
+        EditBox nickBox = new EditBox(this.font, formX, nickBoxY, nickBoxW, 18,
                 Component.translatable("rpessentials.gui.player_profile.nick_label"));
         nickBox.setHint(Component.translatable("rpessentials.gui.player_profile.nick_hint"));
         nickBox.setMaxLength(64);
         nickBox.setValue(stateNick);
         nickBox.setResponder(val -> stateNick = val);
         addRenderableWidget(nickBox);
+
+        addRenderableWidget(Button.builder(
+                        Component.literal("§c✕"),
+                        btn -> {
+                            stateNick = "";
+                            stateNickColorIndex = 0;
+                            OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
+                            PacketDistributor.sendToServer(new SetPlayerProfilePacket(
+                                    target.uuid(), "", "", "", false, true));
+                            players.set(stateSelectedPlayer, new OpenPlayerProfileGuiPacket.PlayerData(
+                                    target.uuid(), target.mcName(), "", target.currentRole(),
+                                    target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
+                                    target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
+                                    target.noteCount(), target.isOnline(), target.notes()));
+                            rebuild();
+                        })
+                .pos(formX + nickBoxW + 4, nickBoxY)
+                .size(18, 18)
+                .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.player_profile.nick_reset_tooltip")))
+                .build());
         y += 44;
 
         // --- Palette de couleurs ---
@@ -211,56 +234,71 @@ public class PlayerProfileScreen extends Screen {
 
         // Raccourcis de roles
         if (!availableRoles.isEmpty()) {
-            int rbW = Math.max(40, Math.min(80,
-                    (this.width - LIST_W - MARGIN * 4 - 4) / availableRoles.size() - 2));
+            int maxBtnW = 80;
+            int minBtnW = 40;
+            int gap     = 2;
+            int availW  = formW - 4;
+            int cols    = Math.max(1, availW / (minBtnW + gap));
+            int btnW    = Math.min(maxBtnW, (availW - gap * (cols - 1)) / cols);
+            int rows    = (int) Math.ceil((double) availableRoles.size() / cols);
+
             for (int i = 0; i < availableRoles.size(); i++) {
                 final String role = availableRoles.get(i);
+                int col = i % cols;
+                int row = i / cols;
                 boolean sel = role.equalsIgnoreCase(stateRole);
                 addRenderableWidget(Button.builder(
                                 Component.literal(sel ? "§e§l" + role : "§7" + role),
                                 btn -> { stateRole = role; rebuild(); })
-                        .pos(formX + i * (rbW + 2), y).size(rbW, 14).build());
+                        .pos(formX + col * (btnW + gap), y + row * 16)
+                        .size(btnW, 14).build());
             }
-            y += 20;
+            y += rows * 16 + 4;
         }
 
         // --- Licences ---
         if (!availableProfessionIds.isEmpty()) {
-            y += 6;
+            int longestW = availableProfessionIds.stream()
+                    .mapToInt(id -> this.font.width("License: " + id + " (" + availableProfessionIds.size() + "/" + availableProfessionIds.size() + ")"))
+                    .max().orElse(0);
+            int fixedGap = 90;
+            int navX = formX + Math.max(longestW + 12, fixedGap);
+
+            boolean fitsInline = navX + 140 < formX + formW;
+            int navY = fitsInline ? y : y + 12;
+            if (!fitsInline) navX = formX;
 
             addRenderableWidget(Button.builder(Component.literal("§7<"),
                             btn -> { stateSelectedProf = Math.floorMod(stateSelectedProf - 1,
                                     availableProfessionIds.size()); rebuild(); })
-                    .pos(formX, y).size(18, 18).build());
+                    .pos(navX, navY).size(18, 18).build());
 
             addRenderableWidget(Button.builder(Component.literal("§7>"),
                             btn -> { stateSelectedProf = (stateSelectedProf + 1)
                                     % availableProfessionIds.size(); rebuild(); })
-                    .pos(formX + 20 + 100, y).size(18, 18).build());
+                    .pos(navX + 20, navY).size(18, 18).build());
 
             String profId = selectedProfId();
             boolean owned = selectedPlayerOwns(profId);
-
             addRenderableWidget(Button.builder(
                             Component.literal(owned
                                     ? I18n.get("rpessentials.gui.player_profile.btn_add_license_off")
                                     : I18n.get("rpessentials.gui.player_profile.btn_add_license")),
                             btn -> { if (!owned) grantSelectedLicense(); })
-                    .pos(formX + 140, y).size(50, 18).build());
+                    .pos(navX + 40, navY).size(50, 18).build());
 
             addRenderableWidget(Button.builder(
                             Component.literal(owned
                                     ? I18n.get("rpessentials.gui.player_profile.btn_revoke_license")
                                     : I18n.get("rpessentials.gui.player_profile.btn_revoke_license_off")),
                             btn -> { if (owned) revokeSelectedLicense(); })
-                    .pos(formX + 193, y).size(55, 18).build());
+                    .pos(navX + 93, navY).size(55, 18).build());
         }
     }
 
     // =========================================================================
     // ONGLET NOTES
     // =========================================================================
-
     private void buildNotesTab(int formX, int formW, int contentY) {
         if (players.isEmpty()) return;
 
@@ -388,7 +426,7 @@ public class PlayerProfileScreen extends Screen {
         int formRight = this.width - MARGIN;
 
         switch (activeTab) {
-            case 0 -> renderProfileTab(g, formX, contentY, sel);
+            case 0 -> renderProfileTab(g, formX, formRight - formX, contentY, sel);
             case 1 -> renderStatsTab(g, formX, formRight, contentY, sel);
             case 2 -> renderNotesTab(g, formX, formRight, contentY, sel);
         }
@@ -396,7 +434,7 @@ public class PlayerProfileScreen extends Screen {
         super.render(g, mouseX, mouseY, delta);
     }
 
-    private void renderProfileTab(GuiGraphics g, int formX, int y,
+    private void renderProfileTab(GuiGraphics g, int formX, int formW, int y,
                                   OpenPlayerProfileGuiPacket.PlayerData sel) {
         g.drawString(this.font,
                 I18n.get("rpessentials.gui.player_profile.nick_label_draw"),
@@ -428,14 +466,21 @@ public class PlayerProfileScreen extends Screen {
         y += 38 + roleRows * 20;
 
         if (!availableProfessionIds.isEmpty()) {
-            y += 6;
-            String profId = selectedProfId();
-            boolean owned = selectedPlayerOwns(profId);
-            String color  = owned ? "§a" : "§7";
+            int longestW = availableProfessionIds.stream()
+                    .mapToInt(id -> this.font.width("License: " + id + " (" + availableProfessionIds.size() + "/" + availableProfessionIds.size() + ")"))
+                    .max().orElse(0);
+            int fixedGap = 90;
+            int navX = formX + Math.max(longestW + 12, fixedGap);
+            boolean fitsInline = navX + 140 < formX + formW;
+            int navY = fitsInline ? y : y + 12;
+
+            String profId  = selectedProfId();
+            boolean owned  = selectedPlayerOwns(profId);
+            String color   = owned ? "§a" : "§7";
             g.drawString(this.font,
                     "§8License: " + color + profId
                             + " §8(" + (stateSelectedProf + 1) + "/" + availableProfessionIds.size() + ")",
-                    formX + 22, y + 5, 0xAAAAAA, false);
+                    formX, navY + 5, 0xAAAAAA, false);
         }
 
         List<String> lics = sel.currentLicenses();
@@ -494,13 +539,18 @@ public class PlayerProfileScreen extends Screen {
         y += lineH;
 
         List<String> lics = sel.currentLicenses();
-        g.drawString(this.font,
-                I18n.get("rpessentials.gui.player_profile.stats.licenses")
-                        + "§f" + (lics.isEmpty()
-                        ? "§8" + I18n.get("rpessentials.gui.player_profile.stats.licenses_none")
-                        : String.join("§7, §f", lics)),
-                formX, y, 0xAAAAAA, false);
-        y += lineH + 6;
+        String licsText = lics.isEmpty()
+                ? "§8" + I18n.get("rpessentials.gui.player_profile.stats.licenses_none")
+                : "§f" + String.join("§7, §f", lics);
+
+        List<FormattedCharSequence> wrapped = this.font.split(
+                Component.literal(I18n.get("rpessentials.gui.player_profile.stats.licenses") + licsText),
+                formRight - MARGIN - formX);
+        for (FormattedCharSequence line : wrapped) {
+            g.drawString(this.font, line, formX, y, 0xAAAAAA, false);
+            y += 10;
+        }
+        y += 6;
 
         g.fill(formX, y, formRight - MARGIN, y + 1, 0xFF444444);
         y += 6;
@@ -633,7 +683,7 @@ public class PlayerProfileScreen extends Screen {
                 : "§" + COLOR_CHARS[stateNickColorIndex] + stateNick.trim();
 
         PacketDistributor.sendToServer(new SetPlayerProfilePacket(
-                target.uuid(), finalNick, stateRole.trim(), "", false));
+                target.uuid(), finalNick, stateRole.trim(), "", false, false));
 
         players.set(stateSelectedPlayer, new OpenPlayerProfileGuiPacket.PlayerData(
                 target.uuid(), target.mcName(), finalNick, stateRole.trim(),
@@ -650,7 +700,7 @@ public class PlayerProfileScreen extends Screen {
 
         OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
         PacketDistributor.sendToServer(new SetPlayerProfilePacket(
-                target.uuid(), "", "", profId, false));
+                target.uuid(), "", "", profId, false, false));
 
         List<String> updated = new ArrayList<>(target.currentLicenses());
         updated.add(profId);
@@ -669,7 +719,7 @@ public class PlayerProfileScreen extends Screen {
 
         OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
         PacketDistributor.sendToServer(new SetPlayerProfilePacket(
-                target.uuid(), "", "", profId, true));
+                target.uuid(), "", "", profId, true, false));
 
         List<String> updated = new ArrayList<>(target.currentLicenses());
         updated.remove(profId);

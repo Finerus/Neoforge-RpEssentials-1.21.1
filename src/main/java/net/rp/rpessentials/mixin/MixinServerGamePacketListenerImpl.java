@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.RpEssentialsRoleManager;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.identity.RpEssentialsChatFormatter;
@@ -21,8 +22,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Intercepte le chat pour appliquer le formatage personnalisé.
  *
- * 4.1.6 : le format du spy log de proximité utilise resolveRpPlaceholders
- * pour supporter {player}/{nick}/{real}/{nick_real}.
  */
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class MixinServerGamePacketListenerImpl {
@@ -106,7 +105,7 @@ public abstract class MixinServerGamePacketListenerImpl {
             Component spyComp = ColorHelper.parseColors(rawSpy);
 
             for (ServerPlayer p : player.getServer().getPlayerList().getPlayers()) {
-                if (!RpEssentialsPermissions.isStaff(p)) continue;
+                if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
                 if (p.getUUID().equals(player.getUUID())) continue;
                 if (p.level() == player.level() && p.distanceToSqr(player) <= distSq) continue;
                 p.sendSystemMessage(spyComp);

@@ -136,6 +136,7 @@ public class RpEssentialsEventHandler {
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
+        RpEssentialsRoleManager.invalidate(player.getUUID());
         PlaytimeManager.onLogout(player.getUUID());
         LastConnectionManager.recordLogout(player);
         ProximityChatSpyManager.onLogout(player.getUUID());

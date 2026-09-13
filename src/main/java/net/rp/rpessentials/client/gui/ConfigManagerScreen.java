@@ -387,13 +387,13 @@ public class ConfigManagerScreen extends Screen {
 
         // Title + file name
         String title = selectedFileId != null
-                ? String.format(I18n.get("rpessentials.gui.config.title_with_file"), selectedFileId)
+                ? I18n.get("rpessentials.gui.config.title_with_file", selectedFileId)
                 : I18n.get("rpessentials.gui.config.title");
         g.drawString(this.font, title, formX, PANEL_TOP + 5, 0xFFD700, false);
 
         // Pending indicator
         if (!pendingChanges.isEmpty()) {
-            g.drawString(this.font, String.format(I18n.get("rpessentials.gui.config.unsaved"), pendingChanges.size()),
+            g.drawString(this.font, I18n.get("rpessentials.gui.config.unsaved", pendingChanges.size()),
                     formX, PANEL_TOP + 14, 0xFFDD44, false);
         }
 
@@ -421,7 +421,7 @@ public class ConfigManagerScreen extends Screen {
         int applyBtnX = (FILE_PANEL_W + MARGIN * 3 + this.width) / 2 - 110;
         int applyBtnY = this.height - FOOTER_H + 4;
         String applyLabel = !pendingChanges.isEmpty()
-                ? String.format(I18n.get("rpessentials.gui.config.btn_apply"), pendingChanges.size())
+                ? I18n.get("rpessentials.gui.config.btn_apply", pendingChanges.size())
                 : I18n.get("rpessentials.gui.config.btn_no_change");
         g.drawCenteredString(this.font, applyLabel, applyBtnX + 80, applyBtnY + 6, 0xFFFFFF);
 
@@ -504,13 +504,13 @@ public class ConfigManagerScreen extends Screen {
         // Scroll indicators
         if (scrollOffset > 0) {
             g.drawCenteredString(this.font,
-                    String.format(I18n.get("rpessentials.gui.config.scroll_above"), scrollOffset),
+                    I18n.get("rpessentials.gui.config.scroll_above", scrollOffset),
                     (formX + formRight) / 2, clipTop, 0x444444);
         }
         long below = currentEntries.stream().skip(last + 1).count();
         if (below > 0) {
             g.drawCenteredString(this.font,
-                    String.format(I18n.get("rpessentials.gui.config.scroll_below"), below),
+                    I18n.get("rpessentials.gui.config.scroll_below", below),
                     (formX + formRight) / 2, clipBottom - 8, 0x444444);
         }
     }
@@ -727,7 +727,7 @@ public class ConfigManagerScreen extends Screen {
 
         ListEditorSubScreen(ConfigManagerScreen parent, String fullPath,
                             String key, String commaValue) {
-            super(Component.literal(String.format(I18n.get("rpessentials.gui.config.list.title"),
+            super(Component.literal(I18n.get("rpessentials.gui.config.list.title",
                     ConfigManagerScreen.formatKeyName(key))));
             this.parent        = parent;
             this.fullPath      = fullPath;
@@ -835,7 +835,7 @@ public class ConfigManagerScreen extends Screen {
             super.render(g, mx, my, delta);
             g.drawCenteredString(this.font, this.title, this.width / 2, 14, 0xFFD700);
             g.drawCenteredString(this.font,
-                    String.format(I18n.get("rpessentials.gui.config.list.entries"), items.size()),
+                    I18n.get("rpessentials.gui.config.list.entries", items.size()),
                     this.width / 2, 26, 0x666666);
         }
 

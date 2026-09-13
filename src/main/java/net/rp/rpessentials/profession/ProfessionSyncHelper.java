@@ -55,21 +55,15 @@ public class ProfessionSyncHelper {
      * Vérifie si le joueur a la permission pour un pattern via ses licences.
      * Utilise OneriaPatternUtils pour le matching — plus de duplication.
      */
-    private static boolean hasPermissionForPattern(List<String> licenses, String pattern, List<? extends String> allowedList) {
+    private static boolean hasPermissionForPattern(List<String> licenses, String pattern,
+                                                   List<? extends String> allowedList) {
         for (String license : licenses) {
             for (String allowEntry : allowedList) {
                 if (!allowEntry.contains(";")) continue;
-
                 String[] parts = allowEntry.split(";", 2);
-                String professionId = parts[0].toLowerCase().trim();
-                String allowedItems = parts[1];
-
-                if (!professionId.equals(license.toLowerCase())) continue;
-
-                for (String allowedItem : allowedItems.split(",")) {
-                    if (RpEssentialsPatternUtils.matchesPattern(pattern, allowedItem.trim())) {
-                        return true;
-                    }
+                if (!parts[0].trim().equalsIgnoreCase(license)) continue;
+                for (String allowedItem : parts[1].split(",")) {
+                    if (RpEssentialsPatternUtils.matchesPattern(pattern, allowedItem.trim())) return true;
                 }
             }
         }

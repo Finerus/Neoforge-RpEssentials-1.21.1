@@ -1,6 +1,3 @@
-// ─── ClientGuiOpener.java ────────────────────────────────────────────────────
-// Replace the existing file with this version that adds openConfigManagerGui()
-
 package net.rp.rpessentials.network;
 
 import net.minecraft.client.Minecraft;
@@ -12,16 +9,49 @@ import net.rp.rpessentials.client.gui.ProfessionEditorScreen;
 
 import java.util.List;
 
-/**
- * Ouvre les Screens GUI depuis les handlers de packets côté client.
- * Classe séparée pour éviter que le classloader charge Screen (client-only)
- * côté serveur lors du traitement des packets.
- */
 @OnlyIn(Dist.CLIENT)
 public class ClientGuiOpener {
 
+    private static List<OpenProfessionGuiPacket.ProfessionEntry> pendingProfessions = null;
+    private static List<OpenRolesGuiPacket.RoleEntry>            pendingRoles       = null;
+    private static OpenGlobalRestrictionsPacket                   pendingGlobal      = null;
+
     public static void openProfessionGui(List<OpenProfessionGuiPacket.ProfessionEntry> professions) {
-        Minecraft.getInstance().setScreen(new ProfessionEditorScreen(professions));
+        pendingProfessions = professions;
+        pendingRoles       = null;
+        pendingGlobal      = null;
+        tryOpenProfessionEditor(0);
+    }
+
+    public static void openRolesGui(List<OpenRolesGuiPacket.RoleEntry> roles) {
+        if (pendingProfessions != null) {
+            pendingRoles = roles;
+            tryOpenProfessionEditor(0);
+        } else {
+            // Ouverture directe sur l'onglet Roles
+            Minecraft.getInstance().setScreen(
+                    new ProfessionEditorScreen(List.of(), roles, null, 1));
+        }
+    }
+
+    public static void openGlobalRestrictionsGui(OpenGlobalRestrictionsPacket packet) {
+        if (pendingProfessions != null) {
+            pendingGlobal = packet;
+            tryOpenProfessionEditor(0);
+        } else {
+            Minecraft.getInstance().setScreen(
+                    new ProfessionEditorScreen(List.of(), List.of(), packet, 2));
+        }
+    }
+
+    private static void tryOpenProfessionEditor(int tab) {
+        if (pendingProfessions != null && pendingRoles != null && pendingGlobal != null) {
+            Minecraft.getInstance().setScreen(new ProfessionEditorScreen(
+                    pendingProfessions, pendingRoles, pendingGlobal, tab));
+            pendingProfessions = null;
+            pendingRoles       = null;
+            pendingGlobal      = null;
+        }
     }
 
     public static void openPlayerProfileGui(

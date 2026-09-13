@@ -29,10 +29,11 @@ import java.util.UUID;
  */
 public record SetPlayerProfilePacket(
         UUID   targetUuid,
-        String nickname,    // "" = ne pas modifier
-        String role,        // "" = ne pas modifier
-        String licenseId,   // "" = ne pas modifier
-        boolean revokeMode  // true = révoquer licenseId, false = donner licenseId
+        String nickname,      // "" = ne pas modifier
+        String role,          // "" = ne pas modifier
+        String licenseId,     // "" = ne pas modifier
+        boolean revokeMode,   // true = révoquer licenseId, false = donner licenseId
+        boolean resetNickname // true = réinitialise le nickname, prioritaire sur nickname
 ) implements CustomPacketPayload {
 
     public static final Type<SetPlayerProfilePacket> TYPE =
@@ -47,6 +48,7 @@ public record SetPlayerProfilePacket(
                             buf.readUtf(),
                             buf.readUtf(),
                             buf.readUtf(),
+                            buf.readBoolean(),
                             buf.readBoolean()
                     );
                 }
@@ -57,6 +59,7 @@ public record SetPlayerProfilePacket(
                     buf.writeUtf(p.role());
                     buf.writeUtf(p.licenseId());
                     buf.writeBoolean(p.revokeMode());
+                    buf.writeBoolean(p.resetNickname());
                 }
             };
 
@@ -144,10 +147,15 @@ public record SetPlayerProfilePacket(
                 "§a[RPEssentials] Profile of §e" + targetName + " §aupdated:");
 
         // ── 1. Nickname ───────────────────────────────────────────────────────
-        String nick = packet.nickname().trim();
-        if (!nick.isEmpty()) {
-            NicknameManager.setNickname(target.getUUID(), nick);
-            report.append(" §fnick=").append(nick);
+        if (packet.resetNickname()) {
+            NicknameManager.removeNickname(target.getUUID());
+            report.append(" §fnick=§8(reset)");
+        } else {
+            String nick = packet.nickname().trim();
+            if (!nick.isEmpty()) {
+                NicknameManager.setNickname(target.getUUID(), nick);
+                report.append(" §fnick=").append(nick);
+            }
         }
 
         // ── 2. Rôle ───────────────────────────────────────────────────────────

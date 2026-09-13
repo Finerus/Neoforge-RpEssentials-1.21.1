@@ -9,8 +9,10 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsDataPaths;
 import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.RpEssentialsRoleManager;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
+import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -120,6 +122,15 @@ public class LastConnectionManager {
             if (!server.getPlayerList().isWhiteListed(
                     new com.mojang.authlib.GameProfile(uuid, entry.mcName))) continue;
 
+            // Bypass si le joueur a la permission correspondante
+            ServerPlayer onlineCheck = server.getPlayerList().getPlayer(uuid);
+            if (onlineCheck != null && RpEssentialsRoleManager.has(onlineCheck,
+                    RpEssentialsRoleManager.Permission.BYPASS_AUTO_UNWHITELIST)) continue;
+            // Pour les joueurs hors ligne, on vérifie via les tags (pas de ServerPlayer dispo)
+            // On skip si l'un de ses tags correspond à un rôle ayant bypassAutoUnwhitelist
+            if (onlineCheck == null && hasRoleWithPermission(entry.mcName, server,
+                    RpEssentialsRoleManager.Permission.BYPASS_AUTO_UNWHITELIST)) continue;
+
             long lastLoginMs;
             try { lastLoginMs = sdf.parse(entry.lastLogin).getTime(); }
             catch (java.text.ParseException ex) { continue; }
@@ -174,6 +185,35 @@ public class LastConnectionManager {
             removed[0]++;
         }
         RpEssentials.LOGGER.info("[AutoUnwhitelist] Sweep done — {} player(s) removed.", removed[0]);
+    }
+
+    private static boolean hasRoleWithPermission(String mcName, MinecraftServer server,
+                                                 RpEssentialsRoleManager.Permission permission) {
+        try {
+            net.luckperms.api.LuckPerms lp = net.luckperms.api.LuckPermsProvider.get();
+            UUID uuid = server.getProfileCache().get(mcName)
+                    .map(com.mojang.authlib.GameProfile::getId).orElse(null);
+            if (uuid == null) return false;
+            net.luckperms.api.model.user.User user = lp.getUserManager().getUser(uuid);
+            if (user == null) return false;
+            String primary = user.getPrimaryGroup().toLowerCase();
+            try {
+                for (String entry2 : RpEssentialsConfig.ROLES.get()) {
+                    String[] parts = entry2.split(";", 3);
+                    if (parts.length < 1) continue;
+                    if (!parts[0].trim().equalsIgnoreCase(primary)) continue;
+                    if (parts.length < 3) return false;
+                    for (String p : parts[2].split(",")) {
+                        if (p.trim().equalsIgnoreCase("bypassAutoUnwhitelist")) return true;
+                    }
+                }
+            } catch (IllegalStateException ignored) {}
+            return false;
+        } catch (NoClassDefFoundError ignored) {
+            return false;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     // =========================================================================

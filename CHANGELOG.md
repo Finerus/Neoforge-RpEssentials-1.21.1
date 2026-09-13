@@ -1,6 +1,79 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [5.0.0]
+
+### Breaking Changes
+
+- The `roles` config format has changed from `id;lpGroup` to `id;lpGroup;perm1,perm2,...`.
+  Existing configs must be migrated manually.
+
+- Old two-field role entries (`id;lpGroup`) remain valid and automatically grant `isStaff`
+  for backward compatibility. (May change in future versions.)
+
+### Added
+
+- **Role-based permission system**, replacing the binary staff/non-staff model. Each role
+  can hold any combination of the following permissions:
+  - `isStaff` : access to staff commands
+  - `tabWhitelist` : always shown clearly in the tab list regardless of range
+  - `scheduleWhitelist` : can connect outside server opening hours
+  - `professionWhitelist` : bypasses all profession restrictions
+  - `seeNicknames` : sees "Nickname (RealName)" in the tab list
+  - `seeAll` : sees all players clearly in the tab list regardless of range
+  - `bypassWorldBorder` : not teleported by the world border
+  - `spyMessages` : receives spy messages (proximity chat, /rp action, /rp incognito)
+  - `bypassAutoUnwhitelist` : never removed by the auto-unwhitelist system
+  - `bypassDeathRpWhitelist` : RP death does not remove them from the whitelist
+- `RpEssentialsRoleManager`: central role resolution with a 30-second cache, detecting roles
+  via vanilla scoreboard tags and LuckPerms groups.
+
+- **Second tab "Roles"** in the Profession Editor screen: create, edit, and delete roles with
+  a checkbox for each permission.
+
+- **Third tab "Global"** in the Profession Editor screen: edit global blocked crafts,
+  unbreakable blocks, blocked items, blocked equipment, and container-open restrictions
+  directly from the GUI.
+
+- **New delete buttons** (with two-step confirmation) for both professions and roles.
+
+- Dedicated sub-screen for managing profession and global restriction entries.
+
+- **Profile GUI**: Reset button next to the nickname field in the Player Profile screen.
+
+- **GUI**: Unsaved changes are now visually flagged in yellow italics until the corresponding Save
+  button is pressed.
+
+### Improved
+
+- Spy messages, world border bypass, and whitelist-removal bypasses (auto-unwhitelist and
+  Death RP) are now controlled per-role instead of by a single generic staff check.
+
+- **Config GUI**: list values are now stored with newline separators instead of commas, so entries
+  containing internal commas (such as role permissions) are edited correctly.
+
+### Fixed
+
+- License navigation buttons (previous/next/add/revoke) in the Player Profile screen now
+  keep a fixed position regardless of which profession is currently displayed.
+
+### Technical
+
+- `IllegalStateException` is no longer caught alongside the broader `Exception` type in the
+  same multi-catch block when resolving auto-unwhitelist bypass permissions.
+
+### Migration Notes
+
+- After updating, review your `roles` list in `rpessentials-core.toml`: old entries still
+  work but grant no permission beyond `isStaff`. Add the permission list explicitly to take
+  advantage of the new system.
+
+### Other
+
+- Some QoL things and modification with Immersive Message integration that should not affect you in any way.
+
+(Hi, just a personal note, this version is very likely to have some bugs, if you find any pls feel free to post a comment on the curseforge page!)
+
 ## [4.2.0]
 
 ### Changed

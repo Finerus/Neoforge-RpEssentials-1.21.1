@@ -256,6 +256,8 @@ public class RpConfigCommands {
     // =========================================================================
     static int reloadConfig(CommandContext<CommandSourceStack> ctx) {
         // Schedules et caches dérivés
+        RpEssentialsRoleManager.clearAll();
+        RpEssentialsRoleManager.reload();
         RpEssentialsScheduleManager.reload();
         WarnManager.reload();
         ProfessionRestrictionManager.reloadCache();

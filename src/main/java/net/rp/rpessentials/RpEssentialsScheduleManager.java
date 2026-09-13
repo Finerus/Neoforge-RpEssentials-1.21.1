@@ -186,6 +186,7 @@ public class RpEssentialsScheduleManager {
 
     public static Component canPlayerJoin(ServerPlayer player) {
         if (RpEssentialsPermissions.isStaff(player)) return null;
+        if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.SCHEDULE_WHITELIST)) return null;
 
         try {
             List<? extends String> scheduleWhitelist = ScheduleConfig.SCHEDULE_WHITELIST.get();
@@ -200,6 +201,7 @@ public class RpEssentialsScheduleManager {
             return null;
         }
         if (isServerOpen()) return null;
+
         DaySchedule next = getNextOpenSchedule();
         String open  = next != null ? next.open().format(FMT)  : "?";
         String close = next != null ? next.close().format(FMT) : "?";

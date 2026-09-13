@@ -350,13 +350,27 @@ public class RpEssentialsConfig {
         BUILDER.push("Roles");
 
         ROLES = BUILDER
-                .comment("Configurable roles for /rpessentials setrole.",
-                        "Format: roleId;lpGroup",
-                        "Example: [\"admin;admin\", \"modo;modo\", \"builder;builder\", \"joueur;joueur\"]",
-                        "The vanilla tag added = roleId. The LuckPerms parent set = lpGroup.",
-                        "All other role tags are removed automatically when a new role is set.")
+                .comment("Role definitions with their associated permissions.",
+                        "Format: id;luckpermsGroup;perm1,perm2,...",
+                        "",
+                        "Available permissions:",
+                        "  isStaff                : access to staff commands",
+                        "  tabWhitelist           : always shown clearly in the tab list",
+                        "  scheduleWhitelist      : can connect outside server hours",
+                        "  professionWhitelist    : bypasses profession restrictions",
+                        "  seeNicknames           : sees 'Nickname (RealName)' in tab",
+                        "  seeAll                 : sees all players clearly in tab regardless of range",
+                        "  bypassWorldBorder      : not teleported by world border",
+                        "  spyMessages            : receives spy messages (proximity chat, RP actions)",
+                        "  bypassAutoUnwhitelist  : never removed by auto-unwhitelist",
+                        "  bypassDeathRpWhitelist : death RP does not remove them from whitelist")
                 .defineList("roles",
-                        java.util.Arrays.asList("admin;admin", "moderator;moderator", "builder;builder", "player;player"),
+                        java.util.Arrays.asList(
+                                "admin;admin;isStaff,professionWhitelist,scheduleWhitelist,seeNicknames,seeAll,bypassWorldBorder,spyMessages,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
+                                "moderator;moderator;isStaff,scheduleWhitelist,professionWhitelist,seeNicknames,bypassWorldBorder,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
+                                "builder;builder;scheduleWhitelist,professionWhitelist,bypassWorldBorder,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
+                                "player;player"
+                        ),
                         obj -> obj instanceof String && ((String) obj).contains(";"));
 
         BUILDER.pop(); // Roles

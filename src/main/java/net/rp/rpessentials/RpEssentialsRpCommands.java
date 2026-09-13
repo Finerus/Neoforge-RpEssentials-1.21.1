@@ -25,6 +25,7 @@ import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.identity.RpEssentialsChatFormatter;
+import net.rp.rpessentials.RpEssentialsRoleManager;
 
 import java.util.List;
 
@@ -203,10 +204,6 @@ public class RpEssentialsRpCommands {
         String rawFormat = MessagesConfig.get(MessagesConfig.RP_COMMERCE_FORMAT, "message", message);
         String formatted = RpEssentialsChatFormatter.resolveRpPlaceholders(rawFormat, player);
 
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            p.displayClientMessage(ColorHelper.parseColors(formatted), false);
-        }
-
         // Log avec real + nick pour la console
         RpEssentials.LOGGER.info("[COMMERCE] {} ({}): {}",
                 NicknameManager.getDisplayName(player),
@@ -244,11 +241,12 @@ public class RpEssentialsRpCommands {
         // Log staff : résolution complète avec nick/real
         String rawLog = MessagesConfig.get(MessagesConfig.RP_INCOGNITO_LOG, "message", message);
         rawLog = RpEssentialsChatFormatter.resolveRpPlaceholders(rawLog, player);
-        String finalLog = rawLog;
+        String finalLogResolved = RpEssentialsChatFormatter.resolveRpPlaceholders(
+                MessagesConfig.get(MessagesConfig.RP_INCOGNITO_LOG, "message", message), player);
+        Component spyComponent = ColorHelper.parseColors(finalLogResolved);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(p)) {
-                p.displayClientMessage(ColorHelper.parseColors(finalLog), false);
-            }
+            if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
+            p.displayClientMessage(spyComponent, false);
         }
 
         RpEssentials.LOGGER.info("[INCOGNITO] {} ({}): {}",
@@ -302,7 +300,7 @@ public class RpEssentialsRpCommands {
             }
         }
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!RpEssentialsPermissions.isStaff(p)) continue;
+            if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
             if (inRange.stream().anyMatch(r -> r.getUUID().equals(p.getUUID()))) continue;
             p.displayClientMessage(ColorHelper.parseColors(spyMsg), false);
         }

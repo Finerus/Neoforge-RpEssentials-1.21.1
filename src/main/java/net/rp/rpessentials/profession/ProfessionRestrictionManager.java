@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.RpEssentialsRoleManager;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ProfessionConfig;
 import net.rp.rpessentials.config.RpEssentialsConfig;
@@ -56,6 +57,7 @@ public class ProfessionRestrictionManager {
     // =========================================================================
 
     public static void reloadCache() {
+        actionCache.clear();
         professionDataCache.clear();
         compiledPatterns.clear();
         craftMessageCooldown.clear();
@@ -101,6 +103,8 @@ public class ProfessionRestrictionManager {
     // =========================================================================
 
     private static boolean isExemptFromProfessionRestrictions(ServerPlayer player) {
+        if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.PROFESSION_WHITELIST))
+            return true;
         try {
             if (RpEssentialsConfig.WHITELIST_EXEMPT_PROFESSIONS != null
                     && RpEssentialsConfig.WHITELIST_EXEMPT_PROFESSIONS.get()) {
@@ -115,10 +119,8 @@ public class ProfessionRestrictionManager {
     }
 
     // =========================================================================
-    // MÉTHODE GÉNÉRIQUE — cœur du système
-    // Remplace la duplication dans canCraft / canBreakBlock / canUseItem / canEquip
+    // MÉTHODE GÉNÉRIQUE
     // =========================================================================
-
     private static boolean canPerformAction(ServerPlayer player, ResourceLocation id,
                                             String cachePrefix,
                                             Supplier<List<? extends String>> globalList,
@@ -145,7 +147,6 @@ public class ProfessionRestrictionManager {
     // =========================================================================
     // API PUBLIQUE — VÉRIFICATIONS
     // =========================================================================
-
     public static boolean canCraft(ServerPlayer player, ResourceLocation itemId) {
         return canPerformAction(player, itemId, "craft",
                 ProfessionConfig.GLOBAL_BLOCKED_CRAFTS::get,

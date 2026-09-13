@@ -247,7 +247,8 @@ public class DeathRPManager {
 
         try {
             if (RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE != null
-                    && RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get()) {
+                    && RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get()
+                    && !RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.BYPASS_DEATH_RP_WHITELIST)) {
                 server.getPlayerList().getWhiteList()
                         .remove(new net.minecraft.server.players.UserWhiteListEntry(player.getGameProfile()));
                 LOGGER.info("[DeathRP] {} removed from whitelist.", player.getName().getString());

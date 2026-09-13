@@ -349,7 +349,10 @@ public class ConfigInspector {
     public static String serialize(Object value, ValueType type) {
         if (value == null) return "";
         if (value instanceof List<?> list)
-            return list.stream().map(Object::toString).reduce((a, b) -> a + ", " + b).orElse("");
+            return list.stream()
+                    .map(Object::toString)
+                    .reduce((a, b) -> a + "\n" + b)
+                    .orElse("");
         return value.toString();
     }
 
@@ -379,7 +382,11 @@ public class ConfigInspector {
             case LIST_STRING -> {
                 if (raw.isBlank()) yield new ArrayList<String>();
                 List<String> out = new ArrayList<>();
-                for (String s : raw.split(",")) { String t = s.trim(); if (!t.isEmpty()) out.add(t); }
+                String[] lines = raw.contains("\n") ? raw.split("\n") : raw.split(",");
+                for (String s : lines) {
+                    String t = s.trim();
+                    if (!t.isEmpty()) out.add(t);
+                }
                 yield out;
             }
             case LIST_INT -> {

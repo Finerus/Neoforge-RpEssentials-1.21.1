@@ -15,7 +15,7 @@ group = mod_group_id
 repositories {
     mavenCentral()
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-    maven { url "https://maven.txni.dev/releases" }
+    flatDir { dirs 'libs' }
     maven { url "https://maven.su5ed.dev/releases" }
     maven { url "https://api.modrinth.com/maven" }
     maven {
@@ -72,7 +72,7 @@ dependencies {
 
     annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
 
-    implementation("toni.immersivemessages:neoforge-1.21.1:1.0.18") { transitive = false }
+    implementation files('libs/immersivemessages-neoforge-1.0.18-1.21.1.jar')
     implementation "maven.modrinth:txnilib:neoforge-1.21.1-1.0.24"
 
     compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"

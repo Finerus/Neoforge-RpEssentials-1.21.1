@@ -114,6 +114,42 @@ public class NetworkHandler {
                 SaveConfigEntriesPacket.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(null, SaveConfigEntriesPacket::handleOnServer)
         );
+
+        registrar.playToClient(
+                OpenRolesGuiPacket.TYPE,
+                OpenRolesGuiPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(OpenRolesGuiPacket::handleOnClient, null)
+        );
+
+        registrar.playToServer(
+                SaveRolePacket.TYPE,
+                SaveRolePacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, SaveRolePacket::handleOnServer)
+        );
+
+        registrar.playToServer(
+                DeleteProfessionPacket.TYPE,
+                DeleteProfessionPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, DeleteProfessionPacket::handleOnServer)
+        );
+
+        registrar.playToServer(
+                DeleteRolePacket.TYPE,
+                DeleteRolePacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, DeleteRolePacket::handleOnServer)
+        );
+
+        registrar.playToClient(
+                OpenGlobalRestrictionsPacket.TYPE,
+                OpenGlobalRestrictionsPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(OpenGlobalRestrictionsPacket::handleOnClient, null)
+        );
+
+        registrar.playToServer(
+                SaveGlobalRestrictionsPacket.TYPE,
+                SaveGlobalRestrictionsPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, SaveGlobalRestrictionsPacket::handleOnServer)
+        );
     }
 
     private static void handleSyncProfessionRestrictions(

@@ -38,15 +38,24 @@ public class RpEssentialsPermissions {
         if (player == null) return false;
 
         CacheEntry cached = staffCache.get(player.getUUID());
-        if (cached != null && cached.isValid()) {
-            return cached.isStaff;
-        }
+        if (cached != null && cached.isValid()) return cached.isStaff;
 
-        boolean result = checkStaffStatus(player);
+        boolean result = RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.IS_STAFF)
+                || checkOpLevelBypass(player);
         staffCache.put(player.getUUID(), new CacheEntry(result));
         return result;
     }
 
+    private static boolean checkOpLevelBypass(ServerPlayer player) {
+        try {
+            int opLevel = RpEssentialsConfig.OP_LEVEL_BYPASS.get();
+            return opLevel > 0 && player.hasPermissions(opLevel);
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
+    /**
     private static boolean checkStaffStatus(ServerPlayer player) {
 
         // ── 1. Tags vanilla scoreboard ────────────────────────────────────────
@@ -108,6 +117,9 @@ public class RpEssentialsPermissions {
 
         return false;
     }
+    */
+
+    // -----------
 
     /**
      * Invalide le cache pour un joueur (appeler à la déconnexion).

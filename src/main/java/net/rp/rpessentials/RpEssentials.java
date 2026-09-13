@@ -123,6 +123,7 @@ public class RpEssentials {
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
+        RpEssentialsRoleManager.clearExpired();
 
         // Toutes les 40 ticks (2s) : mise à jour TabList blur
         if (tickCounter % 40 == 0) {
@@ -206,6 +207,7 @@ public class RpEssentials {
 
     @SubscribeEvent
     public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        RpEssentialsRoleManager.clearAll();
         WorldBorderManager.clearAllCache();
         RpEssentialsPermissions.clearCache();
         RpEssentialsScheduleManager.reload();
