@@ -26,6 +26,7 @@ import net.rp.rpessentials.config.RpConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.identity.RpEssentialsChatFormatter;
 import net.rp.rpessentials.RpEssentialsRoleManager;
+import net.rp.rpessentials.moderation.MuteManager;
 
 import java.util.List;
 
@@ -183,12 +184,11 @@ public class RpEssentialsRpCommands {
     // =========================================================================
     // /rp commerce <message>
     // =========================================================================
-
     private static int executeCommerce(CommandContext<CommandSourceStack> ctx, String message)
             throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
+        if (MuteManager.denyIfMuted(player)) return 0;
 
-        // Cooldown
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "commerce")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "commerce");
             player.displayClientMessage(ColorHelper.parseColors(
@@ -200,11 +200,13 @@ public class RpEssentialsRpCommands {
 
         MinecraftServer server = ctx.getSource().getServer();
 
-        // Résolution via le helper centralisé — supporte {player}/{nick}/{real}/{nick_real}
         String rawFormat = MessagesConfig.get(MessagesConfig.RP_COMMERCE_FORMAT, "message", message);
-        String formatted = RpEssentialsChatFormatter.resolveRpPlaceholders(rawFormat, player);
+        Component component = ColorHelper.parseColors(
+                RpEssentialsChatFormatter.resolveRpPlaceholders(rawFormat, player));
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            p.displayClientMessage(component, false);
+        }
 
-        // Log avec real + nick pour la console
         RpEssentials.LOGGER.info("[COMMERCE] {} ({}): {}",
                 NicknameManager.getDisplayName(player),
                 player.getName().getString(),
@@ -215,12 +217,11 @@ public class RpEssentialsRpCommands {
     // =========================================================================
     // /rp incognito <message>
     // =========================================================================
-
     private static int executeIncognito(CommandContext<CommandSourceStack> ctx, String message)
             throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
+        if (MuteManager.denyIfMuted(player)) return 0;
 
-        // Cooldown
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "incognito")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "incognito");
             player.displayClientMessage(ColorHelper.parseColors(
@@ -232,13 +233,11 @@ public class RpEssentialsRpCommands {
 
         MinecraftServer server = ctx.getSource().getServer();
 
-        // Message public (pas de nom → pas de résolution de {player})
         String rawPublic = MessagesConfig.get(MessagesConfig.RP_INCOGNITO_FORMAT, "message", message);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             p.displayClientMessage(ColorHelper.parseColors(rawPublic), false);
         }
 
-        // Log staff : résolution complète avec nick/real
         String rawLog = MessagesConfig.get(MessagesConfig.RP_INCOGNITO_LOG, "message", message);
         rawLog = RpEssentialsChatFormatter.resolveRpPlaceholders(rawLog, player);
         String finalLogResolved = RpEssentialsChatFormatter.resolveRpPlaceholders(
@@ -259,12 +258,11 @@ public class RpEssentialsRpCommands {
     // =========================================================================
     // /rp action <action> + /me <action>
     // =========================================================================
-
     private static int executeAction(CommandContext<CommandSourceStack> ctx, String action)
             throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
+        if (MuteManager.denyIfMuted(player)) return 0;
 
-        // Cooldown
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "action")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "action");
             player.displayClientMessage(ColorHelper.parseColors(
@@ -280,7 +278,6 @@ public class RpEssentialsRpCommands {
         try { distance = RpConfig.ACTION_DISTANCE.get(); }
         catch (IllegalStateException ignored) {}
 
-        // Résolution centralisée — {player}/{nick}/{real}/{nick_real} tous supportés
         String rawAction = MessagesConfig.get(MessagesConfig.RP_ACTION_FORMAT, "action", action);
         rawAction = RpEssentialsChatFormatter.resolveRpPlaceholders(rawAction, player);
 

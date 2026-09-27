@@ -13,6 +13,9 @@ import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
 import net.rp.rpessentials.moderation.LastConnectionManager;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.util.UUID;
 
@@ -26,9 +29,9 @@ public class RpLastConnectionCommands {
                 .executes(RpLastConnectionCommands::lastConnectionPlayer));
 
         lastConnNode.then(Commands.literal("list")
-                .executes(ctx -> lastConnectionList(ctx, 20))
-                .then(Commands.argument("count", IntegerArgumentType.integer(1, 100))
-                        .executes(ctx -> lastConnectionList(ctx, IntegerArgumentType.getInteger(ctx, "count")))));
+                .executes(ctx -> lastConnectionList(ctx, 1))
+                .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                        .executes(ctx -> lastConnectionList(ctx, IntegerArgumentType.getInteger(ctx, "page")))));
 
         return lastConnNode;
     }
@@ -36,7 +39,6 @@ public class RpLastConnectionCommands {
     // =========================================================================
     // HANDLERS
     // =========================================================================
-
     private static int lastConnectionPlayer(CommandContext<CommandSourceStack> ctx) {
         try {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
@@ -76,17 +78,24 @@ public class RpLastConnectionCommands {
         String logoutStr = entry.lastLogout != null ? "§f" + entry.lastLogout : unknown;
         String displayName = entry.mcName != null ? entry.mcName : targetName;
 
-        ctx.getSource().sendSuccess(() -> Component.literal(
-                MessagesConfig.get(MessagesConfig.LASTCONN_BOX_HEADER) + "\n" +
-                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_PLAYER) + "§e" + displayName + " §8(" + finalTargetUUID + ")\n" +
-                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_STATUS) + status + "\n" +
-                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_LOGIN) + loginStr + "\n" +
-                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_LOGOUT) + logoutStr + "\n" +
-                        "§6╚════════════════════════════════════╝"), false);
+        MutableComponent nameComp = Component.literal("§e" + displayName).withStyle(style -> style
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("§7" + finalTargetUUID + "\n§8Click to copy")))
+                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, finalTargetUUID.toString())));
+
+        MutableComponent out = Component.literal(
+                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_HEADER) + "\n" + RpChatUi.LINE + "\n"
+                                + MessagesConfig.get(MessagesConfig.LASTCONN_BOX_PLAYER))
+                .append(nameComp)
+                .append(Component.literal("\n" + MessagesConfig.get(MessagesConfig.LASTCONN_BOX_STATUS) + status
+                        + "\n" + MessagesConfig.get(MessagesConfig.LASTCONN_BOX_LOGIN) + loginStr
+                        + "\n" + MessagesConfig.get(MessagesConfig.LASTCONN_BOX_LOGOUT) + logoutStr
+                        + "\n" + RpChatUi.LINE));
+        ctx.getSource().sendSuccess(() -> out, false);
         return 1;
     }
 
-    private static int lastConnectionList(CommandContext<CommandSourceStack> ctx, int count) {
+    private static int lastConnectionList(CommandContext<CommandSourceStack> ctx, int page) {
         try {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
                 ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.LASTCONN_DISABLED)));
@@ -106,30 +115,34 @@ public class RpLastConnectionCommands {
             return 1;
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.LASTCONN_LIST_HEADER,
-                "shown", String.valueOf(Math.min(count, total)), "total", String.valueOf(total))).append("\n");
+        int pages = RpChatUi.pageCount(total);
+        int current = Math.min(page, pages);
+        int from = (current - 1) * RpChatUi.PAGE_SIZE;
+        int to = Math.min(total, from + RpChatUi.PAGE_SIZE);
 
         String unknown = MessagesConfig.get(MessagesConfig.LASTCONN_UNKNOWN);
-        int shown = 0;
-        for (var e : allEntries) {
-            if (shown >= count) break;
+        StringBuilder sb = new StringBuilder();
+        sb.append(MessagesConfig.get(MessagesConfig.LASTCONN_LIST_HEADER,
+                        "page", String.valueOf(current), "pages", String.valueOf(pages),
+                        "total", String.valueOf(total), "shown", String.valueOf(to - from)))
+                .append("\n").append(RpChatUi.LINE).append("\n");
+
+        for (int i = from; i < to; i++) {
+            var e = allEntries.get(i);
             UUID uuid = e.getKey();
             LastConnectionManager.ConnectionEntry entry = e.getValue();
-            String name = entry.mcName != null ? entry.mcName : uuid.toString().substring(0, 8) + "...";
-            boolean isOnline = server.getPlayerList().getPlayer(uuid) != null;
-            String bullet = isOnline
-                    ? MessagesConfig.get(MessagesConfig.LASTCONN_ONLINE).substring(0, 4)
-                    : MessagesConfig.get(MessagesConfig.LASTCONN_OFFLINE).substring(0, 4);
+            String name = entry.mcName != null ? entry.mcName : uuid.toString().substring(0, 8);
+            String bullet = server.getPlayerList().getPlayer(uuid) != null ? "§a●" : "§7○";
             String loginStr = entry.lastLogin != null ? entry.lastLogin : unknown;
-            sb.append("§6║ ").append(bullet).append(" §e").append(name)
-                    .append("§7 — ").append(loginStr).append("\n");
-            shown++;
+            sb.append(bullet).append(" §e").append(name).append(" §8- §7").append(loginStr).append("\n");
         }
-        sb.append("§6╚═══════════════════════════════════╝");
+        sb.append(RpChatUi.LINE);
 
-        String finalMsg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(finalMsg), false);
+        MutableComponent out = Component.literal(sb.toString());
+        if (pages > 1) {
+            out.append(Component.literal("\n")).append(RpChatUi.pager(current, pages, "/rpessentials lastconnection list"));
+        }
+        ctx.getSource().sendSuccess(() -> out, false);
         return 1;
     }
 }

@@ -12,6 +12,6 @@ public class ClientEventHandler {
     @SubscribeEvent
     public static void onClientDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientNametagCache.reset();
-        RpEssentials.LOGGER.info("[RPEssentials] Nametag cache reset on disconnect");
+        RpEssentials.LOGGER.info("[RpEssentials] Nametag cache reset on disconnect");
     }
 }

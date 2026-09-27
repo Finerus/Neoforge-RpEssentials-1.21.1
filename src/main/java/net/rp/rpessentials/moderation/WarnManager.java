@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 /**
  * Gestionnaire d'avertissements (warns) joueurs.
- * Stocke les warns dans : world/data/oneriamod/warns.json
  *
  * Fonctionnalités :
  *  - Warn permanent ou temporaire (avec expiration)

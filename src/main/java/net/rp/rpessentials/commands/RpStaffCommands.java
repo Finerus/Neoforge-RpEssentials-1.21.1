@@ -25,7 +25,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.RpEssentialsScheduleManager;
 import net.rp.rpessentials.config.*;
+import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.profession.LicenseManager;
 
@@ -308,45 +310,84 @@ public class RpStaffCommands {
 
     private static int showStats(CommandContext<CommandSourceStack> ctx) {
         MinecraftServer server = ctx.getSource().getServer();
-        StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.STATS_HEADER)).append("\n");
-        sb.append("§6╠═══════════════════════════════════\n");
+        var known = LastConnectionManager.getAllSortedByLogin();
 
-        int playersWithLicense = LicenseManager.getAllLicenses().size();
-        sb.append("§6║ §7Players with profession: §e").append(playersWithLicense).append("\n");
+        long totalPlaytime = 0L;
+        for (var e : known) totalPlaytime += PlaytimeManager.getTotalPlaytimeMs(e.getKey());
 
-        long activeWarns = WarnManager.getAll().stream().filter(w -> !w.isExpired()).count();
-        sb.append("§6║ §7Active warns            : §e").append(activeWarns).append("\n");
+        var licenses = LicenseManager.getAllLicenses();
+        int licenseCount = licenses.values().stream().mapToInt(List::size).sum();
 
-        java.time.LocalDate in7Days = java.time.LocalDate.now().plusDays(7);
+        java.time.LocalDate today = java.time.LocalDate.now();
         java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
         long expiringSoon = LicenseManager.getAllTempLicenses().stream().filter(e -> {
             try {
                 java.time.LocalDate expiry = java.time.LocalDate.parse(e.expiresAt, fmt);
-                return !expiry.isBefore(java.time.LocalDate.now()) && !expiry.isAfter(in7Days);
+                return !expiry.isBefore(today) && !expiry.isAfter(today.plusDays(7));
             } catch (Exception ex) { return false; }
         }).count();
-        sb.append("§6║ §7Licenses expiring (7d)  : §e").append(expiringSoon).append("\n");
 
-        long activeMutes = MuteManager.getAllMutes().size();
-        sb.append("§6║ §7Active mutes            : §e").append(activeMutes).append("\n");
+        var activeWarns = WarnManager.getAll().stream().filter(w -> !w.isExpired()).toList();
+        long warnedPlayers = activeWarns.stream().map(w -> w.targetUUID).distinct().count();
 
-        long deathCount = DeathRPManager.getAllHistory().size();
-        sb.append("§6║ §7Death RP recorded       : §e").append(deathCount).append("\n");
+        String schedule;
+        try {
+            schedule = !ScheduleConfig.ENABLE_SCHEDULE.get() ? "§7Disabled"
+                    : RpEssentialsScheduleManager.isServerOpen() ? "§aOpen" : "§cClosed";
+        } catch (IllegalStateException e) { schedule = "§8N/A"; }
 
-        sb.append("§6╠═══════════════════════════════════\n");
-        sb.append("§6║ §7Recent connections:\n");
-        var recent = LastConnectionManager.getAllSortedByLogin();
-        int shown = 0;
-        for (var e : recent) {
-            if (shown++ >= 5) break;
-            String name = e.getValue().mcName != null ? e.getValue().mcName : e.getKey().toString().substring(0, 8);
-            boolean online = server.getPlayerList().getPlayer(e.getKey()) != null;
-            String bullet = online ? "§a●" : "§7○";
-            sb.append("§6║  ").append(bullet).append(" §e").append(name)
-                    .append(" §8— §7").append(e.getValue().lastLogin != null ? e.getValue().lastLogin : "?").append("\n");
+        String deathRp = "§cOFF";
+        try {
+            if (RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED != null && RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get())
+                deathRp = "§aON";
+        } catch (IllegalStateException ignored) {}
+
+        List<Map.Entry<UUID, LastConnectionManager.ConnectionEntry>> byPlaytime = new ArrayList<>(known);
+        byPlaytime.sort((a, b) -> Long.compare(
+                PlaytimeManager.getTotalPlaytimeMs(b.getKey()), PlaytimeManager.getTotalPlaytimeMs(a.getKey())));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(MessagesConfig.get(MessagesConfig.STATS_HEADER)).append("\n").append(RpChatUi.LINE).append("\n");
+
+        sb.append("§eServer\n")
+                .append(RpChatUi.row(
+                        RpChatUi.kv("Online", "§f" + server.getPlayerList().getPlayerCount()),
+                        RpChatUi.kv("Known", "§f" + known.size()),
+                        RpChatUi.kv("Playtime", "§f" + PlaytimeManager.format(totalPlaytime))))
+                .append(RpChatUi.row(
+                        RpChatUi.kv("Nicknames", "§f" + NicknameManager.count()),
+                        RpChatUi.kv("Schedule", schedule)));
+
+        sb.append("§eProfessions\n")
+                .append(RpChatUi.row(
+                        RpChatUi.kv("Holders", "§f" + licenses.size() + " §8(" + licenseCount + " licenses)"),
+                        RpChatUi.kv("Expiring in 7d", "§f" + expiringSoon)));
+
+        sb.append("§eModeration\n")
+                .append(RpChatUi.row(
+                        RpChatUi.kv("Active warns", "§f" + activeWarns.size() + " §8(" + warnedPlayers + " players)"),
+                        RpChatUi.kv("Active mutes", "§f" + MuteManager.getAllMutes().size())))
+                .append(RpChatUi.row(
+                        RpChatUi.kv("Death RP", deathRp),
+                        RpChatUi.kv("Overrides", "§f" + DeathRPManager.getAllOverrides().size()),
+                        RpChatUi.kv("Deaths recorded", "§f" + DeathRPManager.getAllHistory().size())));
+
+        sb.append("§eMost playtime\n");
+        for (int i = 0; i < Math.min(3, byPlaytime.size()); i++) {
+            UUID id = byPlaytime.get(i).getKey();
+            sb.append("§8").append(i + 1).append(". §f").append(LastConnectionManager.resolveName(server, id))
+                    .append(" §8- §7").append(PlaytimeManager.format(PlaytimeManager.getTotalPlaytimeMs(id))).append("\n");
         }
-        sb.append("§6╚═══════════════════════════════════╝");
+
+        sb.append("§eRecent connections\n");
+        for (int i = 0; i < Math.min(5, known.size()); i++) {
+            var e = known.get(i);
+            boolean online = server.getPlayerList().getPlayer(e.getKey()) != null;
+            sb.append(online ? "§a● " : "§7○ ").append("§e").append(LastConnectionManager.resolveName(server, e.getKey()))
+                    .append(" §8- §7").append(e.getValue().lastLogin != null ? e.getValue().lastLogin : "?").append("\n");
+        }
+        sb.append(RpChatUi.LINE);
+
         String msg = sb.toString();
         ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;

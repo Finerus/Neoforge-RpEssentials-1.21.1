@@ -2,7 +2,7 @@
 
 **Rp Essentials** is a comprehensive server side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It covers identity obfuscation, professions and licenses, moderation, chat formatting, server scheduling, Death RP, world border and zones, and more, all configurable in real time without restarts.
 
-> Current version: **5.0.0_beta**. Full changelog on [Modrinth](https://modrinth.com/mod/rp-essentials/changelog).
+> Current version: **5.0.0**. Full changelog on [Modrinth](https://modrinth.com/mod/rp-essentials/changelog).
 
 Full documentation, configuration reference and setup guides now live on the **[GitHub Wiki](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki)**.
 

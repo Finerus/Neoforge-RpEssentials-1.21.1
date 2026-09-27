@@ -52,9 +52,9 @@ public class RpEssentials {
         RpEssentialsItems.ITEMS.register(modEventBus);
         try {
             CuriosCompat.register(modEventBus);
-            LOGGER.info("[RPEssentials] Curios compatibility enabled.");
+            LOGGER.info("[RpEssentials] Curios compatibility enabled.");
         } catch (NoClassDefFoundError e) {
-            LOGGER.info("[RPEssentials] Curios not found, skipping compatibility.");
+            LOGGER.info("[RpEssentials] Curios not found, skipping compatibility.");
         }
         NeoForge.EVENT_BUS.register(this);
 
@@ -63,7 +63,7 @@ public class RpEssentials {
                 RpEssentialsScheduleManager.reload();
                 ProfessionRestrictionManager.reloadCache();
                 ImmersivePresetHelper.clearCache();
-                LOGGER.info("[RPEssentials] Config loaded: schedule, professions & immersive presets initialized.");
+                LOGGER.info("[RpEssentials] Config loaded: schedule, professions & immersive presets initialized.");
             }
         });
     }
@@ -215,6 +215,6 @@ public class RpEssentials {
         PlaytimeManager.clearAll();
         lastBlurPositions.clear();
         RpEssentialsIO.shutdown();
-        LOGGER.info("[RPEssentials] Static caches cleared on server stop. Bye! - Finerus");
+        LOGGER.info("[RpEssentials] Static caches cleared on server stop. Bye! - Finerus");
     }
 }

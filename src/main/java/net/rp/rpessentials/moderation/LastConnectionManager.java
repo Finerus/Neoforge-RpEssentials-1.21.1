@@ -122,20 +122,13 @@ public class LastConnectionManager {
             if (!server.getPlayerList().isWhiteListed(
                     new com.mojang.authlib.GameProfile(uuid, entry.mcName))) continue;
 
-            // Bypass si le joueur a la permission correspondante
-            ServerPlayer onlineCheck = server.getPlayerList().getPlayer(uuid);
-            if (onlineCheck != null && RpEssentialsRoleManager.has(onlineCheck,
-                    RpEssentialsRoleManager.Permission.BYPASS_AUTO_UNWHITELIST)) continue;
-            // Pour les joueurs hors ligne, on vérifie via les tags (pas de ServerPlayer dispo)
-            // On skip si l'un de ses tags correspond à un rôle ayant bypassAutoUnwhitelist
-            if (onlineCheck == null && hasRoleWithPermission(entry.mcName, server,
-                    RpEssentialsRoleManager.Permission.BYPASS_AUTO_UNWHITELIST)) continue;
-
             long lastLoginMs;
             try { lastLoginMs = sdf.parse(entry.lastLogin).getTime(); }
             catch (java.text.ParseException ex) { continue; }
 
             if (nowMs - lastLoginMs < thresholdMs) continue;
+
+            if (hasAutoUnwhitelistBypass(uuid)) continue;
 
             final String playerName   = entry.mcName;
             final UUID   playerUUID   = uuid;
@@ -187,33 +180,24 @@ public class LastConnectionManager {
         RpEssentials.LOGGER.info("[AutoUnwhitelist] Sweep done — {} player(s) removed.", removed[0]);
     }
 
-    private static boolean hasRoleWithPermission(String mcName, MinecraftServer server,
-                                                 RpEssentialsRoleManager.Permission permission) {
+    private static boolean hasAutoUnwhitelistBypass(UUID uuid) {
         try {
             net.luckperms.api.LuckPerms lp = net.luckperms.api.LuckPermsProvider.get();
-            UUID uuid = server.getProfileCache().get(mcName)
-                    .map(com.mojang.authlib.GameProfile::getId).orElse(null);
-            if (uuid == null) return false;
-            net.luckperms.api.model.user.User user = lp.getUserManager().getUser(uuid);
+            net.luckperms.api.model.user.User user = lp.getUserManager().loadUser(uuid).join();
             if (user == null) return false;
             String primary = user.getPrimaryGroup().toLowerCase();
-            try {
-                for (String entry2 : RpEssentialsConfig.ROLES.get()) {
-                    String[] parts = entry2.split(";", 3);
-                    if (parts.length < 1) continue;
-                    if (!parts[0].trim().equalsIgnoreCase(primary)) continue;
-                    if (parts.length < 3) return false;
-                    for (String p : parts[2].split(",")) {
-                        if (p.trim().equalsIgnoreCase("bypassAutoUnwhitelist")) return true;
-                    }
+            for (String entry : RpEssentialsConfig.ROLES.get()) {
+                String[] parts = entry.split(";", 3);
+                if (!parts[0].trim().equalsIgnoreCase(primary)) continue;
+                if (parts.length < 3) return false;
+                for (String p : parts[2].split(",")) {
+                    if (p.trim().equalsIgnoreCase("bypassAutoUnwhitelist")) return true;
                 }
-            } catch (IllegalStateException ignored) {}
-            return false;
-        } catch (NoClassDefFoundError ignored) {
-            return false;
-        } catch (Exception ignored) {
-            return false;
-        }
+                return false;
+            }
+        } catch (NoClassDefFoundError | IllegalStateException ignored) {
+        } catch (Exception ignored) {}
+        return false;
     }
 
     // =========================================================================
@@ -331,7 +315,6 @@ public class LastConnectionManager {
     // =========================================================================
     // PUBLIC API — PLAYTIME
     // =========================================================================
-
     /**
      * Ajoute de la durée au playtime cumulatif d'un joueur.
      * Appelé par {@link net.rp.rpessentials.moderation.PlaytimeManager#onLogout}.
@@ -368,7 +351,6 @@ public class LastConnectionManager {
     // =========================================================================
     // PUBLIC API — LECTURE
     // =========================================================================
-
     public static ConnectionEntry getEntry(UUID uuid) {
         ensureInitialized();
         return entries.get(uuid);
@@ -376,16 +358,19 @@ public class LastConnectionManager {
 
     public static List<Map.Entry<UUID, ConnectionEntry>> getAllSortedByLogin() {
         ensureInitialized();
+        SimpleDateFormat parser;
+        try { parser = new SimpleDateFormat(ModerationConfig.LAST_CONNECTION_DATE_FORMAT.get()); }
+        catch (Exception e) { parser = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss"); }
+        final SimpleDateFormat fmt = parser;
         List<Map.Entry<UUID, ConnectionEntry>> list = new ArrayList<>(entries.entrySet());
-        list.sort((a, b) -> {
-            String la = a.getValue().lastLogin;
-            String lb = b.getValue().lastLogin;
-            if (la == null && lb == null) return 0;
-            if (la == null) return 1;
-            if (lb == null) return -1;
-            return lb.compareTo(la);
-        });
+        list.sort((a, b) -> Long.compare(loginMillis(b.getValue(), fmt), loginMillis(a.getValue(), fmt)));
         return list;
+    }
+
+    private static long loginMillis(ConnectionEntry entry, SimpleDateFormat fmt) {
+        if (entry.lastLogin == null) return Long.MIN_VALUE;
+        try { return fmt.parse(entry.lastLogin).getTime(); }
+        catch (java.text.ParseException e) { return Long.MIN_VALUE; }
     }
 
     public static UUID findUUIDByName(String name) {
@@ -394,6 +379,18 @@ public class LastConnectionManager {
             if (name.equalsIgnoreCase(e.getValue().mcName)) return e.getKey();
         }
         return null;
+    }
+
+    public static String resolveName(MinecraftServer server, UUID uuid) {
+        ServerPlayer online = server.getPlayerList().getPlayer(uuid);
+        if (online != null) return online.getName().getString();
+        ConnectionEntry entry = getEntry(uuid);
+        if (entry != null && entry.mcName != null) return entry.mcName;
+        if (server.getProfileCache() != null) {
+            Optional<String> cached = server.getProfileCache().get(uuid).map(p -> p.getName());
+            if (cached.isPresent()) return cached.get();
+        }
+        return uuid.toString().substring(0, 8);
     }
 
     public static void reload() {

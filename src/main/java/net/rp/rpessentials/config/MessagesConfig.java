@@ -444,16 +444,16 @@ public class MessagesConfig {
 
         LASTCONN_BOX_HEADER = BUILDER
                 .comment("Header of the last connection info box. Placeholder: none.")
-                .define("boxHeader",  "§6╔═ Last connection ═══════════════════╗");
-        LASTCONN_BOX_PLAYER = BUILDER.comment("'Player' label.").define("boxPlayer", "§6║ §7Player : ");
-        LASTCONN_BOX_STATUS = BUILDER.comment("'Status' label.").define("boxStatus", "§6║ §7Status : ");
-        LASTCONN_BOX_LOGIN  = BUILDER.comment("'Login' label.").define("boxLogin",  "§6║ §7Login  : ");
-        LASTCONN_BOX_LOGOUT = BUILDER.comment("'Logout' label.").define("boxLogout", "§6║ §7Logout : ");
+                .define("boxHeader",  "§6§lLast connection");
+        LASTCONN_BOX_PLAYER = BUILDER.comment("'Player' label.").define("boxPlayer", "§7Player : ");
+        LASTCONN_BOX_STATUS = BUILDER.comment("'Status' label.").define("boxStatus", "§7Status : ");
+        LASTCONN_BOX_LOGIN  = BUILDER.comment("'Login' label.").define("boxLogin",  "§7Login  : ");
+        LASTCONN_BOX_LOGOUT = BUILDER.comment("'Logout' label.").define("boxLogout", "§7Logout : ");
 
         LASTCONN_LIST_HEADER = BUILDER
                 .comment("Header of the last connection list.",
                         "Placeholders: {shown} = displayed count, {total} = total count.")
-                .define("listHeader", "§6╔═ Recent connections ({shown}/{total}) ══╗");
+                .define("listHeader", "§6§lConnections §8- §7page {page}/{pages} §8({total} players)");
 
         BUILDER.pop();
 
@@ -724,7 +724,7 @@ public class MessagesConfig {
         LICENSE_LIST_HEADER = BUILDER
                 .comment("Header title of the license list box.",
                         "Placeholder: {player} = player name.")
-                .define("listHeader", "§6║ §e§lLICENSES — §f{player}");
+                .define("listHeader", "§6§lLicenses §8- §f{player}");
 
         LICENSE_LIST_RP_EXPIRY = BUILDER
                 .comment("Suffix appended to a license entry when it is an RP (temporary) license.",
@@ -737,7 +737,7 @@ public class MessagesConfig {
 
         LICENSE_LIST_ALL_HEADER = BUILDER
                 .comment("Header title line of the all-players license list.")
-                .define("listAllHeader", "§6║ §e§lLICENSES — ALL PLAYERS §6║");
+                .define("listAllHeader", "§6§lLicenses §8- §fall players");
 
         LICENSE_LIST_ALL_NONE_FOR_PLAYER = BUILDER
                 .comment("Shown in the all-players list when a player has no active license.")
@@ -747,19 +747,19 @@ public class MessagesConfig {
                 .comment("Staff feedback after reissuing a license item.",
                         "Placeholders: {profession} = profession display name, {player} = player name.")
                 .define("reissueStaff",
-                        "§a[RpEssentials] Replacement license for {profession} §agiven to §f{player}§a.");
+                        "§a[RpEssentials] Replacement license item for {profession} §agiven to §f{player}§a. Their license itself is unchanged.");
 
         LICENSE_REISSUE_PLAYER = BUILDER
                 .comment("Notification sent to the player when a replacement license item is given.",
                         "Placeholder: {profession} = profession display name.")
                 .define("reissuePlayer",
-                        "§aYou received a replacement {profession}§6§l License§a.");
+                        "§aYou received a replacement {profession}§6§l License §aitem.");
 
         LICENSE_REISSUE_NOT_FOUND = BUILDER
                 .comment("Error shown when the player does not have the license to reissue.",
                         "Placeholders: {player} = player name, {profession} = profession id.")
                 .define("reissueNotFound",
-                        "§c[RpEssentials] §f{player} §cdoes not have the §f{profession} §clicense.");
+                        "§c[RpEssentials] §f{player} §cdoes not have the §f{profession} §clicense: nothing to replace. Use §f/rpessentials license give §cto grant it.");
 
         LICENSE_EXPIRED_RP_PLAYER = BUILDER
                 .comment("Message sent to the player when their RP license expires.",
@@ -842,28 +842,28 @@ public class MessagesConfig {
         BUILDER.push("Roles");
         SETROLE_UNKNOWN = BUILDER
                 .comment("Shown when the role ID is not found. Placeholder: {role}")
-                .define("setroleUnknown", "§c[RPE] Unknown role: {role}.");
+                .define("setroleUnknown", "§c[RpEssentials] Unknown role: {role}.");
         SETROLE_SUCCESS_STAFF = BUILDER
                 .comment("Staff feedback on /setrole. Placeholders: {role} {player}")
                 .define("setroleSuccessStaff", "§a✔ §aRole §e§l{role} §aassigned to §e§l{player}§a.");
         SETROLE_SUCCESS_PLAYER = BUILDER
                 .comment("Message sent to the target. Placeholder: {role}")
-                .define("setroleSuccessPlayer", "§6[RPE] §fYour role has been updated: §e§l{role}§f.");
+                .define("setroleSuccessPlayer", "§6[RpEssentials] §fYour role has been updated: §e§l{role}§f.");
         BUILDER.pop();
 
         BUILDER.push("Schedule Commands");
         SCHEDULE_DAY_UPDATED = BUILDER
                 .comment("Shown when a day schedule value is updated. Placeholders: {day} {type} {value}")
-                .define("scheduleDayUpdated", "§a[RPE] §e{day} {type} §aupdated: §f{value}");
+                .define("scheduleDayUpdated", "§a[RpEssentials] §e{day} {type} §aupdated: §f{value}");
         SCHEDULE_DAY_INVALID = BUILDER
                 .comment("Shown when an invalid day is provided. Placeholder: {day}")
-                .define("scheduleDayInvalid", "§c[RPE] Invalid day: {day}");
+                .define("scheduleDayInvalid", "§c[RpEssentials] Invalid day: {day}");
         SCHEDULE_DAY_ENABLED = BUILDER
                 .comment("Shown when a day is enabled or disabled. Placeholders: {day} {state}")
-                .define("scheduleDayEnabled", "§a[RPE] §e{day} §a{state}.");
+                .define("scheduleDayEnabled", "§a[RpEssentials] §e{day} §a{state}.");
         SCHEDULE_TIME_INVALID = BUILDER
                 .comment("Shown when the time format is invalid.")
-                .define("scheduleTimeInvalid", "§c[RPE] Invalid format. Use HH:MM (e.g. 19:00).");
+                .define("scheduleTimeInvalid", "§c[RpEssentials] Invalid format. Use HH:MM (e.g. 19:00).");
         AUTO_UNWHITELIST_STAFF_NOTIFY = BUILDER
                 .comment("Staff notification when a player is auto-unwhitelisted. Placeholders: {player} {days}")
                 .define("autoUnwhitelistStaffNotify", "§6[Auto-Unwhitelist] §e{player} §7removed ({days} days inactive). ");

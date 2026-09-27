@@ -51,12 +51,13 @@ public record OpenPlayerProfileGuiPacket(
             long   sessionMs,
             int    noteCount,
             boolean isOnline,
-            List<NoteEntry> notes  // NOUVEAU
+            List<NoteEntry> notes,
+            boolean isPrepared // true = jamais connecté, profil préparé par le staff
     ) {
         public record NoteEntry(int id, String text, String authorName, String timestamp) {}
 
         public static PlayerData simple(UUID uuid, String mcName, String nick, String role, List<String> licenses) {
-            return new PlayerData(uuid, mcName, nick, role, licenses, 0, false, "", 0L, 0L, 0, true, List.of());
+            return new PlayerData(uuid, mcName, nick, role, licenses, 0, false, "", 0L, 0L, 0, true, List.of(), false);
         }
     }
 
@@ -89,6 +90,7 @@ public record OpenPlayerProfileGuiPacket(
                         long    session     = buf.readLong();
                         int     notes       = buf.readVarInt();
                         boolean online      = buf.readBoolean();
+                        boolean prepared    = buf.readBoolean();
                         int noteListCount = buf.readVarInt();
                         List<PlayerData.NoteEntry> notesList = new ArrayList<>(noteListCount);
                         for (int k = 0; k < noteListCount; k++) {
@@ -100,7 +102,7 @@ public record OpenPlayerProfileGuiPacket(
                             ));
                         }
                         players.add(new PlayerData(uuid, mcName, nick, role, lics,
-                                warns, muted, muteExpiry, playtime, session, notes, online, notesList));
+                                warns, muted, muteExpiry, playtime, session, notes, online, notesList, prepared));
                     }
                     int profCount = buf.readVarInt();
                     List<String> profIds = new ArrayList<>(profCount);
@@ -129,6 +131,7 @@ public record OpenPlayerProfileGuiPacket(
                         buf.writeLong(p.sessionMs());
                         buf.writeVarInt(p.noteCount());
                         buf.writeBoolean(p.isOnline());
+                        buf.writeBoolean(p.isPrepared());
                         buf.writeVarInt(p.notes().size());
                         for (PlayerData.NoteEntry n : p.notes()) {
                             buf.writeVarInt(n.id());

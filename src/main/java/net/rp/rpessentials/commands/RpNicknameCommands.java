@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -17,6 +18,7 @@ import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.identity.RpEssentialsChatFormatter;
+import net.rp.rpessentials.moderation.LastConnectionManager;
 import net.rp.rpessentials.moderation.NoteManager;
 
 import java.util.*;
@@ -32,7 +34,10 @@ public class RpNicknameCommands {
                         .executes(RpNicknameCommands::setNickname))
                 .executes(RpNicknameCommands::resetNickname));
 
-        nickNode.then(Commands.literal("list").executes(RpNicknameCommands::listNicknames));
+        nickNode.then(Commands.literal("list")
+                .executes(ctx -> listNicknames(ctx, 1))
+                .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                        .executes(ctx -> listNicknames(ctx, IntegerArgumentType.getInteger(ctx, "page")))));
         return nickNode;
     }
 
@@ -132,26 +137,43 @@ public class RpNicknameCommands {
         }
     }
 
-    private static int listNicknames(CommandContext<CommandSourceStack> ctx) {
-        int count = NicknameManager.count();
-        if (count == 0) {
+    private record NickRow(String realName, String nick, boolean online) {}
+
+    private static int listNicknames(CommandContext<CommandSourceStack> ctx, int page) {
+        Map<UUID, String> all = NicknameManager.getAllNicknames();
+        if (all.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.literal("§e[RpEssentials] No active nicknames."), false);
             return 1;
         }
 
-        StringBuilder list = new StringBuilder("§6╔═══════════════════════════════════╗\n");
-        list.append("§6║ §e§lACTIVE NICKNAMES §6(§e").append(count).append("§6)\n");
-        list.append("§6╠═══════════════════════════════════╣\n");
+        var server = ctx.getSource().getServer();
+        List<NickRow> rows = new ArrayList<>();
+        for (Map.Entry<UUID, String> e : all.entrySet()) {
+            rows.add(new NickRow(LastConnectionManager.resolveName(server, e.getKey()), e.getValue(),
+                    server.getPlayerList().getPlayer(e.getKey()) != null));
+        }
+        rows.sort(Comparator.comparing(NickRow::realName, String.CASE_INSENSITIVE_ORDER));
 
-        ctx.getSource().getServer().getPlayerList().getPlayers().forEach(player -> {
-            if (NicknameManager.hasNickname(player.getUUID())) {
-                list.append("§6║ §f").append(player.getName().getString())
-                        .append(" §7→ ").append(NicknameManager.getNickname(player.getUUID())).append("\n");
-            }
-        });
+        int pages = RpChatUi.pageCount(rows.size());
+        int current = Math.min(page, pages);
+        int from = (current - 1) * RpChatUi.PAGE_SIZE;
+        int to = Math.min(rows.size(), from + RpChatUi.PAGE_SIZE);
 
-        list.append("§6╚═══════════════════════════════════╝");
-        ctx.getSource().sendSuccess(() -> Component.literal(list.toString()), false);
+        StringBuilder sb = new StringBuilder();
+        sb.append("§6§lNicknames §8- §7page ").append(current).append("/").append(pages)
+                .append(" §8(").append(rows.size()).append(")\n").append(RpChatUi.LINE).append("\n");
+        for (int i = from; i < to; i++) {
+            NickRow r = rows.get(i);
+            sb.append(r.online() ? "§a● " : "§7○ ").append("§f").append(r.realName())
+                    .append(" §8> §r").append(r.nick()).append("§r\n");
+        }
+        sb.append(RpChatUi.LINE);
+
+        MutableComponent out = Component.literal(sb.toString());
+        if (pages > 1) {
+            out.append(Component.literal("\n")).append(RpChatUi.pager(current, pages, "/rpessentials nick list"));
+        }
+        ctx.getSource().sendSuccess(() -> out, false);
         return 1;
     }
 

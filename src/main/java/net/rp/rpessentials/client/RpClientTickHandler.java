@@ -36,14 +36,14 @@ public class RpClientTickHandler {
                 && RpKeyBindings.OPEN_PROFESSION_GUI.consumeClick()) {
             PacketDistributor.sendToServer(
                     new RequestOpenGuiPacket(RequestOpenGuiPacket.GuiType.PROFESSION));
-            RpEssentials.LOGGER.debug("[RPEssentials] Sent PROFESSION GUI request to server");
+            RpEssentials.LOGGER.debug("[RpEssentials] Sent PROFESSION GUI request to server");
         }
 
         while (RpKeyBindings.OPEN_PLAYER_PROFILE_GUI != null
                 && RpKeyBindings.OPEN_PLAYER_PROFILE_GUI.consumeClick()) {
             PacketDistributor.sendToServer(
                     new RequestOpenGuiPacket(RequestOpenGuiPacket.GuiType.PLAYER_PROFILE));
-            RpEssentials.LOGGER.debug("[RPEssentials] Sent PLAYER_PROFILE GUI request to server");
+            RpEssentials.LOGGER.debug("[RpEssentials] Sent PLAYER_PROFILE GUI request to server");
         }
 
         while (RpKeyBindings.OPEN_DICE_GUI != null
@@ -59,7 +59,7 @@ public class RpClientTickHandler {
                 && RpKeyBindings.OPEN_CONFIG_MANAGER_GUI.consumeClick()) {
             PacketDistributor.sendToServer(
                     new RequestOpenGuiPacket(RequestOpenGuiPacket.GuiType.CONFIG_MANAGER));
-            RpEssentials.LOGGER.debug("[RPEssentials] Sent CONFIG_MANAGER GUI request to server");
+            RpEssentials.LOGGER.debug("[RpEssentials] Sent CONFIG_MANAGER GUI request to server");
         }
     }
 }

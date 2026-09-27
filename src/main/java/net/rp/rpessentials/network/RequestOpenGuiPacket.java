@@ -17,9 +17,7 @@ import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.profession.LicenseManager;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Packet CLIENT → SERVEUR : demande d'ouverture d'un GUI admin.
@@ -143,12 +141,36 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
     }
 
     // ── GUI Profil Joueur ─────────────────────────────────────
-    private static void handlePlayerProfileGui(ServerPlayer admin) {
+    static void handlePlayerProfileGui(ServerPlayer admin) {
         MinecraftServer server = admin.getServer();
         List<OpenPlayerProfileGuiPacket.PlayerData> players = new ArrayList<>();
+        Set<UUID> knownIds = new HashSet<>();
 
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             players.add(buildPlayerData(p));
+            knownIds.add(p.getUUID());
+        }
+
+        // Joueurs hors ligne déjà connectés au moins une fois sur le serveur
+        for (var entry : LastConnectionManager.getAllSortedByLogin()) {
+            UUID uuid = entry.getKey();
+            if (knownIds.contains(uuid)) continue;
+            players.add(buildOfflineKnownPlayerData(uuid));
+            knownIds.add(uuid);
+        }
+
+        // Joueurs préparés à l'avance par le staff, jamais connectés
+        for (net.rp.rpessentials.profession.PendingProfileManager.PendingEntry entry :
+                net.rp.rpessentials.profession.PendingProfileManager.getAllPending()) {
+            UUID uuid;
+            try { uuid = UUID.fromString(entry.uuid); }
+            catch (IllegalArgumentException e) { continue; }
+            if (knownIds.contains(uuid)) continue;
+            players.add(new OpenPlayerProfileGuiPacket.PlayerData(
+                    uuid, entry.mcName, entry.nickname, entry.role,
+                    new ArrayList<>(entry.licenses),
+                    0, false, "", 0L, 0L, 0, false, List.of(), true));
+            knownIds.add(uuid);
         }
 
         // Professions disponibles
@@ -176,7 +198,47 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
     }
 
     /**
-     * Construit le snapshot complet d'un joueur pour le GUI.
+     * Construit les données d'un joueur hors ligne mais déjà connu (déjà connecté au moins une fois).
+     * Le rôle n'est pas détectable hors ligne (les tags scoreboard nécessitent une entité chargée).
+     */
+    private static OpenPlayerProfileGuiPacket.PlayerData buildOfflineKnownPlayerData(UUID uuid) {
+        LastConnectionManager.ConnectionEntry conn = LastConnectionManager.getEntry(uuid);
+        String mcName = conn != null && conn.mcName != null ? conn.mcName : uuid.toString();
+        String nick   = NicknameManager.hasNickname(uuid) ? NicknameManager.getNickname(uuid) : "";
+        List<String> licenses = LicenseManager.getLicenses(uuid);
+
+        int warnCount = 0;
+        try { warnCount = WarnManager.getActiveWarns(uuid).size(); }
+        catch (Exception ignored) {}
+
+        boolean isMuted    = false;
+        String  muteExpiry = "";
+        try {
+            isMuted = MuteManager.isMuted(uuid);
+            if (isMuted) {
+                MuteManager.MuteEntry muteEntry = MuteManager.getEntry(uuid);
+                muteExpiry = muteEntry != null ? muteEntry.getFormattedExpiry() : "";
+            }
+        } catch (Exception ignored) {}
+
+        long playtimeMs = PlaytimeManager.getTotalPlaytimeMs(uuid);
+
+        List<NoteManager.NoteEntry> rawNotes = new ArrayList<>();
+        try { rawNotes = NoteManager.getNotes(uuid); } catch (Exception ignored) {}
+        int noteCount = rawNotes.size();
+        List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> noteEntries = rawNotes.stream()
+                .map(n -> new OpenPlayerProfileGuiPacket.PlayerData.NoteEntry(n.id, n.text, n.authorName, n.timestamp))
+                .collect(java.util.stream.Collectors.toList());
+
+        return new OpenPlayerProfileGuiPacket.PlayerData(
+                uuid, mcName, nick, "", licenses,
+                warnCount, isMuted, muteExpiry,
+                playtimeMs, 0L, noteCount, false, noteEntries, false
+        );
+    }
+
+    /**
+     * Construit le snapshot complet d'un joueur en ligne pour le GUI.
      * Collecte warns, mute, playtime, notes.
      */
     private static OpenPlayerProfileGuiPacket.PlayerData buildPlayerData(ServerPlayer p) {
@@ -217,7 +279,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         return new OpenPlayerProfileGuiPacket.PlayerData(
                 uuid, mcName, nick, role, licenses,
                 warnCount, isMuted, muteExpiry,
-                playtimeMs, sessionMs, noteCount, true, noteEntries
+                playtimeMs, sessionMs, noteCount, true, noteEntries, false
         );
     }
 

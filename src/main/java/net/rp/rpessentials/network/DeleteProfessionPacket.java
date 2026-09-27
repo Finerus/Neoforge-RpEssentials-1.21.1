@@ -53,12 +53,12 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
                 ProfessionRestrictionManager.reloadCache();
 
                 player.sendSystemMessage(Component.literal(
-                        "§a[RPEssentials] Profession §e" + cleanId + " §adeleted."));
+                        "§a[RpEssentials] Profession §e" + cleanId + " §adeleted."));
                 RpEssentials.LOGGER.info("[GUI] Profession '{}' deleted by {}",
                         cleanId, player.getGameProfile().getName());
             } catch (IllegalStateException e) {
                 player.sendSystemMessage(Component.literal(
-                        "§c[RPEssentials] Config not loaded, please try again."));
+                        "§c[RpEssentials] Config not loaded, please try again."));
             }
         });
     }

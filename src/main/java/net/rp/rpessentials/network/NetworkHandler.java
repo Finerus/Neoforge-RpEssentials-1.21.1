@@ -80,6 +80,18 @@ public class NetworkHandler {
                 new DirectionalPayloadHandler<>(null, PlayerNoteActionPacket::handleOnServer)
         );
 
+        registrar.playToServer(
+                RequestAddPlayerPacket.TYPE,
+                RequestAddPlayerPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, RequestAddPlayerPacket::handleOnServer)
+        );
+
+        registrar.playToServer(
+                DeletePendingProfilePacket.TYPE,
+                DeletePendingProfilePacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, DeletePendingProfilePacket::handleOnServer)
+        );
+
         // ── Config Manager GUI ────────────────────────────────────────────────
         // S→C: initial file list
         registrar.playToClient(

@@ -78,7 +78,7 @@ public record SaveProfessionPacket(
 
             String cleanId = packet.id().toLowerCase().trim().replaceAll("[^a-z0-9_]", "_");
             if (cleanId.isEmpty() || packet.displayName().trim().isEmpty()) {
-                player.sendSystemMessage(Component.literal("§c[RPEssentials] Invalid ID or name."));
+                player.sendSystemMessage(Component.literal("§c[RpEssentials] Invalid ID or name."));
                 return;
             }
 
@@ -121,7 +121,7 @@ public record SaveProfessionPacket(
 
             } catch (IllegalStateException e) {
                 player.sendSystemMessage(Component.literal(
-                        "§c[RPEssentials] Config not loaded, please try again."));
+                        "§c[RpEssentials] Config not loaded, please try again."));
                 RpEssentials.LOGGER.error("[GUI] Config not loaded when saving profession", e);
             }
         });
@@ -134,7 +134,7 @@ public record SaveProfessionPacket(
     private static Component buildConfirmation(String id, SaveProfessionPacket p, String verb) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("§a[RPEssentials] Profession §e").append(id).append(" §a").append(verb).append(".\n");
+        sb.append("§a[RpEssentials] Profession §e").append(id).append(" §a").append(verb).append(".\n");
         sb.append("§7  §6Name: §f").append(p.displayName())
                 .append("  §6Color: §").append(p.color().replace("&","").replace("§",""))
                 .append("■§r\n");

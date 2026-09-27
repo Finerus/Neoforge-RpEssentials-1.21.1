@@ -58,7 +58,7 @@ public record SaveRolePacket(
 
             String cleanId = packet.id().toLowerCase().trim().replaceAll("[^a-z0-9_]", "_");
             if (cleanId.isEmpty()) {
-                player.sendSystemMessage(Component.literal("§c[RPEssentials] Invalid role ID."));
+                player.sendSystemMessage(Component.literal("§c[RpEssentials] Invalid role ID."));
                 return;
             }
 
@@ -85,16 +85,17 @@ public record SaveRolePacket(
                 RpEssentialsConfig.SPEC.save();
                 RpEssentialsRoleManager.clearAll();
                 RpEssentialsRoleManager.reload();
+                RpEssentialsPermissions.clearCache();
 
                 String verb = found ? "updated" : "created";
                 player.sendSystemMessage(Component.literal(
-                        "§a[RPEssentials] Role §e" + cleanId + " §a" + verb + "."));
+                        "§a[RpEssentials] Role §e" + cleanId + " §a" + verb + "."));
                 RpEssentials.LOGGER.info("[GUI] Role '{}' {} by {}",
                         cleanId, verb, player.getGameProfile().getName());
 
             } catch (IllegalStateException e) {
                 player.sendSystemMessage(Component.literal(
-                        "§c[RPEssentials] Config not loaded, please try again."));
+                        "§c[RpEssentials] Config not loaded, please try again."));
             }
         });
     }

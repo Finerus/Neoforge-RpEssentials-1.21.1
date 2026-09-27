@@ -55,6 +55,6 @@ public class RpKeyBindings {
         event.register(OPEN_CONFIG_MANAGER_GUI);
         event.register(OPEN_DICE_GUI);
 
-        RpEssentials.LOGGER.debug("[RPEssentials] GUI keybindings registered (including Config Manager)");
+        RpEssentials.LOGGER.debug("[RpEssentials] GUI keybindings registered (including Config Manager)");
     }
 }

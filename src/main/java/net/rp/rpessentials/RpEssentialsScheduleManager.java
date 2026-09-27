@@ -184,14 +184,20 @@ public class RpEssentialsScheduleManager {
         return Collections.unmodifiableMap(schedules);
     }
 
+    public static boolean isScheduleExempt(ServerPlayer player) {
+        if (RpEssentialsPermissions.isStaff(player)) return true;
+        if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.SCHEDULE_WHITELIST)) return true;
+        try {
+            return ScheduleConfig.SCHEDULE_WHITELIST.get().contains(player.getGameProfile().getName());
+        } catch (IllegalStateException e) {
+            return false;
+        }
+    }
+
     public static Component canPlayerJoin(ServerPlayer player) {
-        if (RpEssentialsPermissions.isStaff(player)) return null;
-        if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.SCHEDULE_WHITELIST)) return null;
+        if (isScheduleExempt(player)) return null;
 
         try {
-            List<? extends String> scheduleWhitelist = ScheduleConfig.SCHEDULE_WHITELIST.get();
-            if (scheduleWhitelist.contains(player.getGameProfile().getName())) return null;
-
             String state = ScheduleConfig.FORCE_STATE.get();
             if ("FORCE_OPEN".equals(state))   return null;
             if ("FORCE_CLOSED".equals(state))
@@ -413,6 +419,7 @@ public class RpEssentialsScheduleManager {
         } catch (IllegalStateException ignored) {}
     }
 
+
     public static void closeServer(MinecraftServer server) {
         try {
             if ("FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) return;
@@ -437,8 +444,9 @@ public class RpEssentialsScheduleManager {
         String finalKickMsg = kickMsg;
         List<ServerPlayer> toKick = new ArrayList<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!RpEssentialsPermissions.isStaff(p)) toKick.add(p);
-            else p.sendSystemMessage(Component.literal("§6[STAFF] Server closed: you may remain connected."));
+            if (!isScheduleExempt(p)) toKick.add(p);
+            else if (RpEssentialsPermissions.isStaff(p))
+                p.sendSystemMessage(Component.literal("§6[STAFF] Server closed: you may remain connected."));
         }
         for (ServerPlayer p : toKick) {
             p.connection.disconnect(ColorHelper.parseColors(finalKickMsg));

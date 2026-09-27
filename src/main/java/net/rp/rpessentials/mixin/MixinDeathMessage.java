@@ -3,6 +3,7 @@ package net.rp.rpessentials.mixin;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
+import net.minecraft.world.damagesource.DamageSource;
 import net.rp.rpessentials.moderation.DeathRPManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -28,20 +29,18 @@ public abstract class MixinDeathMessage {
      * </ul>
      */
     @Redirect(
-        method = "die(Lnet/minecraft/world/damagesource/DamageSource;)V",
-        at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/server/players/PlayerList;broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V"
-        ),
-        remap = false
+            method = "die(Lnet/minecraft/world/damagesource/DamageSource;)V",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/server/players/PlayerList;broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V"
+            ),
+            remap = false
     )
-    private void onDeathMessageBroadcast(PlayerList playerList, Component message, boolean overlay) {
+    private void onDeathMessageBroadcast(PlayerList playerList, Component message, boolean overlay, DamageSource damageSource) {
         ServerPlayer self = (ServerPlayer) (Object) this;
         if (DeathRPManager.isDeathRPEnabled(self.getUUID())) {
-            // Supprime le message vanilla et gère le comportement RP complet
-            DeathRPManager.onPlayerDeathRP(self);
+            DeathRPManager.onPlayerDeathRP(self, damageSource);
         } else {
-            // Comportement vanilla inchangé
             playerList.broadcastSystemMessage(message, overlay);
         }
     }

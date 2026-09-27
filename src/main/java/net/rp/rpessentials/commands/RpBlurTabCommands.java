@@ -89,8 +89,8 @@ public class RpBlurTabCommands {
     // =========================================================================
 
     private static int modifyList(CommandContext<CommandSourceStack> ctx,
-                                   ModConfigSpec.ConfigValue<List<? extends String>> config,
-                                   String listName, boolean add) {
+                                  ModConfigSpec.ConfigValue<List<? extends String>> config,
+                                  String listName, boolean add) {
         String player = StringArgumentType.getString(ctx, "player");
         List<String> list = new ArrayList<>(config.get());
 
@@ -111,6 +111,7 @@ public class RpBlurTabCommands {
 
         config.set(list);
         config.save();
+        net.rp.rpessentials.TabListCache.reload();
         return 1;
     }
 

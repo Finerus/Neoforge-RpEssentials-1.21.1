@@ -1,5 +1,6 @@
 package net.rp.rpessentials.client.gui;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
@@ -39,8 +40,13 @@ public class PlayerProfileScreen extends Screen {
     private String stateNick = "";
     private String stateRole = "";
     private String stateNoteInput = "";
+    private String stateAddPlayerName = "";
     private int stateEditingNoteId = -1;
     private int tempNoteIdCounter  = -1;
+    private static int filterMode = 0;
+    private int sortButtonX, sortButtonY;
+    private static final String[] FILTER_KEYS = { "online", "offline", "prepared", "all" };
+    private String pendingDeletePlayerUuid = null;
 
     private static final char[]   COLOR_CHARS = { 0, 'f','e','6','c','a','b','9','d','7','8','0','1','2','3','4','5' };
     private static final String[] COLOR_KEYS  = {
@@ -77,6 +83,21 @@ public class PlayerProfileScreen extends Screen {
         return players.get(stateSelectedPlayer).currentLicenses();
     }
 
+    private List<Integer> getVisibleIndices() {
+        List<Integer> result = new ArrayList<>();
+        for (int i = 0; i < players.size(); i++) {
+            OpenPlayerProfileGuiPacket.PlayerData p = players.get(i);
+            boolean match = switch (filterMode) {
+                case 1 -> !p.isOnline() && !p.isPrepared();
+                case 2 -> p.isPrepared();
+                case 3 -> true;
+                default -> p.isOnline();
+            };
+            if (match) result.add(i);
+        }
+        return result;
+    }
+
     private boolean selectedPlayerOwns(String profId) {
         return selectedLicenses().contains(profId);
     }
@@ -93,43 +114,103 @@ public class PlayerProfileScreen extends Screen {
     // =========================================================================
     // INIT
     // =========================================================================
-
     @Override
     protected void init() {
         int formX = LIST_W + MARGIN * 3;
         int formW = this.width - formX - MARGIN;
 
+        // ── Bouton de tri : cycle En ligne -> Hors ligne -> Prévu -> Tous ───
+        sortButtonX = MARGIN + LIST_W - 20;
+        sortButtonY = PANEL_TOP + 2 ;
+        addRenderableWidget(Button.builder(Component.literal("§f⇅"),
+                        btn -> {
+                            filterMode = (filterMode + 1) % FILTER_KEYS.length;
+                            playerListScroll = 0;
+                            rebuild();
+                        })
+                .pos(sortButtonX, sortButtonY).size(18, 12)
+                .tooltip(Tooltip.create(Component.translatable(
+                        "rpessentials.gui.player_profile.filter." + FILTER_KEYS[filterMode])))
+                .build());
+
         // ── Liste joueurs (gauche) ─────────────────────────────────────────
-        if (playerListScroll > 0)
-            addRenderableWidget(Button.builder(Component.literal("▲"),
-                            btn -> { playerListScroll--; rebuild(); })
-                    .pos(MARGIN, PANEL_TOP + 12).size(LIST_W, 13).build());
+        List<Integer> visible = getVisibleIndices();
+
+        boolean canScrollUp   = playerListScroll > 0;
+        boolean canScrollDown = playerListScroll + LIST_VISIBLE < visible.size();
+
+        addRenderableWidget(Button.builder(Component.literal(canScrollUp ? "▲" : "§8▲"),
+                        btn -> { if (canScrollUp) { playerListScroll--; rebuild(); } })
+                .pos(MARGIN, PANEL_TOP + 14).size(LIST_W, 13).build());
 
         int listStart = playerListScroll;
-        int listEnd   = Math.min(players.size(), listStart + LIST_VISIBLE);
-        int listOffY  = playerListScroll > 0 ? 15 : 0;
+        int listEnd   = Math.min(visible.size(), listStart + LIST_VISIBLE);
+        int listOffY  = 15;
 
         for (int i = listStart; i < listEnd; i++) {
-            final int idx = i;
-            OpenPlayerProfileGuiPacket.PlayerData p = players.get(i);
-            String label = (i == stateSelectedPlayer ? "§e> " : "  ") + p.mcName();
-            if (!p.currentNick().isEmpty()) label += " §8(" + stripColor(p.currentNick()) + ")";
+            final int idx = visible.get(i);
+            OpenPlayerProfileGuiPacket.PlayerData p = players.get(idx);
+
+            String statusSymbol = p.isPrepared() ? "§b# " : (p.isOnline() ? "§a● " : "§7○ ");
+            String label = (idx == stateSelectedPlayer ? "§e> " : "  ") + statusSymbol + "§f" + p.mcName();
+            if (!p.currentNick().isEmpty()) label += " §7(" + stripColor(p.currentNick()) + ")";
             if (p.activeWarnCount() > 0)    label += " §c[" + p.activeWarnCount() + "W]";
             if (p.isMuted())                label += " §6[M]";
+
+            int rowWidth = p.isPrepared() ? LIST_W - 18 : LIST_W;
             addRenderableWidget(Button.builder(Component.literal(label),
                             btn -> { loadPlayerState(idx); rebuild(); })
                     .pos(MARGIN, PANEL_TOP + 14 + (i - listStart) * ROW_H + listOffY)
-                    .size(LIST_W, ROW_H - 2).build());
+                    .size(rowWidth, ROW_H - 2).build());
+
+            if (p.isPrepared()) {
+                String uuidStr = p.uuid().toString();
+                if (uuidStr.equals(pendingDeletePlayerUuid)) {
+                    addRenderableWidget(Button.builder(Component.literal("§c!"),
+                                    btn -> PacketDistributor.sendToServer(
+                                            new net.rp.rpessentials.network.DeletePendingProfilePacket(p.uuid())))
+                            .pos(MARGIN + LIST_W - 16, PANEL_TOP + 14 + (i - listStart) * ROW_H + listOffY)
+                            .size(16, ROW_H - 2)
+                            .tooltip(Tooltip.create(Component.translatable(
+                                    "rpessentials.gui.player_profile.confirm_delete_prepared")))
+                            .build());
+                } else {
+                    addRenderableWidget(Button.builder(Component.literal("§c✕"),
+                                    btn -> { pendingDeletePlayerUuid = uuidStr; rebuild(); })
+                            .pos(MARGIN + LIST_W - 16, PANEL_TOP + 14 + (i - listStart) * ROW_H + listOffY)
+                            .size(16, ROW_H - 2)
+                            .tooltip(Tooltip.create(Component.translatable(
+                                    "rpessentials.gui.player_profile.delete_prepared_tooltip")))
+                            .build());
+                }
+            }
         }
 
-        if (listEnd < players.size()) {
-            int remaining = players.size() - listEnd;
-            addRenderableWidget(Button.builder(
-                            Component.literal(I18n.get("rpessentials.gui.btn_more", remaining)),
-                            btn -> { playerListScroll++; rebuild(); })
-                    .pos(MARGIN, PANEL_TOP + 14 + LIST_VISIBLE * ROW_H + listOffY)
-                    .size(LIST_W, 13).build());
-        }
+        addRenderableWidget(Button.builder(Component.literal(canScrollDown
+                                ? "▼ " + I18n.get("rpessentials.gui.btn_more", Math.max(0, visible.size() - listEnd))
+                                : "§8▼"),
+                        btn -> { if (canScrollDown) { playerListScroll++; rebuild(); } })
+                .pos(MARGIN, PANEL_TOP + 14 + LIST_VISIBLE * ROW_H + listOffY)
+                .size(LIST_W, 13).build());
+
+        // ── Ajout d'un joueur jamais connecté ───────────────────────────────
+        EditBox addPlayerBox = new EditBox(this.font, MARGIN, this.height - 30, LIST_W - 40, 18,
+                Component.translatable("rpessentials.gui.player_profile.add_label"));
+        addPlayerBox.setHint(Component.translatable("rpessentials.gui.player_profile.add_label")
+                .copy().withStyle(ChatFormatting.GRAY));
+        addPlayerBox.setMaxLength(32);
+        addPlayerBox.setValue(stateAddPlayerName);
+        addPlayerBox.setResponder(val -> stateAddPlayerName = val);
+        addPlayerBox.setTooltip(Tooltip.create(
+                Component.translatable("rpessentials.gui.player_profile.add_tooltip")));
+        addRenderableWidget(addPlayerBox);
+
+        addRenderableWidget(Button.builder(Component.literal("§a+"),
+                        btn -> sendAddPlayerRequest())
+                .pos(MARGIN + LIST_W - 38, this.height - 30).size(38, 18)
+                .tooltip(Tooltip.create(
+                        Component.translatable("rpessentials.gui.player_profile.add_tooltip")))
+                .build());
 
         if (players.isEmpty()) return;
 
@@ -141,7 +222,7 @@ public class PlayerProfileScreen extends Screen {
                     + TAB_COLORS[ti] + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i]);
             addRenderableWidget(Button.builder(Component.literal(label),
                             btn -> { activeTab = ti; rebuild(); })
-                    .pos(formX + i * (tabW + 2), PANEL_TOP + 14)
+                    .pos(formX - 2 + i * (tabW + 2), PANEL_TOP + 14)
                     .size(tabW, 16).build());
         }
 
@@ -167,10 +248,17 @@ public class PlayerProfileScreen extends Screen {
                 .pos(this.width - MARGIN - 65, this.height - 35).size(60, 20).build());
     }
 
+    private void sendAddPlayerRequest() {
+        String name = stateAddPlayerName.trim();
+        if (name.isEmpty()) return;
+        PacketDistributor.sendToServer(new net.rp.rpessentials.network.RequestAddPlayerPacket(name));
+        stateAddPlayerName = "";
+        rebuild();
+    }
+
     // =========================================================================
     // ONGLET PROFIL
     // =========================================================================
-
     private void buildProfileTab(int formX, int formW, int y) {
 
         // --- Nickname ---
@@ -196,7 +284,7 @@ public class PlayerProfileScreen extends Screen {
                                     target.uuid(), target.mcName(), "", target.currentRole(),
                                     target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
                                     target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
-                                    target.noteCount(), target.isOnline(), target.notes()));
+                                    target.noteCount(), target.isOnline(), target.notes(), target.isPrepared()));
                             rebuild();
                         })
                 .pos(formX + nickBoxW + 4, nickBoxY)
@@ -399,12 +487,19 @@ public class PlayerProfileScreen extends Screen {
         g.fill(0, 0, this.width, this.height, 0x99000000);
         int formX = LIST_W + MARGIN * 3;
 
+        List<Integer> visible = getVisibleIndices();
+
         // Panneau liste
         g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
         g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, PANEL_TOP + 2, 0xFF8B6914);
         g.drawString(this.font,
-                "§6" + I18n.get("rpessentials.gui.player_profile.players_header", players.size()),
+                "§6" + I18n.get("rpessentials.gui.player_profile.players_header", visible.size()),
                 MARGIN + 3, PANEL_TOP + 4, 0xFFD700, false);
+
+        if (!players.isEmpty() && visible.isEmpty()) {
+            g.drawString(this.font, "§8" + I18n.get("rpessentials.gui.player_profile.filter_empty"),
+                    MARGIN + 3, PANEL_TOP + 26, 0x666666, false);
+        }
 
         // Panneau formulaire
         g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, this.height - 10, 0xBB111111);
@@ -418,7 +513,7 @@ public class PlayerProfileScreen extends Screen {
         }
 
         OpenPlayerProfileGuiPacket.PlayerData sel = selectedData();
-        String statusDot = sel.isOnline() ? "§a# " : "§7o ";
+        String statusDot = sel.isOnline() ? "§a● " : "§7o ";
         g.drawCenteredString(this.font, statusDot + "§e" + sel.mcName(),
                 (LIST_W + MARGIN * 2 + this.width) / 2, PANEL_TOP + 5, 0xFFFFFF);
 
@@ -634,7 +729,7 @@ public class PlayerProfileScreen extends Screen {
         int formX = LIST_W + MARGIN * 3;
 
         if (mx < LIST_W + MARGIN * 2) {
-            int max = Math.max(0, players.size() - LIST_VISIBLE);
+            int max = Math.max(0, getVisibleIndices().size() - LIST_VISIBLE);
             playerListScroll = (int) Math.max(0, Math.min(max, playerListScroll - sy));
             rebuild();
             return true;
@@ -653,11 +748,11 @@ public class PlayerProfileScreen extends Screen {
     // =========================================================================
     // LOGIQUE
     // =========================================================================
-
     private void loadPlayerState(int idx) {
         stateSelectedPlayer = idx;
         stateNotesScroll    = 0;
         stateEditingNoteId  = -1;
+        pendingDeletePlayerUuid = null;
         OpenPlayerProfileGuiPacket.PlayerData p = players.get(idx);
         String rawNick = p.currentNick();
         stateNickColorIndex = 0;
@@ -689,7 +784,7 @@ public class PlayerProfileScreen extends Screen {
                 target.uuid(), target.mcName(), finalNick, stateRole.trim(),
                 target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
                 target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
-                target.noteCount(), target.isOnline(), target.notes()));
+                target.noteCount(), target.isOnline(), target.notes(), target.isPrepared()));
         rebuild();
     }
 
@@ -708,7 +803,7 @@ public class PlayerProfileScreen extends Screen {
                 target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
                 updated, target.activeWarnCount(), target.isMuted(), target.muteExpiry(),
                 target.playtimeMs(), target.sessionMs(), target.noteCount(), target.isOnline(),
-                target.notes()));
+                target.notes(), target.isPrepared()));
         rebuild();
     }
 
@@ -727,7 +822,7 @@ public class PlayerProfileScreen extends Screen {
                 target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
                 updated, target.activeWarnCount(), target.isMuted(), target.muteExpiry(),
                 target.playtimeMs(), target.sessionMs(), target.noteCount(), target.isOnline(),
-                target.notes()));
+                target.notes(), target.isPrepared()));
         rebuild();
     }
 
@@ -756,7 +851,7 @@ public class PlayerProfileScreen extends Screen {
                     target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
                     target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
                     target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
-                    target.noteCount(), target.isOnline(), updated));
+                    target.noteCount(), target.isOnline(), updated, target.isPrepared()));
             stateEditingNoteId = -1;
         } else {
             PacketDistributor.sendToServer(new PlayerNoteActionPacket(target.uuid(), false, 0, text));
@@ -768,7 +863,7 @@ public class PlayerProfileScreen extends Screen {
                     target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
                     target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
                     target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
-                    target.noteCount() + 1, target.isOnline(), updated));
+                    target.noteCount() + 1, target.isOnline(), updated, target.isPrepared()));
             stateNotesScroll = updated.size() - 1;
         }
 
@@ -790,7 +885,7 @@ public class PlayerProfileScreen extends Screen {
                 target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
                 target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
                 target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
-                Math.max(0, target.noteCount() - 1), target.isOnline(), updated));
+                Math.max(0, target.noteCount() - 1), target.isOnline(), updated, target.isPrepared()));
         stateNotesScroll = Math.max(0, stateNotesScroll - 1);
         rebuild();
     }

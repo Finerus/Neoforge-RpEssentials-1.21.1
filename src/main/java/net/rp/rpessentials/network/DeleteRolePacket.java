@@ -44,14 +44,15 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
                 RpEssentialsConfig.SPEC.save();
                 RpEssentialsRoleManager.clearAll();
                 RpEssentialsRoleManager.reload();
+                RpEssentialsPermissions.clearCache();
 
                 player.sendSystemMessage(Component.literal(
-                        "§a[RPEssentials] Role §e" + cleanId + " §adeleted."));
+                        "§a[RpEssentials] Role §e" + cleanId + " §adeleted."));
                 RpEssentials.LOGGER.info("[GUI] Role '{}' deleted by {}",
                         cleanId, player.getGameProfile().getName());
             } catch (IllegalStateException e) {
                 player.sendSystemMessage(Component.literal(
-                        "§c[RPEssentials] Config not loaded, please try again."));
+                        "§c[RpEssentials] Config not loaded, please try again."));
             }
         });
     }

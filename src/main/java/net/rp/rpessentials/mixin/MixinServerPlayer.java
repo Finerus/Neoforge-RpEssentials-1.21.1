@@ -13,7 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MixinServerPlayer {
 
     /**
-     * @author Oneria
      * @reason Remplacement du nom d'affichage par le pseudonyme s'il existe.
      *
      * IMPORTANT: Ce mixin cible Player.class qui est commun client/serveur.

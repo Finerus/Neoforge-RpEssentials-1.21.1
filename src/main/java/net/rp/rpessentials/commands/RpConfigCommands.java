@@ -18,6 +18,8 @@ import net.rp.rpessentials.moderation.WarnManager;
 import net.rp.rpessentials.network.HideNametagsPacket;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 
+import static net.rp.rpessentials.commands.RpChatUi.*;
+
 public class RpConfigCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
@@ -264,6 +266,8 @@ public class RpConfigCommands {
         RpEssentialsPatternUtils.clearCache();
         ImmersivePresetHelper.clearCache();
         RpEssentialsPermissions.clearCache();
+        RpEssentialsPermissions.clearCache();
+        net.rp.rpessentials.TabListCache.reload();
 
         // Données persistantes (rechargement depuis fichier)
         NicknameManager.reload();
@@ -289,7 +293,7 @@ public class RpConfigCommands {
 
         ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] Configuration reloaded."), true);
         String dataFolder = RpEssentialsDataPaths.getDataFolder().getAbsolutePath();
-        RpEssentials.LOGGER.info("[RPEssentials] Data layer ready — {} nickname(s), {} license(s), {} warn(s), {} mute(s). Data folder: {}",
+        RpEssentials.LOGGER.info("[RpEssentials] Data layer ready — {} nickname(s), {} license(s), {} warn(s), {} mute(s). Data folder: {}",
                 NicknameManager.count(),
                 net.rp.rpessentials.profession.LicenseManager.getAllLicenses().size(),
                 net.rp.rpessentials.moderation.WarnManager.getAll().size(),
@@ -299,63 +303,89 @@ public class RpConfigCommands {
     }
 
     private static int showStatus(CommandContext<CommandSourceStack> ctx) {
+        String schedule;
         try {
-            final java.util.function.Function<java.util.function.Supplier<?>, String> safe = supplier -> {
-                try {
-                    Object val = supplier.get();
-                    return val != null ? val.toString() : "N/A";
-                } catch (Exception e) { return "N/A"; }
-            };
-            String scheduleStatus;
-            try {
-                scheduleStatus = RpEssentialsScheduleManager.isServerOpen() ? "§aOPEN" : "§cCLOSED";
-            } catch (Exception e) { scheduleStatus = "§7N/A"; }
+            schedule = !ScheduleConfig.ENABLE_SCHEDULE.get() ? "§7Disabled"
+                    : RpEssentialsScheduleManager.isServerOpen() ? "§aOpen" : "§cClosed";
+        } catch (Exception e) { schedule = "§8N/A"; }
 
-            String statusMessage =
-                    "§6╔═══════════════════════════════════╗\n" +
-                            "§6║  §e§lRPESSENTIALS - STATUS§r         §6║\n" +
-                            "§6╠═══════════════════════════════════╣\n" +
-                            "§6║ §7Obfuscation\n" +
-                            "§6║  §eBlur: §f" + safe.apply(RpEssentialsConfig.ENABLE_BLUR) + "\n" +
-                            "§6║  §eProximity: §f" + safe.apply(RpEssentialsConfig.PROXIMITY_DISTANCE) + " blocks\n" +
-                            "§6║  §eObfuscate Prefix: §f" + safe.apply(RpEssentialsConfig.OBFUSCATE_PREFIX) + "\n" +
-                            "§6║  §eOPs See All: §f" + safe.apply(RpEssentialsConfig.OPS_SEE_ALL) + "\n" +
-                            "§6║  §eHide Nametags: §f" + safe.apply(RpEssentialsConfig.HIDE_NAMETAGS) + "\n" +
-                            "§6║  §eSneak Stealth: §f" + safe.apply(RpEssentialsConfig.ENABLE_SNEAK_STEALTH) + "\n" +
-                            "§6║  §eSneak Distance: §f" + safe.apply(RpEssentialsConfig.SNEAK_PROXIMITY_DISTANCE) + " blocks\n" +
-                            "§6║  §eAlways Visible: §f" + safe.apply(() -> RpEssentialsConfig.ALWAYS_VISIBLE_LIST.get().size()) + " players\n" +
-                            "§6║\n" +
-                            "§6║ §7Schedule: " + scheduleStatus + "\n" +
-                            "§6║\n" +
-                            "§6║ §7Death RP\n" +
-                            "§6║  §eGlobal enabled    : §f" + safe.apply(RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED) + "\n" +
-                            "§6║  §eWhitelist removal : §f" + safe.apply(RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE) + "\n" +
-                            "§6║  §eDeath sound       : §f" + safe.apply(RpEssentialsConfig.DEATH_RP_DEATH_SOUND) + "\n" +
-                            "§6║\n" +
-                            "§6║ §7Chat System\n" +
-                            "§6║  §eChat Format: §f" + safe.apply(ChatConfig.ENABLE_CHAT_FORMAT) + "\n" +
-                            "§6║  §eTimestamp: §f" + safe.apply(ChatConfig.ENABLE_TIMESTAMP) + "\n" +
-                            "§6║  §eMarkdown: §f" + safe.apply(ChatConfig.MARKDOWN_ENABLED) + "\n" +
-                            "§6║  §eMessage Color: §f" + safe.apply(ChatConfig.CHAT_MESSAGE_COLOR) + "\n" +
-                            "§6║\n" +
-                            "§6║ §7Join/Leave: §f" + safe.apply(ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE) + "\n" +
-                            "§6║\n" +
-                            "§6║ §7World Border\n" +
-                            "§6║  §eEnabled: §f" + safe.apply(RpEssentialsConfig.ENABLE_WORLD_BORDER_WARNING) + "\n" +
-                            "§6║  §eDistance: §f" + safe.apply(RpEssentialsConfig.WORLD_BORDER_DISTANCE) + " blocks\n" +
-                            "§6║\n" +
-                            "§6║ §7Moderation\n" +
-                            "§6║  §eSilent Commands: §f" + safe.apply(ModerationConfig.ENABLE_SILENT_COMMANDS) + "\n" +
-                            "§6║  §ePlatforms: §f" + safe.apply(ModerationConfig.ENABLE_PLATFORMS) + "\n" +
-                            "§6║  §eWelcome Message: §f" + safe.apply(ScheduleConfig.ENABLE_WELCOME) + "\n" +
-                            "§6╚═══════════════════════════════════╝";
+        String luckPerms;
+        try { net.luckperms.api.LuckPermsProvider.get(); luckPerms = "§aDetected"; }
+        catch (NoClassDefFoundError | IllegalStateException e) { luckPerms = "§7Absent"; }
 
-            ctx.getSource().sendSuccess(() -> Component.literal(statusMessage), false);
-            return 1;
-        } catch (Exception e) {
-            ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] Error: " + e.getMessage()));
-            return 0;
-        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("§6§lRpEssentials §8- §7Status\n").append(LINE).append("\n");
+
+        sb.append("§eObfuscation\n")
+                .append(row(
+                        kv("Blur", flag(() -> RpEssentialsConfig.ENABLE_BLUR.get())),
+                        kv("Range", value(() -> RpEssentialsConfig.PROXIMITY_DISTANCE.get()) + "§7 blocks"),
+                        kv("Sneak", flag(() -> RpEssentialsConfig.ENABLE_SNEAK_STEALTH.get()))))
+                .append(row(
+                        kv("Ops see all", flag(() -> RpEssentialsConfig.OPS_SEE_ALL.get())),
+                        kv("Hide nametags", flag(() -> RpEssentialsConfig.HIDE_NAMETAGS.get()))))
+                .append(row(
+                        kv("Whitelist", value(() -> RpEssentialsConfig.WHITELIST.get().size())),
+                        kv("Blacklist", value(() -> RpEssentialsConfig.BLACKLIST.get().size())),
+                        kv("Always visible", value(() -> RpEssentialsConfig.ALWAYS_VISIBLE_LIST.get().size()))));
+
+        sb.append("§ePermissions\n")
+                .append(row(
+                        kv("LuckPerms", luckPerms),
+                        kv("Use groups", flag(() -> RpEssentialsConfig.USE_LUCKPERMS_GROUPS.get())),
+                        kv("OP level", value(() -> RpEssentialsConfig.OP_LEVEL_BYPASS.get()))))
+                .append(row(kv("Roles", value(() -> RpEssentialsConfig.ROLES.get().size()))));
+
+        sb.append("§eSchedule and Death RP\n")
+                .append(row(
+                        kv("Schedule", schedule),
+                        kv("Death RP", flag(() -> RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get())),
+                        kv("Death hours", flag(() -> ScheduleConfig.DEATH_HOURS_ENABLED.get()))))
+                .append(row(
+                        kv("Whitelist removal", flag(() -> RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get())),
+                        kv("HRP hours", flag(() -> ScheduleConfig.ENABLE_HRP_HOURS.get()))));
+
+        sb.append("§eChat\n")
+                .append(row(
+                        kv("Format", flag(() -> ChatConfig.ENABLE_CHAT_FORMAT.get())),
+                        kv("Proximity", flag(() -> ChatConfig.ENABLE_PROXIMITY_CHAT.get())),
+                        kv("Markdown", flag(() -> ChatConfig.MARKDOWN_ENABLED.get()))))
+                .append(row(
+                        kv("Timestamp", flag(() -> ChatConfig.ENABLE_TIMESTAMP.get())),
+                        kv("Join/Leave", flag(() -> ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE.get())),
+                        kv("Color", value(() -> ChatConfig.CHAT_MESSAGE_COLOR.get()))));
+
+        sb.append("§eWorld border\n")
+                .append(row(
+                        kv("Enabled", flag(() -> RpEssentialsConfig.ENABLE_WORLD_BORDER_WARNING.get())),
+                        kv("Distance", value(() -> RpEssentialsConfig.WORLD_BORDER_DISTANCE.get()) + "§7 blocks"),
+                        kv("Teleport", flag(() -> RpEssentialsConfig.WORLD_BORDER_TELEPORT_ENABLED.get()))))
+                .append(row(kv("Named zones", value(() -> RpEssentialsConfig.NAMED_ZONES.get().size()))));
+
+        sb.append("§eModeration\n")
+                .append(row(
+                        kv("Warns", flag(() -> ModerationConfig.ENABLE_WARN_SYSTEM.get())),
+                        kv("Mutes", flag(() -> ModerationConfig.ENABLE_MUTE_SYSTEM.get())),
+                        kv("Last connection", flag(() -> ModerationConfig.ENABLE_LAST_CONNECTION.get()))))
+                .append(row(
+                        kv("Auto unwhitelist", flag(() -> ModerationConfig.AUTO_UNWHITELIST_ENABLED.get())),
+                        kv("Silent commands", flag(() -> ModerationConfig.ENABLE_SILENT_COMMANDS.get())),
+                        kv("Platforms", flag(() -> ModerationConfig.ENABLE_PLATFORMS.get()))));
+
+        sb.append("§eProfessions and RP\n")
+                .append(row(
+                        kv("Professions", value(() -> ProfessionConfig.PROFESSIONS.get().size())),
+                        kv("Blocked crafts", value(() -> ProfessionConfig.GLOBAL_BLOCKED_CRAFTS.get().size())),
+                        kv("Blocked items", value(() -> ProfessionConfig.GLOBAL_BLOCKED_ITEMS.get().size()))))
+                .append(row(
+                        kv("Dice", flag(() -> RpConfig.ENABLE_DICE_SYSTEM.get())),
+                        kv("Self nick", flag(() -> RpConfig.ENABLE_SELF_NICK.get())),
+                        kv("Welcome", flag(() -> ScheduleConfig.ENABLE_WELCOME.get()))));
+        sb.append(LINE);
+
+        String msg = sb.toString();
+        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        return 1;
     }
 
     // =========================================================================

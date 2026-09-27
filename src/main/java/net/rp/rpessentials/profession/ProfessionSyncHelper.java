@@ -18,9 +18,14 @@ public class ProfessionSyncHelper {
 
     /**
      * Envoie les restrictions au joueur lors de sa connexion
-     * Appelé dans OneriaEventHandler.onPlayerLogin()
      */
     public static void syncToPlayer(ServerPlayer player) {
+        if (ProfessionRestrictionManager.isExemptFromProfessionRestrictions(player)) {
+            PacketDistributor.sendToPlayer(player,
+                    new SyncProfessionRestrictionsPacket(new HashSet<>(), new HashSet<>()));
+            return;
+        }
+
         List<String> playerLicenses = LicenseManager.getLicenses(player.getUUID());
 
         Set<String> blockedCrafts = calculateBlockedCrafts(playerLicenses);
@@ -28,7 +33,7 @@ public class ProfessionSyncHelper {
 
         SyncProfessionRestrictionsPacket packet = new SyncProfessionRestrictionsPacket(blockedCrafts, blockedEquipment);
         PacketDistributor.sendToPlayer(player, packet);
-
+        PacketDistributor.sendToPlayer(player, new SyncProfessionRestrictionsPacket(blockedCrafts, blockedEquipment));
     }
 
     private static Set<String> calculateBlockedCrafts(List<String> playerLicenses) {
@@ -53,7 +58,6 @@ public class ProfessionSyncHelper {
 
     /**
      * Vérifie si le joueur a la permission pour un pattern via ses licences.
-     * Utilise OneriaPatternUtils pour le matching — plus de duplication.
      */
     private static boolean hasPermissionForPattern(List<String> licenses, String pattern,
                                                    List<? extends String> allowedList) {

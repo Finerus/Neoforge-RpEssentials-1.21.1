@@ -21,8 +21,6 @@ import java.util.*;
 
 /**
  * Commandes de modération : warn, mute, note, deathrp, inspect.
- *
- * 4.1.6 : /rpessentials inspect enrichi avec playtime total et session courante.
  */
 public class RpModerationCommands {
 
@@ -85,7 +83,7 @@ public class RpModerationCommands {
                             String name = StringArgumentType.getString(ctx, "player");
                             ServerPlayer op = ctx.getSource().getServer().getPlayerList().getPlayerByName(name);
                             UUID uuid = op != null ? op.getUUID() : LastConnectionManager.findUUIDByName(name);
-                            if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[RPE] Player not found: " + name)); return 0; }
+                            if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] Player not found: " + name)); return 0; }
                             return displayWarnList(ctx, uuid, name, true);
                         })
                         .then(Commands.argument("warnId", StringArgumentType.word())
@@ -252,11 +250,12 @@ public class RpModerationCommands {
                 .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
+                            Set<String> names = new LinkedHashSet<>();
                             ctx.getSource().getServer().getPlayerList().getPlayers()
-                                    .forEach(p -> builder.suggest(p.getName().getString()));
+                                    .forEach(p -> names.add(p.getName().getString()));
                             LastConnectionManager.getAllSortedByLogin().stream()
-                                    .map(e -> e.getValue().mcName).filter(Objects::nonNull).forEach(builder::suggest);
-                            return builder.buildFuture();
+                                    .map(e -> e.getValue().mcName).filter(Objects::nonNull).forEach(names::add);
+                            return net.minecraft.commands.SharedSuggestionProvider.suggest(names, builder);
                         })
                         .executes(RpModerationCommands::inspectPlayer));
     }
@@ -279,7 +278,7 @@ public class RpModerationCommands {
             if (!fmt.isEmpty()) RpStaffCommands.broadcastToStaff(server, fmt.replace("{id}", warnId).replace("{staff}", issuerName)
                     .replace("{player}", target.getName().getString()).replace("{reason}", reason).replace("{expiry}", "Permanent"));
         } catch (IllegalStateException ignored) {}
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RPE] Warn §e#" + warnId + "§a added for §e" + target.getName().getString() + "§a."), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] Warn §e#" + warnId + "§a added for §e" + target.getName().getString() + "§a."), false);
         autoMuteIfNeeded(target, server);
         return 1;
     }
@@ -330,7 +329,7 @@ public class RpModerationCommands {
                     .replace("{staff}", issuerName).replace("{player}", target.getName().getString()).replace("{reason}", reason).replace("{expiry}", dur));
         } catch (IllegalStateException ignored) {}
         String finalDur = dur;
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RPE] Temp warn §e#" + warnId + "§a for §e" + target.getName().getString() + "§a (" + finalDur + ")."), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] Temp warn §e#" + warnId + "§a for §e" + target.getName().getString() + "§a (" + finalDur + ")."), false);
         return 1;
     }
 
@@ -349,7 +348,7 @@ public class RpModerationCommands {
             String fmt = ModerationConfig.WARN_REMOVED_BROADCAST_FORMAT.get();
             if (!fmt.isEmpty()) RpStaffCommands.broadcastToStaff(server, fmt.replace("{id}", warnId).replace("{staff}", staffName));
         } catch (IllegalStateException ignored) {}
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RPE] Warn §e#" + warnId + "§a removed."), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] Warn §e#" + warnId + "§a removed."), false);
         return 1;
     }
 
@@ -362,7 +361,7 @@ public class RpModerationCommands {
     private static int warnListAll(CommandContext<CommandSourceStack> ctx) {
         if (!warnSystemCheck(ctx)) return 0;
         var all = WarnManager.getAll();
-        if (all.isEmpty()) { ctx.getSource().sendSuccess(() -> Component.literal("§7[RPE] No warns."), false); return 1; }
+        if (all.isEmpty()) { ctx.getSource().sendSuccess(() -> Component.literal("§7[RpEssentials] No warns."), false); return 1; }
         StringBuilder sb = new StringBuilder("§6╔═ All warns (" + all.size() + ") ═════════╗\n");
         for (WarnManager.WarnEntry w : all) {
             String tag = w.isExpired() ? "§8[EXP]" : (w.isPermanent() ? "§c[PERM]" : "§e[TEMP]");
@@ -401,7 +400,7 @@ public class RpModerationCommands {
         if (removed == 0) { ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.WARN_LIST_NONE_STAFF, "player", target.getName().getString())), false); return 1; }
         target.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.WARN_CLEARED_PLAYER)));
         int finalR = removed;
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RPE] §e" + finalR + "§a warn(s) removed for §e" + target.getName().getString() + "§a."), false);
+        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] §e" + finalR + "§a warn(s) removed for §e" + target.getName().getString() + "§a."), false);
         return 1;
     }
 

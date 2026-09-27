@@ -12,8 +12,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.RpEssentialsRoleManager;
 import net.rp.rpessentials.RpEssentialsScheduleManager;
 import net.rp.rpessentials.config.*;
+import net.rp.rpessentials.profession.ProfessionSyncHelper;
 
 import java.util.List;
 
@@ -250,9 +252,8 @@ public class RpScheduleCommands {
     }
 
     // =========================================================================
-    // /setrole — avec broadcast staff 4.1.6
+    // /setrole
     // =========================================================================
-
     private static int setRole(CommandContext<CommandSourceStack> ctx) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String roleId = StringArgumentType.getString(ctx, "role").toLowerCase();
@@ -269,9 +270,9 @@ public class RpScheduleCommands {
 
         String lpGroup = null;
         for (String entry : rolesConfig) {
-            String[] parts = entry.split(";", 2);
+            String[] parts = entry.split(";", 3);
             if (parts[0].trim().equalsIgnoreCase(roleId)) {
-                lpGroup = parts.length > 1 ? parts[1].trim() : roleId;
+                lpGroup = parts.length > 1 && !parts[1].isBlank() ? parts[1].trim() : roleId;
                 break;
             }
         }
@@ -285,7 +286,6 @@ public class RpScheduleCommands {
         final String roleDisplay = roleId.toUpperCase();
         CommandSourceStack silent = server.createCommandSourceStack().withSuppressedOutput().withPermission(4);
 
-        // Retrait de tous les anciens rôles, ajout du nouveau
         for (String entry : rolesConfig) {
             String old = entry.split(";", 2)[0].trim();
             server.getCommands().performPrefixedCommand(silent, "tag " + name + " remove " + old);
@@ -293,7 +293,10 @@ public class RpScheduleCommands {
         server.getCommands().performPrefixedCommand(silent, "tag " + name + " add " + roleId);
         server.getCommands().performPrefixedCommand(silent, "lp user " + name + " parent set " + finalLpGroup);
 
-        // Message staff + console (4.1.6)
+        RpEssentialsRoleManager.invalidate(target.getUUID());
+        RpEssentialsPermissions.invalidateCache(target.getUUID());
+        ProfessionSyncHelper.syncToPlayer(target);
+
         String staffMsg = "§6[SETROLE] §e" + staffName + " §7→ §e" + name + " §7: §f" + roleDisplay + " §8(LP: " + finalLpGroup + ")";
         Component staffComp = Component.literal(staffMsg);
         for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
@@ -456,7 +459,7 @@ public class RpScheduleCommands {
         // Kick non-staff
         java.util.List<ServerPlayer> toKick = new java.util.ArrayList<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!net.rp.rpessentials.RpEssentialsPermissions.isStaff(p)) toKick.add(p);
+            if (!RpEssentialsScheduleManager.isScheduleExempt(p)) toKick.add(p);
         }
         for (ServerPlayer p : toKick) {
             p.connection.disconnect(net.rp.rpessentials.ColorHelper.parseColors(finalKickMsg));
@@ -467,7 +470,7 @@ public class RpScheduleCommands {
                 + ctx.getSource().getTextName()
                 + "§c. §8(" + toKick.size() + " player(s) kicked)");
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (net.rp.rpessentials.RpEssentialsPermissions.isStaff(p))
+            if (RpEssentialsPermissions.isStaff(p))
                 p.sendSystemMessage(staffMsg);
         }
 

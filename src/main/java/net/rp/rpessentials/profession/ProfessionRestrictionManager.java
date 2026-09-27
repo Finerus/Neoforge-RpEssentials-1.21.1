@@ -102,7 +102,7 @@ public class ProfessionRestrictionManager {
     // EXEMPTION WHITELIST
     // =========================================================================
 
-    private static boolean isExemptFromProfessionRestrictions(ServerPlayer player) {
+    public static boolean isExemptFromProfessionRestrictions(ServerPlayer player) {
         if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.PROFESSION_WHITELIST))
             return true;
         try {

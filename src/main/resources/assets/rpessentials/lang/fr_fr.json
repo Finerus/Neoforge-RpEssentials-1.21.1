@@ -24,7 +24,7 @@
   "rpessentials.gui.color.dark_red":    "Rouge foncé",
   "rpessentials.gui.color.dark_purple": "Violet foncé",
 
-  "rpessentials.gui.btn_more": "§8▼ (%s de plus)",
+  "rpessentials.gui.btn_more": "§8(%s de plus)",
 
   "rpessentials.gui.profession_editor.title":              "§6✦ Éditeur de Professions",
   "rpessentials.gui.profession_editor.professions_header": "§6Professions (%s)",
@@ -49,7 +49,7 @@
   "rpessentials.gui.profession_editor.btn_save":           "§aSauvegarder les modifications",
   "rpessentials.gui.profession_editor.btn_new":            "§e+ Nouvelle profession",
   "rpessentials.gui.profession_editor.btn_close":          "§cFermer",
-  "rpessentials.gui.profession_editor.removed_feedback": "§7[RPEssentials] Restriction retirée : §f%s",
+  "rpessentials.gui.profession_editor.removed_feedback": "§7[RpEssentials] Restriction retirée : §f%s",
   "rpessentials.gui.profession_editor.manage_list": "§eGérer les restrictions (%s)",
 
   "rpessentials.gui.restriction_list.close": "§7Fermer",
@@ -90,7 +90,7 @@
   "rpessentials.gui.global.equipment":  "Équipement bloqué",
   "rpessentials.gui.global.containers": "Restrictions conteneurs",
   "rpessentials.gui.global.categories_header": "§6Catégories",
-  "rpessentials.gui.global.removed_feedback": "§7[RPEssentials] Retiré des restrictions globales : §f%s",
+  "rpessentials.gui.global.removed_feedback": "§7[RpEssentials] Retiré des restrictions globales : §f%s",
   "rpessentials.gui.global.manage_list": "§eGérer les entrées (%s)",
 
   "rpessentials.gui.player_profile.title":               "§6✦ Gestionnaire de Profils RP",
@@ -140,6 +140,15 @@
   "rpessentials.gui.player_profile.notes.footer_new":    "§7Nouvelle note :",
   "rpessentials.gui.player_profile.notes.footer_edit":   "§7Modifier la note #%s :",
   "rpessentials.gui.player_profile.nick_reset_tooltip": "Réinitialise le pseudo de ce joueur",
+  "rpessentials.gui.player_profile.add_label": "Pseudo",
+  "rpessentials.gui.player_profile.add_tooltip": "Prépare un profil (pseudo RP, rôle, permis) pour un joueur jamais connecté. Appliqué automatiquement à sa première connexion.",
+  "rpessentials.gui.player_profile.filter.online": "Affiche : En ligne (cliquez pour Hors ligne)",
+  "rpessentials.gui.player_profile.filter.offline": "Affiche : Hors ligne (cliquez pour Prévu)",
+  "rpessentials.gui.player_profile.filter.prepared": "Affiche : Profils prévus (cliquez pour Tous)",
+  "rpessentials.gui.player_profile.filter.all": "Affiche : Tous (cliquez pour En ligne)",
+  "rpessentials.gui.player_profile.filter_empty": "Aucun joueur ne correspond à ce filtre.",
+  "rpessentials.gui.player_profile.delete_prepared_tooltip": "Supprime ce profil prévu.",
+  "rpessentials.gui.player_profile.confirm_delete_prepared": "Cliquez à nouveau pour confirmer la suppression.",
 
   "rpessentials.gui.dice.title":  "§6Lancer un dé",
   "rpessentials.gui.dice.cancel": "§cAnnuler",

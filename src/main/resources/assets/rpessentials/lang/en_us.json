@@ -24,7 +24,7 @@
   "rpessentials.gui.color.dark_red":    "Dark Red",
   "rpessentials.gui.color.dark_purple": "Dark Purple",
 
-  "rpessentials.gui.btn_more": "§8▼ (%s more)",
+  "rpessentials.gui.btn_more": "§8(%s more)",
 
   "rpessentials.gui.profession_editor.title":              "§6✦ Profession Editor",
   "rpessentials.gui.profession_editor.professions_header": "§6Professions (%s)",
@@ -49,7 +49,7 @@
   "rpessentials.gui.profession_editor.btn_save":           "§aSave changes",
   "rpessentials.gui.profession_editor.btn_new":            "§e+ New profession",
   "rpessentials.gui.profession_editor.btn_close":          "§cClose",
-  "rpessentials.gui.profession_editor.removed_feedback": "§7[RPEssentials] Removed restriction: §f%s",
+  "rpessentials.gui.profession_editor.removed_feedback": "§7[RpEssentials] Removed restriction: §f%s",
   "rpessentials.gui.profession_editor.manage_list": "§eManage restrictions (%s)",
 
   "rpessentials.gui.restriction_list.close": "§7Close",
@@ -90,7 +90,7 @@
   "rpessentials.gui.global.equipment":  "Blocked Equipment",
   "rpessentials.gui.global.containers": "Container Restrictions",
   "rpessentials.gui.global.categories_header": "§6Categories",
-  "rpessentials.gui.global.removed_feedback": "§7[RPEssentials] Removed from global restrictions: §f%s",
+  "rpessentials.gui.global.removed_feedback": "§7[RpEssentials] Removed from global restrictions: §f%s",
   "rpessentials.gui.global.manage_list": "§eManage entries (%s)",
 
   "rpessentials.gui.player_profile.title":               "§6✦ RP Profile Manager",
@@ -140,6 +140,15 @@
   "rpessentials.gui.player_profile.notes.footer_new":    "§7New note:",
   "rpessentials.gui.player_profile.notes.footer_edit":   "§7Edit note #%s:",
   "rpessentials.gui.player_profile.nick_reset_tooltip": "Reset this player's nickname",
+  "rpessentials.gui.player_profile.add_label": "Username",
+  "rpessentials.gui.player_profile.add_tooltip": "Prepare a profile (nickname, role, licenses) for a player who has never connected. Applied automatically on their first join.",
+  "rpessentials.gui.player_profile.filter.online": "Showing: Online (click for Offline)",
+  "rpessentials.gui.player_profile.filter.offline": "Showing: Offline (click for Prepared)",
+  "rpessentials.gui.player_profile.filter.prepared": "Showing: Prepared profiles (click for All)",
+  "rpessentials.gui.player_profile.filter.all": "Showing: All (click for Online)",
+  "rpessentials.gui.player_profile.filter_empty": "No player matches this filter.",
+  "rpessentials.gui.player_profile.delete_prepared_tooltip": "Delete this prepared profile.",
+  "rpessentials.gui.player_profile.confirm_delete_prepared": "Click again to confirm deletion.",
 
   "rpessentials.gui.dice.title":  "§6Roll a dice",
   "rpessentials.gui.dice.cancel": "§cCancel",

@@ -151,7 +151,9 @@ public class RpEssentialsConfig {
                         obj -> obj instanceof String);
 
         OP_LEVEL_BYPASS = BUILDER
-                .comment("Minimum OP level to bypass all restrictions. 0 = disabled.")
+                .comment("Minimum OP level for a player to be considered staff (staff commands).",
+                        "It does NOT bypass profession restrictions: use the professionWhitelist role permission for that.",
+                        "0 = disabled.")
                 .defineInRange("opLevelBypass", 2, 0, 4);
 
         USE_LUCKPERMS_GROUPS = BUILDER

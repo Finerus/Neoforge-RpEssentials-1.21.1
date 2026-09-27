@@ -6,10 +6,12 @@ import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.RpEssentialsRoleManager;
-import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.config.RpEssentialsConfig;
+import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.TabListCache;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -43,32 +45,36 @@ public abstract class MixinServerCommonPacketListenerImpl {
         if (receiver == null) return packet;
 
         EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions = infoPacket.actions();
-        boolean shouldProcess =
-                actions.contains(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME) ||
-                        actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER);
-        if (!shouldProcess) return packet;
+        if (!actions.contains(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME)
+                && !actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER)) return packet;
 
-        // Permissions du joueur qui reçoit le packet
-        boolean seeAll       = RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_ALL);
-        boolean seeNicknames = RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_NICKNAMES);
-        boolean opsSeeAll    = false;
-        boolean debugMode    = false;
+        boolean opsSeeAll = false;
+        boolean debugMode = false;
+        boolean blurSpectators = false;
+        boolean sneakStealth = false;
+        double maxDistSq = 0;
+        double sneakDistSq = 0;
+        int obfLen = 5;
+        List<? extends String> whitelist = List.of();
         try {
             opsSeeAll = RpEssentialsConfig.OPS_SEE_ALL.get();
             debugMode = RpEssentialsConfig.DEBUG_SELF_BLUR.get();
-        } catch (IllegalStateException ignored) {}
-
-        // opsSeeAll reste un fallback global indépendant des rôles
-        boolean isAdminViewer = !debugMode && (seeAll || (opsSeeAll && RpEssentialsPermissions.isStaff(receiver)));
-
-        double maxDistSq    = 0;
-        double sneakDistSq  = 0;
-        boolean sneakStealth = false;
-        try {
-            maxDistSq   = Math.pow(RpEssentialsConfig.PROXIMITY_DISTANCE.get(), 2);
-            sneakDistSq = Math.pow(RpEssentialsConfig.SNEAK_PROXIMITY_DISTANCE.get(), 2);
+            blurSpectators = RpEssentialsConfig.BLUR_SPECTATORS.get();
             sneakStealth = RpEssentialsConfig.ENABLE_SNEAK_STEALTH.get();
+            maxDistSq = Math.pow(RpEssentialsConfig.PROXIMITY_DISTANCE.get(), 2);
+            sneakDistSq = Math.pow(RpEssentialsConfig.SNEAK_PROXIMITY_DISTANCE.get(), 2);
+            obfLen = RpEssentialsConfig.OBFUSCATED_NAME_LENGTH.get();
+            whitelist = RpEssentialsConfig.WHITELIST.get();
         } catch (IllegalStateException ignored) {}
+
+        // Observateur : role seeAll, liste whitelist de /rpessentials blurtab, ou staff avec opsSeeAll
+        boolean isStaffViewer = RpEssentialsPermissions.isStaff(receiver);
+        boolean seesAll = !debugMode
+                && (RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_ALL)
+                || whitelist.contains(receiver.getGameProfile().getName())
+                || (opsSeeAll && isStaffViewer));
+        boolean showRealNames = RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_NICKNAMES)
+                || (opsSeeAll && isStaffViewer);
 
         List<ClientboundPlayerInfoUpdatePacket.Entry> originalEntries =
                 ((ClientboundPlayerInfoUpdatePacketAccessor) infoPacket).getEntries();
@@ -78,67 +84,41 @@ public abstract class MixinServerCommonPacketListenerImpl {
             ServerPlayer target = receiver.server.getPlayerList().getPlayer(entry.profileId());
             Component displayName;
 
-            if (target != null) {
-                String prefix   = net.rp.rpessentials.RpEssentials.getPlayerPrefix(target);
+            if (target == null) {
+                displayName = entry.displayName();
+            } else {
                 String realName = target.getGameProfile().getName();
-                boolean hasNick = NicknameManager.hasNickname(target.getUUID());
-                String nickname = hasNick ? NicknameManager.getNickname(target.getUUID()) : null;
+                String prefix = RpEssentials.getPlayerPrefix(target);
+                String nickname = NicknameManager.getNickname(target.getUUID());
+                String displayed = nickname != null ? nickname : realName;
+                String shown = (nickname != null && showRealNames)
+                        ? nickname + " §7§o(" + realName + ")"
+                        : displayed;
 
-                // tabWhitelist : toujours visible clairement
-                boolean targetAlwaysVisible = false;
-                try {
-                    if (RpEssentialsConfig.ALWAYS_VISIBLE_LIST != null)
-                        targetAlwaysVisible = RpEssentialsConfig.ALWAYS_VISIBLE_LIST.get().contains(realName);
-                } catch (Exception ignored) {}
-                targetAlwaysVisible = targetAlwaysVisible
+                boolean blacklisted = TabListCache.isBlacklisted(realName);
+                boolean alwaysVisible = TabListCache.isAlwaysVisible(realName)
                         || RpEssentialsRoleManager.has(target, RpEssentialsRoleManager.Permission.TAB_WHITELIST);
 
-                boolean isBlacklisted = false;
-                try { isBlacklisted = RpEssentialsConfig.BLACKLIST.get().contains(realName); }
-                catch (Exception ignored) {}
-
-                boolean isTargetSpectator = target.isSpectator();
-                boolean blurSpectators = false;
-                try {
-                    if (RpEssentialsConfig.BLUR_SPECTATORS != null)
-                        blurSpectators = RpEssentialsConfig.BLUR_SPECTATORS.get();
-                } catch (Exception ignored) {}
-
-                String displayedName = (hasNick && nickname != null) ? nickname : realName;
-
-                if (targetAlwaysVisible && !isBlacklisted) {
-                    displayName = Component.literal(prefix + displayedName);
-                } else if (isAdminViewer && !isBlacklisted) {
-                    // seeNicknames : format "Nickname (RealName)" si différents
-                    if (seeNicknames && hasNick && nickname != null) {
-                        displayName = Component.literal(prefix + nickname + " §7§o(" + realName + ")");
-                    } else if (opsSeeAll && RpEssentialsPermissions.isStaff(receiver) && hasNick && nickname != null) {
-                        displayName = Component.literal(prefix + nickname + " §7§o(" + realName + ")");
-                    } else {
-                        displayName = Component.literal(prefix + displayedName);
-                    }
+                boolean clear;
+                if (blacklisted) {
+                    clear = false;
+                } else if (alwaysVisible || seesAll) {
+                    clear = true;
                 } else {
-                    double distSq = receiver.distanceToSqr(target);
-                    double effectiveMaxDistSq = (sneakStealth && target.isCrouching())
-                            ? sneakDistSq : maxDistSq;
-
-                    boolean shouldBlur = isBlacklisted || debugMode
-                            || distSq > effectiveMaxDistSq
-                            || (isTargetSpectator && blurSpectators);
-
-                    if (shouldBlur) {
-                        String cleanName = displayedName.replaceAll("§.", "");
-                        int obfLen;
-                        try { obfLen = RpEssentialsConfig.OBFUSCATED_NAME_LENGTH.get(); }
-                        catch (IllegalStateException e) { obfLen = 5; }
-                        obfLen = Math.min(cleanName.length(), obfLen);
-                        displayName = Component.literal("§k" + "?".repeat(obfLen));
-                    } else {
-                        displayName = Component.literal(prefix + displayedName);
-                    }
+                    double effectiveMaxDistSq = (sneakStealth && target.isCrouching()) ? sneakDistSq : maxDistSq;
+                    boolean blur = debugMode
+                            || receiver.distanceToSqr(target) > effectiveMaxDistSq
+                            || (target.isSpectator() && blurSpectators);
+                    clear = !blur;
                 }
-            } else {
-                displayName = entry.displayName();
+
+                if (clear) {
+                    displayName = Component.literal(prefix + shown);
+                } else {
+                    String cleanName = displayed.replaceAll("§.", "");
+                    int len = Math.min(cleanName.length(), obfLen);
+                    displayName = Component.literal("§k" + "?".repeat(len));
+                }
             }
 
             newEntries.add(new ClientboundPlayerInfoUpdatePacket.Entry(

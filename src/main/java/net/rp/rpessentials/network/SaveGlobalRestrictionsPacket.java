@@ -89,13 +89,13 @@ public record SaveGlobalRestrictionsPacket(
                     ProfessionSyncHelper.syncToPlayer(p);
 
                 player.sendSystemMessage(Component.literal(
-                        "§a[RPEssentials] Global restrictions saved."));
+                        "§a[RpEssentials] Global restrictions saved."));
                 RpEssentials.LOGGER.info("[GUI] Global restrictions updated by {}",
                         player.getGameProfile().getName());
 
             } catch (IllegalStateException e) {
                 player.sendSystemMessage(Component.literal(
-                        "§c[RPEssentials] Config not loaded, please try again."));
+                        "§c[RpEssentials] Config not loaded, please try again."));
             }
         });
     }

@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.moderation.MuteManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,6 +20,8 @@ public class RpEssentialsMessagingManager {
     private static final Map<UUID, UUID> lastMessaged = new HashMap<>();
 
     public static int sendMessage(ServerPlayer sender, ServerPlayer target, String message) {
+        if (MuteManager.denyIfMuted(sender)) return 0;
+
         UUID senderUuid = sender.getUUID();
         UUID targetUuid = target.getUUID();
 
@@ -52,7 +55,6 @@ public class RpEssentialsMessagingManager {
                         .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
                                 "/msg " + sender.getName().getString() + " ")));
 
-        // Split prefix and name so the clickable component stays separate
         String toSenderPrefix = MessagesConfig.get(MessagesConfig.MP_TO_SENDER, "target", targetDisplay);
         String fromTargetPrefix = MessagesConfig.get(MessagesConfig.MP_FROM_TARGET, "sender", senderDisplay);
 

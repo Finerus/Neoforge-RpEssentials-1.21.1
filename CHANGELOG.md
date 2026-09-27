@@ -1,6 +1,90 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [5.0.0] (Beta 2)
+
+### Breaking Changes
+
+* **`/rpessentials license check` removed:** merged into `/rpessentials license list`, which now displays formatted profession names and expiry dates. Update any documentation or staff guides that reference `license check`.
+
+* **`/rpessentials lastconnection list [count]` → `list [page]`:** the argument is now a page number, not a total count. 8 entries are shown per page.
+
+### Added
+
+* **(WIP) Prepared player profiles:** staff can now prepare (pre-register) a nickname, a role and licenses for a player who has never connected, via the Player Profile GUI. The profile is applied automatically on the player's first join, with a summary logged to console (it is working but not everytime so I prefer to flag it as "WIP").
+
+* **Offline player browsing in the Player Profile GUI:** the screen now lists every player who has already connected to the server at least once, not just those currently online.
+
+* **Sort toggle in the Player Profile GUI:** a new button cycles between Online (default), Offline, Prepared and All, so staff can quickly narrow down the player list.
+
+* **`/rpessentials nick list` shows offline players:** the list now pulls from `nicknames.json` directly and displays all known nicknames, online and offline, with an online/offline indicator and pagination.
+
+* **Mute extended to RP commands:** `/msg`, `/r`, `/me`, `/rp action`, `/rp commerce` and `/rp incognito` are now blocked for muted players. The cooldown is not consumed when the message is blocked.
+
+* **`isScheduleExempt` helper:** centralizes schedule exemption logic. Players with the `scheduleWhitelist` role permission or in the `scheduleWhitelist` config list are now consistently exempted at connection, on auto-close and on `/schedule forceclose`.
+
+### Improved
+
+* **Player Profile GUI scroll arrows:** the up/down arrows are now always visible and greyed out when there is nothing left to scroll, instead of disappearing entirely.
+
+* **`/rpessentials inspect` autocomplete:** suggestions are now filtered as the player types, instead of listing every known name regardless of input.
+
+* **GUI:** rearranged some buttons to have a better placement and feel more polished (and I'm still rearranging some buttons).
+
+* **`/rpessentials lastconnection`:** display is now lighter, paginated (8 entries per page with clickable arrows), and player names in `/lastconnection <player>` show the UUID on hover and copy it to clipboard on click.
+
+* **`/rpessentials license list`:** now displays formatted profession names (color + display name) and expiry dates, matching the previous `license check` output. Also resolves offline player names.
+
+* **`/rpessentials license reissue`:** command feedback now explicitly states this replaces the physical item only and does not modify the player's actual license data.
+
+* **`/rpessentials stats`:** fully reworked display, now grouped by theme and showing total playtime, top 3 players by playtime, Death RP and schedule state, active warn count and warned player count, active mutes and licence count.
+
+* **`/rpessentials config status`:** fully reworked display, now grouped by theme with colored ON/OFF indicators, list sizes and relevant values for each system.
+
+* **`blurtab whitelist`:** players added via `/rpessentials blurtab whitelist` now correctly see through obfuscation again, as originally documented.
+
+* **`seeNicknames` role permission:** now works independently, without requiring `seeAll`. Targets in the always-visible list also benefit from it.
+
+* **Role cache invalidated immediately:** after `/setrole` or a role change via the Player Profile GUI, the role and staff permission caches are cleared right away instead of waiting up to 30 seconds.
+
+* **Profession restriction sync on role change:** players whose role changes gain or lose the `professionWhitelist` permission now receive an updated client-side restriction packet immediately.
+
+* **Schedule exemption coherence:** players in the `scheduleWhitelist` list or holding the `scheduleWhitelist` role are no longer kicked at server auto-close or `/schedule forceclose`, matching the behaviour at connection.
+
+* **`opLevelBypass` comment clarified:** the config comment now states explicitly that this option does not bypass profession restrictions, and points to the `professionWhitelist` role permission instead. The README is updated accordingly.
+
+* **Tag uniformity:** all in-chat feedback tags standardized from `[RPE]` (or sometime `[RPEssentials]`) to `[RpEssentials]`.
+
+### Fixed
+
+* **Death RP cause of death:** the damage source is now captured at the exact moment of death and passed directly to the history logger, instead of being re-read later from a field that could already be stale or cleared.
+
+* **`/rp commerce` message not sent:** the formatted message was only written to the server log and never broadcast to players in range.
+
+* **Auto-unwhitelist bypass never worked for offline players:** `LuckPerms.getUser(uuid)` only returns loaded (online) users. Offline players always fell through to removal regardless of their role. Now uses `loadUser(uuid)` to fetch from the LuckPerms database. The lookup is performed only after the inactivity threshold is confirmed, to limit database calls.
+
+* **Auto-unwhitelist UUID lookup:** the UUID was previously re-derived from the player name via the profile cache, which could fail or return a wrong result in offline mode. The UUID from the loop is now used directly.
+
+### Security
+
+* **Auto-unwhitelist bypass reliability:** the switch from `getUser` to `loadUser` ensures that administrators and moderators who are offline for an extended period are reliably protected from automatic whitelist removal.
+
+### Technical
+
+* **New `RpChatUi` utility class:** provides a shared separator line, clickable pagination component, `kv`, `row`, `flag` and `value` helpers used by the reworked `stats`, `config status`, `nick list`, `lastconnection list` and `license list` outputs.
+
+* **`getAllSortedByLogin` date sort fixed:** connections were previously sorted by lexicographic string comparison, which gave incorrect results with `dd/MM/yyyy` format (e.g. September ranked before October). Dates are now parsed with the configured `dateFormat` before sorting.
+
+* **`resolveName` added to `LastConnectionManager`:** resolves a UUID to a display name by checking the online player list, then the connection entry, then the profile cache, with a short UUID fallback.
+
+* **`isExemptFromProfessionRestrictions` is now `public`:** required by `ProfessionSyncHelper` to send empty restriction packets to exempted players.
+
+* **Tab list rendering:** the blacklist and always-visible list are now cached as `Set` instead of being looked up as `List` on every tab list entry, avoiding a costly linear search per player per update resulting in performance optimization.
+
+### Personal note
+
+Hi, so this version is supposed to be stable, not everything is perfect and some added/modified features are still being tested! Anyway, if you find any bugs or have any suggestions, let me know!
+
 ## [5.0.0] (BETA)
 
 ### Breaking Changes
@@ -226,7 +310,7 @@ All notable changes to this project will be documented in this file.
 
 * **RequestConfigFilePacket rate-limited to 1 request/second per player.** A player (or modified client) could flood the server with config file requests, each triggering a full reflection scan and serialization of a config class. Requests arriving faster than 1 per second per player are now silently dropped.
 
-* **Startup log noise reduced.** Each manager (`NicknameManager`, `LicenseManager`, `WarnManager`, `MuteManager`, `LastConnectionManager`, `NoteManager`, `DeathRPManager`) previously emitted two INFO lines on initialization ("Initialized" and "Loaded X entries"), producing 10+ lines on every player login. These are now DEBUG-level. A single INFO summary line is emitted once when the server finishes starting: `[RPEssentials] Data layer ready: X nickname(s), X license(s), X warn(s), X mute(s).`
+* **Startup log noise reduced.** Each manager (`NicknameManager`, `LicenseManager`, `WarnManager`, `MuteManager`, `LastConnectionManager`, `NoteManager`, `DeathRPManager`) previously emitted two INFO lines on initialization ("Initialized" and "Loaded X entries"), producing 10+ lines on every player login. These are now DEBUG-level. A single INFO summary line is emitted once when the server finishes starting: `[RpEssentials] Data layer ready: X nickname(s), X license(s), X warn(s), X mute(s).`
 
 * **All data managers initialized eagerly at server start.** Managers were lazily initialized on first use, causing a visible lag spike at the first player login. They are now all initialized in a `ServerStartedEvent` handler before any player can connect, distributing the I/O cost to server startup instead.
 

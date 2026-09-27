@@ -15,10 +15,12 @@ import net.minecraft.world.item.ItemStack;
 import net.rp.rpessentials.RpEssentialsItems;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.moderation.LastConnectionManager;
 import net.rp.rpessentials.profession.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class RpLicenseCommands {
 
@@ -61,10 +63,6 @@ public class RpLicenseCommands {
                 .executes(RpLicenseCommands::listAllLicenses)
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(RpLicenseCommands::listLicenses)));
-
-        licenseNode.then(Commands.literal("check")
-                .then(Commands.argument("player", EntityArgument.player())
-                        .executes(RpLicenseCommands::checkLicenseAll)));
 
         licenseNode.then(Commands.literal("giverp")
                 .then(Commands.argument("player", EntityArgument.player())
@@ -170,30 +168,38 @@ public class RpLicenseCommands {
         return 1;
     }
 
-    private static int listLicenses(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
-        List<String> licenses = LicenseManager.getLicenses(target.getUUID());
-
+    private static int sendLicenseList(CommandContext<CommandSourceStack> ctx, UUID uuid, String name) {
+        List<String> licenses = LicenseManager.getLicenses(uuid);
         if (licenses.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.literal(
-                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_NONE, "player", target.getName().getString())), false);
+                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_NONE, "player", name)), false);
             return 1;
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═══════════════════════════════════╗\n");
-        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_HEADER, "player", target.getName().getString())).append("\n");
-        sb.append("§6╠═══════════════════════════════════╣\n");
+        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_HEADER, "player", name)).append("\n")
+                .append(RpChatUi.LINE).append("\n");
         for (String profession : licenses) {
-            String expiry = LicenseManager.getTempExpirationDate(target.getUUID(), profession);
-            sb.append("§6║ §f").append(profession);
+            ProfessionRestrictionManager.ProfessionData data = ProfessionRestrictionManager.getProfessionData(profession);
+            String expiry = LicenseManager.getTempExpirationDate(uuid, profession);
+            sb.append(data != null ? data.getFormattedName() : "§f" + profession);
             if (expiry != null) sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
             sb.append("\n");
         }
-        sb.append("§6╚═══════════════════════════════════╝");
+        sb.append(RpChatUi.LINE);
         String msg = sb.toString();
         ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;
+    }
+
+    private static int listLicenses(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        return sendLicenseList(ctx, target.getUUID(), target.getName().getString());
+    }
+
+    private static int myProfession(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        return sendLicenseList(ctx, player.getUUID(), player.getName().getString());
     }
 
     private static int listAllLicenses(CommandContext<CommandSourceStack> ctx) {
@@ -204,56 +210,23 @@ public class RpLicenseCommands {
         }
 
         var server = ctx.getSource().getServer();
-        StringBuilder result = new StringBuilder("§6╔═══════════════════════════════════╗\n");
-        result.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_ALL_HEADER)).append("\n");
-        result.append("§6╠═══════════════════════════════════╣\n");
+        StringBuilder sb = new StringBuilder();
+        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_ALL_HEADER)).append("\n")
+                .append(RpChatUi.LINE).append("\n");
 
         for (var entry : allLicenses.entrySet()) {
-            java.util.UUID uuid = entry.getKey();
-            List<String> licenses = entry.getValue();
-            ServerPlayer onlinePlayer = server.getPlayerList().getPlayer(uuid);
-            String playerName = (onlinePlayer != null) ? onlinePlayer.getName().getString()
-                    : server.getProfileCache().get(uuid).map(p -> p.getName()).orElse(uuid.toString());
-
-            String noneStr = MessagesConfig.get(MessagesConfig.LICENSE_LIST_ALL_NONE_FOR_PLAYER);
+            UUID uuid = entry.getKey();
             StringBuilder licLine = new StringBuilder();
-            for (String lic : licenses) {
+            for (String lic : entry.getValue()) {
                 if (licLine.length() > 0) licLine.append("§7, ");
+                ProfessionRestrictionManager.ProfessionData data = ProfessionRestrictionManager.getProfessionData(lic);
+                licLine.append(data != null ? data.getFormattedName() : "§f" + lic);
                 String expiry = LicenseManager.getTempExpirationDate(uuid, lic);
-                licLine.append("§f").append(lic);
                 if (expiry != null) licLine.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
             }
-            result.append("§6║ §f").append(playerName).append("§7: ")
-                    .append(licLine.length() > 0 ? licLine : noneStr).append("\n");
+            sb.append("§f").append(LastConnectionManager.resolveName(server, uuid)).append("§7: ").append(licLine).append("\n");
         }
-        result.append("§6╚═══════════════════════════════════╝");
-        ctx.getSource().sendSuccess(() -> Component.literal(result.toString()), false);
-        return 1;
-    }
-
-    private static int checkLicenseAll(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
-        List<String> licenses = LicenseManager.getLicenses(target.getUUID());
-        String name = target.getName().getString();
-
-        if (licenses.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_NONE, "player", name)), false);
-            return 1;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═════════════════════════════════╗\n");
-        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_HEADER, "player", name)).append("\n");
-        sb.append("§6╠═════════════════════════════════╣\n");
-        for (String profession : licenses) {
-            String expiry = LicenseManager.getTempExpirationDate(target.getUUID(), profession);
-            ProfessionRestrictionManager.ProfessionData data = ProfessionRestrictionManager.getProfessionData(profession);
-            sb.append("§6║ ").append(data != null ? data.getFormattedName() : "§f" + profession);
-            if (expiry != null) sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
-            sb.append("\n");
-        }
-        sb.append("§6╚═════════════════════════════════╝");
+        sb.append(RpChatUi.LINE);
         String msg = sb.toString();
         ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;
@@ -322,12 +295,12 @@ public class RpLicenseCommands {
         ServerPlayer staff = ctx.getSource().getPlayer();
         boolean gave = LicenseHelper.giveLicenseItem(server, staff, target, professionId);
         if (!gave) {
-            ctx.getSource().sendFailure(Component.literal("§c[RPEssentials] Could not create item for: " + professionId));
+            ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] Could not create item for: " + professionId));
             return 0;
         }
 
         LicenseManager.logActionSystem("REISSUE", target.getName().getString(), target.getUUID().toString(),
-                professionId, "Reissued by " + (staff != null ? staff.getName().getString() : "Console"));
+                professionId, "Item reissued by " + (staff != null ? staff.getName().getString() : "Console"));
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 MessagesConfig.get(MessagesConfig.LICENSE_REISSUE_STAFF, "profession", profData.getFormattedName(),
@@ -373,32 +346,4 @@ public class RpLicenseCommands {
         return 1;
     }
 
-    private static int myProfession(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
-        ServerPlayer player = ctx.getSource().getPlayerOrException();
-        List<String> licenses = LicenseManager.getLicenses(player.getUUID());
-
-        if (licenses.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_NONE, "player", player.getName().getString())), false);
-            return 0;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═══════════════════════════════════╗\n");
-        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_HEADER, "player", player.getName().getString())).append("\n");
-        sb.append("§6╠═══════════════════════════════════╣\n");
-
-        for (String licenseId : licenses) {
-            ProfessionRestrictionManager.ProfessionData data = ProfessionRestrictionManager.getProfessionData(licenseId);
-            String expiry = LicenseManager.getTempExpirationDate(player.getUUID(), licenseId);
-            if (data != null) sb.append("§6║ ").append(data.getFormattedName());
-            else sb.append("§6║ §f").append(licenseId);
-            if (expiry != null) sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
-            sb.append("\n");
-        }
-        sb.append("§6╚═══════════════════════════════════╝");
-        String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
-        return 1;
-    }
 }

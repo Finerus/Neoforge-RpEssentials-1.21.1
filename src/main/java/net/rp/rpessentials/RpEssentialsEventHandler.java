@@ -22,6 +22,12 @@ import net.rp.rpessentials.network.HideNametagsPacket;
 import net.rp.rpessentials.profession.ProfessionSyncHelper;
 import net.rp.rpessentials.profession.TempLicenseExpirationManager;
 
+import net.rp.rpessentials.profession.LicenseHelper;
+import net.rp.rpessentials.profession.LicenseManager;
+import net.rp.rpessentials.profession.PendingProfileManager;
+import net.rp.rpessentials.profession.ProfessionRestrictionManager;
+import net.rp.rpessentials.network.SetPlayerProfilePacket;
+
 @EventBusSubscriber(modid = RpEssentials.MODID)
 public class RpEssentialsEventHandler {
 
@@ -41,6 +47,42 @@ public class RpEssentialsEventHandler {
         if (canJoin != null) {
             player.connection.disconnect(canJoin);
             return;
+        }
+
+        // Application du profil préparé à l'avance par le staff, si existant
+        PendingProfileManager.PendingEntry pending = PendingProfileManager.consumePending(player.getUUID());
+        if (pending != null) {
+            StringBuilder logSummary = new StringBuilder();
+
+            if (pending.nickname != null && !pending.nickname.isEmpty()) {
+                NicknameManager.setNickname(player.getUUID(), pending.nickname);
+                logSummary.append("nickname ").append(player.getName().getString())
+                        .append(" -> ").append(pending.nickname);
+            }
+            if (pending.role != null && !pending.role.isEmpty()) {
+                SetPlayerProfilePacket.applyRole(server, player, pending.role);
+                if (logSummary.length() > 0) logSummary.append(", ");
+                logSummary.append("role \"").append(pending.role).append("\"");
+            }
+            if (!pending.licenses.isEmpty()) {
+                for (String profId : pending.licenses) {
+                    LicenseManager.addLicense(player.getUUID(), profId);
+                    LicenseHelper.giveLicenseItem(server, null, player, profId);
+                }
+                ProfessionRestrictionManager.invalidatePlayerCache(player.getUUID());
+                ProfessionSyncHelper.syncToPlayer(player);
+                if (logSummary.length() > 0) logSummary.append(", ");
+                logSummary.append("gave ").append(pending.licenses.size())
+                        .append(" profession(s) (").append(String.join(", ", pending.licenses)).append(")");
+            }
+
+            if (logSummary.length() > 0) {
+                RpEssentials.LOGGER.info("[RPEssentials] Applied prepared profile for {}: {}",
+                        player.getName().getString(), logSummary);
+            }
+
+            player.sendSystemMessage(Component.literal(
+                    "§a[RPEssentials] Your profile was prepared in advance by staff."));
         }
 
         // Message join — cast via IRpPlayerList (interface injectée par MixinPlayerList)
@@ -166,11 +208,11 @@ public class RpEssentialsEventHandler {
                             net.minecraft.core.registries.Registries.DIMENSION,
                             net.minecraft.resources.ResourceLocation.parse(dimId));
             if (event.getServer().getLevel(dimKey) == null)
-                RpEssentials.LOGGER.warn("[RPEssentials] AFK dimension '{}' does not exist.", dimId);
+                RpEssentials.LOGGER.warn("[RpEssentials] AFK dimension '{}' does not exist.", dimId);
         } catch (IllegalStateException ignored) {}
 
         String dataFolder = RpEssentialsDataPaths.getDataFolder().getAbsolutePath();
-        RpEssentials.LOGGER.info("[RPEssentials] Data layer ready — {} nickname(s), {} license(s), {} warn(s), {} mute(s). Data folder: {}",
+        RpEssentials.LOGGER.info("[RpEssentials] Data layer ready — {} nickname(s), {} license(s), {} warn(s), {} mute(s). Data folder: {}",
                 NicknameManager.count(),
                 net.rp.rpessentials.profession.LicenseManager.getAllLicenses().size(),
                 net.rp.rpessentials.moderation.WarnManager.getAll().size(),

@@ -12,6 +12,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.damagesource.DamageSource;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.RpEssentialsConfig;
@@ -223,7 +224,7 @@ public class DeathRPManager {
 
     // ── Mort ────────────────────────────────────────────────────────────────────
 
-    public static void onPlayerDeathRP(ServerPlayer player) {
+    public static void onPlayerDeathRP(ServerPlayer player, DamageSource damageSource) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
 
@@ -255,10 +256,9 @@ public class DeathRPManager {
             }
         } catch (Exception e) { LOGGER.error("[DeathRP] Could not remove from whitelist", e); }
 
-        // Historique
         try {
-            String cause = player.getLastDamageSource() != null
-                    ? player.getLastDamageSource().typeHolder()
+            String cause = damageSource != null
+                    ? damageSource.typeHolder()
                     .unwrapKey().map(k -> k.location().getPath()).orElse("unknown")
                     : "unknown";
             ensureHistoryInitialized();

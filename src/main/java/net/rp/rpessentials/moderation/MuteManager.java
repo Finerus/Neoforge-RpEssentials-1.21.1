@@ -4,8 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsDataPaths;
+import net.rp.rpessentials.config.MessagesConfig;
 
 import java.io.File;
 import java.io.FileReader;
@@ -188,6 +190,15 @@ public class MuteManager {
             saveToFile();
             return false;
         }
+        return true;
+    }
+
+    public static boolean denyIfMuted(ServerPlayer player) {
+        if (!isMuted(player.getUUID())) return false;
+        MuteEntry entry = getEntry(player.getUUID());
+        String expiry = entry == null || entry.isPermanent() ? "Permanent" : entry.getFormattedExpiry();
+        player.sendSystemMessage(ColorHelper.parseColors(
+                MessagesConfig.get(MessagesConfig.MUTE_BLOCKED_MESSAGE, "expiry", expiry)));
         return true;
     }
 

@@ -22,7 +22,6 @@ import net.rp.rpessentials.config.RpEssentialsConfig;
 
 /**
  * Gestionnaire de nicknames avec sauvegarde automatique
- * Le fichier est sauvegardé dans le dossier world/data/oneriamod/
  */
 public class NicknameManager {
     private static final Map<UUID, String> nicknames = new ConcurrentHashMap<>();
