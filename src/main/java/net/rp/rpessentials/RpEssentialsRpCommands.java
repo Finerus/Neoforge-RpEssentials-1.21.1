@@ -79,7 +79,7 @@ public class RpEssentialsRpCommands {
 
         // /rp selfnick [nickname]
         rpRoot.then(Commands.literal("selfnick")
-                .requires(src -> src.getEntity() instanceof ServerPlayer)
+                .requires(src -> src.getEntity() instanceof ServerPlayer && isSelfNickEnabled())
                 .executes(ctx -> executeSelfNick(ctx, ""))
                 .then(Commands.argument("nickname", StringArgumentType.greedyString())
                         .executes(ctx -> executeSelfNick(ctx,
@@ -446,6 +446,10 @@ public class RpEssentialsRpCommands {
     // =========================================================================
     // UTILITAIRES
     // =========================================================================
+    private static boolean isSelfNickEnabled() {
+        try { return RpConfig.ENABLE_SELF_NICK.get(); }
+        catch (IllegalStateException e) { return false; }
+    }
 
     private static void playAnnonceSound(ServerPlayer player, String soundId) {
         try {

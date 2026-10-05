@@ -67,15 +67,14 @@ public abstract class MixinServerCommonPacketListenerImpl {
             whitelist = RpEssentialsConfig.WHITELIST.get();
         } catch (IllegalStateException ignored) {}
 
-        // Observateur : role seeAll, liste whitelist de /rpessentials blurtab, ou staff avec opsSeeAll
-        boolean isStaffViewer = RpEssentialsPermissions.isStaff(receiver);
+        // opsSeeAll est lié au niveau OP vanilla, pas au tag isStaff du mod
+        boolean isVanillaOp = receiver.hasPermissions(2);
         boolean seesAll = !debugMode
                 && (RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_ALL)
                 || whitelist.contains(receiver.getGameProfile().getName())
-                || (opsSeeAll && isStaffViewer));
-        boolean showRealNames = RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_NICKNAMES)
-                || (opsSeeAll && isStaffViewer);
-
+                || (opsSeeAll && isVanillaOp));
+        boolean showRealNames = RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_NICKNAMES);
+        
         List<ClientboundPlayerInfoUpdatePacket.Entry> originalEntries =
                 ((ClientboundPlayerInfoUpdatePacketAccessor) infoPacket).getEntries();
         List<ClientboundPlayerInfoUpdatePacket.Entry> newEntries = new ArrayList<>();

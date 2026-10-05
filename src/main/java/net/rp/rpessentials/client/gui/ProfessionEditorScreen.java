@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -42,6 +43,8 @@ public class ProfessionEditorScreen extends Screen {
     private int profListScroll       = 0;
     private String profPendingDelete = null;
     private String rolePendingDelete = null;
+    private Button profInCreationButton;
+    private Button roleInCreationButton;
     private boolean profDirty = false;
     private boolean roleDirty = false;
     private final Set<String> roleDirtyPerms = new LinkedHashSet<>();
@@ -149,6 +152,9 @@ public class ProfessionEditorScreen extends Screen {
             this.globalContainerRestrictions = new ArrayList<>();
         }
         buildRegistryCache();
+
+        if (!existingProfessions.isEmpty()) loadProfEntry(0, false);
+        if (!existingRoles.isEmpty()) loadRoleEntry(0, false);
     }
 
     private static void buildRegistryCache() {
@@ -327,21 +333,21 @@ public class ProfessionEditorScreen extends Screen {
 
         String profLabel = mainTab == 0
                 ? "§e§l" + I18n.get("rpessentials.gui.roles.tab_main_professions")
-                : "§7  " + I18n.get("rpessentials.gui.roles.tab_main_professions");
+                : "§7" + I18n.get("rpessentials.gui.roles.tab_main_professions");
         addRenderableWidget(Button.builder(Component.literal(profLabel),
                         btn -> { mainTab = 0; closeSuggestions(); rebuild(); })
                 .pos(x, y).size(tabW, 13).build());
 
         String roleLabel = mainTab == 1
-                ? "§e§l" + I18n.get("rpessentials.gui.roles.tab_main_roles")
-                : "§7  " + I18n.get("rpessentials.gui.roles.tab_main_roles");
+                ? "§9§l" + I18n.get("rpessentials.gui.roles.tab_main_roles")
+                : "§7" + I18n.get("rpessentials.gui.roles.tab_main_roles");
         addRenderableWidget(Button.builder(Component.literal(roleLabel),
                         btn -> { mainTab = 1; closeSuggestions(); rebuild(); })
                 .pos(x + tabW + gap, y).size(tabW, 13).build());
 
         String globalLabel = mainTab == 2
-                ? "§e§l" + I18n.get("rpessentials.gui.roles.tab_main_global")
-                : "§7  " + I18n.get("rpessentials.gui.roles.tab_main_global");
+                ? "§c§l" + I18n.get("rpessentials.gui.roles.tab_main_global")
+                : "§7" + I18n.get("rpessentials.gui.roles.tab_main_global");
         addRenderableWidget(Button.builder(Component.literal(globalLabel),
                         btn -> { mainTab = 2; closeSuggestions(); rebuild(); })
                 .pos(x + (tabW + gap) * 2, y).size(tabW, 13).build());
@@ -456,11 +462,14 @@ public class ProfessionEditorScreen extends Screen {
     private void buildProfessionList() {
         int listStart = profListScroll;
         int listEnd   = Math.min(existingProfessions.size(), listStart + LIST_VISIBLE);
+        int listOffY  = 15;
 
-        if (profListScroll > 0)
-            addRenderableWidget(Button.builder(Component.literal("▲"),
-                            btn -> { profListScroll--; rebuild(); })
-                    .pos(MARGIN, PANEL_TOP + 14 - 15).size(LIST_W, 13).build());
+        boolean canScrollUp   = profListScroll > 0;
+        boolean canScrollDown = listEnd < existingProfessions.size();
+
+        addRenderableWidget(Button.builder(Component.literal(canScrollUp ? "▲" : "§8▲"),
+                        btn -> { if (canScrollUp) { profListScroll--; rebuild(); } })
+                .pos(MARGIN, PANEL_TOP + 14).size(LIST_W, 13).build());
 
         for (int i = listStart; i < listEnd; i++) {
             final int idx = i;
@@ -473,43 +482,59 @@ public class ProfessionEditorScreen extends Screen {
             String suffix = isDirtySelected ? " *" : "";
             String label  = prefix + style + id + suffix;
 
+            int rowY = PANEL_TOP + 14 + (i - listStart) * ROW_H + listOffY;
+
             addRenderableWidget(Button.builder(Component.literal(label),
                             btn -> loadProfEntry(idx))
-                    .pos(MARGIN, PANEL_TOP + 14 + (i - listStart) * ROW_H).size(LIST_W - 18, ROW_H - 2).build());
+                    .pos(MARGIN, rowY).size(LIST_W - 18, ROW_H - 2).build());
 
-            if (i == profSelectedIndex) {
-                if (isPendingDelete) {
-                    // Confirmation : bouton rouge
-                    addRenderableWidget(Button.builder(Component.literal("§c!"),
-                                    btn -> {
-                                        PacketDistributor.sendToServer(new DeleteProfessionPacket(id));
-                                        existingProfessions.remove(idx);
-                                        profSelectedIndex = -1;
-                                        profPendingDelete  = null;
-                                        resetProfForm();
-                                    })
-                            .pos(MARGIN + LIST_W - 16, PANEL_TOP + 14 + (i - listStart) * ROW_H)
-                            .size(16, ROW_H - 2).build());
-                } else {
-                    // Premier clic : demande confirmation
-                    addRenderableWidget(Button.builder(Component.literal("§7x"),
-                                    btn -> { profPendingDelete = id; rebuild(); })
-                            .pos(MARGIN + LIST_W - 16, PANEL_TOP + 14 + (i - listStart) * ROW_H)
-                            .size(16, ROW_H - 2).build());
-                }
+            if (isPendingDelete) {
+                addRenderableWidget(Button.builder(Component.literal("§c!"),
+                                btn -> {
+                                    PacketDistributor.sendToServer(new DeleteProfessionPacket(id));
+                                    existingProfessions.remove(idx);
+                                    profSelectedIndex = -1;
+                                    profPendingDelete = null;
+                                    resetProfForm();
+                                })
+                        .pos(MARGIN + LIST_W - 16, rowY).size(16, ROW_H - 2)
+                        .tooltip(Tooltip.create(Component.translatable(
+                                "rpessentials.gui.profession_editor.confirm_delete_tooltip")))
+                        .build());
+            } else {
+                addRenderableWidget(Button.builder(Component.literal("§7x"),
+                                btn -> { profPendingDelete = id; rebuild(); })
+                        .pos(MARGIN + LIST_W - 16, rowY).size(16, ROW_H - 2)
+                        .tooltip(Tooltip.create(Component.translatable(
+                                "rpessentials.gui.profession_editor.delete_tooltip")))
+                        .build());
             }
         }
 
-        if (listEnd < existingProfessions.size()) {
-            int remaining = existingProfessions.size() - listEnd;
-            addRenderableWidget(Button.builder(
-                            Component.literal(I18n.get("rpessentials.gui.btn_more", remaining)),
-                            btn -> { profListScroll++; rebuild(); })
-                    .pos(MARGIN, PANEL_TOP + 14 + LIST_VISIBLE * ROW_H + 2).size(LIST_W, 13).build());
+        if (profStateIsNew) {
+            int row = listEnd - listStart;
+            if (row < LIST_VISIBLE) {
+                String shown = profStateId.isEmpty() ? "?" : profStateId;
+                profInCreationButton = Button.builder(
+                                Component.literal("§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")"),
+                                btn -> {})
+                        .pos(MARGIN, PANEL_TOP + 14 + row * ROW_H + listOffY).size(LIST_W - 18, ROW_H - 2).build();
+                addRenderableWidget(profInCreationButton);
+            } else {
+                profInCreationButton = null;
+            }
+        } else {
+            profInCreationButton = null;
         }
 
+        addRenderableWidget(Button.builder(Component.literal(canScrollDown
+                                ? "▼ " + I18n.get("rpessentials.gui.btn_more", existingProfessions.size() - listEnd)
+                                : "§8▼"),
+                        btn -> { if (canScrollDown) { profListScroll++; rebuild(); } })
+                .pos(MARGIN, PANEL_TOP + 14 + LIST_VISIBLE * ROW_H + listOffY).size(LIST_W, 13).build());
+
         addRenderableWidget(Button.builder(
-                        Component.translatable("rpessentials.gui.profession_editor.btn_new"),
+                        Component.literal(tabColorCode() + I18n.get("rpessentials.gui.profession_editor.btn_new")),
                         btn -> resetProfForm())
                 .pos(MARGIN, this.height - 26).size(LIST_W, 16).build());
     }
@@ -580,11 +605,14 @@ public class ProfessionEditorScreen extends Screen {
     private void buildRoleList() {
         int listStart = roleListScroll;
         int listEnd   = Math.min(existingRoles.size(), listStart + LIST_VISIBLE);
+        int listOffY  = 15;
 
-        if (roleListScroll > 0)
-            addRenderableWidget(Button.builder(Component.literal("▲"),
-                            btn -> { roleListScroll--; rebuild(); })
-                    .pos(MARGIN, PANEL_TOP + 14 - 15).size(LIST_W, 13).build());
+        boolean canScrollUp   = roleListScroll > 0;
+        boolean canScrollDown = listEnd < existingRoles.size();
+
+        addRenderableWidget(Button.builder(Component.literal(canScrollUp ? "▲" : "§8▲"),
+                        btn -> { if (canScrollUp) { roleListScroll--; rebuild(); } })
+                .pos(MARGIN, PANEL_TOP + 14).size(LIST_W, 13).build());
 
         for (int i = listStart; i < listEnd; i++) {
             final int idx = i;
@@ -597,40 +625,58 @@ public class ProfessionEditorScreen extends Screen {
             String suffix = isDirtySelected ? " *" : "";
             String label  = prefix + style + id + suffix;
 
+            int rowY = PANEL_TOP + 14 + (i - listStart) * ROW_H + listOffY;
+
             addRenderableWidget(Button.builder(Component.literal(label),
                             btn -> loadRoleEntry(idx))
-                    .pos(MARGIN, PANEL_TOP + 14 + (i - listStart) * ROW_H).size(LIST_W - 18, ROW_H - 2).build());
+                    .pos(MARGIN, rowY).size(LIST_W - 18, ROW_H - 2).build());
 
-            if (i == roleSelectedIndex) {
-                if (isPendingDelete) {
-                    addRenderableWidget(Button.builder(Component.literal("§c!"),
-                                    btn -> {
-                                        PacketDistributor.sendToServer(new DeleteRolePacket(id));
-                                        existingRoles.remove(idx);
-                                        roleSelectedIndex = -1;
-                                        rolePendingDelete  = null;
-                                        resetRoleForm();
-                                    })
-                            .pos(MARGIN + LIST_W - 16, PANEL_TOP + 14 + (i - listStart) * ROW_H)
-                            .size(16, ROW_H - 2).build());
-                } else {
-                    addRenderableWidget(Button.builder(Component.literal("§7x"),
-                                    btn -> { rolePendingDelete = id; rebuild(); })
-                            .pos(MARGIN + LIST_W - 16, PANEL_TOP + 14 + (i - listStart) * ROW_H)
-                            .size(16, ROW_H - 2).build());
-                }
+            if (isPendingDelete) {
+                addRenderableWidget(Button.builder(Component.literal("§c!"),
+                                btn -> {
+                                    PacketDistributor.sendToServer(new DeleteRolePacket(id));
+                                    existingRoles.remove(idx);
+                                    roleSelectedIndex = -1;
+                                    rolePendingDelete = null;
+                                    resetRoleForm();
+                                })
+                        .pos(MARGIN + LIST_W - 16, rowY).size(16, ROW_H - 2)
+                        .tooltip(Tooltip.create(Component.translatable(
+                                "rpessentials.gui.roles.confirm_delete_tooltip")))
+                        .build());
+            } else {
+                addRenderableWidget(Button.builder(Component.literal("§7x"),
+                                btn -> { rolePendingDelete = id; rebuild(); })
+                        .pos(MARGIN + LIST_W - 16, rowY).size(16, ROW_H - 2)
+                        .tooltip(Tooltip.create(Component.translatable(
+                                "rpessentials.gui.roles.delete_tooltip")))
+                        .build());
             }
         }
 
-        if (listEnd < existingRoles.size()) {
-            int remaining = existingRoles.size() - listEnd;
-            addRenderableWidget(Button.builder(
-                            Component.literal(I18n.get("rpessentials.gui.btn_more", remaining)),
-                            btn -> { roleListScroll++; rebuild(); })
-                    .pos(MARGIN, PANEL_TOP + 14 + LIST_VISIBLE * ROW_H + 2).size(LIST_W, 13).build());
+        if (roleStateIsNew) {
+            int row = listEnd - listStart;
+            if (row < LIST_VISIBLE) {
+                String shown = roleStateId.isEmpty() ? "?" : roleStateId;
+                roleInCreationButton = Button.builder(
+                                Component.literal("§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")"),
+                                btn -> {})
+                        .pos(MARGIN, PANEL_TOP + 14 + row * ROW_H + listOffY).size(LIST_W - 18, ROW_H - 2).build();
+                addRenderableWidget(roleInCreationButton);
+            } else {
+                roleInCreationButton = null;
+            }
+        } else {
+            roleInCreationButton = null;
         }
 
-        addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.roles.btn_new"),
+        addRenderableWidget(Button.builder(Component.literal(canScrollDown
+                                ? "▼ " + I18n.get("rpessentials.gui.btn_more", existingRoles.size() - listEnd)
+                                : "§8▼"),
+                        btn -> { if (canScrollDown) { roleListScroll++; rebuild(); } })
+                .pos(MARGIN, PANEL_TOP + 14 + LIST_VISIBLE * ROW_H + listOffY).size(LIST_W, 13).build());
+
+        addRenderableWidget(Button.builder(Component.literal(tabColorCode() + I18n.get("rpessentials.gui.roles.btn_new")),
                         btn -> resetRoleForm())
                 .pos(MARGIN, this.height - 26).size(LIST_W, 16).build());
     }
@@ -638,42 +684,93 @@ public class ProfessionEditorScreen extends Screen {
     // =========================================================================
     // RENDU
     // =========================================================================
+    private void renderInCreationTab(GuiGraphics g) {
+        if (mainTab == 0 && profStateIsNew) {
+            int listStart = profListScroll;
+            int listEnd   = Math.min(existingProfessions.size(), listStart + LIST_VISIBLE);
+            int row = listEnd - listStart;
+            if (row < LIST_VISIBLE) {
+                String shown = profStateId.isEmpty() ? "?" : profStateId;
+                String label = "§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")";
+                g.drawCenteredString(this.font, label, MARGIN + LIST_W / 2,
+                        PANEL_TOP + 14 + row * ROW_H + 5, 0xFFFFFF);
+            }
+        } else if (mainTab == 1 && roleStateIsNew) {
+            int listStart = roleListScroll;
+            int listEnd   = Math.min(existingRoles.size(), listStart + LIST_VISIBLE);
+            int row = listEnd - listStart;
+            if (row < LIST_VISIBLE) {
+                String shown = roleStateId.isEmpty() ? "?" : roleStateId;
+                String label = "§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")";
+                g.drawCenteredString(this.font, label, MARGIN + LIST_W / 2,
+                        PANEL_TOP + 14 + row * ROW_H + 5, 0xFFFFFF);
+            }
+        }
+    }
+
+    private int tabLineColor() {
+        return switch (mainTab) {
+            case 1 -> 0xFF5555FF; // Rôles, bleu
+            case 2 -> 0xFFFF5555; // Restrictions globales, rouge
+            default -> 0xFFFFFF55; // Professions, jaune
+        };
+    }
+
+    private String tabColorCode() {
+        return switch (mainTab) {
+            case 1 -> "§9";
+            case 2 -> "§c";
+            default -> "§e";
+        };
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         g.fill(0, 0, this.width, this.height, 0x99000000);
 
         // Panneau gauche
         g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
-        g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, PANEL_TOP + 2, 0xFF8B6914);
+        g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, PANEL_TOP + 2, tabLineColor());
 
         if (mainTab == 0) {
             g.drawString(this.font,
-                    "§6" + I18n.get("rpessentials.gui.profession_editor.professions_header",
+                    I18n.get("rpessentials.gui.profession_editor.professions_header",
                             existingProfessions.size()),
-                    MARGIN + 3, PANEL_TOP + 4, 0xFFD700, false);
+                    MARGIN + 3, PANEL_TOP + 4, tabLineColor(), false);
             if (existingProfessions.isEmpty())
                 g.drawString(this.font,
                         "§8" + I18n.get("rpessentials.gui.profession_editor.no_profession"),
                         MARGIN + 8, PANEL_TOP + 24, 0x666666, false);
         } else if (mainTab == 1) {
-            g.drawString(this.font, "§6" + I18n.get("rpessentials.gui.roles.header", existingRoles.size()),
-                    MARGIN + 3, PANEL_TOP + 4, 0xFFD700, false);
+            g.drawString(this.font, I18n.get("rpessentials.gui.roles.header", existingRoles.size()),
+                    MARGIN + 3, PANEL_TOP + 4, tabLineColor(), false);
             if (existingRoles.isEmpty())
                 g.drawString(this.font, "§8" + I18n.get("rpessentials.gui.roles.no_roles"),
                         MARGIN + 8, PANEL_TOP + 24, 0x666666, false);
         } else {
             g.drawString(this.font, I18n.get("rpessentials.gui.global.categories_header"),
-                    MARGIN + 3, PANEL_TOP + 4, 0xFFD700, false);
+                    MARGIN + 3, PANEL_TOP + 4, tabLineColor(), false);
         }
 
         // Panneau droit
         int formX = LIST_W + MARGIN * 3;
         g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, this.height - 10, 0xBB111111);
-        g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, PANEL_TOP + 2, 0xFF8B6914);
+        g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, PANEL_TOP + 2, tabLineColor());
 
         if (mainTab == 0) renderProfessionsOverlay(g, formX);
         else if (mainTab == 1) renderRolesOverlay(g, formX);
         else renderGlobalRestrictionsOverlay(g, formX);
+
+        if (profInCreationButton != null) {
+            String shown = profStateId.isEmpty() ? "?" : profStateId;
+            profInCreationButton.setMessage(Component.literal(
+                    "§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")"));
+        }
+        if (roleInCreationButton != null) {
+            String shown = roleStateId.isEmpty() ? "?" : roleStateId;
+            roleInCreationButton.setMessage(Component.literal(
+                    "§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")"));
+        }
 
         super.render(g, mouseX, mouseY, delta);
 
@@ -682,7 +779,7 @@ public class ProfessionEditorScreen extends Screen {
 
     private void renderGlobalRestrictionsOverlay(GuiGraphics g, int formX) {
         g.drawString(this.font,
-                I18n.get("rpessentials.gui.global.title") + " §8- §e"
+                tabColorCode() + I18n.get("rpessentials.gui.global.title") + " §8- §e"
                         + I18n.get("rpessentials.gui.global." + GLOBAL_CATEGORY_KEYS[globalActiveCategory]),
                 formX, PANEL_TOP + 5, 0xFFFFFF, false);
 
@@ -691,8 +788,8 @@ public class ProfessionEditorScreen extends Screen {
 
     private void renderProfessionsOverlay(GuiGraphics g, int formX) {
         String modeLabel = profStateIsNew
-                ? I18n.get("rpessentials.gui.profession_editor.mode_new")
-                : I18n.get("rpessentials.gui.profession_editor.mode_edit", profStateId);
+                ? tabColorCode() + I18n.get("rpessentials.gui.profession_editor.mode_new")
+                : tabColorCode() + I18n.get("rpessentials.gui.profession_editor.mode_edit", profStateId);
         g.drawString(this.font, modeLabel, formX, PANEL_TOP + 5, 0xFFFFFF, false);
 
         int formW = this.width - formX - MARGIN;
@@ -730,8 +827,8 @@ public class ProfessionEditorScreen extends Screen {
 
     private void renderRolesOverlay(GuiGraphics g, int formX) {
         String modeLabel = roleStateIsNew
-                ? I18n.get("rpessentials.gui.roles.mode_new")
-                : I18n.get("rpessentials.gui.roles.mode_edit", roleStateId);
+                ? tabColorCode() + I18n.get("rpessentials.gui.roles.mode_new")
+                : tabColorCode() + I18n.get("rpessentials.gui.roles.mode_edit", roleStateId);
         g.drawString(this.font, modeLabel, formX, PANEL_TOP + 5, 0xFFFFFF, false);
 
         int y = PANEL_TOP + 14;
@@ -924,6 +1021,10 @@ public class ProfessionEditorScreen extends Screen {
     }
 
     private void loadProfEntry(int index) {
+        loadProfEntry(index, true);
+    }
+
+    private void loadProfEntry(int index, boolean rebuildAfter) {
         profDirty = false;
         profPendingDelete = null;
         profSelectedIndex = index;
@@ -944,7 +1045,7 @@ public class ProfessionEditorScreen extends Screen {
         profActiveTab    = 0;
         profRestrictionInput = "";
         closeSuggestions();
-        rebuild();
+        if (rebuildAfter) rebuild();
     }
 
     private void resetProfForm() {
@@ -953,7 +1054,9 @@ public class ProfessionEditorScreen extends Screen {
         profStateId = ""; profStateName = ""; profColorIndex = 0; profActiveTab = 0;
         allowedCrafts = new ArrayList<>(); allowedBlocks = new ArrayList<>();
         allowedItems = new ArrayList<>(); allowedEquipment = new ArrayList<>();
-        profRestrictionInput = ""; closeSuggestions(); rebuild();
+        profRestrictionInput = "";
+        if (existingProfessions.size() >= LIST_VISIBLE) profListScroll = existingProfessions.size() - LIST_VISIBLE + 1;
+        closeSuggestions(); rebuild();
     }
 
     private List<String> getProfActiveList() {
@@ -999,6 +1102,10 @@ public class ProfessionEditorScreen extends Screen {
     }
 
     private void loadRoleEntry(int index) {
+        loadRoleEntry(index, true);
+    }
+
+    private void loadRoleEntry(int index, boolean rebuildAfter) {
         roleDirty = false;
         rolePendingDelete = null;
         roleSelectedIndex = index;
@@ -1009,7 +1116,7 @@ public class ProfessionEditorScreen extends Screen {
         roleStatePerms.clear();
         roleStatePerms.addAll(e.permissions());
         roleDirtyPerms.clear();
-        rebuild();
+        if (rebuildAfter) rebuild();
     }
 
     private void resetRoleForm() {
@@ -1017,7 +1124,9 @@ public class ProfessionEditorScreen extends Screen {
         roleSelectedIndex = -1; roleStateIsNew = true;
         roleStateId = ""; roleStateLp = "";
         roleDirtyPerms.clear();
-        roleStatePerms.clear(); rebuild();
+        roleStatePerms.clear();
+        if (existingRoles.size() >= LIST_VISIBLE) roleListScroll = existingRoles.size() - LIST_VISIBLE + 1;
+        rebuild();
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -1070,14 +1179,15 @@ public class ProfessionEditorScreen extends Screen {
                         .pos(midX - 140, startY + (i - first) * rowH).size(270, 18).build());
             }
 
-            if (scrollOffset > 0)
-                addRenderableWidget(Button.builder(Component.literal("▲"),
-                                btn -> { scrollOffset--; rebuild(); })
-                        .pos(midX + 134, startY).size(16, 18).build());
-            if (last < items.size() - 1)
-                addRenderableWidget(Button.builder(Component.literal("▼"),
-                                btn -> { scrollOffset++; rebuild(); })
-                        .pos(midX + 134, startY + Math.max(0, last - first) * rowH).size(16, 18).build());
+            boolean canScrollUp = scrollOffset > 0;
+            boolean canScrollDown = last < items.size() - 1;
+
+            addRenderableWidget(Button.builder(Component.literal(canScrollUp ? "▲" : "§8▲"),
+                            btn -> { if (canScrollUp) { scrollOffset--; rebuild(); } })
+                    .pos(midX + 134, startY).size(16, 18).build());
+            addRenderableWidget(Button.builder(Component.literal(canScrollDown ? "▼" : "§8▼"),
+                            btn -> { if (canScrollDown) { scrollOffset++; rebuild(); } })
+                    .pos(midX + 134, startY + Math.max(0, last - first) * rowH).size(16, 18).build());
 
             int addY = this.height - 60;
             boxX = midX - 150;

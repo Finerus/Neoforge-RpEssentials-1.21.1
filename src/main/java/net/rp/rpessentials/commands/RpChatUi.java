@@ -4,6 +4,9 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.commands.CommandSourceStack;
+import com.mojang.brigadier.context.CommandContext;
+import net.minecraft.server.level.ServerPlayer;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -11,6 +14,7 @@ import java.util.function.Supplier;
 public final class RpChatUi {
 
     public static final String LINE = "§6§m                              §r";
+    public static final String MINI_LINE = "§8§m          §r";
     public static final int PAGE_SIZE = 8;
 
     private RpChatUi() {}
@@ -25,6 +29,14 @@ public final class RpChatUi {
 
     public static String row(String... items) {
         return String.join(" §8| ", items) + "\n";
+    }
+
+    public static String header(String title) {
+        return "§6§l" + title + "\n" + LINE + "\n";
+    }
+
+    public static String section(String label) {
+        return MINI_LINE + "\n§e§l" + label + "\n";
     }
 
     public static String flag(BooleanSupplier supplier) {
@@ -52,5 +64,18 @@ public final class RpChatUi {
         return Component.literal("§e[" + label + "]").withStyle(style -> style
                 .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("§7" + command))));
+    }
+
+    public static void sendFormatted(CommandContext<CommandSourceStack> ctx, String formatted) {
+        boolean isPlayer = ctx.getSource().getEntity() instanceof ServerPlayer;
+        for (String line : formatted.split("\n")) {
+            if (line.isBlank()) continue;
+            if (isPlayer) {
+                ((ServerPlayer) ctx.getSource().getEntity()).sendSystemMessage(Component.literal(line));
+            } else {
+                String plain = line.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+                ctx.getSource().sendSuccess(() -> Component.literal(plain), false);
+            }
+        }
     }
 }

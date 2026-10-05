@@ -266,7 +266,6 @@ public class RpConfigCommands {
         RpEssentialsPatternUtils.clearCache();
         ImmersivePresetHelper.clearCache();
         RpEssentialsPermissions.clearCache();
-        RpEssentialsPermissions.clearCache();
         net.rp.rpessentials.TabListCache.reload();
 
         // Données persistantes (rechargement depuis fichier)
@@ -275,6 +274,7 @@ public class RpConfigCommands {
         net.rp.rpessentials.moderation.MuteManager.reload();
         net.rp.rpessentials.moderation.LastConnectionManager.reload();
         net.rp.rpessentials.moderation.WarnManager.reload();
+        net.rp.rpessentials.profession.PendingProfileManager.reload();
 
         // Sync client
         try {
@@ -384,7 +384,7 @@ public class RpConfigCommands {
         sb.append(LINE);
 
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 

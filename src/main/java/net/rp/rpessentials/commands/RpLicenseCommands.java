@@ -188,7 +188,7 @@ public class RpLicenseCommands {
         }
         sb.append(RpChatUi.LINE);
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 
@@ -228,7 +228,7 @@ public class RpLicenseCommands {
         }
         sb.append(RpChatUi.LINE);
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 
@@ -327,22 +327,23 @@ public class RpLicenseCommands {
 
         List<LicenseManager.AuditEntry> recent = log.subList(Math.max(0, log.size() - count), log.size());
         StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═ License Audit §8(").append(recent.size()).append("/").append(log.size()).append(") ═╗\n");
+        sb.append("§6License Audit §8(").append(recent.size()).append("/").append(log.size()).append(")\n")
+                .append(RpChatUi.LINE).append("\n");
         for (LicenseManager.AuditEntry e : recent) {
             String actionColor = switch (e.action) {
                 case "GIVE", "GIVE_RP" -> "§a";
                 case "REVOKE", "EXPIRE_RP" -> "§c";
                 default -> "§7";
             };
-            sb.append("§6║ ").append(actionColor).append(e.action)
+            sb.append(actionColor).append(e.action)
                     .append(" §7| §f").append(e.targetName)
                     .append(" §7| by §e").append(e.staffName)
                     .append(" §7| §b").append(e.profession)
                     .append(" §8(").append(e.timestamp).append(")\n");
         }
-        sb.append("§6╚══════════════════════════════╝");
+        sb.append(RpChatUi.LINE);
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 

@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.commands.RpChatUi;
 import net.rp.rpessentials.config.ChatConfig;
 
 import java.text.SimpleDateFormat;
@@ -317,43 +318,38 @@ public class RpEssentialsChatFormatter {
     // =========================================================================
     // /colors
     // =========================================================================
-
     public static Component getColorsHelp() {
         StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═══════════════════════════════╗\n");
-        sb.append("§6║  §e§lAVAILABLE COLORS§r          §6║\n");
-        sb.append("§6╠═══════════════════════════════╣\n");
+        sb.append(RpChatUi.header("Available Colors"));
+
         String[][] colors = {
-                {"§0","BLACK","§00"},    {"§1","DARK_BLUE","§11"},
-                {"§2","DARK_GREEN","§22"},{"§3","DARK_AQUA","§33"},
-                {"§4","DARK_RED","§44"}, {"§5","DARK_PURPLE","§55"},
-                {"§6","GOLD","§66"},     {"§7","GRAY","§77"},
-                {"§8","DARK_GRAY","§88"},{"§9","BLUE","§99"},
-                {"§a","GREEN","§aa"},    {"§b","AQUA","§bb"},
-                {"§c","RED","§cc"},      {"§d","LIGHT_PURPLE","§dd"},
-                {"§e","YELLOW","§ee"},   {"§f","WHITE","§ff"}
+                {"§0","0","BLACK"},     {"§1","1","DARK_BLUE"},
+                {"§2","2","DARK_GREEN"},{"§3","3","DARK_AQUA"},
+                {"§4","4","DARK_RED"},  {"§5","5","DARK_PURPLE"},
+                {"§6","6","GOLD"},      {"§7","7","GRAY"},
+                {"§8","8","DARK_GRAY"}, {"§9","9","BLUE"},
+                {"§a","a","GREEN"},     {"§b","b","AQUA"},
+                {"§c","c","RED"},       {"§d","d","LIGHT_PURPLE"},
+                {"§e","e","YELLOW"},    {"§f","f","WHITE"}
         };
         for (String[] c : colors)
-            sb.append(String.format("§6║ %s %-15s %s §6║\n", c[0] + "███", c[1], c[2]));
-        sb.append("§6╠═══════════════════════════════╣\n");
-        sb.append("§6║ §7Formatting Codes:            §6║\n");
-        sb.append("§6║ §l§lBold§r §7(§l)                  §6║\n");
-        sb.append("§6║ §o§oItalic§r §7(§o)                §6║\n");
-        sb.append("§6║ §n§nUnderline§r §7(§n)             §6║\n");
-        sb.append("§6║ §m§mStrikethrough§r §7(§m)         §6║\n");
-        sb.append("§6║ §k§kObfuscated§r §7(§k)            §6║\n");
-        sb.append("§6║ §r§rReset§r §7(§r)                 §6║\n");
-        sb.append("§6╠═══════════════════════════════╣\n");
-        sb.append("§6║ §eName variables (chat formats):§6║\n");
-        sb.append("§6║ §7$name/§7$nick  §fnick or username  §6║\n");
-        sb.append("§6║ §7$real         §falways MC username §6║\n");
-        sb.append("§6║ §7$nick_real    §fNick (RealName)   §6║\n");
-        sb.append("§6╠═══════════════════════════════╣\n");
-        sb.append("§6║ §eName variables (RP commands): §6║\n");
-        sb.append("§6║ §7{player}/{nick} §fnick or username §6║\n");
-        sb.append("§6║ §7{real}          §falways MC name   §6║\n");
-        sb.append("§6║ §7{nick_real}     §fNick (RealName)  §6║\n");
-        sb.append("§6╚═══════════════════════════════╝");
+            sb.append(c[0]).append("███ §7").append(c[2]).append(" §8(&").append(c[1]).append(")\n");
+
+        sb.append(RpChatUi.section("Formatting"));
+        sb.append("§lBold§r §7(&l)   §oItalic§r §7(&o)   §nUnderline§r §7(&n)\n");
+        sb.append("§mStrikethrough§r §7(&m)   §kObfuscated§r §7(&k)   §rReset §7(&r)\n");
+
+        sb.append(RpChatUi.section("Chat Variables"));
+        sb.append("§f$name/$nick §8nick or username\n");
+        sb.append("§f$real §8always MC username\n");
+        sb.append("§f$nick_real §8Nick (RealName)\n");
+
+        sb.append(RpChatUi.section("RP Command Variables"));
+        sb.append("§f{player}/{nick} §8nick or username\n");
+        sb.append("§f{real} §8always MC name\n");
+        sb.append("§f{nick_real} §8Nick (RealName)\n");
+
+        sb.append(RpChatUi.LINE);
         return Component.literal(sb.toString());
     }
 }

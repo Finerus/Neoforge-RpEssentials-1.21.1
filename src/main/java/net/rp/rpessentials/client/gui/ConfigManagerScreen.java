@@ -46,7 +46,6 @@ public class ConfigManagerScreen extends Screen {
     // =========================================================================
     // LAYOUT CONSTANTS
     // =========================================================================
-
     private static final int FILE_PANEL_W = 90;
     private static final int MARGIN       = 6;
     private static final int PANEL_TOP    = 16;
@@ -266,11 +265,16 @@ public class ConfigManagerScreen extends Screen {
                 boxW = Math.max(boxW, 80);
                 int boxX = formX + formW - boxW - btnW - 4;
 
+                String displayValue = currentEdit.replace("\n", ", ");
+
                 EditBox box = new EditBox(this.font, boxX, widgetY, boxW, 16,
                         Component.literal(entry.key()));
                 box.setMaxLength(1024);
-                box.setValue(currentEdit);
-                box.setResponder(val -> markChange(entry.fullPath(), val, entry.currentValue()));
+                box.setValue(displayValue);
+                box.setResponder(val -> {
+                    String normalized = val.replace(", ", "\n").replace(",", "\n");
+                    markChange(entry.fullPath(), normalized, entry.currentValue());
+                });
                 if (!entry.comment().isBlank()) {
                     box.setTooltip(Tooltip.create(
                             Component.literal(String.format(
@@ -327,16 +331,13 @@ public class ConfigManagerScreen extends Screen {
         boolean canScrollUp   = scrollOffset > 0;
         boolean canScrollDown = canScrollDown(availableH);
 
-        if (canScrollUp) {
-            addRenderableWidget(Button.builder(Component.literal("▲"),
-                            btn -> { scrollOffset = Math.max(0, scrollOffset - 1); rebuild(); })
-                    .pos(formX + formW - 20, PANEL_TOP + 4).size(18, 12).build());
-        }
-        if (canScrollDown) {
-            addRenderableWidget(Button.builder(Component.literal("▼"),
-                            btn -> { scrollOffset++; rebuild(); })
-                    .pos(formX + formW - 20, this.height - FOOTER_H - 16).size(18, 12).build());
-        }
+        addRenderableWidget(Button.builder(Component.literal(canScrollUp ? "▲" : "§8▲"),
+                        btn -> { if (canScrollUp) { scrollOffset = Math.max(0, scrollOffset - 1); rebuild(); } })
+                .pos(formX + formW - 20, PANEL_TOP + 4).size(18, 12).build());
+
+        addRenderableWidget(Button.builder(Component.literal(canScrollDown ? "▼" : "§8▼"),
+                        btn -> { if (canScrollDown) { scrollOffset++; rebuild(); } })
+                .pos(formX + formW - 20, this.height - FOOTER_H - 16).size(18, 12).build());
     }
 
     // ── Footer (Apply / Discard buttons) ──────────────────────────────────
@@ -726,15 +727,16 @@ public class ConfigManagerScreen extends Screen {
         private int scrollOffset = 0;
 
         ListEditorSubScreen(ConfigManagerScreen parent, String fullPath,
-                            String key, String commaValue) {
+                            String key, String rawValue) {
             super(Component.literal(I18n.get("rpessentials.gui.config.list.title",
                     ConfigManagerScreen.formatKeyName(key))));
             this.parent        = parent;
             this.fullPath      = fullPath;
-            this.originalComma = commaValue;
+            this.originalComma = rawValue;
             this.items = new ArrayList<>();
-            if (!commaValue.isBlank()) {
-                for (String s : commaValue.split(",")) {
+            if (!rawValue.isBlank()) {
+                String[] parts = rawValue.contains("\n") ? rawValue.split("\n") : rawValue.split(",");
+                for (String s : parts) {
                     String t = s.trim();
                     if (!t.isEmpty()) this.items.add(t);
                 }
@@ -782,16 +784,8 @@ public class ConfigManagerScreen extends Screen {
 
             int btnY = this.height - 48;
 
-            // Scroll
+            //noinspection SuspiciousIndentAfterControlStatement
             if (scrollOffset > 0)
-                addRenderableWidget(Button.builder(Component.literal("▲"),
-                                btn -> { scrollOffset = Math.max(0, scrollOffset - 1); rebuild(); })
-                        .pos(midX - 170, startY).size(16, 18).build());
-            if (last < items.size() - 1)
-                addRenderableWidget(Button.builder(Component.literal("▼"),
-                                btn -> { scrollOffset++; rebuild(); })
-                        .pos(midX - 170, startY + (last - first) * rowH).size(16, 18).build());
-
             // Add new entry
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_add"),
                             btn -> { items.add(""); rebuild(); })
@@ -801,7 +795,7 @@ public class ConfigManagerScreen extends Screen {
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_save"), btn -> {
                 // Remove empty entries
                 items.removeIf(String::isBlank);
-                String result = String.join(", ", items);
+                String result = String.join("\n", items);
                 parent.onListEdited(fullPath, result, originalComma);
             }).pos(midX - 55, btnY).size(110, 20).build());
 

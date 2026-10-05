@@ -70,7 +70,6 @@ public record SaveProfessionPacket(
     // =========================================================================
     // HANDLER — côté SERVEUR
     // =========================================================================
-
     public static void handleOnServer(SaveProfessionPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
@@ -82,6 +81,9 @@ public record SaveProfessionPacket(
                 return;
             }
 
+            String cleanName  = packet.displayName().trim().replace("&", "§");
+            String cleanColor = packet.color().trim().replace("&", "§");
+
             try {
                 // ── 1. Mise à jour de la liste des professions ────────────────────
                 List<? extends String> current = ProfessionConfig.PROFESSIONS.get();
@@ -91,14 +93,14 @@ public record SaveProfessionPacket(
                 for (String line : current) {
                     String[] parts = line.split(";", 2);
                     if (parts.length >= 1 && parts[0].trim().equalsIgnoreCase(cleanId)) {
-                        updated.add(cleanId + ";" + packet.displayName().trim() + ";" + packet.color().trim());
+                        updated.add(cleanId + ";" + cleanName + ";" + cleanColor);
                         found = true;
                     } else {
                         updated.add(line);
                     }
                 }
                 if (!found) {
-                    updated.add(cleanId + ";" + packet.displayName().trim() + ";" + packet.color().trim());
+                    updated.add(cleanId + ";" + cleanName + ";" + cleanColor);
                 }
                 ProfessionConfig.PROFESSIONS.set(updated);
                 ProfessionConfig.PROFESSIONS.save();

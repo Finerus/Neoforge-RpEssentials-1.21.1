@@ -180,7 +180,7 @@ public class ModerationConfig {
                         "Set to '' (empty string) to disable staff broadcast."
                 )
                 .define("addedBroadcastFormat",
-                        "§6[STAFF][WARN] §e{staff} §7sent a warn to §e{player} §7(warn #{id})| §f{reason} §7| {expiry}");
+                        "§6[WARN] §e{staff} §7sent a warn to §e{player} §7(warn #{id})| §f{reason} §7| {expiry}");
 
         WARN_REMOVED_BROADCAST_FORMAT = BUILDER
                 .comment(
@@ -189,7 +189,7 @@ public class ModerationConfig {
                         "Set to '' (empty string) to disable staff broadcast."
                 )
                 .define("removedBroadcastFormat",
-                        "§6[STAFF][WARN] §e{staff} §7has deleted the warn §e#{id}§7.");
+                        "§6[WARN] §e{staff} §7has deleted the warn §e#{id}§7.");
 
         BUILDER.pop();
 

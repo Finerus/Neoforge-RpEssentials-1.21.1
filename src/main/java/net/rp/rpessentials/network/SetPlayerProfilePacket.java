@@ -105,7 +105,8 @@ public record SetPlayerProfilePacket(
         if (packet.resetNickname()) {
             net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(), "");
         } else if (!packet.nickname().trim().isEmpty()) {
-            net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(), packet.nickname().trim());
+            net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(),
+                    packet.nickname().trim().replace("&", "§"));
         }
 
         if (!packet.role().trim().isEmpty()) {
@@ -178,7 +179,7 @@ public record SetPlayerProfilePacket(
             NicknameManager.removeNickname(target.getUUID());
             report.append(" §fnick=§8(reset)");
         } else {
-            String nick = packet.nickname().trim();
+            String nick = packet.nickname().trim().replace("&", "§");
             if (!nick.isEmpty()) {
                 NicknameManager.setNickname(target.getUUID(), nick);
                 report.append(" §fnick=").append(nick);

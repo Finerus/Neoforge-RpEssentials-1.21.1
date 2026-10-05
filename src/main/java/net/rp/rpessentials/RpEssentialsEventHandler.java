@@ -54,35 +54,60 @@ public class RpEssentialsEventHandler {
         if (pending != null) {
             StringBuilder logSummary = new StringBuilder();
 
-            if (pending.nickname != null && !pending.nickname.isEmpty()) {
-                NicknameManager.setNickname(player.getUUID(), pending.nickname);
-                logSummary.append("nickname ").append(player.getName().getString())
-                        .append(" -> ").append(pending.nickname);
+            try {
+                if (pending.nickname != null && !pending.nickname.isEmpty()) {
+                    NicknameManager.setNickname(player.getUUID(), pending.nickname);
+                    logSummary.append("nickname ").append(player.getName().getString())
+                            .append(" -> ").append(pending.nickname);
+                }
+            } catch (Exception e) {
+                RpEssentials.LOGGER.error("[RPEssentials] Failed to apply prepared nickname for {}",
+                        player.getName().getString(), e);
             }
-            if (pending.role != null && !pending.role.isEmpty()) {
-                SetPlayerProfilePacket.applyRole(server, player, pending.role);
-                if (logSummary.length() > 0) logSummary.append(", ");
-                logSummary.append("role \"").append(pending.role).append("\"");
+
+            try {
+                if (pending.role != null && !pending.role.isEmpty()) {
+                    SetPlayerProfilePacket.applyRole(server, player, pending.role);
+                    if (logSummary.length() > 0) logSummary.append(", ");
+                    logSummary.append("role \"").append(pending.role).append("\"");
+                }
+            } catch (Exception e) {
+                RpEssentials.LOGGER.error("[RPEssentials] Failed to apply prepared role for {}",
+                        player.getName().getString(), e);
             }
+
             if (!pending.licenses.isEmpty()) {
+                int given = 0;
                 for (String profId : pending.licenses) {
-                    LicenseManager.addLicense(player.getUUID(), profId);
-                    LicenseHelper.giveLicenseItem(server, null, player, profId);
+                    try {
+                        LicenseManager.addLicense(player.getUUID(), profId);
+                        boolean itemGiven = LicenseHelper.giveLicenseItem(server, null, player, profId);
+                        if (!itemGiven) {
+                            RpEssentials.LOGGER.warn("[RPEssentials] Prepared license '{}' for {} has no matching profession, item not given.",
+                                    profId, player.getName().getString());
+                        } else {
+                            given++;
+                        }
+                    } catch (Exception e) {
+                        RpEssentials.LOGGER.error("[RPEssentials] Failed to give prepared license '{}' to {}",
+                                profId, player.getName().getString(), e);
+                    }
                 }
                 ProfessionRestrictionManager.invalidatePlayerCache(player.getUUID());
                 ProfessionSyncHelper.syncToPlayer(player);
-                if (logSummary.length() > 0) logSummary.append(", ");
-                logSummary.append("gave ").append(pending.licenses.size())
-                        .append(" profession(s) (").append(String.join(", ", pending.licenses)).append(")");
+                if (given > 0) {
+                    if (logSummary.length() > 0) logSummary.append(", ");
+                    logSummary.append("gave ").append(given)
+                            .append(" profession(s) (").append(String.join(", ", pending.licenses)).append(")");
+                }
             }
 
             if (logSummary.length() > 0) {
                 RpEssentials.LOGGER.info("[RPEssentials] Applied prepared profile for {}: {}",
                         player.getName().getString(), logSummary);
+                player.sendSystemMessage(Component.literal(
+                        "§a[RPEssentials] Your profile was prepared in advance by staff."));
             }
-
-            player.sendSystemMessage(Component.literal(
-                    "§a[RPEssentials] Your profile was prepared in advance by staff."));
         }
 
         // Message join — cast via IRpPlayerList (interface injectée par MixinPlayerList)

@@ -357,7 +357,7 @@ public class RpEssentialsConfig {
                         "",
                         "Available permissions:",
                         "  isStaff                : access to staff commands",
-                        "  tabWhitelist           : always shown clearly in the tab list",
+                        "  tabWhitelist           : always visible in the tab list, bypassing distance and obfuscation (Always Visible)",
                         "  scheduleWhitelist      : can connect outside server hours",
                         "  professionWhitelist    : bypasses profession restrictions",
                         "  seeNicknames           : sees 'Nickname (RealName)' in tab",

@@ -253,7 +253,7 @@ public class RpNicknameCommands {
             if (i < players.size() - 1) sb.append("§7, ");
         }
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return players.size();
     }
 
@@ -289,7 +289,7 @@ public class RpNicknameCommands {
         }
         sb.append("§6§m                              §r");
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 }

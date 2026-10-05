@@ -1,6 +1,63 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [5.0.0] (Beta 3)
+
+### Breaking Changes
+
+* **`opsSeeAll` no longer tied to `isStaff`:** the `isStaff` role permission now only grants access to staff commands, it no longer grants tab list visibility on its own. Visibility previously inherited from `isStaff` + `opsSeeAll` now requires either the vanilla OP level (2+) with `opsSeeAll` enabled, or the `seeAll` role permission explicitly. Staff roles that relied on this combination must be given the `seeAll` permission manually after updating.
+
+### Added
+
+* **`RpChatUi.header` / `RpChatUi.section` / `RpChatUi.MINI_LINE`:** new helpers to structure lightweight command output. `header` marks a command's title, `section` introduces a sub block inside a command, `MINI_LINE` separates sections without the weight of a full `LINE`.
+
+* **"In creation" indicator in the Profession/Role editor:** while creating a new profession or role, the left side list now shows a live, italic yellow entry with the typed ID and "(in creation)", so staff can see its position in the list before saving. (QoL)
+
+### Improved
+
+* **All remaining commands converted to the lightweight display:** `/mywarn`, `/rpessentials warn list`, `/rpessentials warn info`, `/rpessentials note list`, `/rpessentials deathrp history`, `/rpessentials deathrp status`, `/rpessentials inspect` and `/colors` no longer use the old box style (`╔ ║ ╚ ╠`), matching the rest of the mod (please note that some of those characters might still be here because they are tied to the config).
+
+* **`/colors` now actually shows the color codes again:** the command displays each color swatch next to its name and its `&x` code, along with formatting codes and variable references, instead of only showing colored text with nothing to reference.
+
+* **`tabWhitelist` role permission relabeled "Always Visible":** the config key is unchanged, only the display name in the Role Editor GUI and the config comment were updated to avoid confusion with command access permissions.
+
+* **Profession and Role editor opens on the first entry:** the editor now automatically selects and loads the first profession and the first role when opened, instead of starting on an empty "new entry" form.
+
+* **Scroll arrows extended to the Profession/Role editor and Config Manager:** up/down arrows are now always visible and greyed out when inactive across `ProfessionEditorScreen` (profession list, role list, restriction list sub-screen, global restrictions) and `ConfigManagerScreen` (entries panel, list editor sub-screen), matching the Player Profile GUI.
+
+* **Delete button of the Profession/Role editor:** they are now always shown and a double check before the deletion is shown.
+
+* **Role field in the Player Profile GUI is now buttons only:** only the clickable role shortcut buttons remain, no more text box.
+
+* **Tab labels and left-panel headers now use a per-tab accent color:** in the Player Profile GUI (Profile/Stats/Notes) and the Profession Editor GUI (Professions/Roles/Global Restrictions), the top decorative line, the selected tab label, and the left list header ("Players (X)", "Professions (X)", "Roles (X)", "Categories") now share a color tied to the active sub-tab instead of a single static gold. The Config Manager GUI is unchanged.
+
+### Fixed
+
+* **Prepared player profiles silently failing:** applying a prepared profile (nickname, role, licenses) on first join is now wrapped per step. A single failing step (e.g. an unknown profession in a prepared license) no longer aborts the nickname, role, join message, mute check and nametag sync that follow it. The "profile prepared by staff" message is now only sent if something was actually applied.
+
+* **Multi-line command output unreadable in logs:** commands using the lightweight display were sent as a single multi-line chat `Component`, which logged as one line full of literal `\n` and section codes on both server console and client log. Output is now split into one chat message per line for players, and condensed into a single plain line for the server console.
+
+* **`/rp selfnick` hidden entirely when disabled:** instead of showing the command and replying with a refusal message, the command no longer appears or executes at all when `enableSelfNick` is false in config.
+
+* **Garbled "CR" character at the end of some warn messages:** a stray carriage return character embedded in multi-line config values (via `WARN_RECEIVED_PERM` / `WARN_RECEIVED_TEMP`) rendered as an unsupported glyph box in chat. All messages read through `MessagesConfig.get()` are now stripped of carriage returns.
+
+* **Selected tab label not actually bold in the Player Profile GUI:** the bold formatting code was placed before the color code, which silently canceled it in Minecraft's text formatting. The color code now comes first.
+
+* **Profession Editor top tabs shifting on click:** the selected and unselected tab labels had a different character length (extra leading spaces), causing the centered text to visibly shift position when switching tabs.
+
+### Technical
+
+* **`RpChatUi.sendFormatted`:** new helper that dispatches a formatted multi-line string correctly depending on the command source, one `sendSystemMessage` per line for a player, one compact color-stripped line for the console. Used by every command converted to the lightweight display.
+
+### Migration Notes
+
+* Any staff role that depended on `opsSeeAll` + `isStaff` for tab list visibility needs the `seeAll` role permission added explicitly, or the viewing player needs vanilla OP level 2+.
+
+### Personnal note
+
+Dude the new song of JT Music and Fabvl is absolute fire! 
+On a more serious note, this should be the last beta version!
+
 ## [5.0.0] (Beta 2)
 
 ### Breaking Changes

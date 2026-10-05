@@ -30,7 +30,6 @@ public class WarnManager {
     // =========================================================================
     // INNER CLASS
     // =========================================================================
-
     public static class WarnEntry {
         public String id;
         public String targetUUID;
@@ -41,7 +40,8 @@ public class WarnManager {
         public long issuedAt;       // epoch millis
         public Long expiresAt;      // null = permanent
 
-        public WarnEntry() {}
+        public WarnEntry() {
+        }
 
         public WarnEntry(String id, String targetUUID, String targetName,
                          String issuerUUID, String issuerName,
@@ -57,7 +57,6 @@ public class WarnManager {
         }
 
         // ---- Helpers ----
-
         public boolean isExpired() {
             return expiresAt != null && System.currentTimeMillis() > expiresAt;
         }
@@ -76,16 +75,16 @@ public class WarnManager {
          */
         public String getFormattedExpiry() {
             if (expiresAt == null) return "Permanent";
-            if (isExpired()) return "§cExpiré";
+            if (isExpired()) return "§cExpired";
             long remaining = expiresAt - System.currentTimeMillis();
             long totalMinutes = remaining / 60_000;
-            long days    = totalMinutes / 1440;
-            long hours   = (totalMinutes % 1440) / 60;
+            long days = totalMinutes / 1440;
+            long hours = (totalMinutes % 1440) / 60;
             long minutes = totalMinutes % 60;
 
-            if (days > 0) return days + "j " + hours + "h restants";
-            if (hours > 0) return hours + "h " + minutes + "min restantes";
-            return minutes + "min restantes";
+            if (days > 0) return days + "d " + hours + "h remaining";
+            if (hours > 0) return hours + "h " + minutes + "min remaining";
+            return minutes + "min remaining";
         }
     }
 

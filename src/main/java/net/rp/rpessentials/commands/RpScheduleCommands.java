@@ -247,7 +247,7 @@ public class RpScheduleCommands {
         sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_FOOTER));
 
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 

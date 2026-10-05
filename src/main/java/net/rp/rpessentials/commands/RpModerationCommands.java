@@ -176,14 +176,15 @@ public class RpModerationCommands {
                                 return 1;
                             }
                             StringBuilder sb = new StringBuilder();
-                            sb.append(MessagesConfig.get(MessagesConfig.NOTE_LIST_HEADER, "player", target.getName().getString())).append("\n");
+                            sb.append(MessagesConfig.get(MessagesConfig.NOTE_LIST_HEADER, "player", target.getName().getString())).append("\n")
+                                    .append(RpChatUi.LINE).append("\n");
                             for (NoteManager.NoteEntry n : notes) {
-                                sb.append("§6║ §e#").append(n.id).append(" §8[").append(n.timestamp).append("§8] §7by §f").append(n.authorName)
-                                        .append("\n§6║  §f").append(n.text).append("\n");
+                                sb.append("§e#").append(n.id).append(" §8[").append(n.timestamp).append("§8] §7by §f").append(n.authorName)
+                                        .append("\n §7-> §f").append(n.text).append("\n");
                             }
-                            sb.append("§6╚═══════════════════════════════════╝");
+                            sb.append(RpChatUi.LINE);
                             String msg = sb.toString();
-                            ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+                            RpChatUi.sendFormatted(ctx, msg);
                             return 1;
                         })));
 
@@ -242,9 +243,8 @@ public class RpModerationCommands {
     }
 
     // =========================================================================
-    // INSPECT — enrichi avec playtime 4.1.6
+    // INSPECT
     // =========================================================================
-
     public static LiteralArgumentBuilder<CommandSourceStack> buildInspect() {
         return Commands.literal("inspect")
                 .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
@@ -263,7 +263,6 @@ public class RpModerationCommands {
     // =========================================================================
     // WARN HANDLERS
     // =========================================================================
-
     private static int warnAdd(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         if (!warnSystemCheck(ctx)) return 0;
         ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
@@ -362,14 +361,14 @@ public class RpModerationCommands {
         if (!warnSystemCheck(ctx)) return 0;
         var all = WarnManager.getAll();
         if (all.isEmpty()) { ctx.getSource().sendSuccess(() -> Component.literal("§7[RpEssentials] No warns."), false); return 1; }
-        StringBuilder sb = new StringBuilder("§6╔═ All warns (" + all.size() + ") ═════════╗\n");
+        StringBuilder sb = new StringBuilder("§6All warns §7(" + all.size() + ")\n" + RpChatUi.LINE + "\n");
         for (WarnManager.WarnEntry w : all) {
             String tag = w.isExpired() ? "§8[EXP]" : (w.isPermanent() ? "§c[PERM]" : "§e[TEMP]");
-            sb.append("§6║ ").append(tag).append(" §e#").append(w.id).append(" §7→ §f").append(w.targetName).append(" §7— ").append(w.reason).append("\n");
+            sb.append(tag).append(" §e#").append(w.id).append(" §7-> §f").append(w.targetName).append(" §7- ").append(w.reason).append("\n");
         }
-        sb.append("§6╚══════════════════════════════╝");
+        sb.append(RpChatUi.LINE);
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 
@@ -383,13 +382,14 @@ public class RpModerationCommands {
                 : (w.isExpired() ? MessagesConfig.get(MessagesConfig.WARN_TYPE_EXPIRED) : MessagesConfig.get(MessagesConfig.WARN_TYPE_TEMPORARY));
         ctx.getSource().sendSuccess(() -> Component.literal(
                 MessagesConfig.get(MessagesConfig.WARN_INFO_HEADER, "id", w.id) + "\n"
+                        + RpChatUi.LINE + "\n"
                         + MessagesConfig.get(MessagesConfig.WARN_INFO_PLAYER_LABEL) + "§e" + w.targetName + "\n"
                         + MessagesConfig.get(MessagesConfig.WARN_INFO_STAFF_LABEL)  + "§e" + w.issuerName + "\n"
                         + MessagesConfig.get(MessagesConfig.WARN_INFO_REASON_LABEL) + "§f" + w.reason + "\n"
                         + MessagesConfig.get(MessagesConfig.WARN_INFO_DATE_LABEL)   + "§f" + w.getFormattedDate() + "\n"
                         + MessagesConfig.get(MessagesConfig.WARN_INFO_TYPE_LABEL)   + typeStr + "\n"
                         + MessagesConfig.get(MessagesConfig.WARN_INFO_EXPIRY_LABEL) + "§f" + w.getFormattedExpiry() + "\n"
-                        + "§6╚════════════════════════════════╝"), false);
+                        + RpChatUi.LINE), false);
         return 1;
     }
 
@@ -425,19 +425,20 @@ public class RpModerationCommands {
         List<WarnManager.WarnEntry> list = showAll ? WarnManager.getWarns(uuid) : WarnManager.getActiveWarns(uuid);
         if (list.isEmpty()) {
             String msg = showAll ? MessagesConfig.get(MessagesConfig.WARN_LIST_NONE, "player", name) : MessagesConfig.get(MessagesConfig.WARN_LIST_NONE_SELF);
-            ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+            RpChatUi.sendFormatted(ctx, msg);
             return 1;
         }
         long active = list.stream().filter(w -> !w.isExpired()).count();
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.WARN_LIST_HEADER, "player", name, "count", String.valueOf(active))).append("\n");
+        sb.append(MessagesConfig.get(MessagesConfig.WARN_LIST_HEADER, "player", name, "count", String.valueOf(active))).append("\n")
+                .append(RpChatUi.LINE).append("\n");
         for (WarnManager.WarnEntry w : list) {
             String tag = w.isExpired() ? MessagesConfig.get(MessagesConfig.WARN_STATUS_EXPIRED_TAG)
                     : (w.isPermanent() ? MessagesConfig.get(MessagesConfig.WARN_STATUS_PERM_TAG) : MessagesConfig.get(MessagesConfig.WARN_STATUS_TEMP_TAG));
-            sb.append("§6║ ").append(tag).append(" §7#").append(w.id).append(" §8(").append(w.getFormattedDate()).append(") §7by §f").append(w.issuerName)
-                    .append("\n§6║   §7→ §f").append(w.reason).append(" §8| ").append(w.getFormattedExpiry()).append("\n");
+            sb.append(tag).append(" §7#").append(w.id).append(" §8(").append(w.getFormattedDate()).append(") §7by §f").append(w.issuerName)
+                    .append("\n §7-> §f").append(w.reason).append(" §8| ").append(w.getFormattedExpiry()).append("\n");
         }
-        sb.append("§6╚═══════════════════════════════════╝");
+        sb.append(RpChatUi.LINE);
         ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;
     }
@@ -503,9 +504,9 @@ public class RpModerationCommands {
         String yes = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_YES);
         String no = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_NO);
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_HEADER)).append("\n§6╠═══════════════════════════════\n");
+        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_HEADER)).append("\n").append(RpChatUi.LINE).append("\n");
         sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_GLOBAL, "value", global ? active : inactive)).append("\n");
-        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_WHITELIST, "value", wlRemove ? yes : no)).append("\n§6╠═══════════════════════════════\n");
+        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_WHITELIST, "value", wlRemove ? yes : no)).append("\n").append(RpChatUi.LINE).append("\n");
         sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_OVERRIDES)).append("\n");
         Map<UUID, Boolean> overrides = DeathRPManager.getAllOverrides();
         MinecraftServer server = ctx.getSource().getServer();
@@ -519,12 +520,12 @@ public class RpModerationCommands {
                     else if (server.getProfileCache() != null) name = server.getProfileCache().get(e.getKey())
                             .map(com.mojang.authlib.GameProfile::getName).orElse(name);
                 }
-                sb.append("§6║  §e").append(name).append(" §7→ ").append(e.getValue() ? active : inactive).append("\n");
+                sb.append(" §e").append(name).append(" §7-> ").append(e.getValue() ? active : inactive).append("\n");
             }
         }
-        sb.append("§6═══════════════════════════════");
+        sb.append(RpChatUi.LINE);
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 
@@ -533,22 +534,22 @@ public class RpModerationCommands {
         String label = target != null ? target.getName().getString() : "All players";
         if (h.isEmpty()) { ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.DEATHRP_HISTORY_NONE, "player", label)), false); return 1; }
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_HISTORY_HEADER, "player", label)).append("\n");
+        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_HISTORY_HEADER, "player", label)).append("\n")
+                .append(RpChatUi.LINE).append("\n");
         for (int i = 0; i < h.size(); i++) {
             DeathRPManager.DeathHistoryEntry e = h.get(i);
-            if (target == null) sb.append("§6║ §e#").append(i+1).append(" §f").append(e.playerName).append(" §8— ").append(e.timestamp).append(" §7— ").append(e.damageCause).append("\n");
+            if (target == null) sb.append("§e#").append(i+1).append(" §f").append(e.playerName).append(" §8: ").append(e.timestamp).append(" §7: ").append(e.damageCause).append("\n");
             else sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_HISTORY_ENTRY, "index", String.valueOf(i+1), "date", e.timestamp, "cause", e.damageCause)).append("\n");
         }
-        sb.append("§6╚═══════════════════════════════════╝");
+        sb.append(RpChatUi.LINE);
         String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        RpChatUi.sendFormatted(ctx, msg);
         return 1;
     }
 
     // =========================================================================
-    // INSPECT — enrichi 4.1.6 (playtime + uptime session)
+    // INSPECT
     // =========================================================================
-
     private static int inspectPlayer(CommandContext<CommandSourceStack> ctx) {
         String targetName = StringArgumentType.getString(ctx, "player");
         MinecraftServer server = ctx.getSource().getServer();
@@ -565,13 +566,12 @@ public class RpModerationCommands {
         boolean isMuted = MuteManager.isMuted(uuid);
         boolean isOnline = online != null;
 
-        // ── Playtime (4.1.6) ──────────────────────────────────────────────────
         long totalPlaytimeMs   = net.rp.rpessentials.moderation.PlaytimeManager.getTotalPlaytimeMs(uuid);
         long sessionMs         = net.rp.rpessentials.moderation.PlaytimeManager.getCurrentSessionMs(uuid);
         String totalPlaytimeStr = net.rp.rpessentials.moderation.PlaytimeManager.format(totalPlaytimeMs);
         String sessionStr       = net.rp.rpessentials.moderation.PlaytimeManager.format(sessionMs);
 
-        String role = "§8—";
+        String role = "§8-";
         if (online != null) {
             try {
                 for (String entry : net.rp.rpessentials.config.RpEssentialsConfig.ROLES.get()) {
@@ -581,16 +581,31 @@ public class RpModerationCommands {
             } catch (IllegalStateException ignored) {}
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("§6╔═════ §eInspect: §f").append(targetName).append(" §6═════╗\n");
-        sb.append("§6║ §7Status   : ").append(isOnline ? "§a● Online" : "§7○ Offline").append("\n");
-        sb.append("§6║ §7Nickname : ").append(nick != null ? nick : "§8—").append("\n");
-        sb.append("§6║ §7Role     : ").append(role).append("\n");
-        sb.append("§6║ §7UUID     : §8").append(uuid).append("\n");
-        sb.append("§6╠═══════════════════════════════╣\n");
+        StringBuilder header = new StringBuilder();
+        header.append("§6Inspect: §f").append(targetName).append("\n").append(RpChatUi.LINE).append("\n");
+        header.append("§7Status   : ").append(isOnline ? "§a● Online" : "§7○ Offline").append("\n");
+        header.append("§7Nickname : ").append(nick != null ? nick : "§8-").append("\n");
+        header.append("§7Role     : ").append(role);
+        RpChatUi.sendFormatted(ctx, header.toString());
 
-        // Licences
-        sb.append("§6║ §eLicenses (").append(licenses.size()).append(")§7: ");
+        final UUID finalUuid = uuid;
+        if (ctx.getSource().getEntity() instanceof ServerPlayer viewer) {
+            viewer.sendSystemMessage(Component.literal("§7UUID     : §8" + finalUuid)
+                    .withStyle(style -> style
+                            .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                                    net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                                    Component.literal("§7Click to open NameMC")))
+                            .withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                                    net.minecraft.network.chat.ClickEvent.Action.OPEN_URL,
+                                    "https://namemc.com/profile/" + finalUuid))));
+        } else {
+            ctx.getSource().sendSuccess(() -> Component.literal("UUID     : " + finalUuid), false);
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(RpChatUi.LINE).append("\n");
+
+        sb.append("§eLicenses §7(").append(licenses.size()).append(")§7: ");
         if (licenses.isEmpty()) sb.append("§8None");
         else {
             for (int i = 0; i < licenses.size(); i++) {
@@ -602,40 +617,34 @@ public class RpModerationCommands {
         }
         sb.append("\n");
 
-        // Warns
-        sb.append("§6║ §eWarns (").append(warns.size()).append(" active)§7: ");
+        sb.append("§eWarns §7(").append(warns.size()).append(" active)§7: ");
         if (warns.isEmpty()) sb.append("§aNone");
-        else warns.forEach(w -> sb.append("\n§6║   §c#").append(w.id).append(" §7").append(w.reason));
+        else warns.forEach(w -> sb.append("\n §c#").append(w.id).append(" §7").append(w.reason));
         sb.append("\n");
 
-        // Mute
-        sb.append("§6║ §eMute     : ");
-        if (isMuted && mute != null) sb.append("§c").append(mute.getFormattedExpiry()).append(" — §f").append(mute.reason);
+        sb.append("§eMute     : ");
+        if (isMuted && mute != null) sb.append("§c").append(mute.getFormattedExpiry()).append(" §7: §f").append(mute.reason);
         else sb.append("§aNone");
         sb.append("\n");
 
-        // Connexion
-        sb.append("§6║ §eLast seen: §f")
+        sb.append("§eLast seen: §f")
                 .append(conn != null && conn.lastLogin != null ? conn.lastLogin : "§8Unknown").append("\n");
 
-        // Playtime (4.1.6)
-        sb.append("§6║ §ePlaytime : §f").append(totalPlaytimeStr);
+        sb.append("§ePlaytime : §f").append(totalPlaytimeStr);
         if (isOnline && sessionMs > 60_000L) {
             sb.append(" §8(session: §7").append(sessionStr).append("§8)");
         }
         sb.append("\n");
 
-        // Notes
         if (!notes.isEmpty()) {
-            sb.append("§6╠═══════════════════════════════╣\n");
-            sb.append("§6║ §eNotes (").append(notes.size()).append("):\n");
-            notes.forEach(n -> sb.append("§6║  §8#").append(n.id).append(" §7by §f").append(n.authorName)
+            sb.append(RpChatUi.LINE).append("\n");
+            sb.append("§eNotes §7(").append(notes.size()).append("):\n");
+            notes.forEach(n -> sb.append(" §8#").append(n.id).append(" §7by §f").append(n.authorName)
                     .append("§7: §f").append(n.text).append("\n"));
         }
 
-        sb.append("§6╚═══════════════════════════════╝");
-        String msg = sb.toString();
-        ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        sb.append(RpChatUi.LINE);
+        RpChatUi.sendFormatted(ctx, sb.toString());
         return 1;
     }
 

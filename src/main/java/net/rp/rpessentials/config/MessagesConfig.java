@@ -360,7 +360,7 @@ public class MessagesConfig {
         WARN_LIST_HEADER = BUILDER
                 .comment("Header line of the warn list.",
                         "Placeholders: {player} = player name, {count} = active warn count.")
-                .define("listHeader", "§6╔═ Warnings for §e{player} §6({count} active) ═╗");
+                .define("listHeader", "§6Warnings for §e{player} §7({count} active)");
 
         WARN_LIST_NONE = BUILDER
                 .comment("Message shown to staff when a player has no warns. Placeholder: {player}.")
@@ -378,16 +378,13 @@ public class MessagesConfig {
                 .comment("Message shown after a purge. Placeholder: {count} = purged count.")
                 .define("purgeDone", "§a[RpEssentials] Purge complete: §e{count} §aexpired warn(s) removed.");
 
-        WARN_INFO_HEADER = BUILDER
-                .comment("Header of the warn info box. Placeholder: {id}.")
-                .define("infoHeader", "§6╔═ Warn #{id} ════════════════════════╗");
-
-        WARN_INFO_PLAYER_LABEL = BUILDER.comment("'Player' label in warn info.").define("infoPlayer",  "§6║ §7Player    : ");
-        WARN_INFO_STAFF_LABEL  = BUILDER.comment("'Staff' label in warn info.").define("infoStaff",   "§6║ §7Staff     : ");
-        WARN_INFO_REASON_LABEL = BUILDER.comment("'Reason' label in warn info.").define("infoReason",  "§6║ §7Reason    : ");
-        WARN_INFO_DATE_LABEL   = BUILDER.comment("'Date' label in warn info.").define("infoDate",    "§6║ §7Date      : ");
-        WARN_INFO_TYPE_LABEL   = BUILDER.comment("'Type' label in warn info.").define("infoType",    "§6║ §7Type      : ");
-        WARN_INFO_EXPIRY_LABEL = BUILDER.comment("'Expiry' label in warn info.").define("infoExpiry",  "§6║ §7Expiry    : ");
+        WARN_INFO_HEADER = BUILDER.comment("Header of the warn info box. Placeholder: {id}.").define("infoHeader", "§6Warn #{id}");
+        WARN_INFO_PLAYER_LABEL = BUILDER.comment("'Player' label in warn info.").define("infoPlayer",  "§7Player    : ");
+        WARN_INFO_STAFF_LABEL  = BUILDER.comment("'Staff' label in warn info.").define("infoStaff",   "§7Staff     : ");
+        WARN_INFO_REASON_LABEL = BUILDER.comment("'Reason' label in warn info.").define("infoReason",  "§7Reason    : ");
+        WARN_INFO_DATE_LABEL   = BUILDER.comment("'Date' label in warn info.").define("infoDate",    "§7Date      : ");
+        WARN_INFO_TYPE_LABEL   = BUILDER.comment("'Type' label in warn info.").define("infoType",    "§7Type      : ");
+        WARN_INFO_EXPIRY_LABEL = BUILDER.comment("'Expiry' label in warn info.").define("infoExpiry",  "§7Expiry    : ");
 
         WARN_TYPE_PERMANENT = BUILDER.comment("Text for a permanent warn.").define("typePermanent", "§cPermanent");
         WARN_TYPE_EXPIRED   = BUILDER.comment("Text for an expired warn.").define("typeExpired",   "§8Expired");
@@ -488,11 +485,11 @@ public class MessagesConfig {
                 .define("overrideReset",
                         "§a[RpEssentials] Death RP override removed for §e{player}§a. They now follow the global setting.");
 
-        DEATHRP_STATUS_HEADER    = BUILDER.comment("Header of the deathrp status box.").define("statusHeader",    "§6═══════════════════════════════\n§6║ §eDeath RP System");
-        DEATHRP_STATUS_GLOBAL    = BUILDER.comment("'Global state' label. Placeholder: {value}.").define("statusGlobal",    "§6║ §7Global state  : {value}");
-        DEATHRP_STATUS_WHITELIST = BUILDER.comment("'Whitelist removal' label. Placeholder: {value}.").define("statusWhitelist", "§6║ §7WL removal    : {value}");
-        DEATHRP_STATUS_OVERRIDES = BUILDER.comment("'Individual overrides' section header.").define("statusOverrides", "§6║ §eIndividual overrides:");
-        DEATHRP_STATUS_NO_OVERRIDES = BUILDER.comment("Shown when there are no individual overrides.").define("statusNone",      "§6║  §7(no overrides)");
+        DEATHRP_STATUS_HEADER    = BUILDER.comment("Header of the deathrp status box.").define("statusHeader",    "§6Death RP System");
+        DEATHRP_STATUS_GLOBAL    = BUILDER.comment("'Global state' label. Placeholder: {value}.").define("statusGlobal",    "§7Global state  : {value}");
+        DEATHRP_STATUS_WHITELIST = BUILDER.comment("'Whitelist removal' label. Placeholder: {value}.").define("statusWhitelist", "§7WL removal    : {value}");
+        DEATHRP_STATUS_OVERRIDES = BUILDER.comment("'Individual overrides' section header.").define("statusOverrides", "§eIndividual overrides:");
+        DEATHRP_STATUS_NO_OVERRIDES = BUILDER.comment("Shown when there are no individual overrides.").define("statusNone",      "§7(no overrides)");
         DEATHRP_STATUS_ACTIVE    = BUILDER.comment("'Active' value in the status display.").define("statusActive",    "§aActive");
         DEATHRP_STATUS_INACTIVE  = BUILDER.comment("'Inactive' value in the status display.").define("statusInactive",  "§cInactive");
         DEATHRP_STATUS_YES       = BUILDER.comment("'Yes' value in the status display.").define("statusYes",       "§aYes");
@@ -923,19 +920,19 @@ public class MessagesConfig {
                 .define("noteNone", "§7[NOTE] No notes for §e{player}§7.");
         NOTE_LIST_HEADER = BUILDER
                 .comment("Header of the note list. Placeholder: {player}")
-                .define("noteListHeader", "§6╔═ Notes for §e{player} §6═╗");
+                .define("noteListHeader", "§6Notes for §e{player}");
         BUILDER.pop();
 
         BUILDER.push("Death RP History");
         DEATHRP_HISTORY_HEADER = BUILDER
                 .comment("Header of the death history. Placeholder: {player}")
-                .define("deathHistoryHeader", "§6╔═ Death RP History — §e{player} §6═╗");
+                .define("deathHistoryHeader", "§6Death RP History, §e{player}");
         DEATHRP_HISTORY_NONE = BUILDER
                 .comment("Shown when player has no death history. Placeholder: {player}")
                 .define("deathHistoryNone", "§7No death RP recorded for §e{player}§7.");
         DEATHRP_HISTORY_ENTRY = BUILDER
                 .comment("Format of each history entry. Placeholders: {index} {date} {cause}")
-                .define("deathHistoryEntry", "§6║ §e#{index} §7— §f{date} §7— {cause}");
+                .define("deathHistoryEntry", "§e#{index} §7: §f{date} §7: {cause}");
         BUILDER.pop();
 
         BUILDER.push("RP Cooldowns");
@@ -948,7 +945,7 @@ public class MessagesConfig {
         BUILDER.push("Stats");
         STATS_HEADER = BUILDER
                 .comment("Header of the /rpessentials stats command.")
-                .define("statsHeader", "§6╔═════════ §e§lRP Essentials Stats §6═════════╗");
+                .define("statsHeader", "§e§lRP Essentials Stats");
         BUILDER.pop();
 
         BUILDER.push("Dice");
@@ -983,6 +980,7 @@ public class MessagesConfig {
         } catch (IllegalStateException e) {
             msg = configValue.getDefault().toString();
         }
+        msg = msg.replace("\r", "");
         for (int i = 0; i + 1 < replacements.length; i += 2) {
             msg = msg.replace("{" + replacements[i] + "}", replacements[i + 1]);
         }
@@ -994,9 +992,9 @@ public class MessagesConfig {
      */
     public static String get(ModConfigSpec.ConfigValue<String> configValue) {
         try {
-            return configValue.get();
+            return configValue.get().replace("\r", "");
         } catch (IllegalStateException e) {
-            return configValue.getDefault().toString();
+            return configValue.getDefault().toString().replace("\r", "");
         }
     }
 

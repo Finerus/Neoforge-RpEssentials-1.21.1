@@ -218,8 +218,9 @@ public class PlayerProfileScreen extends Screen {
         int tabW = (formW - 4) / TAB_KEYS.length;
         for (int i = 0; i < TAB_KEYS.length; i++) {
             final int ti = i;
-            String label = (i == activeTab ? "§l" : "§7")
-                    + TAB_COLORS[ti] + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i]);
+            String label = i == activeTab
+                    ? TAB_COLORS[ti] + "§l" + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i])
+                    : "§7" + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i]);
             addRenderableWidget(Button.builder(Component.literal(label),
                             btn -> { activeTab = ti; rebuild(); })
                     .pos(formX - 2 + i * (tabW + 2), PANEL_TOP + 14)
@@ -310,17 +311,8 @@ public class PlayerProfileScreen extends Screen {
         y += colRows * (colBtnH + 2) + 8;
 
         // --- Role ---
-        EditBox roleBox = new EditBox(this.font, formX, y + 16,
-                Math.min(formW - 4, 200), 18,
-                Component.translatable("rpessentials.gui.player_profile.role_label"));
-        roleBox.setHint(Component.translatable("rpessentials.gui.player_profile.role_hint"));
-        roleBox.setMaxLength(32);
-        roleBox.setValue(stateRole);
-        roleBox.setResponder(val -> stateRole = val);
-        addRenderableWidget(roleBox);
-        y += 38;
+        y += 12;
 
-        // Raccourcis de roles
         if (!availableRoles.isEmpty()) {
             int maxBtnW = 80;
             int minBtnW = 40;
@@ -481,6 +473,13 @@ public class PlayerProfileScreen extends Screen {
     // =========================================================================
     // RENDU
     // =========================================================================
+    private int tabLineColor() {
+        return switch (activeTab) {
+            case 1 -> 0xFF55FF55; // Stats
+            case 2 -> 0xFF55FFFF; // Notes
+            default -> 0xFFFFFF55; // Profil
+        };
+    }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
@@ -491,10 +490,11 @@ public class PlayerProfileScreen extends Screen {
 
         // Panneau liste
         g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
-        g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, PANEL_TOP + 2, 0xFF8B6914);
+        g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, PANEL_TOP + 2, tabLineColor());
+
         g.drawString(this.font,
-                "§6" + I18n.get("rpessentials.gui.player_profile.players_header", visible.size()),
-                MARGIN + 3, PANEL_TOP + 4, 0xFFD700, false);
+                I18n.get("rpessentials.gui.player_profile.players_header", visible.size()),
+                MARGIN + 3, PANEL_TOP + 4, tabLineColor(), false);
 
         if (!players.isEmpty() && visible.isEmpty()) {
             g.drawString(this.font, "§8" + I18n.get("rpessentials.gui.player_profile.filter_empty"),
@@ -503,7 +503,7 @@ public class PlayerProfileScreen extends Screen {
 
         // Panneau formulaire
         g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, this.height - 10, 0xBB111111);
-        g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, PANEL_TOP + 2, 0xFF8B6914);
+        g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, PANEL_TOP + 2, tabLineColor());
 
         if (players.isEmpty()) {
             g.drawCenteredString(this.font, "§7" + I18n.get("rpessentials.gui.player_profile.no_players"),
@@ -555,10 +555,18 @@ public class PlayerProfileScreen extends Screen {
 
         g.drawString(this.font,
                 I18n.get("rpessentials.gui.player_profile.role_label_draw"),
-                formX, y + 6, 0x888888, false);
+                formX, y, 0x888888, false);
+        y += 12;
 
-        int roleRows = availableRoles.isEmpty() ? 0 : 1;
-        y += 38 + roleRows * 20;
+        if (!availableRoles.isEmpty()) {
+            int maxBtnW = 80;
+            int minBtnW = 40;
+            int gap     = 2;
+            int availW  = formW - 4;
+            int cols    = Math.max(1, availW / (minBtnW + gap));
+            int rows    = (int) Math.ceil((double) availableRoles.size() / cols);
+            y += rows * 16 + 4;
+        }
 
         if (!availableProfessionIds.isEmpty()) {
             int longestW = availableProfessionIds.stream()
@@ -591,8 +599,8 @@ public class PlayerProfileScreen extends Screen {
                                 OpenPlayerProfileGuiPacket.PlayerData sel) {
         int lineH = 14;
 
-        g.drawString(this.font, I18n.get("rpessentials.gui.player_profile.stats.header"),
-                formX, y, 0xFFD700, false);
+        g.drawString(this.font, "§l" + I18n.get("rpessentials.gui.player_profile.stats.header"),
+                formX, y, tabLineColor(), false);
         y += lineH + 4;
 
         String warnColor = sel.activeWarnCount() == 0 ? "§a"
