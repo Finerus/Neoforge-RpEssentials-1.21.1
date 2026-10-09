@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.RpEssentialsScheduleManager;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.profession.LicenseManager;
@@ -50,7 +51,7 @@ public class RpModerationCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildWarn() {
         var warnNode = Commands.literal("warn")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()));
+                .requires(RpEssentialsPermissions::isStaffSource);
 
         warnNode.then(Commands.literal("add")
                 .then(Commands.argument("target", EntityArgument.player())
@@ -111,7 +112,7 @@ public class RpModerationCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildMute() {
         var muteNode = Commands.literal("mute")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()));
+                .requires(RpEssentialsPermissions::isStaffSource);
         muteNode.then(Commands.argument("player", EntityArgument.player())
                 .executes(ctx -> executeMute(ctx, -1, "No reason specified"))
                 .then(Commands.argument("minutes", IntegerArgumentType.integer(0))
@@ -124,7 +125,7 @@ public class RpModerationCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildUnmute() {
         return Commands.literal("unmute")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
+                .requires(RpEssentialsPermissions::isStaffSource)
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
@@ -142,7 +143,7 @@ public class RpModerationCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildNote() {
         var noteNode = Commands.literal("note")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()));
+                .requires(RpEssentialsPermissions::isStaffSource);
 
         noteNode.then(Commands.literal("add")
                 .then(Commands.argument("player", EntityArgument.player())
@@ -247,7 +248,7 @@ public class RpModerationCommands {
     // =========================================================================
     public static LiteralArgumentBuilder<CommandSourceStack> buildInspect() {
         return Commands.literal("inspect")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
+                .requires(RpEssentialsPermissions::isStaffSource)
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             Set<String> names = new LinkedHashSet<>();
@@ -506,6 +507,13 @@ public class RpModerationCommands {
         StringBuilder sb = new StringBuilder();
         sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_HEADER)).append("\n").append(RpChatUi.LINE).append("\n");
         sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_GLOBAL, "value", global ? active : inactive)).append("\n");
+        try {
+            boolean hoursOn = ScheduleConfig.DEATH_HOURS_ENABLED.get();
+            boolean hourNow = hoursOn && RpEssentialsScheduleManager.isDeathHour();
+            sb.append("§7Death hours   : ").append(!hoursOn ? "§8Disabled" : hourNow ? active : inactive);
+            if (hoursOn) sb.append(" §8(").append(String.join(", ", ScheduleConfig.DEATH_HOURS_SLOTS.get())).append(")");
+            sb.append("\n§7Effective now : ").append(global || hourNow ? active : inactive).append("\n");
+        } catch (IllegalStateException ignored) {}
         sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_WHITELIST, "value", wlRemove ? yes : no)).append("\n").append(RpChatUi.LINE).append("\n");
         sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_OVERRIDES)).append("\n");
         Map<UUID, Boolean> overrides = DeathRPManager.getAllOverrides();

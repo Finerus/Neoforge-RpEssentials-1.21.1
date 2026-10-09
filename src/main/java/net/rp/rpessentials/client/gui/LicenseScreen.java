@@ -60,6 +60,16 @@ public class LicenseScreen extends Screen {
                 .size(50, 16).build());
     }
 
+    private int field(GuiGraphics g, String labelKey, String value, int x, int y) {
+        g.pose().pushPose();
+        g.pose().translate(x, y, 0);
+        g.pose().scale(0.85f, 0.85f, 1f);
+        g.drawString(this.font, "§8" + I18n.get(labelKey), 0, 0, 0xFFFFFF);
+        g.drawString(this.font, "§f" + value, 8, 10, 0xFFFFFF);
+        g.pose().popPose();
+        return y + 22;
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         g.fill(0, 0, this.width, this.height, 0xAA000000);
@@ -71,7 +81,7 @@ public class LicenseScreen extends Screen {
 
         g.blit(LicenseCardRenderer.CARD_TEXTURE, cardX, cardY, 0, 0, TEX_W, TEX_H, TEX_W, TEX_H);
 
-        int y = cardY + 20;
+        int y = cardY + 18;
         int pad = cardX + 20;
 
         g.drawCenteredString(this.font,
@@ -79,32 +89,15 @@ public class LicenseScreen extends Screen {
                         ? "§c§l" + I18n.get("rpessentials.license.card.revoked")
                         : "§6§l" + I18n.get("rpessentials.license.card.title"),
                 cx, y, 0xFFFFFF);
-        y += 22;
+        y += 18;
 
         g.fill(cardX + 14, y, cardX + TEX_W - 14, y + 1, 0x88FFFFFF);
-        y += 12;
-
-        g.drawString(this.font, "§8" + I18n.get("rpessentials.license.card.profession"), pad, y, 0xFFFFFF);
         y += 10;
-        g.drawString(this.font, "§f" + profId, pad + 8, y, 0xFFFFFF);
-        y += 18;
 
-        g.drawString(this.font, "§8" + I18n.get("rpessentials.license.card.holder"), pad, y, 0xFFFFFF);
-        y += 10;
-        g.drawString(this.font, "§f" + holder, pad + 8, y, 0xFFFFFF);
-        y += 18;
-
-        g.drawString(this.font, "§8" + I18n.get("rpessentials.license.card.issued"), pad, y, 0xFFFFFF);
-        y += 10;
-        g.drawString(this.font, "§f" + issueDate, pad + 8, y, 0xFFFFFF);
-        y += 18;
-
-        if (expiryDate != null) {
-            g.drawString(this.font, "§8" + I18n.get("rpessentials.license.card.until"), pad, y, 0xFFFFFF);
-            y += 10;
-            g.drawString(this.font, "§f" + expiryDate, pad + 8, y, 0xFFFFFF);
-            y += 18;
-        }
+        y = field(g, "rpessentials.license.card.profession", profId, pad, y);
+        y = field(g, "rpessentials.license.card.holder", holder, pad, y);
+        y = field(g, "rpessentials.license.card.issued", issueDate, pad, y);
+        if (expiryDate != null) y = field(g, "rpessentials.license.card.until", expiryDate, pad, y);
 
         g.fill(cardX + 14, y + 2, cardX + TEX_W - 14, y + 3, 0x88FFFFFF);
         y += 12;
@@ -114,8 +107,6 @@ public class LicenseScreen extends Screen {
                         ? "§c" + I18n.get("rpessentials.license.card.invalid")
                         : "§a" + I18n.get("rpessentials.license.card.valid"),
                 cx, y, 0xFFFFFF);
-
-        super.render(g, mouseX, mouseY, delta);
     }
 
     @Override

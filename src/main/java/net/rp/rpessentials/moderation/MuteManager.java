@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsDataPaths;
+import net.rp.rpessentials.RpEssentialsIO;
 import net.rp.rpessentials.config.MessagesConfig;
 
 import java.io.File;
@@ -115,6 +116,7 @@ public class MuteManager {
             }
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[MuteManager] Failed to load", e);
+            RpEssentialsIO.quarantine(dataFile);
         }
     }
 
@@ -138,19 +140,12 @@ public class MuteManager {
         }
 
         File targetFile = dataFile;
-        CompletableFuture.runAsync(() -> {
-            try (FileWriter writer = new FileWriter(targetFile)) {
-                GSON.toJson(data, writer);
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[MuteManager] Failed to save", e);
-            }
-        });
+        RpEssentialsIO.saveJson(targetFile, snapshot, GSON);
     }
 
     // =========================================================================
     // PUBLIC API
     // =========================================================================
-
     /**
      * Ajoute ou met à jour un mute.
      * @param durationMinutes 0 = permanent

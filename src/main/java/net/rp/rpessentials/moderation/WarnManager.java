@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsDataPaths;
+import net.rp.rpessentials.RpEssentialsIO;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -105,7 +106,6 @@ public class WarnManager {
     // =========================================================================
     // INITIALISATION
     // =========================================================================
-
     private static synchronized void ensureInitialized() {
         if (dataFile != null) return;
         try {
@@ -123,7 +123,6 @@ public class WarnManager {
     // =========================================================================
     // LOAD
     // =========================================================================
-
     private static void loadFromFile() {
         if (dataFile == null || !dataFile.exists()) return;
         try (FileReader reader = new FileReader(dataFile)) {
@@ -143,13 +142,13 @@ public class WarnManager {
             }
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[WarnManager] Failed to load warns", e);
+            RpEssentialsIO.quarantine(dataFile);
         }
     }
 
     // =========================================================================
     // SAVE (async)
     // =========================================================================
-
     private static void saveToFile() {
         ensureInitialized();
         if (dataFile == null) return;
@@ -157,18 +156,7 @@ public class WarnManager {
         List<WarnEntry> snapshot = new ArrayList<>(warns);
         File targetFile = dataFile;
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                File parent = targetFile.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
-                try (FileWriter writer = new FileWriter(targetFile)) {
-                    GSON.toJson(snapshot, writer);
-                }
-                RpEssentials.LOGGER.debug("[WarnManager] Saved {} warns", snapshot.size());
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[WarnManager] Failed to save warns", e);
-            }
-        });
+        RpEssentialsIO.saveJson(targetFile, snapshot, GSON);
     }
 
     // =========================================================================

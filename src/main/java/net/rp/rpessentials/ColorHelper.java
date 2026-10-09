@@ -23,7 +23,7 @@ public class ColorHelper {
         }
 
         // Remplacer & par §
-        text = text.replace("&", "§");
+        text = text.replaceAll("&(?=[0-9a-fk-orA-FK-OR])", "§");
 
         // Si pas de codes couleur, retour simple
         if (!text.contains("§")) {
@@ -76,30 +76,35 @@ public class ColorHelper {
     /**
      * Applique un code de formatage à un style
      */
-    private static Style applyFormatting(Style style, char code) {
+    private static Style applyFormatting(Style style, char rawCode) {
+        char code = Character.toLowerCase(rawCode);
+        ChatFormatting color = switch (code) {
+            case '0' -> ChatFormatting.BLACK;
+            case '1' -> ChatFormatting.DARK_BLUE;
+            case '2' -> ChatFormatting.DARK_GREEN;
+            case '3' -> ChatFormatting.DARK_AQUA;
+            case '4' -> ChatFormatting.DARK_RED;
+            case '5' -> ChatFormatting.DARK_PURPLE;
+            case '6' -> ChatFormatting.GOLD;
+            case '7' -> ChatFormatting.GRAY;
+            case '8' -> ChatFormatting.DARK_GRAY;
+            case '9' -> ChatFormatting.BLUE;
+            case 'a' -> ChatFormatting.GREEN;
+            case 'b' -> ChatFormatting.AQUA;
+            case 'c' -> ChatFormatting.RED;
+            case 'd' -> ChatFormatting.LIGHT_PURPLE;
+            case 'e' -> ChatFormatting.YELLOW;
+            case 'f' -> ChatFormatting.WHITE;
+            default -> null;
+        };
+        if (color != null) return Style.EMPTY.withColor(color);
         return switch (code) {
-            case '0' -> style.withColor(ChatFormatting.BLACK);
-            case '1' -> style.withColor(ChatFormatting.DARK_BLUE);
-            case '2' -> style.withColor(ChatFormatting.DARK_GREEN);
-            case '3' -> style.withColor(ChatFormatting.DARK_AQUA);
-            case '4' -> style.withColor(ChatFormatting.DARK_RED);
-            case '5' -> style.withColor(ChatFormatting.DARK_PURPLE);
-            case '6' -> style.withColor(ChatFormatting.GOLD);
-            case '7' -> style.withColor(ChatFormatting.GRAY);
-            case '8' -> style.withColor(ChatFormatting.DARK_GRAY);
-            case '9' -> style.withColor(ChatFormatting.BLUE);
-            case 'a' -> style.withColor(ChatFormatting.GREEN);
-            case 'b' -> style.withColor(ChatFormatting.AQUA);
-            case 'c' -> style.withColor(ChatFormatting.RED);
-            case 'd' -> style.withColor(ChatFormatting.LIGHT_PURPLE);
-            case 'e' -> style.withColor(ChatFormatting.YELLOW);
-            case 'f' -> style.withColor(ChatFormatting.WHITE);
             case 'k' -> style.withObfuscated(true);
             case 'l' -> style.withBold(true);
             case 'm' -> style.withStrikethrough(true);
             case 'n' -> style.withUnderlined(true);
             case 'o' -> style.withItalic(true);
-            case 'r' -> Style.EMPTY; // Reset
+            case 'r' -> Style.EMPTY;
             default -> style;
         };
     }
@@ -109,7 +114,7 @@ public class ColorHelper {
      */
     public static String stripColors(String text) {
         if (text == null) return "";
-        return text.replaceAll("§[0-9a-fk-or]", "");
+        return text.replaceAll("(?i)§[0-9a-fk-or]", "");
     }
 
     /**
@@ -117,7 +122,7 @@ public class ColorHelper {
      */
     public static String translateAlternateColorCodes(String text) {
         if (text == null) return "";
-        return text.replace("&", "§");
+        return text.replaceAll("&(?=[0-9a-fk-orA-FK-OR])", "§");
     }
 
     /**

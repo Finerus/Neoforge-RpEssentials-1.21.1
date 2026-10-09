@@ -95,13 +95,16 @@ public class DeathRPManager {
 
     private static void saveHistory() {
         ensureHistoryInitialized();
-        java.util.List<DeathHistoryEntry> snapshot = new java.util.ArrayList<>(history);
+
+        java.util.List<DeathHistoryEntry> snapshot =
+                new java.util.ArrayList<>(history);
+
         File target = historyFile;
-        CompletableFuture.runAsync(() -> {
-            try (FileWriter w = new FileWriter(target)) { GSON.toJson(snapshot, w); }
-            catch (Exception e) { LOGGER.error("[DeathRP] Failed to save history", e); }
-        });
+        if (target == null) return;
+
+        RpEssentialsIO.saveJson(target, snapshot, GSON);
     }
+
 
     public static void purgeOldHistory() {
         try {
@@ -160,6 +163,7 @@ public class DeathRPManager {
                 });
             }
         } catch (Exception e) { LOGGER.error("[DeathRP] Failed to load deathrp.json", e); }
+        RpEssentialsIO.quarantine(dataFile);
     }
 
     private static void saveToFile() {
@@ -183,16 +187,19 @@ public class DeathRPManager {
         }
 
         File targetFile = dataFile;
-        RpEssentialsIO.submit(() -> {
-            try {
-                if (!targetFile.getParentFile().exists()) targetFile.getParentFile().mkdirs();
-                try (FileWriter w = new FileWriter(targetFile)) { GSON.toJson(out, w); }
-            } catch (Exception e) { LOGGER.error("[DeathRP] Failed to save", e); }
-        });
+        RpEssentialsIO.saveJson(targetFile, out, GSON);
+    }
+
+    public static synchronized void reload() {
+        dataFile = null;
+        historyFile = null;
+        overrides.clear();
+        history.clear();
+        ensureInitialized();
+        ensureHistoryInitialized();
     }
 
     // ── Public API ──────────────────────────────────────────────────────────────
-
     public static boolean isDeathRPEnabled(UUID uuid) {
         Boolean override = overrides.get(uuid);
         if (override != null) return override;

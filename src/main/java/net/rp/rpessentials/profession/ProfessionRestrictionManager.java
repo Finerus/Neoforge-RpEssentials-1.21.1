@@ -1,8 +1,11 @@
 package net.rp.rpessentials.profession;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsRoleManager;
 import net.rp.rpessentials.config.MessagesConfig;
@@ -35,7 +38,6 @@ public class ProfessionRestrictionManager {
     // =========================================================================
     // DATA CLASS
     // =========================================================================
-
     public static class ProfessionData {
         public final String id;
         public final String displayName;
@@ -55,7 +57,6 @@ public class ProfessionRestrictionManager {
     // =========================================================================
     // INITIALISATION
     // =========================================================================
-
     public static void reloadCache() {
         actionCache.clear();
         professionDataCache.clear();
@@ -101,7 +102,6 @@ public class ProfessionRestrictionManager {
     // =========================================================================
     // EXEMPTION WHITELIST
     // =========================================================================
-
     public static boolean isExemptFromProfessionRestrictions(ServerPlayer player) {
         if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.PROFESSION_WHITELIST))
             return true;
@@ -171,6 +171,18 @@ public class ProfessionRestrictionManager {
                 ProfessionConfig.PROFESSION_ALLOWED_EQUIPMENT::get);
     }
 
+    public static boolean isReservedTag(String id) {
+        try {
+            for (String e : RpEssentialsConfig.ROLES.get()) {
+                if (e.split(";", 2)[0].trim().equalsIgnoreCase(id)) return true;
+            }
+            for (String t : RpEssentialsConfig.STAFF_TAGS.get()) {
+                if (t.equalsIgnoreCase(id)) return true;
+            }
+        } catch (IllegalStateException ignored) {}
+        return false;
+    }
+
     /**
      * Vérifie si un joueur peut ouvrir un conteneur (bloc) donné.
      * Format config : block_id;profession1,profession2
@@ -204,7 +216,6 @@ public class ProfessionRestrictionManager {
     // HELPER ANTI-SPAM POUR LES MIXINS DE CRAFT
     // Appelé par MixinResultSlot, MixinSmithingMenu, MixinAnvilMenu
     // =========================================================================
-
     /**
      * Envoie le message de craft bloqué avec anti-spam intégré (cooldown 2s).
      */
@@ -219,7 +230,6 @@ public class ProfessionRestrictionManager {
     // =========================================================================
     // MESSAGES
     // =========================================================================
-
     public static String getCraftBlockedMessage(ResourceLocation itemId) {
         try {
             return ProfessionConfig.MSG_CRAFT_BLOCKED.get()
@@ -298,7 +308,6 @@ public class ProfessionRestrictionManager {
     // =========================================================================
     // DONNÉES DES PROFESSIONS
     // =========================================================================
-
     public static ProfessionData getProfessionData(String professionId) {
         if (!ensureInitialized()) return null;
         if (System.currentTimeMillis() - lastCacheUpdate > CACHE_DURATION) reloadCache();
@@ -314,7 +323,6 @@ public class ProfessionRestrictionManager {
     // =========================================================================
     // HELPERS INTERNES
     // =========================================================================
-
     public static boolean isGloballyBlocked(ResourceLocation resourceId, List<? extends String> blockedList) {
         String resourceString = resourceId.toString();
         for (String blocked : blockedList) {
@@ -370,10 +378,23 @@ public class ProfessionRestrictionManager {
                 : String.join("§7, ", required);
     }
 
+    public static void enforceEquipment(ServerPlayer player) {
+        if (player.isCreative()) return;
+        for (EquipmentSlot slot : new EquipmentSlot[]{
+                EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+            ItemStack stack = player.getItemBySlot(slot);
+            if (stack.isEmpty()) continue;
+            ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+            if (canEquip(player, id)) continue;
+            player.setItemSlot(slot, ItemStack.EMPTY);
+            if (!player.getInventory().add(stack)) player.drop(stack, false);
+            player.displayClientMessage(Component.literal(getEquipmentBlockedMessage(id)), true);
+        }
+    }
+
     // =========================================================================
     // CACHE MANAGEMENT
     // =========================================================================
-
     public static void invalidatePlayerCache(UUID playerUUID) {
         craftMessageCooldown.remove(playerUUID);
         actionCache.remove(playerUUID);

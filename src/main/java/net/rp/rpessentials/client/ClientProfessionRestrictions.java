@@ -14,6 +14,7 @@ public class ClientProfessionRestrictions {
 
     private static final Set<String> blockedCrafts = new HashSet<>();
     private static final Set<String> blockedEquipment = new HashSet<>();
+    public static void clear() { blockedCrafts.clear(); blockedEquipment.clear(); }
 
     /**
      * Met à jour les restrictions depuis le serveur

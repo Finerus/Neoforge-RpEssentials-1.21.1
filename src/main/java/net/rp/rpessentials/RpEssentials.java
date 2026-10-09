@@ -15,6 +15,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.client.RpKeyBindings;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.moderation.LastConnectionManager;
@@ -37,6 +38,7 @@ public class RpEssentials {
     public static final Logger LOGGER = LogUtils.getLogger();
     private int tickCounter = 0;
     private final Map<UUID, Vec3> lastBlurPositions = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicBoolean refreshPending = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public RpEssentials(IEventBus modEventBus, ModContainer modContainer) {
 
@@ -66,12 +68,20 @@ public class RpEssentials {
                 LOGGER.info("[RpEssentials] Config loaded: schedule, professions & immersive presets initialized.");
             }
         });
+        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Reloading event) -> {
+            if (event.getConfig().getType() != ModConfig.Type.SERVER) return;
+            MinecraftServer srv = ServerLifecycleHooks.getCurrentServer();
+            if (srv == null || !refreshPending.compareAndSet(false, true)) return;
+            java.util.concurrent.CompletableFuture.runAsync(() -> srv.execute(() -> {
+                refreshPending.set(false);
+                ConfigRefresh.refresh(srv);
+            }), java.util.concurrent.CompletableFuture.delayedExecutor(1500, java.util.concurrent.TimeUnit.MILLISECONDS));
+        });
     }
 
     // =========================================================================
     // LUCKPERMS
     // =========================================================================
-
     public static String getPlayerPrefix(ServerPlayer player) {
         try {
             LuckPerms lp = LuckPermsProvider.get();
@@ -160,8 +170,7 @@ public class RpEssentials {
 
                     if (!RpEssentialsScheduleManager.hasOpenedToday()
                             && todayS != null
-                            && now.getHour()   == todayS.open().getHour()
-                            && now.getMinute() == todayS.open().getMinute()) {
+                            && todayS.equals(active)) {
                         RpEssentialsScheduleManager.markOpenedToday();
                         RpEssentialsScheduleManager.sendOpeningMessage(server, todayS);
                     }
@@ -190,8 +199,8 @@ public class RpEssentials {
             LocalTime now = LocalTime.now();
             RpEssentialsScheduleManager.tickMidnightSweep(server);
             PlaytimeManager.flush();
-            TempLicenseExpirationManager.tickMidnightSweep(server, now.getHour(), now.getMinute());
-            LastConnectionManager.tickAutoUnwhitelist(server, now.getHour(), now.getMinute());
+            TempLicenseExpirationManager.tickMidnightSweep(server);
+            LastConnectionManager.tickAutoUnwhitelist(server);
             if (now.getHour() == 3 && now.getMinute() == 0) {
                 net.rp.rpessentials.moderation.DeathRPManager.purgeOldHistory();
             }
@@ -204,9 +213,13 @@ public class RpEssentials {
     // =========================================================================
     // SERVER STOPPING
     // =========================================================================
-
     @SubscribeEvent
     public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        RpEssentialsEventHandler.flushOnlinePlayers(event.getServer());
+    }
+
+    @SubscribeEvent
+    public void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
         RpEssentialsRoleManager.clearAll();
         WorldBorderManager.clearAllCache();
         RpEssentialsPermissions.clearCache();

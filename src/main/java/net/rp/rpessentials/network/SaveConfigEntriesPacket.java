@@ -8,14 +8,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.ConfigRefresh;
+import net.rp.rpessentials.GuiFeedback;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ConfigInspector;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Packet CLIENT → SERVEUR : application des modifications de config depuis le GUI.
@@ -55,7 +54,6 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
     // =========================================================================
     // HANDLER — côté SERVEUR
     // =========================================================================
-
     public static void handleOnServer(SaveConfigEntriesPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
@@ -64,14 +62,13 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
                         player.getName().getString(), packet.fileId());
                 return;
             }
-
             if (packet.changes().isEmpty()) {
                 player.sendSystemMessage(Component.literal("§7[Config] No changes to apply."));
                 return;
             }
 
-// Validation : paths connus uniquement, valeurs non surdimensionnées
-            Set<String> knownPaths = ConfigInspector.getEntries(packet.fileId()).stream()
+            boolean sensitive = RpEssentialsPermissions.canEditSensitiveConfig(player);
+            Set<String> knownPaths = ConfigInspector.getEntries(packet.fileId(), sensitive).stream()
                     .filter(e -> !e.isSection())
                     .map(ConfigInspector.EntryData::fullPath)
                     .collect(java.util.stream.Collectors.toSet());
@@ -79,11 +76,11 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
             Map<String, String> validatedChanges = new java.util.LinkedHashMap<>();
             for (Map.Entry<String, String> change : packet.changes().entrySet()) {
                 if (!knownPaths.contains(change.getKey())) {
-                    RpEssentials.LOGGER.warn("[ConfigGUI] {} tried to set unknown path '{}'",
+                    RpEssentials.LOGGER.warn("[ConfigGUI] {} tried to set unknown or restricted path '{}'",
                             player.getName().getString(), change.getKey());
                     continue;
                 }
-                if (change.getValue().length() > 2048) {
+                if (change.getValue().length() > 8000) {
                     RpEssentials.LOGGER.warn("[ConfigGUI] {} sent oversized value for '{}'",
                             player.getName().getString(), change.getKey());
                     continue;
@@ -100,17 +97,27 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
             int applied = ConfigInspector.applyAndSave(packet.fileId(), validatedChanges);
 
             if (applied > 0) {
-                RpEssentials.LOGGER.info("[ConfigGUI] {} applied {} change(s) to '{}'",
-                        player.getName().getString(), applied, packet.fileId());
+                ConfigRefresh.refresh(player.getServer());
 
-                broadcastChangesToStaff(player, packet.fileId(), validatedChanges, oldValues);
+                List<String> details = new ArrayList<>();
+                for (Map.Entry<String, String> c : validatedChanges.entrySet()) {
+                    String key = simplifyKey(c.getKey());
+                    String oldVal = oldValues.getOrDefault(c.getKey(), "?");
+                    String newVal = c.getValue();
+                    if (oldVal.contains("\n") || newVal.contains("\n")) {
+                        details.add("§e" + key + "§7:");
+                        for (String line : GuiFeedback.diff(lines(oldVal), lines(newVal))) details.add("    " + line);
+                    } else {
+                        details.add("§e" + key + " §7: §c" + shorten(oldVal) + " §7-> §a" + shorten(newVal));
+                    }
+                }
+                if (applied < validatedChanges.size()) {
+                    details.add("§8" + (validatedChanges.size() - applied) + " value(s) not applied (invalid or out of range)");
+                }
+                GuiFeedback.report(player, "Config §e" + packet.fileId() + " §f: " + applied + " change(s) applied", details, true);
 
-                List<ConfigInspector.EntryData> entries = ConfigInspector.getEntries(packet.fileId());
-                PacketDistributor.sendToPlayer(player,
-                        ConfigFileEntriesPacket.from(packet.fileId(), entries));
-
-                player.sendSystemMessage(Component.literal(
-                        "§a[Config] §f" + applied + " change(s) applied to §e" + packet.fileId() + "§f."));
+                PacketDistributor.sendToPlayer(player, ConfigFileEntriesPacket.from(
+                        packet.fileId(), ConfigInspector.getEntries(packet.fileId(), sensitive)));
             } else {
                 player.sendSystemMessage(Component.literal(
                         "§c[Config] No changes could be applied (validation failed?)."));
@@ -138,47 +145,14 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
         return snapshot;
     }
 
-    /**
-     * Envoie à tous les staffs online un résumé lisible des changements.
-     *
-     * Format : "[CONFIG] Staff a modifié n valeur(s) dans fichier :"
-     *          "  clé : ancienne → nouvelle"
-     */
-    private static void broadcastChangesToStaff(ServerPlayer editor,
-                                                String fileId,
-                                                Map<String, String> newValues,
-                                                Map<String, String> oldValues) {
-        String staffName = editor.getName().getString();
-        int count = newValues.size();
+    private static List<String> lines(String s) {
+        List<String> out = new ArrayList<>();
+        for (String l : s.split("\n")) if (!l.isBlank()) out.add(l.trim());
+        return out;
+    }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("§6[CONFIG] §e").append(staffName)
-                .append(" §7a modifié §e").append(count).append(" §7valeur(s) dans §f").append(fileId).append("§7:");
-
-        int shown = 0;
-        for (Map.Entry<String, String> change : newValues.entrySet()) {
-            if (shown >= 5) { // Ne pas spammer si beaucoup de changements
-                sb.append("\n  §8... et ").append(count - shown).append(" autre(s)");
-                break;
-            }
-            String key = simplifyKey(change.getKey());
-            String oldVal = oldValues.getOrDefault(change.getKey(), "?");
-            String newVal = change.getValue();
-            // Tronque si trop long
-            if (oldVal.length() > 40) oldVal = oldVal.substring(0, 37) + "...";
-            if (newVal.length() > 40) newVal = newVal.substring(0, 37) + "...";
-            sb.append("\n  §7").append(key).append(" : §c").append(oldVal).append(" §7→ §a").append(newVal);
-            shown++;
-        }
-
-        Component msg = Component.literal(sb.toString());
-
-        for (ServerPlayer staff : editor.getServer().getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(staff) && !staff.getUUID().equals(editor.getUUID())) {
-                staff.sendSystemMessage(msg);
-            }
-        }
-        RpEssentials.LOGGER.info("[CONFIG] {} modified {} value(s) in {}", staffName, count, fileId);
+    private static String shorten(String s) {
+        return s.length() > 40 ? s.substring(0, 37) + "..." : s;
     }
 
     /** Raccourcit le chemin complet "section.subsection.key" en juste "key" pour la lisibilité. */

@@ -65,6 +65,7 @@ public class PendingProfileManager {
             }
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[PendingProfileManager] Failed to load", e);
+            RpEssentialsIO.quarantine(dataFile);
         }
     }
 
@@ -73,21 +74,13 @@ public class PendingProfileManager {
         if (dataFile == null) return;
         Map<UUID, PendingEntry> snapshot = new HashMap<>(entries);
         File targetFile = dataFile;
-        RpEssentialsIO.submit(() -> {
-            try {
-                Map<String, PendingEntry> data = new LinkedHashMap<>();
-                for (PendingEntry e : snapshot.values()) {
-                    data.put(e.uuid + " (" + e.mcName + ")", e);
-                }
-                File parent = targetFile.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
-                try (FileWriter writer = new FileWriter(targetFile)) {
-                    GSON.toJson(data, writer);
-                }
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[PendingProfileManager] Failed to save", e);
-            }
-        });
+
+        Map<String, PendingEntry> data = new LinkedHashMap<>();
+        for (PendingEntry e : snapshot.values()) {
+            data.put(e.uuid + " (" + e.mcName + ")", e);
+        }
+
+        RpEssentialsIO.saveJson(targetFile, data, GSON);
     }
 
     // =========================================================================

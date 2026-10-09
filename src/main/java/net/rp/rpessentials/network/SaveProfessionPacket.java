@@ -41,7 +41,8 @@ public record SaveProfessionPacket(
                 public SaveProfessionPacket decode(FriendlyByteBuf buf) {
                     return new SaveProfessionPacket(
                             buf.readUtf(), buf.readUtf(), buf.readUtf(),
-                            readList(buf), readList(buf), readList(buf), readList(buf),
+                            PacketValidation.readList(buf), PacketValidation.readList(buf),
+                            PacketValidation.readList(buf), PacketValidation.readList(buf),
                             buf.readBoolean()
                     );
                 }
@@ -51,12 +52,6 @@ public record SaveProfessionPacket(
                     writeList(buf, p.allowedCrafts()); writeList(buf, p.allowedBlocks());
                     writeList(buf, p.allowedItems()); writeList(buf, p.allowedEquipment());
                     buf.writeBoolean(p.isNew());
-                }
-                private List<String> readList(FriendlyByteBuf buf) {
-                    int n = buf.readVarInt();
-                    List<String> out = new ArrayList<>(n);
-                    for (int i = 0; i < n; i++) out.add(buf.readUtf());
-                    return out;
                 }
                 private void writeList(FriendlyByteBuf buf, List<String> list) {
                     buf.writeVarInt(list.size());
@@ -80,9 +75,18 @@ public record SaveProfessionPacket(
                 player.sendSystemMessage(Component.literal("§c[RpEssentials] Invalid ID or name."));
                 return;
             }
-
-            String cleanName  = packet.displayName().trim().replace("&", "§");
+            if (packet.isNew() && ProfessionRestrictionManager.isReservedTag(cleanId)) {
+                player.sendSystemMessage(Component.literal("§c[RpEssentials] This ID is reserved (role or staff tag)."));
+                return;
+            }
+            String cleanName = packet.displayName().trim().replace("&", "§").replace(";", "");
+            if (cleanName.length() > 48) cleanName = cleanName.substring(0, 48);
             String cleanColor = packet.color().trim().replace("&", "§");
+            if (!cleanColor.matches("(§[0-9a-f])?")) cleanColor = "";
+            List<String> crafts = PacketValidation.cleanItems(packet.allowedCrafts());
+            List<String> blocks = PacketValidation.cleanItems(packet.allowedBlocks());
+            List<String> items = PacketValidation.cleanItems(packet.allowedItems());
+            List<String> equipment = PacketValidation.cleanItems(packet.allowedEquipment());
 
             try {
                 // ── 1. Mise à jour de la liste des professions ────────────────────
@@ -103,20 +107,22 @@ public record SaveProfessionPacket(
                     updated.add(cleanId + ";" + cleanName + ";" + cleanColor);
                 }
                 ProfessionConfig.PROFESSIONS.set(updated);
-                ProfessionConfig.PROFESSIONS.save();
 
                 // ── 2. Mise à jour des listes d'overrides ─────────────────────────
-                setAndSave(ProfessionConfig.PROFESSION_ALLOWED_CRAFTS,    cleanId, packet.allowedCrafts());
-                setAndSave(ProfessionConfig.PROFESSION_ALLOWED_BLOCKS,    cleanId, packet.allowedBlocks());
-                setAndSave(ProfessionConfig.PROFESSION_ALLOWED_ITEMS,     cleanId, packet.allowedItems());
-                setAndSave(ProfessionConfig.PROFESSION_ALLOWED_EQUIPMENT, cleanId, packet.allowedEquipment());
+                setOnly(ProfessionConfig.PROFESSION_ALLOWED_CRAFTS,    cleanId, crafts);
+                setOnly(ProfessionConfig.PROFESSION_ALLOWED_BLOCKS,    cleanId, blocks);
+                setOnly(ProfessionConfig.PROFESSION_ALLOWED_ITEMS,     cleanId, items);
+                setOnly(ProfessionConfig.PROFESSION_ALLOWED_EQUIPMENT, cleanId, equipment);
 
                 // ── 3. Recharge le cache en RAM ───────────────────────────────────
                 ProfessionRestrictionManager.reloadCache();
+                ProfessionConfig.SPEC.save();
 
                 // ── 4. Message de confirmation avec résumé ────────────────────────
                 String actionVerb = found ? "updated" : "created";
-                player.sendSystemMessage(buildConfirmation(cleanId, packet, actionVerb));
+
+                player.sendSystemMessage(buildConfirmation(cleanId, cleanName, cleanColor, crafts,
+                        blocks, items, equipment, actionVerb));
 
                 RpEssentials.LOGGER.info("[GUI] Profession '{}' {} by {}",
                         cleanId, actionVerb, player.getGameProfile().getName());
@@ -133,18 +139,18 @@ public record SaveProfessionPacket(
      * Builds the confirmation message sent to the admin after saving.
      * Shows how many entries each restriction category has.
      */
-    private static Component buildConfirmation(String id, SaveProfessionPacket p, String verb) {
+    private static Component buildConfirmation(String id, String name, String color,
+                                               List<String> crafts, List<String> blocks,
+                                               List<String> items, List<String> equipment, String verb) {
         StringBuilder sb = new StringBuilder();
-
         sb.append("§a[RpEssentials] Profession §e").append(id).append(" §a").append(verb).append(".\n");
-        sb.append("§7  §6Name: §f").append(p.displayName())
-                .append("  §6Color: §").append(p.color().replace("&","").replace("§",""))
+        sb.append("§7  §6Name: §f").append(name)
+                .append("  §6Color: §").append(color.replace("&", "").replace("§", ""))
                 .append("■§r\n");
-        sb.append(formatRestrictionLine("Crafts",    p.allowedCrafts()));
-        sb.append(formatRestrictionLine("Blocks",    p.allowedBlocks()));
-        sb.append(formatRestrictionLine("Items",     p.allowedItems()));
-        sb.append(formatRestrictionLine("Equipment", p.allowedEquipment()));
-
+        sb.append(formatRestrictionLine("Crafts", crafts));
+        sb.append(formatRestrictionLine("Blocks", blocks));
+        sb.append(formatRestrictionLine("Items", items));
+        sb.append(formatRestrictionLine("Equipment", equipment));
         return Component.literal(sb.toString().stripTrailing());
     }
 
@@ -173,20 +179,16 @@ public record SaveProfessionPacket(
         return line.toString();
     }
 
-    private static void setAndSave(
+    private static void setOnly(
             ModConfigSpec.ConfigValue<List<? extends String>> configValue,
             String profId,
             List<String> items) {
-
         List<String> current = new ArrayList<>(configValue.get());
         current.removeIf(line -> {
             String[] parts = line.split(";", 2);
             return parts.length >= 1 && parts[0].trim().equalsIgnoreCase(profId);
         });
-        if (!items.isEmpty()) {
-            current.add(profId + ";" + String.join(",", items));
-        }
+        if (!items.isEmpty()) current.add(profId + ";" + String.join(",", items));
         configValue.set(current);
-        configValue.save();
     }
 }

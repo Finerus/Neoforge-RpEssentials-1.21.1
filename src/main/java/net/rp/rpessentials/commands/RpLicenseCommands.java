@@ -64,15 +64,23 @@ public class RpLicenseCommands {
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(RpLicenseCommands::listLicenses)));
 
-        licenseNode.then(Commands.literal("giverp")
+        licenseNode.then(Commands.literal("tempgive")
                 .then(Commands.argument("player", EntityArgument.player())
                         .then(Commands.argument("profession", StringArgumentType.word())
                                 .suggests((ctx, builder) -> {
-                                    ProfessionRestrictionManager.getAllProfessions().forEach(p -> builder.suggest(p.id));
+                                    try {
+                                        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+                                        List<String> current = LicenseManager.getLicenses(target.getUUID());
+                                        ProfessionRestrictionManager.getAllProfessions().stream()
+                                                .filter(p -> !current.contains(p.id))
+                                                .forEach(p -> builder.suggest(p.id));
+                                    } catch (Exception e) {
+                                        ProfessionRestrictionManager.getAllProfessions().forEach(p -> builder.suggest(p.id));
+                                    }
                                     return builder.buildFuture();
                                 })
                                 .then(Commands.argument("days_duration", IntegerArgumentType.integer(1, 365))
-                                        .executes(RpLicenseCommands::giveRPLicense)))));
+                                        .executes(RpLicenseCommands::giveTempLicense)))));
 
         licenseNode.then(Commands.literal("reissue")
                 .then(Commands.argument("player", EntityArgument.player())
@@ -129,6 +137,11 @@ public class RpLicenseCommands {
             ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
             return 0;
         }
+        if (LicenseManager.hasLicense(target.getUUID(), professionId)) {
+            ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] §f" + target.getName().getString()
+                    + " §calready has the §f" + professionId + " §clicense. Use §f/rpessentials license reissue §cfor a replacement item."));
+            return 0;
+        }
 
         LicenseManager.addLicense(target.getUUID(), professionId);
         ServerPlayer staff = ctx.getSource().getPlayer();
@@ -155,9 +168,8 @@ public class RpLicenseCommands {
         LicenseManager.logAction("REVOKE", staff, target, profession, null);
         TempLicenseExpirationManager.markRevokedLicenseItems(target);
 
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack(), "tag " + target.getName().getString() + " remove " + profession);
-
+        if (!ProfessionRestrictionManager.isReservedTag(profession)) {
+            server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "tag " + target.getName().getString() + " remove " + profession);}
         ProfessionRestrictionManager.ProfessionData profData = ProfessionRestrictionManager.getProfessionData(profession);
         String profDisplayName = profData != null ? profData.getFormattedName() : profession;
 
@@ -232,39 +244,33 @@ public class RpLicenseCommands {
         return 1;
     }
 
-    private static int giveRPLicense(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    private static int giveTempLicense(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String professionId = StringArgumentType.getString(ctx, "profession");
         int days = IntegerArgumentType.getInteger(ctx, "days_duration");
+        MinecraftServer server = ctx.getSource().getServer();
 
         ProfessionRestrictionManager.ProfessionData profData = ProfessionRestrictionManager.getProfessionData(professionId);
         if (profData == null) {
             ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
             return 0;
         }
+        if (LicenseManager.hasLicense(target.getUUID(), professionId)) {
+            ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] §f" + target.getName().getString()
+                    + " §calready has the §f" + professionId + " §clicense."));
+            return 0;
+        }
 
-        String displayName = NicknameManager.getDisplayName(target);
         java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String issued = java.time.LocalDate.now().format(fmt);
         String expires = java.time.LocalDate.now().plusDays(days).format(fmt);
-
-        ItemStack license = new ItemStack(RpEssentialsItems.LICENSE.get());
-        license.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
-                Component.literal(profData.colorCode + MessagesConfig.get(MessagesConfig.LICENSE_ITEM_NAME) + profData.displayName));
-
-        List<Component> lore = new ArrayList<>();
-        lore.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_TO, "player", displayName)));
-        lore.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_DATE, "date", issued)));
-        lore.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LORE_VALID_UNTIL, "date", expires)));
-        license.set(net.minecraft.core.component.DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(lore));
-        if (!target.getInventory().add(license)) target.drop(license, false);
+        String displayName = NicknameManager.getDisplayName(target);
+        ServerPlayer staff = ctx.getSource().getPlayer();
 
         LicenseManager.addLicense(target.getUUID(), professionId);
-        ServerPlayer staff = ctx.getSource().getPlayer();
         LicenseManager.addTempLicense(staff, target, professionId, days, issued, expires);
-        LicenseManager.logAction("GIVE_RP", staff, target, professionId, days + " days, expires " + expires);
-        ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
-        ProfessionSyncHelper.syncToPlayer(target);
+        LicenseManager.logAction("TEMPGIVE", staff, target, professionId, days + " days, expires " + expires);
+        LicenseHelper.giveLicenseItem(server, staff, target, professionId, expires);
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 MessagesConfig.get(MessagesConfig.LICENSE_GIVE_RP_STAFF, "profession", profData.getFormattedName(),
@@ -293,7 +299,8 @@ public class RpLicenseCommands {
         }
 
         ServerPlayer staff = ctx.getSource().getPlayer();
-        boolean gave = LicenseHelper.giveLicenseItem(server, staff, target, professionId);
+        boolean gave = LicenseHelper.giveLicenseItem(server, staff, target, professionId,
+                LicenseManager.getTempExpirationDate(target.getUUID(), professionId));
         if (!gave) {
             ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] Could not create item for: " + professionId));
             return 0;
@@ -331,8 +338,8 @@ public class RpLicenseCommands {
                 .append(RpChatUi.LINE).append("\n");
         for (LicenseManager.AuditEntry e : recent) {
             String actionColor = switch (e.action) {
-                case "GIVE", "GIVE_RP" -> "§a";
-                case "REVOKE", "EXPIRE_RP" -> "§c";
+                case "GIVE", "TEMPGIVE", "GIVE_RP" -> "§a";
+                case "REVOKE", "TEMPEXPIRE", "EXPIRE_RP" -> "§c";
                 default -> "§7";
             };
             sb.append(actionColor).append(e.action)

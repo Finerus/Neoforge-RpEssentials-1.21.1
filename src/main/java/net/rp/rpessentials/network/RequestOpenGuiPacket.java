@@ -33,7 +33,10 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
             new StreamCodec<>() {
                 @Override
                 public RequestOpenGuiPacket decode(FriendlyByteBuf buf) {
-                    return new RequestOpenGuiPacket(GuiType.values()[buf.readByte()]);
+                    int i = buf.readByte();
+                    GuiType[] values = GuiType.values();
+                    if (i < 0 || i >= values.length) throw new io.netty.handler.codec.DecoderException("Invalid GUI type");
+                    return new RequestOpenGuiPacket(values[i]);
                 }
                 @Override
                 public void encode(FriendlyByteBuf buf, RequestOpenGuiPacket packet) {
@@ -227,7 +230,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         try { rawNotes = NoteManager.getNotes(uuid); } catch (Exception ignored) {}
         int noteCount = rawNotes.size();
         List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> noteEntries = rawNotes.stream()
-                .map(n -> new OpenPlayerProfileGuiPacket.PlayerData.NoteEntry(n.id, n.text, n.authorName, n.timestamp))
+                .map(n -> new OpenPlayerProfileGuiPacket.PlayerData.NoteEntry(n.id, n.text, n.displayAuthor(), n.timestamp))
                 .collect(java.util.stream.Collectors.toList());
 
         return new OpenPlayerProfileGuiPacket.PlayerData(
@@ -273,7 +276,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         int noteCount = rawNotes.size();
 
         List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> noteEntries = rawNotes.stream()
-                .map(n -> new OpenPlayerProfileGuiPacket.PlayerData.NoteEntry(n.id, n.text, n.authorName, n.timestamp))
+                .map(n -> new OpenPlayerProfileGuiPacket.PlayerData.NoteEntry(n.id, n.text, n.displayAuthor(), n.timestamp))
                 .collect(java.util.stream.Collectors.toList());
 
         return new OpenPlayerProfileGuiPacket.PlayerData(

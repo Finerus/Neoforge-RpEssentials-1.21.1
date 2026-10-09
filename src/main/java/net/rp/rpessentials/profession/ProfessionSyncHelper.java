@@ -20,6 +20,9 @@ public class ProfessionSyncHelper {
      * Envoie les restrictions au joueur lors de sa connexion
      */
     public static void syncToPlayer(ServerPlayer player) {
+        ProfessionRestrictionManager.invalidatePlayerCache(player.getUUID());
+        ProfessionRestrictionManager.enforceEquipment(player);
+
         if (ProfessionRestrictionManager.isExemptFromProfessionRestrictions(player)) {
             PacketDistributor.sendToPlayer(player,
                     new SyncProfessionRestrictionsPacket(new HashSet<>(), new HashSet<>()));
@@ -27,12 +30,8 @@ public class ProfessionSyncHelper {
         }
 
         List<String> playerLicenses = LicenseManager.getLicenses(player.getUUID());
-
         Set<String> blockedCrafts = calculateBlockedCrafts(playerLicenses);
         Set<String> blockedEquipment = calculateBlockedEquipment(playerLicenses);
-
-        SyncProfessionRestrictionsPacket packet = new SyncProfessionRestrictionsPacket(blockedCrafts, blockedEquipment);
-        PacketDistributor.sendToPlayer(player, packet);
         PacketDistributor.sendToPlayer(player, new SyncProfessionRestrictionsPacket(blockedCrafts, blockedEquipment));
     }
 
@@ -67,7 +66,9 @@ public class ProfessionSyncHelper {
                 String[] parts = allowEntry.split(";", 2);
                 if (!parts[0].trim().equalsIgnoreCase(license)) continue;
                 for (String allowedItem : parts[1].split(",")) {
-                    if (RpEssentialsPatternUtils.matchesPattern(pattern, allowedItem.trim())) return true;
+                    String a = allowedItem.trim();
+                    if (RpEssentialsPatternUtils.matchesPattern(pattern, a)
+                            || RpEssentialsPatternUtils.matchesPattern(a, pattern)) return true;
                 }
             }
         }

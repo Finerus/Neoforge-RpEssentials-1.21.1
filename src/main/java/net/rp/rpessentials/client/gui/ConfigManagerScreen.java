@@ -170,8 +170,8 @@ public class ConfigManagerScreen extends Screen {
         // No widget needed — text drawn in render()
         // Just add a cancel button
         addRenderableWidget(Button.builder(
-                        Component.translatable("rpessentials.gui.config.btn_close_loading"),
-                        btn -> onClose())
+                        Component.translatable("rpessentials.gui.config.btn_refresh"),
+                        btn -> refreshFile())
                 .pos(cx - 30, cy + 20).size(60, 18).build());
     }
 
@@ -261,35 +261,22 @@ public class ConfigManagerScreen extends Screen {
 
             case LIST_STRING, LIST_INT -> {
                 int btnW = 40;
-                int boxW = formW - labelWidth(entry.key()) - btnW - 16;
-                boxW = Math.max(boxW, 80);
+                int boxW = Math.max(formW - labelWidth(entry.key()) - btnW - 16, 80);
                 int boxX = formX + formW - boxW - btnW - 4;
 
-                String displayValue = currentEdit.replace("\n", ", ");
-
-                EditBox box = new EditBox(this.font, boxX, widgetY, boxW, 16,
-                        Component.literal(entry.key()));
-                box.setMaxLength(1024);
-                box.setValue(displayValue);
-                box.setResponder(val -> {
-                    String normalized = val.replace(", ", "\n").replace(",", "\n");
-                    markChange(entry.fullPath(), normalized, entry.currentValue());
-                });
-                if (!entry.comment().isBlank()) {
-                    box.setTooltip(Tooltip.create(
-                            Component.literal(String.format(
-                                    I18n.get("rpessentials.gui.config.comma_separated"),
-                                    firstLine(entry.comment())))));
-                }
+                EditBox box = new EditBox(this.font, boxX, widgetY, boxW, 16, Component.literal(entry.key()));
+                box.setMaxLength(8192);
+                box.setValue(currentEdit.replace("\n", " | "));
+                box.setEditable(false);
                 addRenderableWidget(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
 
-                // "Edit List" button — opens the list editor sub-screen
-                final String path      = entry.fullPath();
-                final String entryKey  = entry.key();
+                final String path = entry.fullPath();
+                final String entryKey = entry.key();
+                final String original = entry.currentValue();
                 addRenderableWidget(Button.builder(Component.literal(
                                         I18n.get("rpessentials.gui.config.edit_list")),
-                                btn -> openListEditor(path, entryKey, currentEdit))
+                                btn -> openListEditor(path, entryKey, currentEdit, original))
                         .pos(boxX + boxW + 2, widgetY).size(btnW, 16).build());
             }
 
@@ -357,6 +344,11 @@ public class ConfigManagerScreen extends Screen {
             editBoxValues.clear();
             rebuild();
         }).pos(mid + 54, y).size(60, 20).build());
+
+        addRenderableWidget(Button.builder(Component.literal("§e↻"), btn -> refreshFile())
+                .pos(mid + 118, y).size(20, 20)
+                .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
+                .build());
 
         // Close
         addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.btn_close"), btn -> onClose())
@@ -595,19 +587,37 @@ public class ConfigManagerScreen extends Screen {
 
     private void applyChanges() {
         if (selectedFileId == null || pendingChanges.isEmpty()) return;
-        PacketDistributor.sendToServer(new SaveConfigEntriesPacket(selectedFileId,
-                new HashMap<>(pendingChanges)));
-        pendingChanges.clear();
-        // Server will respond with updated entries (see onFileDataReceived)
+        Map<String, String> batch = new HashMap<>();
+        List<String> sent = new ArrayList<>();
+        int size = 0;
+        int tooLong = 0;
+        for (Map.Entry<String, String> e : pendingChanges.entrySet()) {
+            if (e.getValue().length() > 8000) { tooLong++; continue; }
+            int entrySize = e.getKey().getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+                    + e.getValue().getBytes(java.nio.charset.StandardCharsets.UTF_8).length + 10;
+            if (!batch.isEmpty() && size + entrySize > 20000) {
+                PacketDistributor.sendToServer(new SaveConfigEntriesPacket(selectedFileId, batch));
+                batch = new HashMap<>();
+                size = 0;
+            }
+            batch.put(e.getKey(), e.getValue());
+            sent.add(e.getKey());
+            size += entrySize;
+        }
+        if (!batch.isEmpty()) PacketDistributor.sendToServer(new SaveConfigEntriesPacket(selectedFileId, batch));
+        sent.forEach(pendingChanges::remove);
+        if (tooLong > 0 && Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
+                    Component.literal("§c[Config] " + tooLong + " value(s) too long (max 8000 characters), not sent."), false);
+        }
     }
 
     /**
      * Opens the ListEditorSubScreen for a LIST_STRING entry.
      * The sub-screen calls back via onListEdited().
      */
-    private void openListEditor(String fullPath, String key, String currentCommaValue) {
-        Minecraft.getInstance().setScreen(
-                new ListEditorSubScreen(this, fullPath, key, currentCommaValue));
+    private void openListEditor(String fullPath, String key, String current, String original) {
+        Minecraft.getInstance().setScreen(new ListEditorSubScreen(this, fullPath, key, current, original));
     }
 
     /** Called by ListEditorSubScreen when the user saves the list. */
@@ -726,20 +736,17 @@ public class ConfigManagerScreen extends Screen {
         private final List<String>        items;
         private int scrollOffset = 0;
 
-        ListEditorSubScreen(ConfigManagerScreen parent, String fullPath,
-                            String key, String rawValue) {
+        ListEditorSubScreen(ConfigManagerScreen parent, String fullPath, String key,
+                            String rawValue, String originalValue) {
             super(Component.literal(I18n.get("rpessentials.gui.config.list.title",
                     ConfigManagerScreen.formatKeyName(key))));
-            this.parent        = parent;
-            this.fullPath      = fullPath;
-            this.originalComma = rawValue;
+            this.parent = parent;
+            this.fullPath = fullPath;
+            this.originalComma = originalValue;
             this.items = new ArrayList<>();
-            if (!rawValue.isBlank()) {
-                String[] parts = rawValue.contains("\n") ? rawValue.split("\n") : rawValue.split(",");
-                for (String s : parts) {
-                    String t = s.trim();
-                    if (!t.isEmpty()) this.items.add(t);
-                }
+            for (String s : rawValue.split("\n")) {
+                String t = s.trim();
+                if (!t.isEmpty()) this.items.add(t);
             }
         }
 
@@ -747,59 +754,49 @@ public class ConfigManagerScreen extends Screen {
         protected void init() {
             int midX = this.width / 2;
             int startY = 40;
-            int rowH   = 22;
-            int visMax = (this.height - startY - 60) / rowH;
+            int rowH = 22;
+            int visMax = Math.max(1, (this.height - startY - 60) / rowH);
+            scrollOffset = Math.min(scrollOffset, Math.max(0, items.size() - visMax));
 
-            int first = Math.max(0, scrollOffset);
-            int last  = Math.min(items.size() - 1, first + visMax - 1);
+            int first = scrollOffset;
+            int last = Math.min(items.size() - 1, first + visMax - 1);
 
             for (int i = first; i <= last; i++) {
                 final int idx = i;
+                int rowY = startY + (i - first) * rowH + 2;
 
-                // EditBox for the item
-                EditBox box = new EditBox(this.font, midX - 160, startY + (i - first) * rowH + 2,
-                        290, 18, Component.empty());
+                EditBox box = new EditBox(this.font, midX - 160, rowY, 290, 18, Component.empty());
                 box.setMaxLength(512);
                 box.setValue(items.get(i));
                 box.setResponder(val -> items.set(idx, val));
                 addRenderableWidget(box);
 
-                // Remove button
                 addRenderableWidget(Button.builder(Component.literal("§c✗"),
                                 btn -> { items.remove(idx); rebuild(); })
-                        .pos(midX + 134, startY + (i - first) * rowH + 2).size(16, 18).build());
+                        .pos(midX + 134, rowY).size(16, 18).build());
 
-                // Move up
                 if (i > 0)
                     addRenderableWidget(Button.builder(Component.literal("▲"),
                                     btn -> { Collections.swap(items, idx, idx - 1); rebuild(); })
-                            .pos(midX + 152, startY + (i - first) * rowH + 2).size(14, 8).build());
+                            .pos(midX + 152, rowY).size(14, 8).build());
 
-                // Move down
                 if (i < items.size() - 1)
                     addRenderableWidget(Button.builder(Component.literal("▼"),
                                     btn -> { Collections.swap(items, idx, idx + 1); rebuild(); })
-                            .pos(midX + 152, startY + (i - first) * rowH + 12).size(14, 8).build());
+                            .pos(midX + 152, rowY + 10).size(14, 8).build());
             }
 
             int btnY = this.height - 48;
 
-            //noinspection SuspiciousIndentAfterControlStatement
-            if (scrollOffset > 0)
-            // Add new entry
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_add"),
                             btn -> { items.add(""); rebuild(); })
                     .pos(midX - 170, btnY).size(110, 20).build());
 
-            // Save
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_save"), btn -> {
-                // Remove empty entries
                 items.removeIf(String::isBlank);
-                String result = String.join("\n", items);
-                parent.onListEdited(fullPath, result, originalComma);
+                parent.onListEdited(fullPath, String.join("\n", items), originalComma);
             }).pos(midX - 55, btnY).size(110, 20).build());
 
-            // Cancel
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_cancel"),
                             btn -> net.minecraft.client.Minecraft.getInstance().setScreen(parent))
                     .pos(midX + 59, btnY).size(70, 20).build());
@@ -835,5 +832,16 @@ public class ConfigManagerScreen extends Screen {
 
         @Override
         public boolean isPauseScreen() { return false; }
+    }
+
+    private void refreshFile() {
+        if (selectedFileId == null) return;
+        currentEntries = null;
+        loading = true;
+        scrollOffset = 0;
+        pendingChanges.clear();
+        editBoxValues.clear();
+        PacketDistributor.sendToServer(new RequestConfigFilePacket(selectedFileId));
+        rebuild();
     }
 }

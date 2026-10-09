@@ -1,6 +1,143 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [5.0.0] - Beta 4
+
+### Breaking Changes
+
+* **`/rpessentials license giverp` replaced by `tempgive`:** temporary licenses now use `/rpessentials license tempgive <player> <profession> <days>`. They behave like permanent licenses with an expiration date.
+
+* **Role management and sensitive config keys restricted:** role management and sensitive config keys (`staffTags`, `opLevelBypass`, `roles`, `autoUnwhitelistExtraCommands`, LuckPerms groups) now require the OP level defined by `opLevelBypass` (OP 4 if disabled). Restricted entries are hidden or greyed out in the GUIs.
+
+* **Reserved profession and role IDs:** profession IDs can no longer match a role ID or a staff tag, and role IDs can no longer match a profession ID.
+
+* **Death hours no longer rewrite `globalEnabled`:** both systems now work independently.
+
+### Added
+
+* **`/rpessentials license tempgive`:** professions already owned are no longer suggested nor accepted.
+
+* **Holder UUID and expiration date on license items:** licenses now store both directly on the item.
+
+* **`notifyRefusedJoin` config option (Schedule System):** notifies staff when a player tries to join while the server is closed.
+
+* **`diceCooldownSeconds` config option (RP Cooldowns):** adds a cooldown to `/roll` and the dice GUI.
+
+* **Automatic kick of players who are no longer allowed:** online players are kicked when the schedule changed, their role changed or the server was force closed.
+
+* **Live config reload:** hand edited config files are now applied live, without `/rpessentials config reload`.
+
+* **Invalid schedule time warning:** staff are warned in chat when a schedule time is invalid.
+
+* **Staff notes edit history:** notes keep the original author and list every later editor.
+
+* **Armor restriction enforcement:** armor that a player is not allowed to wear is removed on equip, on license revoke or expiration, and on config change.
+
+* **Reset nickname:** You now have to confirm the reset of the nickname.
+
+* **New button:** a new button to refresh the GUIs is now her! (Be careful, refreshing a GUI will reset all the unsaved changes)
+
+### Improved
+
+* **`/rpessentials license reissue`:** now keeps the expiration date of temporary licenses.
+
+* **`/schedule` layout:** new layout with header, sections and special hours.
+
+* **`/rpessentials deathrp status`:** now shows the death hours status and the effective Death RP state.
+
+* **Staff commands:** they now work from the console and for staff defined by tag or group without OP.
+
+* **Auto unwhitelist:** it runs only during the midnight hour and no longer blocks the server thread on LuckPerms.
+
+* **Config Manager refresh:** applied changes now refresh schedule, tab list, roles, presets and nametag settings.
+
+* **Default `staffTags`:** `builder` was removed from the defaults.
+
+* **README requirements:** ImmersiveMessages and TxniLib are now listed as required on both sides.
+
+* **GUIs Feedback:** all the feedback sent by the GUI are now much more detailed.
+
+### Fixed
+
+* **Config Manager lists corrupted:** lists with commas (`professionAllowedCrafts` and others) were split and corrupted.
+
+* **Config Manager "Add entry" button hidden:** the button was not visible until scrolling.
+
+* **Config Manager pending edit cancelled:** saving a list without changes could cancel a pending edit.
+
+* **Config Manager disconnecting the admin:** values over the packet limit no longer disconnect the admin.
+
+* **Profession wiped on restart:** a profession name containing `;` no longer wipes the profession on restart.
+
+* **Chat messages hidden:** messages containing "joined the game" or "left the game" are no longer hidden.
+
+* **Refused join side effects:** a player refused by the schedule no longer triggers a leave message nor updates last connection and playtime.
+
+* **Next opening on `/schedule`:** the next opening on `/schedule` and in the kick message now takes the current day into account.
+
+* **Temporary license removing a permanent one:** a temporary license can no longer remove a permanent one.
+
+* **License items flagged as revoked for another player:** items given to another player are no longer flagged as revoked for them, and the revoked flag is removed when the license is back.
+
+* **Inverted wildcard matching on client sync:** the client side restriction sync used inverted wildcard matching, and was sent twice.
+
+* **Block placement and interaction:** block placement now checks the placed block, and using a forbidden item on a door or chest no longer prevents opening it.
+
+* **Tab list blur:** it now takes dimensions into account, converts `&` prefixes and respects `obfuscatePrefix`.
+
+* **Dice:** `/roll` and the dice GUI ignore mute but have a cooldown, invalid dice are ignored and custom faces are trimmed.
+
+* **World border in the Nether:** players are no longer placed above the Nether roof (players already on the roof stay on the roof).
+
+* **Nickname and nametag refresh:** both are refreshed after `/setrole`, `/rp selfnick` and GUI changes.
+
+* **Client state on disconnect:** client nametag and restriction states are reset on disconnect.
+
+* **Nickname leaking into player data:** nicknames no longer leak into the player `CustomName` data.
+
+* **Hardcoded French (oui oui baguette) texts:** the Undo button and the config change summary are now in English.
+
+### Security
+
+* **GUI packet validation:** GUI packets are size limited and validated (names, item lists, container rules, permissions).
+
+* **Profile GUI role check:** the role sent by the profile GUI is now checked against the configured roles.
+
+* **Sensitive config keys:** they are hidden and rejected server side for staff below the required OP level.
+
+### Technical
+
+* **Atomic JSON saves:** saves are atomic and sequential, and unreadable files are moved aside instead of being overwritten.
+
+* **Shutdown save order:** the last logout and playtime are now saved on shutdown.
+
+* **World switch reload:** notes, death history, pending profiles and unwhitelist history are reloaded when switching world.
+
+* **Daily tasks:** the license sweep and auto unwhitelist no longer depend on an exact minute.
+
+* **Death RP trigger:** it no longer depends on the vanilla death message (`showDeathMessages false` is supported).
+
+### Migration Notes
+
+* `giverp` no longer exists, use `tempgive` in scripts, command blocks and documentation.
+
+* The default `staffTags` no longer contains `builder`, but existing configs must be edited by hand.
+
+* Staff relying on role management or sensitive config keys need the OP level defined by `opLevelBypass` (and when you first install the mod, the `opLevelBypass` will be set to 3).
+
+### Known issues
+
+* The license item shown in hand and the GUI have some unaligned lignes.
+
+* The line `[STAFF] Server closed: you may remain connected` is sent everytime you type a rpessentials command in the chat. (This is driving me crazy)
+
+### Personal notes
+
+So hummm, yeah, Beta 3 was supposed to be the last Beta, but you know I had that amazing idea
+"And WHAT IF I decided to sent my code to Claude to check all the bugs?"
+Terrible idea... so there is still some little things to be modified or added, but for people on the beta, I think that this Beta 4 was much needed!
+Oh, and the release will be released very soon! I just need to polish 2 or 3 things.
+
 ## [5.0.0] (Beta 3)
 
 ### Breaking Changes

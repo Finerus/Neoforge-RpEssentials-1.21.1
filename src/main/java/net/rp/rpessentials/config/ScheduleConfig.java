@@ -22,6 +22,7 @@ public class ScheduleConfig {
     // =========================================================================
     public static final ModConfigSpec.BooleanValue ENABLE_SCHEDULE;
     public static final ModConfigSpec.BooleanValue KICK_NON_STAFF;
+    public static final ModConfigSpec.BooleanValue NOTIFY_REFUSED_JOIN;
     public static final ModConfigSpec.ConfigValue<List<? extends Integer>> WARNING_TIMES;
 
     // =========================================================================
@@ -111,6 +112,10 @@ public class ScheduleConfig {
         KICK_NON_STAFF = BUILDER
                 .comment("If true, non-staff players are kicked when the server closes.")
                 .define("kickNonStaff", true);
+
+        NOTIFY_REFUSED_JOIN = BUILDER
+                .comment("If true, staff members are notified when a player tries to join while the server is closed.")
+                .define("notifyRefusedJoin", false);
 
         WARNING_TIMES = BUILDER
                 .comment("Minutes before closing at which warning messages are sent.",

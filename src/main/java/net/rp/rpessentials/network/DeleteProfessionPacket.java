@@ -42,7 +42,6 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
                 List<String> professions = new ArrayList<>(ProfessionConfig.PROFESSIONS.get());
                 professions.removeIf(l -> l.split(";", 2)[0].trim().equalsIgnoreCase(cleanId));
                 ProfessionConfig.PROFESSIONS.set(professions);
-                ProfessionConfig.PROFESSIONS.save();
 
                 // Suppression dans toutes les listes d'overrides
                 removeFromOverride(ProfessionConfig.PROFESSION_ALLOWED_CRAFTS,    cleanId);
@@ -51,6 +50,7 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
                 removeFromOverride(ProfessionConfig.PROFESSION_ALLOWED_EQUIPMENT, cleanId);
 
                 ProfessionRestrictionManager.reloadCache();
+                ProfessionConfig.SPEC.save();
 
                 player.sendSystemMessage(Component.literal(
                         "§a[RpEssentials] Profession §e" + cleanId + " §adeleted."));
@@ -69,6 +69,5 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
         List<String> list = new ArrayList<>(config.get());
         list.removeIf(l -> l.split(";", 2)[0].trim().equalsIgnoreCase(profId));
         config.set(list);
-        config.save();
     }
 }

@@ -147,14 +147,14 @@ public class RpEssentialsConfig {
         STAFF_TAGS = BUILDER
                 .comment("LuckPerms tags/groups considered as staff.")
                 .defineList("staffTags",
-                        Arrays.asList("admin", "moderator", "staff", "builder"),
+                        Arrays.asList("admin", "moderator", "staff"),
                         obj -> obj instanceof String);
 
         OP_LEVEL_BYPASS = BUILDER
                 .comment("Minimum OP level for a player to be considered staff (staff commands).",
                         "It does NOT bypass profession restrictions: use the professionWhitelist role permission for that.",
                         "0 = disabled.")
-                .defineInRange("opLevelBypass", 2, 0, 4);
+                .defineInRange("opLevelBypass", 3, 0, 4);
 
         USE_LUCKPERMS_GROUPS = BUILDER
                 .comment("If true, uses LuckPerms groups to determine staff status.")

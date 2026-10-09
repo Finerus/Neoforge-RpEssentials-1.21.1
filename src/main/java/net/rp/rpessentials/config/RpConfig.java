@@ -48,6 +48,7 @@ public class RpConfig {
     public static final ModConfigSpec.IntValue ACTION_COOLDOWN_SECONDS;
     public static final ModConfigSpec.IntValue COMMERCE_COOLDOWN_SECONDS;
     public static final ModConfigSpec.IntValue INCOGNITO_COOLDOWN_SECONDS;
+    public static final ModConfigSpec.IntValue DICE_COOLDOWN_SECONDS;
 
     // =========================================================================
     // SELF NICK
@@ -99,6 +100,7 @@ public class RpConfig {
         ACTION_COOLDOWN_SECONDS    = BUILDER.comment("Cooldown for /rp action and /me (0=disabled).").defineInRange("actionCooldownSeconds",    0, 0, 300);
         COMMERCE_COOLDOWN_SECONDS  = BUILDER.comment("Cooldown for /rp commerce (0=disabled).").defineInRange("commerceCooldownSeconds",  0, 0, 300);
         INCOGNITO_COOLDOWN_SECONDS = BUILDER.comment("Cooldown for /rp incognito (0=disabled).").defineInRange("incognitoCooldownSeconds", 0, 0, 300);
+        DICE_COOLDOWN_SECONDS = BUILDER.comment("Cooldown for dice rolls (0=disabled).").defineInRange("diceCooldownSeconds", 0, 0, 300);
         BUILDER.pop();
 
         // ── SELF NICK ─────────────────────────────────────────────────────

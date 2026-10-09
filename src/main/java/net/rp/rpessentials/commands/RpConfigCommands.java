@@ -14,8 +14,12 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.moderation.LastConnectionManager;
+import net.rp.rpessentials.moderation.MuteManager;
 import net.rp.rpessentials.moderation.WarnManager;
 import net.rp.rpessentials.network.HideNametagsPacket;
+import net.rp.rpessentials.profession.LicenseManager;
+import net.rp.rpessentials.profession.PendingProfileManager;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 
 import static net.rp.rpessentials.commands.RpChatUi.*;
@@ -266,15 +270,16 @@ public class RpConfigCommands {
         RpEssentialsPatternUtils.clearCache();
         ImmersivePresetHelper.clearCache();
         RpEssentialsPermissions.clearCache();
-        net.rp.rpessentials.TabListCache.reload();
+        TabListCache.reload();
+        RpEssentialsScheduleManager.enforceOnline(ctx.getSource().getServer());
 
         // Données persistantes (rechargement depuis fichier)
         NicknameManager.reload();
-        net.rp.rpessentials.profession.LicenseManager.reload();
-        net.rp.rpessentials.moderation.MuteManager.reload();
-        net.rp.rpessentials.moderation.LastConnectionManager.reload();
-        net.rp.rpessentials.moderation.WarnManager.reload();
-        net.rp.rpessentials.profession.PendingProfileManager.reload();
+        LicenseManager.reload();
+        MuteManager.reload();
+        LastConnectionManager.reload();
+        WarnManager.reload();
+        PendingProfileManager.reload();
 
         // Sync client
         try {
@@ -295,9 +300,9 @@ public class RpConfigCommands {
         String dataFolder = RpEssentialsDataPaths.getDataFolder().getAbsolutePath();
         RpEssentials.LOGGER.info("[RpEssentials] Data layer ready — {} nickname(s), {} license(s), {} warn(s), {} mute(s). Data folder: {}",
                 NicknameManager.count(),
-                net.rp.rpessentials.profession.LicenseManager.getAllLicenses().size(),
-                net.rp.rpessentials.moderation.WarnManager.getAll().size(),
-                net.rp.rpessentials.moderation.MuteManager.getAllMutes().size(),
+                LicenseManager.getAllLicenses().size(),
+                WarnManager.getAll().size(),
+                MuteManager.getAllMutes().size(),
                 dataFolder);
         return 1;
     }

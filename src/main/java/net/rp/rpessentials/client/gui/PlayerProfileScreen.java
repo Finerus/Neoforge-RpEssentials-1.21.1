@@ -11,6 +11,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.moderation.PlaytimeManager;
 import net.rp.rpessentials.network.OpenPlayerProfileGuiPacket;
 import net.rp.rpessentials.network.PlayerNoteActionPacket;
@@ -47,6 +48,7 @@ public class PlayerProfileScreen extends Screen {
     private int sortButtonX, sortButtonY;
     private static final String[] FILTER_KEYS = { "online", "offline", "prepared", "all" };
     private String pendingDeletePlayerUuid = null;
+    private boolean pendingNickReset = false;
 
     private static final char[]   COLOR_CHARS = { 0, 'f','e','6','c','a','b','9','d','7','8','0','1','2','3','4','5' };
     private static final String[] COLOR_KEYS  = {
@@ -131,6 +133,13 @@ public class PlayerProfileScreen extends Screen {
                 .pos(sortButtonX, sortButtonY).size(18, 12)
                 .tooltip(Tooltip.create(Component.translatable(
                         "rpessentials.gui.player_profile.filter." + FILTER_KEYS[filterMode])))
+                .build());
+
+        addRenderableWidget(Button.builder(Component.literal("§7↻"),
+                        btn -> PacketDistributor.sendToServer(new net.rp.rpessentials.network.RequestOpenGuiPacket(
+                                net.rp.rpessentials.network.RequestOpenGuiPacket.GuiType.PLAYER_PROFILE)))
+                .pos(sortButtonX - 20, sortButtonY).size(18, 12)
+                .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
                 .build());
 
         // ── Liste joueurs (gauche) ─────────────────────────────────────────
@@ -274,8 +283,14 @@ public class PlayerProfileScreen extends Screen {
         addRenderableWidget(nickBox);
 
         addRenderableWidget(Button.builder(
-                        Component.literal("§c✕"),
+                        Component.literal(pendingNickReset ? "§c!" : "§c✕"),
                         btn -> {
+                            if (!pendingNickReset) {
+                                pendingNickReset = true;
+                                rebuild();
+                                return;
+                            }
+                            pendingNickReset = false;
                             stateNick = "";
                             stateNickColorIndex = 0;
                             OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
@@ -290,7 +305,9 @@ public class PlayerProfileScreen extends Screen {
                         })
                 .pos(formX + nickBoxW + 4, nickBoxY)
                 .size(18, 18)
-                .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.player_profile.nick_reset_tooltip")))
+                .tooltip(Tooltip.create(Component.translatable(pendingNickReset
+                        ? "rpessentials.gui.player_profile.nick_reset_confirm"
+                        : "rpessentials.gui.player_profile.nick_reset_tooltip")))
                 .build());
         y += 44;
 
@@ -327,11 +344,14 @@ public class PlayerProfileScreen extends Screen {
                 int col = i % cols;
                 int row = i / cols;
                 boolean sel = role.equalsIgnoreCase(stateRole);
-                addRenderableWidget(Button.builder(
+                Button roleBtn = Button.builder(
                                 Component.literal(sel ? "§e§l" + role : "§7" + role),
                                 btn -> { stateRole = role; rebuild(); })
                         .pos(formX + col * (btnW + gap), y + row * 16)
-                        .size(btnW, 14).build());
+                        .size(btnW, 14).build();
+                roleBtn.active = Minecraft.getInstance().player != null
+                        && RpEssentialsPermissions.hasSensitiveLevel(Minecraft.getInstance().player);
+                addRenderableWidget(roleBtn);
             }
             y += rows * 16 + 4;
         }
@@ -761,6 +781,7 @@ public class PlayerProfileScreen extends Screen {
         stateNotesScroll    = 0;
         stateEditingNoteId  = -1;
         pendingDeletePlayerUuid = null;
+        pendingNickReset = false;
         OpenPlayerProfileGuiPacket.PlayerData p = players.get(idx);
         String rawNick = p.currentNick();
         stateNickColorIndex = 0;
@@ -844,8 +865,7 @@ public class PlayerProfileScreen extends Screen {
 
         if (stateEditingNoteId != -1) {
             int oldId = stateEditingNoteId;
-            PacketDistributor.sendToServer(new PlayerNoteActionPacket(target.uuid(), true, oldId, ""));
-            PacketDistributor.sendToServer(new PlayerNoteActionPacket(target.uuid(), false, 0, text));
+            PacketDistributor.sendToServer(new PlayerNoteActionPacket(target.uuid(), false, oldId, text));
 
             List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> updated = new ArrayList<>();
             for (OpenPlayerProfileGuiPacket.PlayerData.NoteEntry n : target.notes()) {

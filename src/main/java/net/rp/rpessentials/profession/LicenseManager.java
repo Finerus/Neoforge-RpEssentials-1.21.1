@@ -77,7 +77,6 @@ public class LicenseManager {
     // =========================================================================
     // STATE
     // =========================================================================
-
     private static final Map<UUID, List<String>> playerLicenses = new ConcurrentHashMap<>();
     private static final List<AuditEntry> auditLog = Collections.synchronizedList(new ArrayList<>());
     private static final List<TempLicenseEntry> tempLicenses = Collections.synchronizedList(new ArrayList<>());
@@ -114,7 +113,6 @@ public class LicenseManager {
     // =========================================================================
     // LOAD
     // =========================================================================
-
     private static void loadFromFile() {
         if (licenseFile == null || !licenseFile.exists()) return;
 
@@ -137,6 +135,7 @@ public class LicenseManager {
             }
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[LicenseManager] Failed to load licenses", e);
+            RpEssentialsIO.quarantine(licenseFile);
         }
     }
 
@@ -169,7 +168,6 @@ public class LicenseManager {
     // =========================================================================
     // SAVE (async)
     // =========================================================================
-
     private static void saveToFile() {
         ensureInitialized();
         if (licenseFile == null) return;
@@ -194,18 +192,12 @@ public class LicenseManager {
         }
 
         File targetFile = licenseFile;
-        RpEssentialsIO.submit(() -> {
-            try {
-                File parent = targetFile.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
-                try (java.io.FileWriter writer = new java.io.FileWriter(targetFile)) {
-                    GSON.toJson(data, writer);
-                }
-                RpEssentials.LOGGER.debug("[LicenseManager] Saved licenses for {} players", data.size());
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[LicenseManager] Failed to save licenses", e);
-            }
-        });
+        RpEssentialsIO.saveJson(targetFile, data, GSON);
+
+        RpEssentials.LOGGER.debug(
+                "[LicenseManager] Queued licenses save for {} players",
+                data.size()
+        );
     }
 
     private static void saveAuditToFile() {
@@ -214,19 +206,12 @@ public class LicenseManager {
         List<AuditEntry> snapshot = new ArrayList<>(auditLog);
         File targetFile = auditFile;
 
-        RpEssentialsIO.submit(() -> {
-            try {
-                File parent = targetFile.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
+        RpEssentialsIO.saveJson(targetFile, snapshot, GSON);
 
-                try (FileWriter writer = new FileWriter(targetFile)) {
-                    GSON.toJson(snapshot, writer);
-                }
-                RpEssentials.LOGGER.debug("[LicenseManager] Saved {} audit entries", snapshot.size());
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[LicenseManager] Failed to save audit log", e);
-            }
-        });
+        RpEssentials.LOGGER.debug(
+                "[LicenseManager] Queued {} audit entries",
+                snapshot.size()
+        );
     }
 
     private static void saveTempToFile() {
@@ -235,19 +220,12 @@ public class LicenseManager {
         List<TempLicenseEntry> snapshot = new ArrayList<>(tempLicenses);
         File targetFile = tempFile;
 
-        RpEssentialsIO.submit(() -> {
-            try {
-                File parent = targetFile.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
+        RpEssentialsIO.saveJson(targetFile, snapshot, GSON);
 
-                try (FileWriter writer = new FileWriter(targetFile)) {
-                    GSON.toJson(snapshot, writer);
-                }
-                RpEssentials.LOGGER.debug("[LicenseManager] Saved {} temp licenses", snapshot.size());
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[LicenseManager] Failed to save temp licenses", e);
-            }
-        });
+        RpEssentials.LOGGER.debug(
+                "[LicenseManager] Queued {} temp licenses",
+                snapshot.size()
+        );
     }
 
     // =========================================================================
@@ -272,10 +250,12 @@ public class LicenseManager {
         List<String> licenses = playerLicenses.get(playerUUID);
         if (licenses != null) {
             licenses.remove(profession);
-            if (licenses.isEmpty()) {
-                playerLicenses.remove(playerUUID);
-            }
+            if (licenses.isEmpty()) playerLicenses.remove(playerUUID);
             saveToFile();
+        }
+        String uuidStr = playerUUID.toString();
+        if (tempLicenses.removeIf(e -> e.targetUUID.equals(uuidStr) && e.profession.equalsIgnoreCase(profession))) {
+            saveTempToFile();
         }
         MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {

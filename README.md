@@ -47,11 +47,8 @@ Hi, here is all you need to know about AI in this project:
 | NeoForge                                                                | 21.1.219+              | Both   | Yes      |
 | [RpImmersion](https://www.curseforge.com/minecraft/mc-mods/rpimmersion) | 1.0.0                  | Both   | Optional |
 | LuckPerms                                                               | Any                    | Server | Optional |
-| ImmersiveMessages                                                       | neoforge-1.21.1:1.0.18 | Client | Optional |
-| TxniLib                                                                 | neoforge-1.21.1:1.0.24 | Client | Optional |
-
-ImmersiveMessages and TxniLib are only required client side if you use the `IMMERSIVE` display mode somewhere in the config. The server runs fine without them.
-
+| ImmersiveMessages                                                       | neoforge-1.21.1:1.0.18 | Both   | Optional |
+| TxniLib                                                                 | neoforge-1.21.1:1.0.24 | Both   | Optional |
 ---
 
 ## Installation

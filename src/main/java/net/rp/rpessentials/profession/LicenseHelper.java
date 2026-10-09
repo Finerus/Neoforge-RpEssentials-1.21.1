@@ -44,11 +44,13 @@ public class LicenseHelper {
      * @param professionId the profession id (must exist in ProfessionRestrictionManager)
      * @return true if the profession data was found and the item was created, false otherwise
      */
-    public static boolean giveLicenseItem(MinecraftServer server,
-                                          ServerPlayer staff,
-                                          ServerPlayer target,
-                                          String professionId) {
+    public static boolean giveLicenseItem(MinecraftServer server, ServerPlayer staff,
+                                          ServerPlayer target, String professionId) {
+        return giveLicenseItem(server, staff, target, professionId, null);
+    }
 
+    public static boolean giveLicenseItem(MinecraftServer server, ServerPlayer staff,
+                                          ServerPlayer target, String professionId, String expiryDate) {
         ProfessionRestrictionManager.ProfessionData profData =
                 ProfessionRestrictionManager.getProfessionData(professionId);
         if (profData == null) return false;
@@ -58,27 +60,25 @@ public class LicenseHelper {
 
         // ── Build the ItemStack ───────────────────────────────────────────────
         ItemStack license = new ItemStack(RpEssentialsItems.LICENSE.get());
-
-        // colorCode may be stored as "&e" (from the GUI) or "§e" (from hand-edited config).
-        // Component.literal() does NOT parse either -- we must translate first.
         String colorPrefix = profData.colorCode.replace("&", "§");
         license.set(DataComponents.CUSTOM_NAME,
                 net.rp.rpessentials.ColorHelper.parseColors(
-                        colorPrefix
-                                + MessagesConfig.get(MessagesConfig.LICENSE_ITEM_NAME)
-                                + profData.displayName));
+                        colorPrefix + MessagesConfig.get(MessagesConfig.LICENSE_ITEM_NAME) + profData.displayName));
 
         List<Component> lore = new ArrayList<>();
-        lore.add(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_TO, "player", displayName)));
-        lore.add(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_LORE_DATE, "date", dateStr)));
+        lore.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LORE_ISSUED_TO, "player", displayName)));
+        lore.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LORE_DATE, "date", dateStr)));
+        if (expiryDate != null) {
+            lore.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LORE_VALID_UNTIL, "date", expiryDate)));
+        }
         license.set(DataComponents.LORE, new ItemLore(lore));
 
         CompoundTag tag = new CompoundTag();
         tag.putString("professionId", professionId);
-        tag.putString("holderName",   displayName);
-        tag.putString("issueDate",    dateStr);
+        tag.putString("holderName", displayName);
+        tag.putString("holderUuid", target.getUUID().toString());
+        tag.putString("issueDate", dateStr);
+        if (expiryDate != null) tag.putString("expiryDate", expiryDate);
         license.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 
         // ── Give to player ────────────────────────────────────────────────────
@@ -86,17 +86,15 @@ public class LicenseHelper {
             target.drop(license, false);
         }
 
-        // ── Vanilla tag ───────────────────────────────────────────────────────
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack()
-                        .withSuppressedOutput()
-                        .withPermission(4),
-                "tag " + target.getName().getString() + " add " + professionId);
+        if (!ProfessionRestrictionManager.isReservedTag(professionId)) {
+            server.getCommands().performPrefixedCommand(
+                    server.createCommandSourceStack().withSuppressedOutput().withPermission(4),
+                    "tag " + target.getName().getString() + " add " + professionId);
+        }
 
         // ── Cache + client sync ───────────────────────────────────────────────
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
-
         return true;
     }
 }

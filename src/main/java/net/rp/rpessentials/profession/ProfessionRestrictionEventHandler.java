@@ -6,6 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -32,17 +33,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * Gestion événementielle des restrictions de métiers.
  *
  * Restrictions couvertes :
- *   ✅ Craft             → MixinResultSlot, MixinSmithingMenu, MixinAnvilMenu
- *   ✅ Armure drag       → MixinArmorSlot
- *   ✅ Armure right-click→ MixinArmorItemUse
- *   ✅ Cassage de blocs  → onBlockBreak
- *   ✅ Usage item (RC)   → onRightClickItem + onRightClickBlock
- *   ✅ Outil (LC)        → onLeftClickBlock
- *   ✅ Attaque arme      → onAttackEntity
- *   ✅ Ouverture container → MixinServerPlayerGameMode
- *   ✅ Placement de bloc → onBlockPlace  ← NOUVEAU
- *   ✅ Interaction entité→ onEntityInteract ← NOUVEAU
- *   ✅ Tooltips complets → onItemTooltip (fix item/bloc ID mismatch)
+ *   Craft             → MixinResultSlot, MixinSmithingMenu, MixinAnvilMenu
+ *   Armure drag       → MixinArmorSlot
+ *   Armure right-click→ MixinArmorItemUse
+ *   Cassage de blocs  → onBlockBreak
+ *   Usage item (RC)   → onRightClickItem + onRightClickBlock
+ *   Outil (LC)        → onLeftClickBlock
+ *   Attaque arme      → onAttackEntity
+ *   Ouverture container → MixinServerPlayerGameMode
+ *   Placement de bloc → onBlockPlace  ← NOUVEAU
+ *   Interaction entité→ onEntityInteract ← NOUVEAU
+ *   Tooltips complets → onItemTooltip (fix item/bloc ID mismatch)
  */
 @EventBusSubscriber(modid = RpEssentials.MODID)
 public class ProfessionRestrictionEventHandler {
@@ -55,7 +56,6 @@ public class ProfessionRestrictionEventHandler {
     // =========================================================================
     // UTILITAIRE ANTI-SPAM
     // =========================================================================
-
     private static boolean canSendMessage(UUID id, Map<UUID, Long> cache, long cooldown) {
         long now = System.currentTimeMillis();
         Long last = cache.get(id);
@@ -102,14 +102,7 @@ public class ProfessionRestrictionEventHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (player.isCreative()) return;
 
-        // On vérifie l'item tenu en main (l'item placé)
-        ItemStack heldMain  = player.getItemInHand(InteractionHand.MAIN_HAND);
-        ItemStack heldOff   = player.getItemInHand(InteractionHand.OFF_HAND);
-        ItemStack held      = !heldMain.isEmpty() ? heldMain : heldOff;
-        if (held.isEmpty()) return;
-
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(held.getItem());
-
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(event.getPlacedBlock().getBlock().asItem());
         if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
             event.setCanceled(true);
             sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(itemId));
@@ -128,8 +121,16 @@ public class ProfessionRestrictionEventHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getEntity().isCreative()) return;
-        checkItemUse(event.getEntity(), event.getItemStack(), event);
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (player.isCreative()) return;
+        ItemStack stack = event.getItemStack();
+        if (stack.isEmpty()) return;
+
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
+            event.setUseItem(net.neoforged.neoforge.common.util.TriState.FALSE);
+            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(itemId));
+        }
     }
 
     private static void checkItemUse(net.minecraft.world.entity.Entity entity,
@@ -167,9 +168,8 @@ public class ProfessionRestrictionEventHandler {
     }
 
     // =========================================================================
-    // ENTITY INTERACTION  (NOUVEAU)
+    // ENTITY INTERACTION
     // =========================================================================
-
     /**
      * Bloque l'interaction avec des entités si l'item tenu est restreint.
      * Exemples : selle sur cheval, laisse, seau à lait sur vache, etc.
@@ -229,17 +229,11 @@ public class ProfessionRestrictionEventHandler {
     }
 
     // =========================================================================
-    // TOOLTIP  (fix complet)
+    // TOOLTIP
     // =========================================================================
 
     /**
      * Affiche les restrictions dans le tooltip des items.
-     *
-     * Fix 4.1.6 :
-     *   - Les blocs dont l'item ID ≠ block ID sont maintenant couverts
-     *     (ex: minecraft:grass_block item → minecraft:grass_block block).
-     *   - Les restrictions de containers (containerOpenRestrictions) sont affichées.
-     *   - Les restrictions de placement de blocs utilisent le block ID résolu.
      */
     @SubscribeEvent
     public static void onItemTooltip(ItemTooltipEvent event) {
@@ -317,10 +311,30 @@ public class ProfessionRestrictionEventHandler {
         }
     }
 
+    @SubscribeEvent
+    public static void onEquipmentChange(net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (player.isCreative()) return;
+        EquipmentSlot slot = event.getSlot();
+        if (slot.getType() != EquipmentSlot.Type.HUMANOID_ARMOR) return;
+
+        ItemStack stack = event.getTo();
+        if (stack.isEmpty()) return;
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        if (ProfessionRestrictionManager.canEquip(player, id)) return;
+
+        player.getServer().execute(() -> {
+            ItemStack current = player.getItemBySlot(slot);
+            if (current.isEmpty() || current.getItem() != stack.getItem()) return;
+            player.setItemSlot(slot, ItemStack.EMPTY);
+            if (!player.getInventory().add(current)) player.drop(current, false);
+            sendBlocked(player, ProfessionRestrictionManager.getEquipmentBlockedMessage(id));
+        });
+    }
+
     // =========================================================================
     // NETTOYAGE DES CACHES
     // =========================================================================
-
     public static void cleanupCaches() {
         long now = System.currentTimeMillis();
         lastMessageTime.entrySet().removeIf(e -> now - e.getValue() > 10000);

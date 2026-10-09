@@ -44,8 +44,12 @@ public class ClientGuiOpener {
         }
     }
 
-    private static void tryOpenProfessionEditor(int tab) {
+    public static int requestedTab = 0;
+
+    private static void tryOpenProfessionEditor(int ignored) {
         if (pendingProfessions != null && pendingRoles != null && pendingGlobal != null) {
+            int tab = requestedTab;
+            requestedTab = 0;
             Minecraft.getInstance().setScreen(new ProfessionEditorScreen(
                     pendingProfessions, pendingRoles, pendingGlobal, tab));
             pendingProfessions = null;

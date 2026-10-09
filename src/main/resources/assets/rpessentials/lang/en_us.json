@@ -153,6 +153,7 @@
   "rpessentials.gui.player_profile.filter_empty": "No player matches this filter.",
   "rpessentials.gui.player_profile.delete_prepared_tooltip": "Delete this prepared profile.",
   "rpessentials.gui.player_profile.confirm_delete_prepared": "Click again to confirm deletion.",
+  "rpessentials.gui.player_profile.nick_reset_confirm": "Click again to confirm the reset",
 
   "rpessentials.gui.dice.title":  "§6Roll a dice",
   "rpessentials.gui.dice.cancel": "§cCancel",
@@ -181,6 +182,9 @@
   "rpessentials.gui.config.comma_separated":  "§8Comma-separated. %s",
   "rpessentials.gui.config.bool_on":          "§a§l✔ ON",
   "rpessentials.gui.config.bool_off":         "§c§l✗ OFF",
+  "rpessentials.gui.config.btn_refresh": "§eRefresh",
+
+  "rpessentials.gui.refresh_tooltip": "Refresh (unsaved changes are lost)",
 
   "rpessentials.gui.in_creation": "in creation",
 

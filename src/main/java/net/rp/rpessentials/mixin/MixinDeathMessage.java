@@ -38,9 +38,7 @@ public abstract class MixinDeathMessage {
     )
     private void onDeathMessageBroadcast(PlayerList playerList, Component message, boolean overlay, DamageSource damageSource) {
         ServerPlayer self = (ServerPlayer) (Object) this;
-        if (DeathRPManager.isDeathRPEnabled(self.getUUID())) {
-            DeathRPManager.onPlayerDeathRP(self, damageSource);
-        } else {
+        if (!DeathRPManager.isDeathRPEnabled(self.getUUID())) {
             playerList.broadcastSystemMessage(message, overlay);
         }
     }

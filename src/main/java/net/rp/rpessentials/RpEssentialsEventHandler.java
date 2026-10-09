@@ -7,6 +7,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.level.Level;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -17,6 +18,7 @@ import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.config.ScheduleConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.api.IRpPlayerList;
+import net.rp.rpessentials.identity.RpEssentialsMessagingManager;
 import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.network.HideNametagsPacket;
 import net.rp.rpessentials.profession.ProfessionSyncHelper;
@@ -31,23 +33,34 @@ import net.rp.rpessentials.network.SetPlayerProfilePacket;
 @EventBusSubscriber(modid = RpEssentials.MODID)
 public class RpEssentialsEventHandler {
 
+    private static final java.util.Set<java.util.UUID> refusedJoins = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-
-        LastConnectionManager.recordLogin(player);
-        PlaytimeManager.onLogin(player.getUUID());
-
         MinecraftServer server = player.getServer();
         if (server == null) return;
-
-        ProfessionSyncHelper.syncToPlayer(player);
+        player.setCustomName(null);
 
         Component canJoin = RpEssentialsScheduleManager.canPlayerJoin(player);
         if (canJoin != null) {
+            refusedJoins.add(player.getUUID());
+            try {
+                if (ScheduleConfig.NOTIFY_REFUSED_JOIN.get()) {
+                    Component notice = Component.literal("§6[Schedule] §e" + player.getName().getString()
+                            + " §7tried to join while the server is closed.");
+                    for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                        if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(notice);
+                    }
+                }
+            } catch (IllegalStateException ignored) {}
             player.connection.disconnect(canJoin);
             return;
         }
+
+        LastConnectionManager.recordLogin(player);
+        PlaytimeManager.onLogin(player.getUUID());
+        ProfessionSyncHelper.syncToPlayer(player);
 
         // Application du profil préparé à l'avance par le staff, si existant
         PendingProfileManager.PendingEntry pending = PendingProfileManager.consumePending(player.getUUID());
@@ -118,9 +131,12 @@ public class RpEssentialsEventHandler {
                 if ("FORCE_CLOSED".equals(ScheduleConfig.FORCE_STATE.get())) {
                     player.sendSystemMessage(Component.literal(
                             "§c§l[Schedule] ⚠ The server is currently FORCIBLY CLOSED. "
-                                    + "Use §f/opennow §c§lto reopen it."));
+                                    + "Use §f/calendar opennow §c§lto reopen it. Or §f/calendar resetforcestate §c§lto reset the state of the schedule."));
                 }
             } catch (IllegalStateException ignored) {}
+            for (String w : RpEssentialsScheduleManager.getConfigWarnings()) {
+                player.sendSystemMessage(Component.literal("§c[Schedule] " + w));
+            }
         }
 
         try {
@@ -204,26 +220,44 @@ public class RpEssentialsEventHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
         RpEssentialsRoleManager.invalidate(player.getUUID());
-        PlaytimeManager.onLogout(player.getUUID());
-        LastConnectionManager.recordLogout(player);
+        RpEssentialsPermissions.invalidateCache(player.getUUID());
+        RpEssentialsMessagingManager.clearCache(player.getUUID());
+        RpCooldownManager.clearAll(player.getUUID());
         ProximityChatSpyManager.onLogout(player.getUUID());
 
+        if (refusedJoins.remove(player.getUUID())) return;
+
+        if (!flushedAtStop.remove(player.getUUID())) {
+            PlaytimeManager.onLogout(player.getUUID());
+            LastConnectionManager.recordLogout(player);
+        }
         MinecraftServer server = player.getServer();
         if (server != null) sendJoinLeaveMessage(server, player, false);
+    }
 
-        RpEssentialsPermissions.invalidateCache(player.getUUID());
-        net.rp.rpessentials.identity.RpEssentialsMessagingManager.clearCache(player.getUUID());
-        RpCooldownManager.clearAll(player.getUUID());
+    private static final java.util.Set<java.util.UUID> flushedAtStop = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static void flushOnlinePlayers(MinecraftServer server) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (!flushedAtStop.add(p.getUUID())) continue;
+            PlaytimeManager.onLogout(p.getUUID());
+            LastConnectionManager.recordLogout(p);
+        }
+        LastConnectionManager.flushToDisk();
     }
 
     @SubscribeEvent
     public static void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
         // Initialisation anticipée pour éviter le lag au premier login
         NicknameManager.reload();
-        net.rp.rpessentials.profession.LicenseManager.reload();
-        net.rp.rpessentials.moderation.WarnManager.reload();
-        net.rp.rpessentials.moderation.MuteManager.reload();
-        net.rp.rpessentials.moderation.LastConnectionManager.reload();
+        LicenseManager.reload();
+        WarnManager.reload();
+        MuteManager.reload();
+        LastConnectionManager.reload();
+        NoteManager.reload();
+        DeathRPManager.reload();
+        AutoUnwhitelistHistory.reload();
+        PendingProfileManager.reload();
 
         // Validation dimension AFK
         try {
@@ -239,11 +273,18 @@ public class RpEssentialsEventHandler {
         String dataFolder = RpEssentialsDataPaths.getDataFolder().getAbsolutePath();
         RpEssentials.LOGGER.info("[RpEssentials] Data layer ready — {} nickname(s), {} license(s), {} warn(s), {} mute(s). Data folder: {}",
                 NicknameManager.count(),
-                net.rp.rpessentials.profession.LicenseManager.getAllLicenses().size(),
-                net.rp.rpessentials.moderation.WarnManager.getAll().size(),
-                net.rp.rpessentials.moderation.MuteManager.getAllMutes().size(),
+                LicenseManager.getAllLicenses().size(),
+                WarnManager.getAll().size(),
+                MuteManager.getAllMutes().size(),
                 dataFolder);
         AfkPlatformInitializer.tryPlace(event.getServer());
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onPlayerDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!DeathRPManager.isDeathRPEnabled(player.getUUID())) return;
+        DeathRPManager.onPlayerDeathRP(player, event.getSource());
     }
 
     // =========================================================================

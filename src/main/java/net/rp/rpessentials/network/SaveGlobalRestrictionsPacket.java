@@ -6,7 +6,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.GuiFeedback;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ProfessionConfig;
@@ -46,10 +48,7 @@ public record SaveGlobalRestrictionsPacket(
                 }
 
                 private List<String> readList(FriendlyByteBuf buf) {
-                    int n = buf.readVarInt();
-                    List<String> out = new ArrayList<>(n);
-                    for (int i = 0; i < n; i++) out.add(buf.readUtf());
-                    return out;
+                    return PacketValidation.readList(buf);
                 }
 
                 private void writeList(FriendlyByteBuf buf, List<String> list) {
@@ -67,36 +66,44 @@ public record SaveGlobalRestrictionsPacket(
             if (!RpEssentialsPermissions.isStaff(player)) return;
 
             try {
-                ProfessionConfig.GLOBAL_BLOCKED_CRAFTS.set(packet.blockedCrafts());
-                ProfessionConfig.GLOBAL_BLOCKED_CRAFTS.save();
+                List<String> details = new ArrayList<>();
+                applyCategory(details, "Blocked crafts", ProfessionConfig.GLOBAL_BLOCKED_CRAFTS,
+                        PacketValidation.cleanItems(packet.blockedCrafts()));
+                applyCategory(details, "Unbreakable blocks", ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS,
+                        PacketValidation.cleanItems(packet.unbreakableBlocks()));
+                applyCategory(details, "Blocked items", ProfessionConfig.GLOBAL_BLOCKED_ITEMS,
+                        PacketValidation.cleanItems(packet.blockedItems()));
+                applyCategory(details, "Blocked equipment", ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT,
+                        PacketValidation.cleanItems(packet.blockedEquipment()));
+                applyCategory(details, "Container restrictions", ProfessionConfig.CONTAINER_OPEN_RESTRICTIONS,
+                        PacketValidation.cleanContainers(packet.containerRestrictions()));
 
-                ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS.set(packet.unbreakableBlocks());
-                ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS.save();
+                if (details.isEmpty()) {
+                    player.sendSystemMessage(Component.literal("§7[RpEssentials] Global restrictions: no change."));
+                    return;
+                }
 
-                ProfessionConfig.GLOBAL_BLOCKED_ITEMS.set(packet.blockedItems());
-                ProfessionConfig.GLOBAL_BLOCKED_ITEMS.save();
-
-                ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT.set(packet.blockedEquipment());
-                ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT.save();
-
-                ProfessionConfig.CONTAINER_OPEN_RESTRICTIONS.set(packet.containerRestrictions());
-                ProfessionConfig.CONTAINER_OPEN_RESTRICTIONS.save();
-
+                ProfessionConfig.SPEC.save();
                 ProfessionRestrictionManager.reloadCache();
-
-                // Re-sync restrictions pour tous les joueurs connectes
                 for (ServerPlayer p : player.getServer().getPlayerList().getPlayers())
                     ProfessionSyncHelper.syncToPlayer(p);
 
-                player.sendSystemMessage(Component.literal(
-                        "§a[RpEssentials] Global restrictions saved."));
-                RpEssentials.LOGGER.info("[GUI] Global restrictions updated by {}",
-                        player.getGameProfile().getName());
+                GuiFeedback.report(player, "Global restrictions updated", details, true);
 
             } catch (IllegalStateException e) {
-                player.sendSystemMessage(Component.literal(
-                        "§c[RpEssentials] Config not loaded, please try again."));
+                player.sendSystemMessage(Component.literal("§c[RpEssentials] Config not loaded, please try again."));
             }
         });
+    }
+
+    private static void applyCategory(List<String> details, String label,
+                                      ModConfigSpec.ConfigValue<List<? extends String>> cfg,
+                                      List<String> next) {
+        List<String> before = new ArrayList<>(cfg.get());
+        List<String> d = GuiFeedback.diff(before, next);
+        if (d.isEmpty()) return;
+        cfg.set(next);
+        details.add("§e" + label + "§7:");
+        for (String line : d) details.add("    " + line);
     }
 }

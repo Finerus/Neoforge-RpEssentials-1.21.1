@@ -66,7 +66,8 @@ public record RequestConfigFilePacket(String fileId) implements CustomPacketPayl
             lastRequestTime.put(player.getUUID(), now);
 
             // Load entries for this file
-            List<ConfigInspector.EntryData> entries = ConfigInspector.getEntries(packet.fileId());
+            List<ConfigInspector.EntryData> entries = ConfigInspector.getEntries(
+                    packet.fileId(), RpEssentialsPermissions.canEditSensitiveConfig(player));
 
             if (entries.isEmpty()) {
                 RpEssentials.LOGGER.warn("[ConfigGUI] No entries found for file id '{}'", packet.fileId());

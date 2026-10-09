@@ -52,6 +52,7 @@ public abstract class MixinServerCommonPacketListenerImpl {
         boolean debugMode = false;
         boolean blurSpectators = false;
         boolean sneakStealth = false;
+        boolean obfPrefix = true;
         double maxDistSq = 0;
         double sneakDistSq = 0;
         int obfLen = 5;
@@ -65,6 +66,7 @@ public abstract class MixinServerCommonPacketListenerImpl {
             sneakDistSq = Math.pow(RpEssentialsConfig.SNEAK_PROXIMITY_DISTANCE.get(), 2);
             obfLen = RpEssentialsConfig.OBFUSCATED_NAME_LENGTH.get();
             whitelist = RpEssentialsConfig.WHITELIST.get();
+            obfPrefix = RpEssentialsConfig.OBFUSCATE_PREFIX.get();
         } catch (IllegalStateException ignored) {}
 
         // opsSeeAll est lié au niveau OP vanilla, pas au tag isStaff du mod
@@ -74,7 +76,7 @@ public abstract class MixinServerCommonPacketListenerImpl {
                 || whitelist.contains(receiver.getGameProfile().getName())
                 || (opsSeeAll && isVanillaOp));
         boolean showRealNames = RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_NICKNAMES);
-        
+
         List<ClientboundPlayerInfoUpdatePacket.Entry> originalEntries =
                 ((ClientboundPlayerInfoUpdatePacketAccessor) infoPacket).getEntries();
         List<ClientboundPlayerInfoUpdatePacket.Entry> newEntries = new ArrayList<>();
@@ -106,17 +108,20 @@ public abstract class MixinServerCommonPacketListenerImpl {
                 } else {
                     double effectiveMaxDistSq = (sneakStealth && target.isCrouching()) ? sneakDistSq : maxDistSq;
                     boolean blur = debugMode
+                            || receiver.level() != target.level()
                             || receiver.distanceToSqr(target) > effectiveMaxDistSq
                             || (target.isSpectator() && blurSpectators);
                     clear = !blur;
                 }
 
+                String coloredPrefix = net.rp.rpessentials.ColorHelper.translateAlternateColorCodes(prefix);
                 if (clear) {
-                    displayName = Component.literal(prefix + shown);
+                    displayName = Component.literal(coloredPrefix + shown);
                 } else {
                     String cleanName = displayed.replaceAll("§.", "");
                     int len = Math.min(cleanName.length(), obfLen);
-                    displayName = Component.literal("§k" + "?".repeat(len));
+                    String hidden = "§k" + "?".repeat(len);
+                    displayName = Component.literal(obfPrefix ? hidden : coloredPrefix + "§r" + hidden);
                 }
             }
 

@@ -4,12 +4,16 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.GuiFeedback;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.moderation.LastConnectionManager;
 import net.rp.rpessentials.moderation.NoteManager;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -34,7 +38,7 @@ public record PlayerNoteActionPacket(
                             buf.readUUID(),
                             buf.readBoolean(),
                             buf.readVarInt(),
-                            buf.readUtf()
+                            buf.readUtf(256)
                     );
                 }
                 @Override
@@ -54,34 +58,48 @@ public record PlayerNoteActionPacket(
             if (!(ctx.player() instanceof ServerPlayer staff)) return;
             if (!RpEssentialsPermissions.isStaff(staff)) return;
 
-            if (packet.isDelete()) {
-                NoteManager.removeNote(packet.targetUuid(), packet.noteId());
-                RpEssentials.LOGGER.info("[Notes] {} deleted note #{} for {}",
-                        staff.getName().getString(), packet.noteId(), packet.targetUuid());
-            } else {
-                String text = packet.text().trim();
-                if (text.isEmpty()) return;
-                ServerPlayer targetOnline = staff.getServer().getPlayerList().getPlayer(packet.targetUuid());
-                String targetName = targetOnline != null
-                        ? targetOnline.getName().getString()
-                        : staff.getServer().getProfileCache()
-                        .get(packet.targetUuid())
-                        .map(p -> p.getName())
-                        .orElse(packet.targetUuid().toString());
-                int newId = NoteManager.addNote(
-                        packet.targetUuid(),
-                        targetName,
-                        staff.getName().getString(),
-                        staff.getUUID().toString(),
-                        text
-                );
-                if (newId < 0) {
-                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                            "§c[NOTE] Note limit reached for this player."));
-                }
-                RpEssentials.LOGGER.info("[Notes] {} added note for {}: {}",
-                        staff.getName().getString(), packet.targetUuid(), text);
+            MinecraftServer server = staff.getServer();
+            String target = LastConnectionManager.resolveName(server, packet.targetUuid());
+            NoteManager.NoteEntry old = null;
+            for (NoteManager.NoteEntry n : NoteManager.getNotes(packet.targetUuid())) {
+                if (n.id == packet.noteId()) old = n;
             }
+
+            if (packet.isDelete()) {
+                if (old == null || !NoteManager.removeNote(packet.targetUuid(), packet.noteId())) {
+                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                            "§c[NOTE] Note #" + packet.noteId() + " not found for " + target + "."));
+                    return;
+                }
+                GuiFeedback.report(staff, "Note #" + packet.noteId() + " deleted for §e" + target,
+                        List.of("§c- §7" + old.text, "§8Original author: " + old.displayAuthor()), false);
+                return;
+            }
+
+            String text = packet.text().trim();
+            if (text.isEmpty()) return;
+            if (text.length() > 256) text = text.substring(0, 256);
+
+            if (packet.noteId() > 0) {
+                if (old == null || !NoteManager.editNote(packet.targetUuid(), packet.noteId(), text, staff.getName().getString())) {
+                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                            "§c[NOTE] Note #" + packet.noteId() + " not found for " + target + "."));
+                    return;
+                }
+                GuiFeedback.report(staff, "Note #" + packet.noteId() + " edited for §e" + target,
+                        List.of("§c- §7" + old.text, "§a+ §7" + text, "§8Original author: " + old.authorName), false);
+                return;
+            }
+
+            int newId = NoteManager.addNote(packet.targetUuid(), target,
+                    staff.getName().getString(), staff.getUUID().toString(), text);
+            if (newId < 0) {
+                staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                        "§c[NOTE] Note limit reached for " + target + "."));
+                return;
+            }
+            GuiFeedback.report(staff, "Note #" + newId + " added for §e" + target,
+                    List.of("§a+ §7" + text), false);
         });
     }
 }

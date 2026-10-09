@@ -12,11 +12,7 @@ import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.identity.NicknameManager;
-import net.rp.rpessentials.profession.LicenseHelper;
-import net.rp.rpessentials.profession.LicenseManager;
-import net.rp.rpessentials.profession.ProfessionRestrictionManager;
-import net.rp.rpessentials.profession.ProfessionSyncHelper;
-import net.rp.rpessentials.profession.TempLicenseExpirationManager;
+import net.rp.rpessentials.profession.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -109,8 +105,8 @@ public record SetPlayerProfilePacket(
                     packet.nickname().trim().replace("&", "§"));
         }
 
-        if (!packet.role().trim().isEmpty()) {
-            net.rp.rpessentials.profession.PendingProfileManager.setRole(packet.targetUuid(), packet.role().trim());
+        if (!packet.role().trim().isEmpty() && RpEssentialsPermissions.canManageRoles(admin)) {
+            PendingProfileManager.setRole(packet.targetUuid(), packet.role().trim());
         }
 
         String licenseId = packet.licenseId().trim();
@@ -147,9 +143,11 @@ public record SetPlayerProfilePacket(
         TempLicenseExpirationManager.markRevokedLicenseItems(target);
 
         // Remove vanilla tag
-        server.getCommands().performPrefixedCommand(
-                server.createCommandSourceStack().withSuppressedOutput().withPermission(4),
-                "tag " + targetName + " remove " + licenseId);
+        if (!ProfessionRestrictionManager.isReservedTag(licenseId)) {
+            server.getCommands().performPrefixedCommand(
+                    server.createCommandSourceStack().withSuppressedOutput().withPermission(4),
+                    "tag " + targetName + " remove " + licenseId);
+        }
 
         ProfessionRestrictionManager.ProfessionData profData =
                 ProfessionRestrictionManager.getProfessionData(licenseId);
@@ -189,8 +187,13 @@ public record SetPlayerProfilePacket(
         // ── 2. Rôle ───────────────────────────────────────────────────────────
         String role = packet.role().trim();
         if (!role.isEmpty()) {
-            applyRole(server, target, role);
-            report.append(" §frole=").append(role);
+            if (!RpEssentialsPermissions.canManageRoles(admin)) {
+                admin.sendSystemMessage(Component.literal("§c[RpEssentials] Managing roles requires the OP level set in opLevelBypass."));
+            } else if (applyRole(server, target, role)) {
+                report.append(" §frole=").append(role);
+            } else {
+                admin.sendSystemMessage(Component.literal("§c[RpEssentials] Unknown role: §f" + role));
+            }
         }
 
         // ── 3. Licence ────────────────────────────────────────────────────────
@@ -230,39 +233,38 @@ public record SetPlayerProfilePacket(
     }
 
     // ── Role helper ────────────────────────────────────────────────────────────
-    public static void applyRole(MinecraftServer server, ServerPlayer target, String roleId) {
-        var silentSource = server.createCommandSourceStack()
-                .withSuppressedOutput().withPermission(4);
+    public static boolean applyRole(MinecraftServer server, ServerPlayer target, String roleId) {
+        var silentSource = server.createCommandSourceStack().withSuppressedOutput().withPermission(4);
         String targetName = target.getName().getString();
-
         try {
-            for (String entry : RpEssentialsConfig.ROLES.get()) {
-                String oldTag = entry.split(";", 2)[0].trim();
-                server.getCommands().performPrefixedCommand(
-                        silentSource, "tag " + targetName + " remove " + oldTag);
-            }
-            server.getCommands().performPrefixedCommand(
-                    silentSource, "tag " + targetName + " add " + roleId);
-
-            String lpGroup = roleId;
+            String lpGroup = null;
             for (String entry : RpEssentialsConfig.ROLES.get()) {
                 String[] parts = entry.split(";", 3);
-                if (parts.length >= 2 && parts[0].trim().equalsIgnoreCase(roleId) && !parts[1].isBlank()) {
-                    lpGroup = parts[1].trim();
+                if (parts[0].trim().equalsIgnoreCase(roleId)) {
+                    lpGroup = parts.length >= 2 && !parts[1].isBlank() ? parts[1].trim() : parts[0].trim();
                     break;
                 }
             }
-            server.getCommands().performPrefixedCommand(
-                    silentSource, "lp user " + targetName + " parent set " + lpGroup);
+            if (lpGroup == null) return false;
+
+            for (String entry : RpEssentialsConfig.ROLES.get()) {
+                String oldTag = entry.split(";", 2)[0].trim();
+                server.getCommands().performPrefixedCommand(silentSource, "tag " + targetName + " remove " + oldTag);
+            }
+            server.getCommands().performPrefixedCommand(silentSource, "tag " + targetName + " add " + roleId);
+            server.getCommands().performPrefixedCommand(silentSource, "lp user " + targetName + " parent set " + lpGroup);
 
             RpEssentialsRoleManager.invalidate(target.getUUID());
             RpEssentialsPermissions.invalidateCache(target.getUUID());
             ProfessionSyncHelper.syncToPlayer(target);
-
+            SyncNametagDataPacket.broadcastDelayed(target);
+            RpEssentialsScheduleManager.enforceOnlineDelayed(server);
+            return true;
         } catch (IllegalStateException e) {
             RpEssentials.LOGGER.warn("[GUI] ROLES config unavailable when applying role '{}': {}", roleId, e.getMessage());
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[GUI] Error applying role '{}' to {}: {}", roleId, targetName, e.getMessage());
         }
+        return false;
     }
 }

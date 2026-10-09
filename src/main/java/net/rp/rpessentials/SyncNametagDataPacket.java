@@ -3,13 +3,19 @@ package net.rp.rpessentials;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.profession.LicenseManager;
 
+import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Packet serveur → client.
@@ -59,7 +65,6 @@ public record SyncNametagDataPacket(
     // =========================================================================
     // HANDLER (côté CLIENT)
     // =========================================================================
-
     public static void handle(SyncNametagDataPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             net.rp.rpessentials.client.ClientNametagCache.update(packet);
@@ -69,7 +74,6 @@ public record SyncNametagDataPacket(
     // =========================================================================
     // FACTORY — construit le packet depuis un ServerPlayer
     // =========================================================================
-
     public static SyncNametagDataPacket from(ServerPlayer target) {
         UUID uuid = target.getUUID();
 
@@ -91,9 +95,25 @@ public record SyncNametagDataPacket(
     // =========================================================================
     // BROADCAST — envoie ce packet à tous les joueurs connectés
     // =========================================================================
-
     public static void broadcastForPlayer(ServerPlayer target) {
         SyncNametagDataPacket packet = from(target);
         net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(packet);
+    }
+
+    public static void refreshNow(ServerPlayer target) {
+        broadcastForPlayer(target);
+        MinecraftServer server = target.getServer();
+        if (server == null) return;
+        server.getPlayerList().broadcastAll(new ClientboundPlayerInfoUpdatePacket(
+                EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME), List.of(target)));
+    }
+
+    /** Delai pour laisser LuckPerms appliquer le changement de groupe. */
+    public static void broadcastDelayed(ServerPlayer target) {
+        MinecraftServer server = target.getServer();
+        if (server == null) return;
+        CompletableFuture.runAsync(() -> server.execute(() -> {
+            if (server.getPlayerList().getPlayer(target.getUUID()) != null) refreshNow(target);
+        }), CompletableFuture.delayedExecutor(500, TimeUnit.MILLISECONDS));
     }
 }

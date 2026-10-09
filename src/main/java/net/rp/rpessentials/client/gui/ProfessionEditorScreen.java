@@ -351,6 +351,14 @@ public class ProfessionEditorScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(globalLabel),
                         btn -> { mainTab = 2; closeSuggestions(); rebuild(); })
                 .pos(x + (tabW + gap) * 2, y).size(tabW, 13).build());
+
+        addRenderableWidget(Button.builder(Component.literal("§7↻"), btn -> {
+                    ClientGuiOpener.requestedTab = mainTab;
+                    PacketDistributor.sendToServer(new RequestOpenGuiPacket(RequestOpenGuiPacket.GuiType.PROFESSION));
+                })
+                .pos(this.width - MARGIN - 18, 2).size(18, 13)
+                .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
+                .build());
     }
 
     // =========================================================================
@@ -564,6 +572,7 @@ public class ProfessionEditorScreen extends Screen {
         lpBox.setHint(Component.translatable("rpessentials.gui.roles.lp_hint"));
         lpBox.setMaxLength(64);
         lpBox.setValue(roleStateLp);
+        lpBox.setEditable(canManageRoles());
         lpBox.setResponder(val -> { roleStateLp = val; roleDirty = true; });
         addRenderableWidget(lpBox);
         y += 38;
@@ -578,21 +587,26 @@ public class ProfessionEditorScreen extends Screen {
             String base       = checked ? "§a[✔] " : "§c[X] ";
             String textColor  = modified ? "§e§o" : "§f";
             String label       = base + textColor + permLabel(perm);
-            addRenderableWidget(Button.builder(Component.literal(label), btn -> {
+            Button permBtn = Button.builder(Component.literal(label), btn -> {
                 if (roleStatePerms.contains(perm)) roleStatePerms.remove(perm);
                 else roleStatePerms.add(perm);
                 roleDirty = true;
                 roleDirtyPerms.add(perm);
                 rebuild();
-            }).pos(checkX, y + i * 18).size(checkW, 16).build());
+            }).pos(checkX, y + i * 18).size(checkW, 16).build();
+            permBtn.active = canManageRoles();
+            addRenderableWidget(permBtn);
         }
         y += ALL_PERMISSIONS.length * 18 + 6;
 
         // Boutons bas
         int btnY = this.height - 35;
-        addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.roles.btn_save"),
+        Button saveRoleBtn = Button.builder(Component.translatable("rpessentials.gui.roles.btn_save"),
                         btn -> saveRole())
-                .pos(formX, btnY).size(120, 20).build());
+                .pos(formX, btnY).size(120, 20).build();
+        saveRoleBtn.active = Minecraft.getInstance().player != null
+                && Minecraft.getInstance().player.hasPermissions(3);
+        addRenderableWidget(saveRoleBtn);
         addRenderableWidget(Button.builder(
                         Component.translatable("rpessentials.gui.profession_editor.btn_close"),
                         btn -> onClose())
@@ -632,25 +646,26 @@ public class ProfessionEditorScreen extends Screen {
                     .pos(MARGIN, rowY).size(LIST_W - 18, ROW_H - 2).build());
 
             if (isPendingDelete) {
-                addRenderableWidget(Button.builder(Component.literal("§c!"),
-                                btn -> {
-                                    PacketDistributor.sendToServer(new DeleteRolePacket(id));
-                                    existingRoles.remove(idx);
-                                    roleSelectedIndex = -1;
-                                    rolePendingDelete = null;
-                                    resetRoleForm();
-                                })
+                Button confirm = Button.builder(Component.literal("§c!"), btn -> {
+                            PacketDistributor.sendToServer(new DeleteRolePacket(id));
+                            existingRoles.remove(idx);
+                            roleSelectedIndex = -1;
+                            rolePendingDelete = null;
+                            resetRoleForm();
+                        })
                         .pos(MARGIN + LIST_W - 16, rowY).size(16, ROW_H - 2)
-                        .tooltip(Tooltip.create(Component.translatable(
-                                "rpessentials.gui.roles.confirm_delete_tooltip")))
-                        .build());
+                        .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.roles.confirm_delete_tooltip")))
+                        .build();
+                confirm.active = canManageRoles();
+                addRenderableWidget(confirm);
             } else {
-                addRenderableWidget(Button.builder(Component.literal("§7x"),
+                Button del = Button.builder(Component.literal("§7x"),
                                 btn -> { rolePendingDelete = id; rebuild(); })
                         .pos(MARGIN + LIST_W - 16, rowY).size(16, ROW_H - 2)
-                        .tooltip(Tooltip.create(Component.translatable(
-                                "rpessentials.gui.roles.delete_tooltip")))
-                        .build());
+                        .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.roles.delete_tooltip")))
+                        .build();
+                del.active = canManageRoles();
+                addRenderableWidget(del);
             }
         }
 
@@ -679,6 +694,11 @@ public class ProfessionEditorScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(tabColorCode() + I18n.get("rpessentials.gui.roles.btn_new")),
                         btn -> resetRoleForm())
                 .pos(MARGIN, this.height - 26).size(LIST_W, 16).build());
+    }
+
+    private boolean canManageRoles() {
+        return Minecraft.getInstance().player != null
+                && net.rp.rpessentials.RpEssentialsPermissions.hasSensitiveLevel(Minecraft.getInstance().player);
     }
 
     // =========================================================================
@@ -997,8 +1017,20 @@ public class ProfessionEditorScreen extends Screen {
 
     private void saveProfession() {
         String id   = profStateId.trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
-        String name = profStateName.trim();
+        String name = profStateName.trim().replace(";", "");
         if (id.isEmpty() || name.isEmpty()) return;
+
+        if (profStateIsNew) {
+            for (OpenRolesGuiPacket.RoleEntry r : existingRoles) {
+                if (r.id().equalsIgnoreCase(id)) {
+                    if (Minecraft.getInstance().player != null) {
+                        Minecraft.getInstance().player.displayClientMessage(
+                                Component.literal("§c[RpEssentials] This ID is already used by a role."), false);
+                    }
+                    return;
+                }
+            }
+        }
 
         String colorCode = profColorIndex == 0 ? "" : "&" + COLOR_CHARS[profColorIndex];
         PacketDistributor.sendToServer(new SaveProfessionPacket(id, name, colorCode,
@@ -1083,6 +1115,18 @@ public class ProfessionEditorScreen extends Screen {
         String id = roleStateId.trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
         String lp = roleStateLp.trim().isEmpty() ? id : roleStateLp.trim();
         if (id.isEmpty()) return;
+
+        if (roleStateIsNew) {
+            for (OpenProfessionGuiPacket.ProfessionEntry p : existingProfessions) {
+                if (p.id().equalsIgnoreCase(id)) {
+                    if (Minecraft.getInstance().player != null) {
+                        Minecraft.getInstance().player.displayClientMessage(
+                                Component.literal("§c[RpEssentials] This ID is already used by a profession."), false);
+                    }
+                    return;
+                }
+            }
+        }
 
         List<String> perms = new ArrayList<>(roleStatePerms);
         PacketDistributor.sendToServer(new SaveRolePacket(id, lp, perms, roleStateIsNew));

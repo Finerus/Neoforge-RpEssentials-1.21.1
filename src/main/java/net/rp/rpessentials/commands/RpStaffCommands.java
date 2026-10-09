@@ -50,7 +50,7 @@ public class RpStaffCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         var staffNode = Commands.literal("staff")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()));
+                .requires(RpEssentialsPermissions::isStaffSource);
 
         staffNode.then(Commands.literal("gamemode")
                 .then(Commands.argument("mode", StringArgumentType.word())
@@ -142,7 +142,7 @@ public class RpStaffCommands {
                                                         .executes(RpStaffCommands::setPlatform)))))));
 
         dispatcher.register(Commands.literal("platform")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
+                .requires(RpEssentialsPermissions::isStaffSource)
                 .executes(RpStaffCommands::platformSelf)
                 .then(Commands.argument("platform_id", StringArgumentType.word())
                         .suggests(PLATFORM_SUGGESTIONS)
@@ -154,7 +154,7 @@ public class RpStaffCommands {
     /** /rpessentials stats */
     public static LiteralArgumentBuilder<CommandSourceStack> buildStats() {
         return Commands.literal("stats")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
+                .requires(RpEssentialsPermissions::isStaffSource)
                 .executes(RpStaffCommands::showStats);
     }
 

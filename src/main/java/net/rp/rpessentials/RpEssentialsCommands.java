@@ -28,7 +28,7 @@ public class RpEssentialsCommands {
         // ROOT: /rpessentials (requires OP 2)
         // =========================================================================
         var root = Commands.literal("rpessentials")
-                .requires(source -> source.hasPermission(2));
+                .requires(RpEssentialsPermissions::isStaffSource);
 
         root.then(RpConfigCommands.build());
         root.then(RpStaffCommands.build());

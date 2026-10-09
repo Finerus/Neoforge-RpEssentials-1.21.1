@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsDataPaths;
+import net.rp.rpessentials.RpEssentialsIO;
 
 import java.io.File;
 import java.io.FileReader;
@@ -20,7 +21,6 @@ public class NoteManager {
     // =========================================================================
     // INNER CLASS
     // =========================================================================
-
     public static class NoteEntry {
         public int    id;
         public String text;
@@ -28,7 +28,7 @@ public class NoteManager {
         public String authorUUID;
         public String timestamp;
 
-        public NoteEntry() {}
+        public List<String> editors;
 
         public NoteEntry(int id, String text, String authorName, String authorUUID) {
             this.id         = id;
@@ -38,12 +38,31 @@ public class NoteManager {
             this.timestamp  = LocalDateTime.now()
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         }
+
+        public String displayAuthor() {
+            if (editors == null || editors.isEmpty()) return authorName;
+            return authorName + " §8(edited: " + String.join(", ", editors) + ")";
+        }
+    }
+
+    public static boolean editNote(UUID targetUUID, int noteId, String text, String editorName) {
+        ensureInitialized();
+        List<NoteEntry> list = notes.get(targetUUID);
+        if (list == null) return false;
+        for (NoteEntry e : list) {
+            if (e.id != noteId) continue;
+            e.text = text;
+            if (e.editors == null) e.editors = new ArrayList<>();
+            e.editors.add(editorName + " " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM HH:mm")));
+            saveForPlayer(targetUUID);
+            return true;
+        }
+        return false;
     }
 
     // =========================================================================
     // STATE
     // =========================================================================
-
     // UUID cible → liste de notes
     private static final Map<UUID, List<NoteEntry>> notes = new HashMap<>();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -53,7 +72,6 @@ public class NoteManager {
     // =========================================================================
     // INIT
     // =========================================================================
-
     private static synchronized void ensureInitialized() {
         if (notesDir != null) return;
         try {
@@ -68,7 +86,6 @@ public class NoteManager {
     // =========================================================================
     // LOAD / SAVE
     // =========================================================================
-
     private static void loadAll() {
         if (notesDir == null) return;
         File[] files = notesDir.listFiles((d, n) -> n.endsWith(".json"));
@@ -97,27 +114,25 @@ public class NoteManager {
 
     private static void saveForPlayer(UUID uuid) {
         if (notesDir == null) return;
-        List<NoteEntry> list = notes.getOrDefault(uuid, List.of());
-        String name     = playerNames.get(uuid);
-        String baseName = (name != null ? name + " - " : "") + uuid;
-        File targetFile = new File(notesDir, baseName + ".json");
+        List<NoteEntry> list = new ArrayList<>(notes.getOrDefault(uuid, List.of()));
+        String name = playerNames.get(uuid);
+        File dir = notesDir;
+        String uuidStr = uuid.toString();
+        File targetFile = new File(dir, (name != null ? name + " - " : "") + uuidStr + ".json");
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                // Migration : supprimer l'ancien fichier UUID-only si on a le nom
-                if (name != null) {
-                    File oldFile = new File(notesDir, uuid + ".json");
-                    if (oldFile.exists() && !oldFile.getCanonicalPath().equals(targetFile.getCanonicalPath()))
-                        oldFile.delete();
-                }
-                if (list.isEmpty()) { targetFile.delete(); return; }
-                try (FileWriter writer = new FileWriter(targetFile)) {
-                    GSON.toJson(list, writer);
-                }
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[NoteManager] Failed to save notes for {}", uuid, e);
-            }
+        RpEssentialsIO.submit(() -> {
+            File[] stale = dir.listFiles((d, n) -> n.endsWith(uuidStr + ".json") && !n.equals(targetFile.getName()));
+            if (stale != null) for (File f : stale) f.delete();
+            if (list.isEmpty()) { targetFile.delete(); return; }
+            RpEssentialsIO.writeJsonNow(targetFile, list, GSON);
         });
+    }
+
+    public static synchronized void reload() {
+        notesDir = null;
+        notes.clear();
+        playerNames.clear();
+        ensureInitialized();
     }
 
     // =========================================================================

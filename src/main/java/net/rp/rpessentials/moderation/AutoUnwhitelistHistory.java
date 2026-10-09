@@ -79,13 +79,7 @@ public class AutoUnwhitelistHistory {
         if (dataFile == null) return;
         List<Entry> snapshot = new ArrayList<>(history);
         File target = dataFile;
-        RpEssentialsIO.submit(() -> {
-            try (FileWriter writer = new FileWriter(target)) {
-                GSON.toJson(snapshot, writer);
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[AutoUnwhitelistHistory] Failed to save.", e);
-            }
-        });
+        RpEssentialsIO.saveJson(target, snapshot, GSON);
     }
 
     public static void record(String playerName, String playerUUID, String lastConnection,

@@ -11,6 +11,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.RpEssentialsRoleManager;
+import net.rp.rpessentials.RpEssentialsScheduleManager;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.util.ArrayList;
@@ -34,22 +35,35 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
             if (!RpEssentialsPermissions.isStaff(player)) return;
 
+            if (!RpEssentialsPermissions.canManageRoles(player)) {
+                player.sendSystemMessage(Component.literal("§c[RpEssentials] Managing roles requires the OP level set in opLevelBypass."));
+                return;
+            }
+
             String cleanId = packet.id().toLowerCase().trim();
             if (cleanId.isEmpty()) return;
 
             try {
                 List<String> roles = new ArrayList<>(RpEssentialsConfig.ROLES.get());
+                String removed = null;
+                for (String l : roles) {
+                    if (l.split(";", 2)[0].trim().equalsIgnoreCase(cleanId)) { removed = l; break; }
+                }
                 roles.removeIf(l -> l.split(";", 2)[0].trim().equalsIgnoreCase(cleanId));
                 RpEssentialsConfig.ROLES.set(roles);
                 RpEssentialsConfig.SPEC.save();
                 RpEssentialsRoleManager.clearAll();
                 RpEssentialsRoleManager.reload();
                 RpEssentialsPermissions.clearCache();
+                RpEssentialsScheduleManager.enforceOnlineDelayed(player.getServer());
 
-                player.sendSystemMessage(Component.literal(
-                        "§a[RpEssentials] Role §e" + cleanId + " §adeleted."));
-                RpEssentials.LOGGER.info("[GUI] Role '{}' deleted by {}",
-                        cleanId, player.getGameProfile().getName());
+                List<String> details = new ArrayList<>();
+                if (removed != null) {
+                    String[] o = removed.split(";", 3);
+                    details.add("§7LuckPerms group: §f" + (o.length > 1 ? o[1].trim() : ""));
+                    if (o.length > 2 && !o[2].isBlank()) details.add("§7Permissions: §f" + o[2].replace(",", "§7, §f"));
+                }
+                net.rp.rpessentials.GuiFeedback.report(player, "Role §e" + cleanId + " §fdeleted", details, true);
             } catch (IllegalStateException e) {
                 player.sendSystemMessage(Component.literal(
                         "§c[RpEssentials] Config not loaded, please try again."));

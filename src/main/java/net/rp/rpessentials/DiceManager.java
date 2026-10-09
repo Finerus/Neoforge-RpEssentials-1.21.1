@@ -53,17 +53,25 @@ public class DiceManager {
     private static DiceType parseDiceType(String entry) {
         if (!entry.contains(";")) return null;
         String[] parts = entry.split(";", 2);
-        String name  = parts[0].trim();
+        String name = parts[0].trim();
         String value = parts[1].trim();
+        if (name.isEmpty()) return null;
 
-        // Faces personnalisées : "coin;Heads,Tails"
         if (value.contains(",")) {
-            List<String> faces = Arrays.asList(value.split(","));
+            List<String> faces = Arrays.stream(value.split(",")).map(String::trim)
+                    .filter(s -> !s.isEmpty()).toList();
+            if (faces.size() < 2) {
+                RpEssentials.LOGGER.warn("[DiceManager] Invalid dice entry: {}", entry);
+                return null;
+            }
             return new DiceType(name, 0, faces);
         }
-
         try {
             int max = Integer.parseInt(value);
+            if (max < 2 || max > 100000) {
+                RpEssentials.LOGGER.warn("[DiceManager] Invalid dice entry: {}", entry);
+                return null;
+            }
             return new DiceType(name, max, null);
         } catch (NumberFormatException e) {
             RpEssentials.LOGGER.warn("[DiceManager] Invalid dice entry: {}", entry);
@@ -90,6 +98,15 @@ public class DiceManager {
     public static boolean roll(ServerPlayer player, String diceName) {
         DiceType dice = getDiceByName(diceName);
         if (dice == null) return false;
+
+        if (RpCooldownManager.isOnCooldown(player.getUUID(), "dice")) {
+            long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "dice");
+            player.displayClientMessage(ColorHelper.parseColors(
+                    MessagesConfig.get(MessagesConfig.RP_COOLDOWN_MESSAGE,
+                            "command", "roll", "seconds", String.valueOf(remaining))), true);
+            return true;
+        }
+        RpCooldownManager.setCooldown(player.getUUID(), "dice");
 
         String result      = dice.roll(RANDOM);
         String playerName  = NicknameManager.getDisplayName(player);

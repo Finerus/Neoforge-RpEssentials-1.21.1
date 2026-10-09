@@ -87,7 +87,7 @@ public class RpEssentialsRpCommands {
 
         // /rp annonce <title|chat> <message>
         rpRoot.then(Commands.literal("annonce")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()))
+                .requires(RpEssentialsPermissions::isStaffSource)
                 .then(Commands.argument("type", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             builder.suggest("title");

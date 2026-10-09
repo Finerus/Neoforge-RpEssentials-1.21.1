@@ -153,6 +153,7 @@
   "rpessentials.gui.player_profile.filter_empty": "Aucun joueur ne correspond à ce filtre.",
   "rpessentials.gui.player_profile.delete_prepared_tooltip": "Supprime ce profil prévu.",
   "rpessentials.gui.player_profile.confirm_delete_prepared": "Cliquez à nouveau pour confirmer la suppression.",
+  "rpessentials.gui.player_profile.nick_reset_confirm": "Cliquez à nouveau pour confirmer la réinitialisation",
 
   "rpessentials.gui.dice.title":  "§6Lancer un dé",
   "rpessentials.gui.dice.cancel": "§cAnnuler",
@@ -181,6 +182,9 @@
   "rpessentials.gui.config.comma_separated":  "§8Séparé par des virgules. %s",
   "rpessentials.gui.config.bool_on":          "§a§l✔ ON",
   "rpessentials.gui.config.bool_off":         "§c§l✗ OFF",
+  "rpessentials.gui.config.btn_refresh": "§eActualiser",
+
+  "rpessentials.gui.refresh_tooltip": "Actualiser (les modifications non sauvegardées sont perdues)",
 
   "rpessentials.gui.in_creation": "en cours de création",
 

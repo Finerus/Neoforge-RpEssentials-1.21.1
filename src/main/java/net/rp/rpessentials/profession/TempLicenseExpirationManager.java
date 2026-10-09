@@ -17,8 +17,7 @@ import java.util.UUID;
 public class TempLicenseExpirationManager {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static boolean hasDoneSweepToday = false;
-    private static int lastSweepDay = -1;
+    private static LocalDate lastSweepDate = null;
 
     public static void checkOnLogin(ServerPlayer player, MinecraftServer server) {
         if (server == null) return;
@@ -48,7 +47,7 @@ public class TempLicenseExpirationManager {
 
         // inventaire vanilla
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-            markStackIfRevoked(player.getInventory().getItem(i), activeLicenses);
+            markStackIfRevoked(player, player.getInventory().getItem(i), activeLicenses);
         }
 
         // slots Curios (optionnel)
@@ -56,14 +55,15 @@ public class TempLicenseExpirationManager {
             top.theillusivec4.curios.api.CuriosApi.getCuriosInventory(player).ifPresent(handler ->
                     handler.getCurios().forEach((slotId, stacksHandler) -> {
                         for (int i = 0; i < stacksHandler.getSlots(); i++) {
-                            markStackIfRevoked(stacksHandler.getStacks().getStackInSlot(i), activeLicenses);
+                            markStackIfRevoked(player, stacksHandler.getStacks().getStackInSlot(i), activeLicenses);
                         }
                     }));
         } catch (NoClassDefFoundError ignored) {}
     }
 
-    private static void markStackIfRevoked(net.minecraft.world.item.ItemStack stack, List<String> activeLicenses) {
-        if (stack.isEmpty() || !(stack.getItem() instanceof net.rp.rpessentials.items.LicenseItem)) return;
+    private static void markStackIfRevoked(ServerPlayer player, net.minecraft.world.item.ItemStack stack,
+                                           List<String> activeLicenses) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof LicenseItem)) return;
         if (!stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) return;
 
         net.minecraft.nbt.CompoundTag tag =
@@ -71,22 +71,36 @@ public class TempLicenseExpirationManager {
         String profId = tag.getString("professionId");
         if (profId.isEmpty()) return;
 
+        String holderUuid = tag.getString("holderUuid");
+        boolean owner;
+        if (!holderUuid.isEmpty()) {
+            owner = holderUuid.equals(player.getUUID().toString());
+        } else {
+            String holder = tag.getString("holderName");
+            owner = holder.equals(net.rp.rpessentials.identity.NicknameManager.getDisplayName(player))
+                    || holder.equals(player.getGameProfile().getName());
+        }
+        if (!owner) return;
+
         boolean isActive = activeLicenses.stream().anyMatch(l -> l.equalsIgnoreCase(profId));
         boolean alreadyRevoked = tag.getBoolean("revoked");
 
         if (!isActive && !alreadyRevoked) {
             tag.putBoolean("revoked", true);
-            stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                    net.minecraft.world.item.component.CustomData.of(tag));
+        } else if (isActive && alreadyRevoked) {
+            tag.remove("revoked");
+        } else {
+            return;
         }
+        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(tag));
     }
 
-    public static void tickMidnightSweep(MinecraftServer server, int hour, int minute) {
-        int today = LocalDate.now().getDayOfYear();
-        if (today != lastSweepDay) { hasDoneSweepToday = false; lastSweepDay = today; }
-        if (hasDoneSweepToday || hour != 0 || minute != 0) return;
-        hasDoneSweepToday = true;
-        RpEssentials.LOGGER.info("[TempLicenseExpiration] Running midnight sweep...");
+    public static void tickMidnightSweep(MinecraftServer server) {
+        LocalDate today = LocalDate.now();
+        if (today.equals(lastSweepDate)) return;
+        lastSweepDate = today;
+        RpEssentials.LOGGER.info("[TempLicenseExpiration] Running daily sweep...");
         LocalDate now = LocalDate.now();
         for (LicenseManager.TempLicenseEntry e : new ArrayList<>(LicenseManager.getAllTempLicenses())) {
             LocalDate exp = parse(e.expiresAt);
@@ -117,7 +131,7 @@ public class TempLicenseExpirationManager {
             online.sendSystemMessage(Component.literal(
                     MessagesConfig.get(MessagesConfig.LICENSE_EXPIRED_RP_PLAYER, "profession", name)));
         }
-        LicenseManager.logActionSystem("EXPIRE_RP", e.targetName, e.targetUUID, e.profession, "Expire le " + e.expiresAt);
+        LicenseManager.logActionSystem("TEMPEXPIRE", e.targetName, e.targetUUID, e.profession, "Expire le " + e.expiresAt);
         RpEssentials.LOGGER.info("[TempLicenseExpiration] Expired '{}' for {}", e.profession, e.targetName);
     }
 

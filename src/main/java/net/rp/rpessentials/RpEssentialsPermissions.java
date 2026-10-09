@@ -1,5 +1,6 @@
 package net.rp.rpessentials;
 
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
@@ -29,6 +30,28 @@ public class RpEssentialsPermissions {
     public static void clearExpiredCache() {
         staffCache.entrySet().removeIf(entry -> !entry.getValue().isValid());
     }
+
+    public static boolean isStaffSource(CommandSourceStack src) {
+        if (src.getEntity() instanceof ServerPlayer p) return isStaff(p);
+        return src.hasPermission(2);
+    }
+
+    public static int sensitiveLevel() {
+        try {
+            int level = RpEssentialsConfig.OP_LEVEL_BYPASS.get();
+            return level > 0 ? level : 4;
+        } catch (IllegalStateException e) {
+            return 4;
+        }
+    }
+
+    public static boolean hasSensitiveLevel(net.minecraft.world.entity.player.Player p) {
+        return p.hasPermissions(sensitiveLevel());
+    }
+
+    public static boolean canManageRoles(ServerPlayer p) { return hasSensitiveLevel(p); }
+
+    public static boolean canEditSensitiveConfig(ServerPlayer p) { return hasSensitiveLevel(p); }
 
     /**
      * Vérifie si un joueur est staff.

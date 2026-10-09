@@ -10,10 +10,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
-import net.rp.rpessentials.RpEssentialsRoleManager;
-import net.rp.rpessentials.RpEssentialsScheduleManager;
+import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.profession.ProfessionSyncHelper;
 
@@ -21,8 +18,6 @@ import java.util.List;
 
 /**
  * Commandes schedule et setrole.
- *
- * 4.1.6 : /setrole broadcast aux staffs online + log console.
  */
 public class RpScheduleCommands {
 
@@ -184,70 +179,79 @@ public class RpScheduleCommands {
     // =========================================================================
     // /schedule
     // =========================================================================
-
     static int showSchedule(CommandContext<CommandSourceStack> ctx) {
         java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
         java.time.DayOfWeek today = java.time.LocalDate.now().getDayOfWeek();
 
         boolean schedEnabled;
         try { schedEnabled = ScheduleConfig.ENABLE_SCHEDULE.get(); } catch (IllegalStateException e) { schedEnabled = false; }
-        boolean isOpen = RpEssentialsScheduleManager.isServerOpen();
-        boolean isForceClosed  = false;
-        boolean isForceOpen    = false;
+        boolean forceClosed = false;
+        boolean forceOpen = false;
         try {
             String state = ScheduleConfig.FORCE_STATE.get();
-            isForceClosed = "FORCE_CLOSED".equals(state);
-            isForceOpen   = "FORCE_OPEN".equals(state);
+            forceClosed = "FORCE_CLOSED".equals(state);
+            forceOpen = "FORCE_OPEN".equals(state);
         } catch (IllegalStateException ignored) {}
-        String timeInfo = schedEnabled ? RpEssentialsScheduleManager.getTimeUntilNextEvent() : MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_OPEN) + " (disabled)";
 
-        StringBuilder sb = new StringBuilder();
-        String statusLabel;
-        if (isForceClosed) {
-            statusLabel = "§c§lFORCIBLY CLOSED";
-        } else if (isForceOpen) {
-            statusLabel = "§a§lFORCIBLY OPEN";
-        } else {
-            statusLabel = isOpen
+        String status;
+        if (forceClosed) status = "§c§lFORCIBLY CLOSED";
+        else if (forceOpen) status = "§a§lFORCIBLY OPEN";
+        else status = RpEssentialsScheduleManager.isServerOpen()
                     ? MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_OPEN)
                     : MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_CLOSED);
-        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(RpChatUi.header("Server Schedule"));
+        sb.append(RpChatUi.kv("Status", status)).append("\n");
 
         if (schedEnabled) {
+            sb.append(RpChatUi.kv("Next", "§f" + RpEssentialsScheduleManager.getTimeUntilNextEvent())).append("\n");
+            sb.append(RpChatUi.section("Opening hours"));
             for (java.time.DayOfWeek day : java.time.DayOfWeek.values()) {
                 RpEssentialsScheduleManager.DaySchedule s = RpEssentialsScheduleManager.getSchedules().get(day);
-                boolean isToday = day == today;
-                String prefix = isToday ? MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_TODAY_PREFIX) : MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_OTHER_PREFIX);
+                String prefix = day == today
+                        ? MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_TODAY_PREFIX)
+                        : MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_OTHER_PREFIX);
                 String dayName = RpEssentialsScheduleManager.getDayName(day);
-                if (s == null) sb.append(prefix).append(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_CLOSED_FORMAT, "day", dayName)).append("\n");
-                else sb.append(prefix).append(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_OPEN_FORMAT, "day", dayName, "open", s.open().format(fmt), "close", s.close().format(fmt))).append("\n");
+                sb.append(prefix);
+                if (s == null) sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_CLOSED_FORMAT, "day", dayName));
+                else sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_OPEN_FORMAT,
+                        "day", dayName, "open", s.open().format(fmt), "close", s.close().format(fmt)));
+                sb.append("\n");
             }
+        } else {
+            sb.append("§7Schedule disabled, the server is always open.\n");
         }
 
+        StringBuilder special = new StringBuilder();
         try {
             if (ScheduleConfig.DEATH_HOURS_ENABLED.get()) {
-                sb.append("\n ").append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_LABEL)).append(" — ");
-                if (RpEssentialsScheduleManager.isDeathHour()) sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_ACTIVE));
-                else sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_INACTIVE, "slots", String.join(", ", ScheduleConfig.DEATH_HOURS_SLOTS.get())));
-                sb.append("\n");
+                special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_LABEL)).append("§7: ");
+                if (RpEssentialsScheduleManager.isDeathHour())
+                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_ACTIVE));
+                else
+                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_INACTIVE,
+                            "slots", String.join(", ", ScheduleConfig.DEATH_HOURS_SLOTS.get())));
+                special.append("\n");
             }
         } catch (IllegalStateException ignored) {}
-
         try {
             if (ScheduleConfig.ENABLE_HRP_HOURS.get()) {
-                sb.append(" ").append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_LABEL)).append(" — ");
-                if (RpEssentialsScheduleManager.isHrpAllowed()) sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_ALLOWED));
-                else if (RpEssentialsScheduleManager.isHrpTolerated()) sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_TOLERATED));
-                else sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_INACTIVE, "slots", "Tolerated: " + String.join(", ", ScheduleConfig.HRP_TOLERATED_SLOTS.get())));
-                sb.append("\n");
+                special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_LABEL)).append("§7: ");
+                if (RpEssentialsScheduleManager.isHrpAllowed())
+                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_ALLOWED));
+                else if (RpEssentialsScheduleManager.isHrpTolerated())
+                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_TOLERATED));
+                else
+                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_INACTIVE,
+                            "slots", "Tolerated: " + String.join(", ", ScheduleConfig.HRP_TOLERATED_SLOTS.get())));
+                special.append("\n");
             }
         } catch (IllegalStateException ignored) {}
+        if (special.length() > 0) sb.append(RpChatUi.section("Special hours")).append(special);
 
-        if (schedEnabled) sb.append("\n §f").append(timeInfo).append("\n");
-        sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_FOOTER));
-
-        String msg = sb.toString();
-        RpChatUi.sendFormatted(ctx, msg);
+        sb.append(RpChatUi.LINE);
+        RpChatUi.sendFormatted(ctx, sb.toString());
         return 1;
     }
 
@@ -296,6 +300,8 @@ public class RpScheduleCommands {
         RpEssentialsRoleManager.invalidate(target.getUUID());
         RpEssentialsPermissions.invalidateCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
+        SyncNametagDataPacket.broadcastDelayed(target);
+        RpEssentialsScheduleManager.enforceOnlineDelayed(server);
 
         String staffMsg = "§6[SETROLE] §e" + staffName + " §7→ §e" + name + " §7: §f" + roleDisplay + " §8(LP: " + finalLpGroup + ")";
         Component staffComp = Component.literal(staffMsg);
@@ -342,6 +348,7 @@ public class RpScheduleCommands {
             };
             if (cfg == null) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_INVALID, "day", day))); return 0; }
             cfg.set(time); ScheduleConfig.SPEC.save(); RpEssentialsScheduleManager.reload();
+            RpEssentialsScheduleManager.enforceOnline(ctx.getSource().getServer());
             ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_UPDATED, "day", day, "type", type, "value", time)), true);
             return 1;
         } catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED))); return 0; }
@@ -363,6 +370,7 @@ public class RpScheduleCommands {
             };
             if (cfg == null) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_INVALID, "day", day))); return 0; }
             cfg.set(val); ScheduleConfig.SPEC.save(); RpEssentialsScheduleManager.reload();
+            RpEssentialsScheduleManager.enforceOnline(ctx.getSource().getServer());
             String state = val ? "enabled" : "disabled";
             ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_ENABLED, "day", day, "state", state)), true);
             return 1;

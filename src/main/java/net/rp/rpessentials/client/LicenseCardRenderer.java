@@ -86,47 +86,49 @@ public class LicenseCardRenderer {
                 revoked
                         ? "§c§l" + I18n.get("rpessentials.license.card.revoked")
                         : "§6§l" + I18n.get("rpessentials.license.card.title"),
-                0f, -HALF_H + 8f, light);
+                0f, -HALF_H + 7f, light, 1f);
 
-        float y = -HALF_H + 22f;
-
-        drawLeft(font, bufferSource, poseStack, "§8" + I18n.get("rpessentials.license.card.profession"), textX, y, light);
-        y += 7f;
-        drawLeft(font, bufferSource, poseStack, "§f" + profId, textX + 6f, y, light);
-        y += 10f;
-
-        drawLeft(font, bufferSource, poseStack, "§8" + I18n.get("rpessentials.license.card.holder"), textX, y, light);
-        y += 7f;
-        drawLeft(font, bufferSource, poseStack, "§f" + holder, textX + 6f, y, light);
-        y += 10f;
-
-        drawLeft(font, bufferSource, poseStack, "§8" + I18n.get("rpessentials.license.card.issued"), textX, y, light);
-        y += 7f;
-        drawLeft(font, bufferSource, poseStack, "§f" + issueDate, textX + 6f, y, light);
-        y += 10f;
-
+        float y = -HALF_H + 20f;
+        y = drawField(font, bufferSource, poseStack, I18n.get("rpessentials.license.card.profession"), profId, textX, y, light);
+        y = drawField(font, bufferSource, poseStack, I18n.get("rpessentials.license.card.holder"), holder, textX, y, light);
+        y = drawField(font, bufferSource, poseStack, I18n.get("rpessentials.license.card.issued"), issueDate, textX, y, light);
         if (expiryDate != null) {
-            drawLeft(font, bufferSource, poseStack, "§8" + I18n.get("rpessentials.license.card.until"), textX, y, light);
-            y += 7f;
-            drawLeft(font, bufferSource, poseStack, "§f" + expiryDate, textX + 6f, y, light);
+            drawField(font, bufferSource, poseStack, I18n.get("rpessentials.license.card.until"), expiryDate, textX, y, light);
         }
 
         drawCentered(font, bufferSource, poseStack,
                 revoked
                         ? "§c" + I18n.get("rpessentials.license.card.invalid")
                         : "§a" + I18n.get("rpessentials.license.card.valid"),
-                0f, HALF_H - 14f, light);
-
-        poseStack.popPose();
+                0f, HALF_H - 12f, light, 0.85f);
     }
 
-    private static void drawCentered(Font font, MultiBufferSource buffer, PoseStack ps, String text, float x, float y, int light) {
+    private static void drawCentered(Font font, MultiBufferSource buffer, PoseStack ps, String text,
+                                     float x, float y, int light, float scale) {
         FormattedCharSequence seq = ColorHelper.parseColors(text).getVisualOrderText();
-        font.drawInBatch(seq, x - font.width(seq) / 2f, y, 0xFFFFFF, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, light);
+        ps.pushPose();
+        ps.translate(x, y, 0f);
+        ps.scale(scale, scale, 1f);
+        font.drawInBatch(seq, -font.width(seq) / 2f, 0f, 0xFFFFFF, false, ps.last().pose(), buffer,
+                Font.DisplayMode.NORMAL, 0, light);
+        ps.popPose();
     }
 
-    private static void drawLeft(Font font, MultiBufferSource buffer, PoseStack ps, String text, float x, float y, int light) {
+    private static void drawLeft(Font font, MultiBufferSource buffer, PoseStack ps, String text,
+                                 float x, float y, int light, float scale) {
         FormattedCharSequence seq = ColorHelper.parseColors(text).getVisualOrderText();
-        font.drawInBatch(seq, x, y, 0xFFFFFF, false, ps.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, light);
+        ps.pushPose();
+        ps.translate(x, y, 0f);
+        ps.scale(scale, scale, 1f);
+        font.drawInBatch(seq, 0f, 0f, 0xFFFFFF, false, ps.last().pose(), buffer,
+                Font.DisplayMode.NORMAL, 0, light);
+        ps.popPose();
+    }
+
+    private static float drawField(Font font, MultiBufferSource buffer, PoseStack ps, String label,
+                                   String value, float x, float y, int light) {
+        drawLeft(font, buffer, ps, "§8" + label, x, y, light, 0.7f);
+        drawLeft(font, buffer, ps, "§f" + value, x + 5f, y + 6f, light, 0.8f);
+        return y + 14f;
     }
 }

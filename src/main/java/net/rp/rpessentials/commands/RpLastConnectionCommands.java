@@ -23,7 +23,7 @@ public class RpLastConnectionCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         var lastConnNode = Commands.literal("lastconnection")
-                .requires(src -> RpEssentialsPermissions.isStaff(src.getPlayer()));
+                .requires(RpEssentialsPermissions::isStaffSource);
 
         lastConnNode.then(Commands.argument("player", StringArgumentType.word())
                 .executes(RpLastConnectionCommands::lastConnectionPlayer));

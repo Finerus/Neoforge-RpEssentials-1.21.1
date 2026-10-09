@@ -45,7 +45,6 @@ public class ConfigInspector {
     // =========================================================================
     // PUBLIC API
     // =========================================================================
-
     public static List<FileInfo> getFileInfos() {
         return CONFIGS.stream().map(c -> new FileInfo(c.id(), c.displayName())).toList();
     }
@@ -112,7 +111,6 @@ public class ConfigInspector {
     // =========================================================================
     // INTROSPECTION
     // =========================================================================
-
     private static List<EntryData> inspectClass(ConfigClassInfo info) {
         List<EntryData> entries     = new ArrayList<>();
         String          lastSection = null;
@@ -181,7 +179,6 @@ public class ConfigInspector {
     // =========================================================================
     // VALUE SPEC ACCESS
     // =========================================================================
-
     /**
      * Retrieves the NeoForge ValueSpec stored inside ModConfigSpec for the given path.
      * -
@@ -345,7 +342,6 @@ public class ConfigInspector {
     // =========================================================================
     // SERIALIZATION / DESERIALIZATION
     // =========================================================================
-
     public static String serialize(Object value, ValueType type) {
         if (value == null) return "";
         if (value instanceof List<?> list)
@@ -380,29 +376,38 @@ public class ConfigInspector {
             case DOUBLE      -> Double.parseDouble(raw.trim());
             case STRING      -> raw;
             case LIST_STRING -> {
-                if (raw.isBlank()) yield new ArrayList<String>();
                 List<String> out = new ArrayList<>();
-                String[] lines = raw.contains("\n") ? raw.split("\n") : raw.split(",");
-                for (String s : lines) {
+                for (String s : raw.split("\n")) {
                     String t = s.trim();
                     if (!t.isEmpty()) out.add(t);
                 }
                 yield out;
             }
             case LIST_INT -> {
-                if (raw.isBlank()) yield new ArrayList<Integer>();
                 List<Integer> out = new ArrayList<>();
-                for (String s : raw.split(",")) out.add(Integer.parseInt(s.trim()));
+                for (String s : raw.split("[\\n,]")) {
+                    String t = s.trim();
+                    if (!t.isEmpty()) out.add(Integer.parseInt(t));
+                }
                 yield out;
             }
             default -> raw;
         };
     }
 
+    private static final Set<String> SENSITIVE_KEYS = Set.of(
+            "autoUnwhitelistExtraCommands", "opLevelBypass", "staffTags",
+            "useLuckPermsGroups", "luckPermsStaffGroups", "roles");
+
+    public static List<EntryData> getEntries(String fileId, boolean includeSensitive) {
+        List<EntryData> all = getEntries(fileId);
+        if (includeSensitive) return all;
+        return all.stream().filter(e -> e.isSection() || !SENSITIVE_KEYS.contains(e.key())).toList();
+    }
+
     // =========================================================================
     // REFLECTION UTILITIES
     // =========================================================================
-
     /** Returns all declared fields of a class and all its superclasses. */
     private static List<Field> getAllFields(Class<?> cls) {
         List<Field> fields = new ArrayList<>();

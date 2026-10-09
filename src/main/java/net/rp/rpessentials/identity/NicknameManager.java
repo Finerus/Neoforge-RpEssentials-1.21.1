@@ -72,6 +72,7 @@ public class NicknameManager {
             }
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[NicknameManager] Failed to load nicknames", e);
+            RpEssentialsIO.quarantine(nicknameFile);
         }
     }
 
@@ -104,18 +105,7 @@ public class NicknameManager {
         }
 
         File targetFile = nicknameFile;
-        RpEssentialsIO.submit(() -> {
-            try {
-                File parent = targetFile.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
-                try (java.io.FileWriter writer = new java.io.FileWriter(targetFile)) {
-                    GSON.toJson(data, writer);
-                }
-                RpEssentials.LOGGER.debug("[NicknameManager] Saved {} nicknames", data.size());
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[NicknameManager] Failed to save nicknames", e);
-            }
-        });
+        RpEssentialsIO.saveJson(targetFile, data, GSON);
     }
 
     /**
@@ -133,7 +123,7 @@ public class NicknameManager {
         MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
-            if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
+            if (target != null) SyncNametagDataPacket.refreshNow(target);
         }
 
         saveToFile();
@@ -191,7 +181,7 @@ public class NicknameManager {
         MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
-            if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
+            if (target != null) SyncNametagDataPacket.refreshNow(target);
         }
     }
 

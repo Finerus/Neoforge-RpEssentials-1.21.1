@@ -107,7 +107,7 @@ public class WorldBorderManager {
         double targetZ = spawnZ - dz * ratio;
 
         ServerLevel level = player.serverLevel();
-        double targetY = findSafeY(level, (int) Math.floor(targetX), (int) Math.floor(targetZ));
+        double targetY = findSafeY(level, (int) Math.floor(targetX), (int) Math.floor(targetZ), player.getY());
 
         player.teleportTo(level, targetX, targetY, targetZ,
                 player.getYRot(), player.getXRot());
@@ -117,9 +117,16 @@ public class WorldBorderManager {
                 Math.floor(targetX), targetY, Math.floor(targetZ));
     }
 
-    private static double findSafeY(ServerLevel level, int x, int z) {
-        // Cherche un bloc solide en descendant depuis y=320
-        for (int y = 320; y > level.getMinBuildHeight(); y--) {
+    private static double findSafeY(ServerLevel level, int x, int z, double currentY) {
+        int min = level.getMinBuildHeight();
+        boolean ceiling = level.dimensionType().hasCeiling();
+        int roof = min + level.dimensionType().logicalHeight();
+        boolean onRoof = ceiling && currentY >= roof;
+
+        int top = (ceiling && !onRoof) ? roof - 6 : level.getMaxBuildHeight() - 1;
+        int bottom = onRoof ? roof - 2 : min;
+
+        for (int y = top; y > bottom; y--) {
             BlockPos pos = new BlockPos(x, y, z);
             if (level.getBlockState(pos).isSolid()
                     && !level.getBlockState(pos.above()).isSolid()
@@ -127,7 +134,7 @@ public class WorldBorderManager {
                 return y + 1;
             }
         }
-        return 64;
+        return onRoof ? currentY : 64;
     }
 
     // =========================================================================

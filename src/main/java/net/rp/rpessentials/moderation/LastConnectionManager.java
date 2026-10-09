@@ -6,10 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsPermissions;
-import net.rp.rpessentials.RpEssentialsRoleManager;
+import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
 import net.rp.rpessentials.config.RpEssentialsConfig;
@@ -84,80 +81,65 @@ public class LastConnectionManager {
     // =========================================================================
     // AUTO-UNWHITELIST
     // =========================================================================
+    private static java.time.LocalDate lastUnwhitelistDate = null;
 
-    private static boolean hasDoneUnwhitelistToday = false;
-    private static int     lastUnwhitelistDay       = -1;
-
-    public static void tickAutoUnwhitelist(MinecraftServer server, int hour, int minute) {
+    public static void tickAutoUnwhitelist(MinecraftServer server) {
         try {
             if (!ModerationConfig.AUTO_UNWHITELIST_ENABLED.get()) return;
-            if (!ModerationConfig.ENABLE_LAST_CONNECTION.get())   return;
+            if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) return;
         } catch (IllegalStateException e) { return; }
 
-        int today = java.time.LocalDate.now().getDayOfYear();
-        if (today != lastUnwhitelistDay) { hasDoneUnwhitelistToday = false; lastUnwhitelistDay = today; }
-        if (hasDoneUnwhitelistToday || hour != 0 || minute > 1) return;
-        hasDoneUnwhitelistToday = true;
+        if (java.time.LocalTime.now().getHour() != 0) return;
+        java.time.LocalDate today = java.time.LocalDate.now();
+        if (today.equals(lastUnwhitelistDate)) return;
+        lastUnwhitelistDate = today;
         RpEssentials.LOGGER.info("[AutoUnwhitelist] Starting daily sweep...");
 
         int thresholdDays;
         List<? extends String> extraCmds;
         String dateFormat;
+        List<String> roles;
         try {
             thresholdDays = ModerationConfig.AUTO_UNWHITELIST_DAYS.get();
-            extraCmds     = ModerationConfig.AUTO_UNWHITELIST_EXTRA_COMMANDS.get();
-            dateFormat    = ModerationConfig.LAST_CONNECTION_DATE_FORMAT.get();
+            extraCmds = ModerationConfig.AUTO_UNWHITELIST_EXTRA_COMMANDS.get();
+            dateFormat = ModerationConfig.LAST_CONNECTION_DATE_FORMAT.get();
+            roles = new ArrayList<>(RpEssentialsConfig.ROLES.get());
         } catch (IllegalStateException e) { return; }
 
         long thresholdMs = (long) thresholdDays * 86400_000L;
-        long nowMs       = System.currentTimeMillis();
+        long nowMs = System.currentTimeMillis();
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat(dateFormat);
-        int[] removed = {0};
 
         for (Map.Entry<UUID, ConnectionEntry> e : new ArrayList<>(entries.entrySet())) {
             UUID uuid = e.getKey();
             ConnectionEntry entry = e.getValue();
             if (entry.lastLogin == null || entry.mcName == null) continue;
-            if (server.getPlayerList().getPlayer(uuid) != null)  continue;
-            if (!server.getPlayerList().isWhiteListed(
-                    new com.mojang.authlib.GameProfile(uuid, entry.mcName))) continue;
+            if (server.getPlayerList().getPlayer(uuid) != null) continue;
+            if (!server.getPlayerList().isWhiteListed(new com.mojang.authlib.GameProfile(uuid, entry.mcName))) continue;
 
             long lastLoginMs;
             try { lastLoginMs = sdf.parse(entry.lastLogin).getTime(); }
             catch (java.text.ParseException ex) { continue; }
-
             if (nowMs - lastLoginMs < thresholdMs) continue;
 
-            if (hasAutoUnwhitelistBypass(uuid)) continue;
-
-            final String playerName   = entry.mcName;
-            final UUID   playerUUID   = uuid;
+            final String playerName = entry.mcName;
             final long inactiveDays = (nowMs - lastLoginMs) / 86400_000L;
+            final long totalPlaytimeMs = getTotalPlaytimeMs(uuid);
+            final List<String> licenses = net.rp.rpessentials.profession.LicenseManager.getLicenses(uuid);
+            final String lastLogin = entry.lastLogin;
 
-            long totalPlaytimeMs = getTotalPlaytimeMs(uuid);
-            List<String> licenses = net.rp.rpessentials.profession.LicenseManager.getLicenses(uuid);
-            String lastLogin = entry.lastLogin != null ? entry.lastLogin : "Unknown";
-
-            AutoUnwhitelistHistory.record(
-                    playerName,
-                    playerUUID.toString(),
-                    lastLogin,
-                    totalPlaytimeMs,
-                    licenses,
-                    inactiveDays);
-
-            server.execute(() -> {
+            Runnable remove = () -> {
+                AutoUnwhitelistHistory.record(playerName, uuid.toString(), lastLogin, totalPlaytimeMs, licenses, inactiveDays);
                 server.getCommands().performPrefixedCommand(
                         server.createCommandSourceStack(), "whitelist remove " + playerName);
 
                 for (ServerPlayer staff : server.getPlayerList().getPlayers()) {
                     if (!RpEssentialsPermissions.isStaff(staff)) continue;
-                    net.minecraft.network.chat.MutableComponent msg =
-                            net.minecraft.network.chat.Component.literal(
-                                    MessagesConfig.get(MessagesConfig.AUTO_UNWHITELIST_STAFF_NOTIFY,
-                                            "player", playerName, "days", String.valueOf(inactiveDays)));
+                    net.minecraft.network.chat.MutableComponent msg = net.minecraft.network.chat.Component.literal(
+                            MessagesConfig.get(MessagesConfig.AUTO_UNWHITELIST_STAFF_NOTIFY,
+                                    "player", playerName, "days", String.valueOf(inactiveDays)));
                     net.minecraft.network.chat.MutableComponent undo =
-                            net.minecraft.network.chat.Component.literal("§a[Annuler]")
+                            net.minecraft.network.chat.Component.literal("§a[Undo]")
                                     .withStyle(s -> s
                                             .withClickEvent(new net.minecraft.network.chat.ClickEvent(
                                                     net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND,
@@ -167,43 +149,44 @@ public class LastConnectionManager {
                                                     net.minecraft.network.chat.Component.literal("Re-whitelist " + playerName))));
                     staff.sendSystemMessage(msg.append(undo));
                 }
-
                 for (String cmd : extraCmds) {
-                    server.getCommands().performPrefixedCommand(
-                            server.createCommandSourceStack(),
-                            cmd.replace("{player}", playerName).replace("{uuid}", playerUUID.toString()));
+                    server.getCommands().performPrefixedCommand(server.createCommandSourceStack(),
+                            cmd.replace("{player}", playerName).replace("{uuid}", uuid.toString()));
                 }
-                RpEssentials.LOGGER.info("[AutoUnwhitelist] Removed {} — inactive {} days", playerName, inactiveDays);
-            });
-            removed[0]++;
+                RpEssentials.LOGGER.info("[AutoUnwhitelist] Removed {} (inactive {} days)", playerName, inactiveDays);
+            };
+
+            checkBypassAsync(uuid, roles, bypass -> { if (!bypass) server.execute(remove); });
         }
-        RpEssentials.LOGGER.info("[AutoUnwhitelist] Sweep done — {} player(s) removed.", removed[0]);
     }
 
-    private static boolean hasAutoUnwhitelistBypass(UUID uuid) {
+    private static void checkBypassAsync(UUID uuid, List<String> roles, java.util.function.Consumer<Boolean> callback) {
         try {
-            net.luckperms.api.LuckPerms lp = net.luckperms.api.LuckPermsProvider.get();
-            net.luckperms.api.model.user.User user = lp.getUserManager().loadUser(uuid).join();
-            if (user == null) return false;
-            String primary = user.getPrimaryGroup().toLowerCase();
-            for (String entry : RpEssentialsConfig.ROLES.get()) {
-                String[] parts = entry.split(";", 3);
-                if (!parts[0].trim().equalsIgnoreCase(primary)) continue;
-                if (parts.length < 3) return false;
-                for (String p : parts[2].split(",")) {
-                    if (p.trim().equalsIgnoreCase("bypassAutoUnwhitelist")) return true;
-                }
-                return false;
+            net.luckperms.api.LuckPermsProvider.get().getUserManager().loadUser(uuid)
+                    .whenComplete((user, err) ->
+                            callback.accept(err == null && user != null && hasBypass(user.getPrimaryGroup(), roles)));
+        } catch (NoClassDefFoundError | IllegalStateException ex) {
+            callback.accept(false);
+        }
+    }
+
+    private static boolean hasBypass(String primaryGroup, List<String> roles) {
+        String primary = primaryGroup.toLowerCase();
+        for (String entry : roles) {
+            String[] parts = entry.split(";", 3);
+            if (!parts[0].trim().equalsIgnoreCase(primary)) continue;
+            if (parts.length < 3) return false;
+            for (String p : parts[2].split(",")) {
+                if (p.trim().equalsIgnoreCase("bypassAutoUnwhitelist")) return true;
             }
-        } catch (NoClassDefFoundError | IllegalStateException ignored) {
-        } catch (Exception ignored) {}
+            return false;
+        }
         return false;
     }
 
     // =========================================================================
     // LOAD
     // =========================================================================
-
     private static void loadFromFile() {
         if (dataFile == null || !dataFile.exists()) return;
         try (FileReader reader = new FileReader(dataFile)) {
@@ -213,7 +196,7 @@ public class LastConnectionManager {
                 entries.clear();
                 for (Map.Entry<String, ConnectionEntry> e : data.entrySet()) {
                     try {
-                        String key     = e.getKey();
+                        String key = e.getKey();
                         String uuidStr = key.contains(" ") ? key.substring(0, key.indexOf(' ')) : key;
                         entries.put(UUID.fromString(uuidStr), e.getValue());
                     } catch (IllegalArgumentException ex) {
@@ -223,13 +206,13 @@ public class LastConnectionManager {
             }
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[LastConnectionManager] Failed to load", e);
+            RpEssentialsIO.quarantine(dataFile);
         }
     }
 
     // =========================================================================
     // SAVE (async)
     // =========================================================================
-
     private static void saveToFile() {
         ensureInitialized();
         if (dataFile == null) return;
@@ -249,23 +232,12 @@ public class LastConnectionManager {
         }
 
         File targetFile = dataFile;
-        CompletableFuture.runAsync(() -> {
-            try {
-                File parent = targetFile.getParentFile();
-                if (parent != null && !parent.exists()) parent.mkdirs();
-                try (java.io.FileWriter writer = new java.io.FileWriter(targetFile)) {
-                    GSON.toJson(data, writer);
-                }
-            } catch (Exception e) {
-                RpEssentials.LOGGER.error("[LastConnectionManager] Failed to save", e);
-            }
-        });
+        RpEssentialsIO.saveJson(targetFile, data, GSON);
     }
 
     // =========================================================================
     // HELPERS
     // =========================================================================
-
     private static String getNow() {
         try {
             String format = ModerationConfig.LAST_CONNECTION_DATE_FORMAT.get();
@@ -283,7 +255,6 @@ public class LastConnectionManager {
     // =========================================================================
     // PUBLIC API — CONNEXIONS
     // =========================================================================
-
     public static void recordLogin(ServerPlayer player) {
         if (!isEnabled()) return;
         ensureInitialized();

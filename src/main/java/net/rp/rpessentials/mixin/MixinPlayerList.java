@@ -40,7 +40,6 @@ public abstract class MixinPlayerList implements IRpPlayerList {
     // =========================================================================
     // INTERCEPTION DU BROADCAST VANILLA
     // =========================================================================
-
     @Inject(
             method = "broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V",
             at = @At("HEAD"),
@@ -55,9 +54,11 @@ public abstract class MixinPlayerList implements IRpPlayerList {
                     || !ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE.get()) return;
         } catch (Exception e) { return; }
 
-        String text = component.getString();
-        boolean isJoin  = text.contains("joined the game")  || text.contains("a rejoint la partie");
-        boolean isLeave = text.contains("left the game")    || text.contains("a quitté la partie");
+        if (!(component.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc)) return;
+        String key = tc.getKey();
+        boolean isJoin = key.startsWith("multiplayer.player.joined");
+        boolean isLeave = key.equals("multiplayer.player.left");
+        if (isJoin || isLeave) RpEssentials.LOGGER.debug("[JoinLeave] Intercepted key: {}", key);
 
         if (!isJoin && !isLeave) return;
         ci.cancel();
@@ -70,7 +71,6 @@ public abstract class MixinPlayerList implements IRpPlayerList {
     // =========================================================================
     // IMPLÉMENTATION IRpPlayerList
     // =========================================================================
-
     public void rpe$sendCustomJoinLeaveMessage(
             net.minecraft.server.level.ServerPlayer player, boolean isJoin) {
         try {
