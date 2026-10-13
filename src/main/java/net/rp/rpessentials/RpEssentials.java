@@ -17,6 +17,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.client.RpKeyBindings;
+import net.rp.rpessentials.compat.LuckPermsSync;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.moderation.LastConnectionManager;
 import net.rp.rpessentials.moderation.PlaytimeManager;
@@ -228,6 +229,7 @@ public class RpEssentials {
         PlaytimeManager.clearAll();
         lastBlurPositions.clear();
         RpEssentialsIO.shutdown();
+        LuckPermsSync.stop();
         LOGGER.info("[RpEssentials] Static caches cleared on server stop. Bye! - Finerus");
     }
 }

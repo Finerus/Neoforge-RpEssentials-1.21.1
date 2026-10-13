@@ -346,12 +346,16 @@ public class RpStaffCommands {
         byPlaytime.sort((a, b) -> Long.compare(
                 PlaytimeManager.getTotalPlaytimeMs(b.getKey()), PlaytimeManager.getTotalPlaytimeMs(a.getKey())));
 
+        long onlineVisible = server.getPlayerList().getPlayers().stream()
+                .filter(p -> !VanishManager.canHide(VanishManager.Aspect.LIST, ctx.getSource(), p.getUUID()))
+                .count();
+
         StringBuilder sb = new StringBuilder();
         sb.append(MessagesConfig.get(MessagesConfig.STATS_HEADER)).append("\n").append(RpChatUi.LINE).append("\n");
 
         sb.append("§eServer\n")
                 .append(RpChatUi.row(
-                        RpChatUi.kv("Online", "§f" + server.getPlayerList().getPlayerCount()),
+                        RpChatUi.kv("Online", "§f" + onlineVisible),
                         RpChatUi.kv("Known", "§f" + known.size()),
                         RpChatUi.kv("Playtime", "§f" + PlaytimeManager.format(totalPlaytime))))
                 .append(RpChatUi.row(
@@ -382,7 +386,8 @@ public class RpStaffCommands {
         sb.append("§eRecent connections\n");
         for (int i = 0; i < Math.min(5, known.size()); i++) {
             var e = known.get(i);
-            boolean online = server.getPlayerList().getPlayer(e.getKey()) != null;
+            boolean online = server.getPlayerList().getPlayer(e.getKey()) != null
+                    && !VanishManager.canHide(VanishManager.Aspect.LIST, ctx.getSource(), e.getKey());
             sb.append(online ? "§a● " : "§7○ ").append("§e").append(LastConnectionManager.resolveName(server, e.getKey()))
                     .append(" §8- §7").append(e.getValue().lastLogin != null ? e.getValue().lastLogin : "?").append("\n");
         }

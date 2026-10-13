@@ -14,9 +14,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.identity.NicknameManager;
-import net.rp.rpessentials.moderation.LastConnectionManager;
-import net.rp.rpessentials.moderation.MuteManager;
-import net.rp.rpessentials.moderation.WarnManager;
+import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.network.HideNametagsPacket;
 import net.rp.rpessentials.profession.LicenseManager;
 import net.rp.rpessentials.profession.PendingProfileManager;
@@ -278,7 +276,10 @@ public class RpConfigCommands {
         LicenseManager.reload();
         MuteManager.reload();
         LastConnectionManager.reload();
+        AbsenceManager.reload();
         WarnManager.reload();
+        PendingActionManager.reload();
+        VanishManager.refreshAll(ctx.getSource().getServer());
         PendingProfileManager.reload();
 
         // Sync client

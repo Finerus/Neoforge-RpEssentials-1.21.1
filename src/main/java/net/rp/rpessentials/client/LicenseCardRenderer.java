@@ -81,12 +81,13 @@ public class LicenseCardRenderer {
         poseStack.translate(0f, 0f, -0.2f);
 
         float textX = -HALF_W + 8f;
+        float maxW = CARD_W - 16f;
 
         drawCentered(font, bufferSource, poseStack,
                 revoked
                         ? "§c§l" + I18n.get("rpessentials.license.card.revoked")
                         : "§6§l" + I18n.get("rpessentials.license.card.title"),
-                0f, -HALF_H + 7f, light, 1f);
+                0f, -HALF_H + 7f, light, 1f, maxW);
 
         float y = -HALF_H + 20f;
         y = drawField(font, bufferSource, poseStack, I18n.get("rpessentials.license.card.profession"), profId, textX, y, light);
@@ -100,26 +101,32 @@ public class LicenseCardRenderer {
                 revoked
                         ? "§c" + I18n.get("rpessentials.license.card.invalid")
                         : "§a" + I18n.get("rpessentials.license.card.valid"),
-                0f, HALF_H - 12f, light, 0.85f);
+                0f, HALF_H - 12f, light, 0.85f, maxW);
+
+        poseStack.popPose();
     }
 
     private static void drawCentered(Font font, MultiBufferSource buffer, PoseStack ps, String text,
-                                     float x, float y, int light, float scale) {
+                                     float x, float y, int light, float scale, float maxWidth) {
         FormattedCharSequence seq = ColorHelper.parseColors(text).getVisualOrderText();
+        float w = font.width(seq) * scale;
+        float s = w > maxWidth ? scale * maxWidth / w : scale;
         ps.pushPose();
         ps.translate(x, y, 0f);
-        ps.scale(scale, scale, 1f);
+        ps.scale(s, s, 1f);
         font.drawInBatch(seq, -font.width(seq) / 2f, 0f, 0xFFFFFF, false, ps.last().pose(), buffer,
                 Font.DisplayMode.NORMAL, 0, light);
         ps.popPose();
     }
 
     private static void drawLeft(Font font, MultiBufferSource buffer, PoseStack ps, String text,
-                                 float x, float y, int light, float scale) {
+                                 float x, float y, int light, float scale, float maxWidth) {
         FormattedCharSequence seq = ColorHelper.parseColors(text).getVisualOrderText();
+        float w = font.width(seq) * scale;
+        float s = w > maxWidth ? scale * maxWidth / w : scale;
         ps.pushPose();
         ps.translate(x, y, 0f);
-        ps.scale(scale, scale, 1f);
+        ps.scale(s, s, 1f);
         font.drawInBatch(seq, 0f, 0f, 0xFFFFFF, false, ps.last().pose(), buffer,
                 Font.DisplayMode.NORMAL, 0, light);
         ps.popPose();
@@ -127,8 +134,8 @@ public class LicenseCardRenderer {
 
     private static float drawField(Font font, MultiBufferSource buffer, PoseStack ps, String label,
                                    String value, float x, float y, int light) {
-        drawLeft(font, buffer, ps, "§8" + label, x, y, light, 0.7f);
-        drawLeft(font, buffer, ps, "§f" + value, x + 5f, y + 6f, light, 0.8f);
+        drawLeft(font, buffer, ps, "§8" + label, x, y, light, 0.7f, CARD_W - 16f);
+        drawLeft(font, buffer, ps, "§f" + value, x + 5f, y + 6f, light, 0.8f, CARD_W - 21f);
         return y + 14f;
     }
 }

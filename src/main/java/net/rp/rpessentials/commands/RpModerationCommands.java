@@ -12,6 +12,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.RpEssentialsCommands;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.RpEssentialsScheduleManager;
 import net.rp.rpessentials.config.*;
@@ -48,7 +49,6 @@ public class RpModerationCommands {
     // =========================================================================
     // WARN
     // =========================================================================
-
     public static LiteralArgumentBuilder<CommandSourceStack> buildWarn() {
         var warnNode = Commands.literal("warn")
                 .requires(RpEssentialsPermissions::isStaffSource);
@@ -109,7 +109,6 @@ public class RpModerationCommands {
     // =========================================================================
     // MUTE
     // =========================================================================
-
     public static LiteralArgumentBuilder<CommandSourceStack> buildMute() {
         var muteNode = Commands.literal("mute")
                 .requires(RpEssentialsPermissions::isStaffSource);
@@ -140,7 +139,6 @@ public class RpModerationCommands {
     // =========================================================================
     // NOTE
     // =========================================================================
-
     public static LiteralArgumentBuilder<CommandSourceStack> buildNote() {
         var noteNode = Commands.literal("note")
                 .requires(RpEssentialsPermissions::isStaffSource);
@@ -218,7 +216,6 @@ public class RpModerationCommands {
     // =========================================================================
     // DEATH RP
     // =========================================================================
-
     public static LiteralArgumentBuilder<CommandSourceStack> buildDeathRp() {
         var node = Commands.literal("deathrp").requires(src -> src.hasPermission(2));
 
@@ -252,13 +249,84 @@ public class RpModerationCommands {
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             Set<String> names = new LinkedHashSet<>();
-                            ctx.getSource().getServer().getPlayerList().getPlayers()
+                            VanishManager.visibleTo(ctx.getSource())
                                     .forEach(p -> names.add(p.getName().getString()));
                             LastConnectionManager.getAllSortedByLogin().stream()
+                                    .filter(e -> !VanishManager.canHide(
+                                            VanishManager.Aspect.SELECTORS, ctx.getSource(), e.getKey()))
                                     .map(e -> e.getValue().mcName).filter(Objects::nonNull).forEach(names::add);
                             return net.minecraft.commands.SharedSuggestionProvider.suggest(names, builder);
                         })
                         .executes(RpModerationCommands::inspectPlayer));
+    }
+
+    public static LiteralArgumentBuilder<CommandSourceStack> buildAbsence() {
+        var node = Commands.literal("absence").requires(RpEssentialsPermissions::isStaffSource);
+
+        node.then(Commands.literal("add")
+                .then(Commands.argument("player", StringArgumentType.word())
+                        .suggests(RpManageCommands.SUGGEST_KNOWN)
+                        .then(Commands.argument("days", IntegerArgumentType.integer(1, 365))
+                                .executes(ctx -> absenceAdd(ctx, ""))
+                                .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                        .executes(ctx -> absenceAdd(ctx, StringArgumentType.getString(ctx, "reason")))))));
+
+        node.then(Commands.literal("remove")
+                .then(Commands.argument("player", StringArgumentType.word())
+                        .suggests((ctx, builder) -> {
+                            AbsenceManager.getAll().forEach(e -> builder.suggest(e.mcName));
+                            return builder.buildFuture();
+                        })
+                        .executes(ctx -> absenceRemove(ctx))));
+
+        node.then(Commands.literal("list").executes(RpModerationCommands::absenceList));
+        return node;
+    }
+
+    // =========================================================================
+    // ABSENCE
+    // =========================================================================
+    private static int absenceAdd(CommandContext<CommandSourceStack> ctx, String reason) {
+        MinecraftServer server = ctx.getSource().getServer();
+        String name = StringArgumentType.getString(ctx, "player");
+        UUID uuid = RpEssentialsCommands.findUUIDByName(server, name);
+        if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[Absence] Player not found: " + name)); return 0; }
+        ServerPlayer staff = ctx.getSource().getPlayer();
+        ManageService.Result r = ManageService.execute(server, staff, uuid, ManageService.Action.ABSENCE_ADD,
+                reason, IntegerArgumentType.getInteger(ctx, "days"));
+        if (r.ok()) ctx.getSource().sendSuccess(() -> Component.literal(r.message()), false);
+        else ctx.getSource().sendFailure(Component.literal(r.message()));
+        return r.ok() ? 1 : 0;
+    }
+
+    private static int absenceRemove(CommandContext<CommandSourceStack> ctx) {
+        MinecraftServer server = ctx.getSource().getServer();
+        String name = StringArgumentType.getString(ctx, "player");
+        UUID uuid = RpEssentialsCommands.findUUIDByName(server, name);
+        if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[Absence] Player not found: " + name)); return 0; }
+        ManageService.Result r = ManageService.execute(server, ctx.getSource().getPlayer(), uuid,
+                ManageService.Action.ABSENCE_REMOVE, "", 0);
+        if (r.ok()) ctx.getSource().sendSuccess(() -> Component.literal(r.message()), false);
+        else ctx.getSource().sendFailure(Component.literal(r.message()));
+        return r.ok() ? 1 : 0;
+    }
+
+    private static int absenceList(CommandContext<CommandSourceStack> ctx) {
+        List<AbsenceManager.AbsenceEntry> all = AbsenceManager.getAll();
+        if (all.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("§7[Absence] No absences."), false);
+            return 1;
+        }
+        StringBuilder sb = new StringBuilder("§6Absences §8(" + all.size() + ")\n" + RpChatUi.LINE + "\n");
+        for (AbsenceManager.AbsenceEntry e : all) {
+            sb.append(e.isExpired() ? "§8[END] " : "§a[ON] ").append("§f").append(e.mcName)
+                    .append(" §7until §f").append(e.formatEnd());
+            if (e.reason != null && !e.reason.isEmpty()) sb.append(" §8| §7").append(e.reason);
+            sb.append("\n");
+        }
+        sb.append(RpChatUi.LINE);
+        RpChatUi.sendFormatted(ctx, sb.toString());
+        return 1;
     }
 
     // =========================================================================
@@ -447,7 +515,6 @@ public class RpModerationCommands {
     // =========================================================================
     // MUTE HANDLER
     // =========================================================================
-
     private static int executeMute(CommandContext<CommandSourceStack> ctx, int minutes, String reason) throws CommandSyntaxException {
         try { if (!ModerationConfig.ENABLE_MUTE_SYSTEM.get()) { ctx.getSource().sendFailure(Component.literal("§c[MUTE] Mute system disabled.")); return 0; } }
         catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal("§c[MUTE] Config not loaded.")); return 0; }
@@ -465,7 +532,6 @@ public class RpModerationCommands {
     // =========================================================================
     // DEATH RP HANDLERS
     // =========================================================================
-
     private static int deathRpSetGlobal(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         boolean enabled = BoolArgumentType.getBool(ctx, "value");
         String staff;
@@ -563,6 +629,9 @@ public class RpModerationCommands {
         MinecraftServer server = ctx.getSource().getServer();
         ServerPlayer online = server.getPlayerList().getPlayerByName(targetName);
         UUID uuid = online != null ? online.getUUID() : LastConnectionManager.findUUIDByName(targetName);
+        if (online != null && VanishManager.canHide(VanishManager.Aspect.LIST, ctx.getSource(), online.getUUID())) {
+            online = null;
+        }
         if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[Inspect] Player not found: " + targetName)); return 0; }
 
         List<String> licenses = LicenseManager.getLicenses(uuid);
@@ -574,10 +643,10 @@ public class RpModerationCommands {
         boolean isMuted = MuteManager.isMuted(uuid);
         boolean isOnline = online != null;
 
-        long totalPlaytimeMs   = net.rp.rpessentials.moderation.PlaytimeManager.getTotalPlaytimeMs(uuid);
-        long sessionMs         = net.rp.rpessentials.moderation.PlaytimeManager.getCurrentSessionMs(uuid);
-        String totalPlaytimeStr = net.rp.rpessentials.moderation.PlaytimeManager.format(totalPlaytimeMs);
-        String sessionStr       = net.rp.rpessentials.moderation.PlaytimeManager.format(sessionMs);
+        long totalPlaytimeMs   = PlaytimeManager.getTotalPlaytimeMs(uuid);
+        long sessionMs         = isOnline ? PlaytimeManager.getCurrentSessionMs(uuid) : 0L;
+        String totalPlaytimeStr = PlaytimeManager.format(totalPlaytimeMs);
+        String sessionStr       = PlaytimeManager.format(sessionMs);
 
         String role = "§8-";
         if (online != null) {

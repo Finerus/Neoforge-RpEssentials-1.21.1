@@ -120,7 +120,8 @@ public class LastConnectionManager {
             long lastLoginMs;
             try { lastLoginMs = sdf.parse(entry.lastLogin).getTime(); }
             catch (java.text.ParseException ex) { continue; }
-            if (nowMs - lastLoginMs < thresholdMs) continue;
+            long reference = Math.max(lastLoginMs, AbsenceManager.getEndMs(uuid));
+            if (nowMs - reference < thresholdMs) continue;
 
             final String playerName = entry.mcName;
             final long inactiveDays = (nowMs - lastLoginMs) / 86400_000L;
@@ -132,6 +133,7 @@ public class LastConnectionManager {
                 AutoUnwhitelistHistory.record(playerName, uuid.toString(), lastLogin, totalPlaytimeMs, licenses, inactiveDays);
                 server.getCommands().performPrefixedCommand(
                         server.createCommandSourceStack(), "whitelist remove " + playerName);
+                ManageSuggestions.propose(server, uuid, playerName, ManageSuggestions.Kind.UNWHITELISTED);
 
                 for (ServerPlayer staff : server.getPlayerList().getPlayers()) {
                     if (!RpEssentialsPermissions.isStaff(staff)) continue;

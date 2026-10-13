@@ -82,6 +82,7 @@ public class RpEssentialsScheduleManager {
     private static DayOfWeek lastResetDay             = null;
     private static String lastHrpSlotKey              = "";
     private static String lastDeathHoursSlotKey       = "";
+    private static boolean closeNoticeSent = false;
 
     // =========================================================================
     // RELOAD
@@ -272,7 +273,7 @@ public class RpEssentialsScheduleManager {
             if (!ScheduleConfig.ENABLE_SCHEDULE.get() && "NONE".equals(ScheduleConfig.FORCE_STATE.get())) return;
         } catch (IllegalStateException e) { return; }
         if (isServerOpen()) return;
-        closeServer(server);
+        closeServer(server, false);
     }
 
     public static void enforceOnlineDelayed(MinecraftServer server) {
@@ -286,11 +287,13 @@ public class RpEssentialsScheduleManager {
     // =========================================================================
     public static boolean hasOpenedToday() { return hasOpenedToday; }
     public static boolean hasClosedToday() { return hasClosedToday; }
-    public static void markOpenedToday()   { hasOpenedToday = true; }
+
+    public static void markOpenedToday() { hasOpenedToday = true; closeNoticeSent = false; }
 
     public static void resetDailyFlags() {
         hasClosedToday = false;
         hasOpenedToday = false;
+        closeNoticeSent = false;
         sentWarnings.clear();
     }
 
@@ -451,12 +454,14 @@ public class RpEssentialsScheduleManager {
             kickMsg = "§cThe server is now closed.";
         }
         String finalKickMsg = kickMsg;
+        boolean announce = announceToStaff && !closeNoticeSent;
         List<ServerPlayer> toKick = new ArrayList<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (!isScheduleExempt(p)) toKick.add(p);
-            else if (announceToStaff && RpEssentialsPermissions.isStaff(p))
+            else if (announce && RpEssentialsPermissions.isStaff(p))
                 p.sendSystemMessage(Component.literal("§6[STAFF] Server closed: you may remain connected."));
         }
+        if (announce) closeNoticeSent = true;
         for (ServerPlayer p : toKick) {
             p.connection.disconnect(ColorHelper.parseColors(finalKickMsg));
             RpEssentials.LOGGER.info("[Schedule] Kicked {} (server closed)", p.getName().getString());

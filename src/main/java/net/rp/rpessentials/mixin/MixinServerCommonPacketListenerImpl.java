@@ -7,12 +7,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.RpEssentialsRoleManager;
+import net.rp.rpessentials.TabListCache;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.identity.NicknameManager;
-import net.rp.rpessentials.TabListCache;
+import net.rp.rpessentials.moderation.VanishManager;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
@@ -30,23 +31,31 @@ public abstract class MixinServerCommonPacketListenerImpl {
             remap = false
     )
     private Packet modifyPacket(Packet packet) {
-        if (!(packet instanceof ClientboundPlayerInfoUpdatePacket infoPacket)) return packet;
-
-        try {
-            if (!RpEssentialsConfig.ENABLE_BLUR.get()) return packet;
-        } catch (IllegalStateException e) {
-            return packet;
-        }
+        if (!(packet instanceof ClientboundPlayerInfoUpdatePacket original)) return packet;
 
         Object self = this;
         if (!(self instanceof ServerGamePacketListenerImpl gameListener)) return packet;
-
         ServerPlayer receiver = gameListener.player;
         if (receiver == null) return packet;
 
+        ClientboundPlayerInfoUpdatePacket filtered = VanishManager.filterInfo(receiver, original);
+        Packet blurred = rpessentials$blur(receiver, filtered);
+        return blurred instanceof ClientboundPlayerInfoUpdatePacket p
+                ? VanishManager.markViewers(receiver, p)
+                : blurred;
+    }
+
+    @Unique
+    private Packet rpessentials$blur(ServerPlayer receiver, ClientboundPlayerInfoUpdatePacket infoPacket) {
+        try {
+            if (!RpEssentialsConfig.ENABLE_BLUR.get()) return infoPacket;
+        } catch (IllegalStateException e) {
+            return infoPacket;
+        }
+
         EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions = infoPacket.actions();
         if (!actions.contains(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME)
-                && !actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER)) return packet;
+                && !actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER)) return infoPacket;
 
         boolean opsSeeAll = false;
         boolean debugMode = false;
@@ -69,7 +78,6 @@ public abstract class MixinServerCommonPacketListenerImpl {
             obfPrefix = RpEssentialsConfig.OBFUSCATE_PREFIX.get();
         } catch (IllegalStateException ignored) {}
 
-        // opsSeeAll est lié au niveau OP vanilla, pas au tag isStaff du mod
         boolean isVanillaOp = receiver.hasPermissions(2);
         boolean seesAll = !debugMode
                 && (RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_ALL)
@@ -82,6 +90,11 @@ public abstract class MixinServerCommonPacketListenerImpl {
         List<ClientboundPlayerInfoUpdatePacket.Entry> newEntries = new ArrayList<>();
 
         for (ClientboundPlayerInfoUpdatePacket.Entry entry : originalEntries) {
+            if (VanishManager.isHiddenFrom(receiver, entry.profileId())) {
+                newEntries.add(entry);
+                continue;
+            }
+
             ServerPlayer target = receiver.server.getPlayerList().getPlayer(entry.profileId());
             Component displayName;
 

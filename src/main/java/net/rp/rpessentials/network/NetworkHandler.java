@@ -162,6 +162,12 @@ public class NetworkHandler {
                 SaveGlobalRestrictionsPacket.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(null, SaveGlobalRestrictionsPacket::handleOnServer)
         );
+
+        registrar.playToServer(
+                ManagePlayerPacket.TYPE,
+                ManagePlayerPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, ManagePlayerPacket::handleOnServer)
+        );
     }
 
     private static void handleSyncProfessionRestrictions(

@@ -9,6 +9,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.moderation.VanishManager;
 import net.rp.rpessentials.profession.LicenseManager;
 
 import java.util.EnumSet;
@@ -97,7 +98,13 @@ public record SyncNametagDataPacket(
     // =========================================================================
     public static void broadcastForPlayer(ServerPlayer target) {
         SyncNametagDataPacket packet = from(target);
-        net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(packet);
+        MinecraftServer server = target.getServer();
+        if (server == null) return;
+        for (ServerPlayer viewer : server.getPlayerList().getPlayers()) {
+            if (!VanishManager.canHide(VanishManager.Aspect.NAMETAG, viewer, target.getUUID())) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(viewer, packet);
+            }
+        }
     }
 
     public static void refreshNow(ServerPlayer target) {

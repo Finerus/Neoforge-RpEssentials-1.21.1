@@ -1,6 +1,8 @@
 package net.rp.rpessentials;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
@@ -10,21 +12,21 @@ import java.util.List;
 public final class GuiFeedback {
 
     private static final int MAX_LINES = 12;
+    private static final int MAX_HOVER = 40;
 
     private GuiFeedback() {}
 
     public static void report(ServerPlayer actor, String title, List<String> details, boolean alertOtherStaff) {
-        StringBuilder sb = new StringBuilder("§a[RpEssentials] §f").append(title);
+        MutableComponent msg = Component.literal("§a[RpEssentials] §f" + title);
         int shown = 0;
         for (String d : details) {
             if (shown >= MAX_LINES) {
-                sb.append("\n  §8... and ").append(details.size() - shown).append(" more");
+                msg.append(withTooltip(Component.literal("\n  §8... and " + (details.size() - shown) + " more"), details));
                 break;
             }
-            sb.append("\n  ").append(d);
+            msg.append(Component.literal("\n  " + d));
             shown++;
         }
-        Component msg = Component.literal(sb.toString());
         actor.sendSystemMessage(msg);
 
         if (alertOtherStaff && actor.getServer() != null) {
@@ -34,6 +36,19 @@ public final class GuiFeedback {
         }
         RpEssentials.LOGGER.info("[GUI] {} | {} | {}", actor.getName().getString(),
                 strip(title), strip(String.join(" ; ", details)));
+    }
+
+    public static MutableComponent withTooltip(MutableComponent component, List<String> full) {
+        StringBuilder sb = new StringBuilder();
+        int n = Math.min(full.size(), MAX_HOVER);
+        for (int i = 0; i < n; i++) {
+            if (i > 0) sb.append("\n");
+            sb.append(full.get(i));
+        }
+        if (full.size() > MAX_HOVER) sb.append("\n§8... and ").append(full.size() - MAX_HOVER).append(" more");
+        final String tip = sb.toString();
+        return component.withStyle(s -> s.withHoverEvent(
+                new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(tip))));
     }
 
     public static List<String> diff(Collection<String> before, Collection<String> after) {

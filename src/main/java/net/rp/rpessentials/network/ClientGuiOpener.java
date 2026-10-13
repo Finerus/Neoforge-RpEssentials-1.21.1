@@ -61,8 +61,9 @@ public class ClientGuiOpener {
     public static void openPlayerProfileGui(
             List<OpenPlayerProfileGuiPacket.PlayerData> players,
             List<String> professionIds,
-            List<String> roles) {
-        Minecraft.getInstance().setScreen(new PlayerProfileScreen(players, professionIds, roles));
+            List<String> roles,
+            List<String> platforms) {
+        Minecraft.getInstance().setScreen(new PlayerProfileScreen(players, professionIds, roles, platforms));
     }
 
     /**

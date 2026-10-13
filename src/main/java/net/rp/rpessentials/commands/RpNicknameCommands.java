@@ -242,7 +242,11 @@ public class RpNicknameCommands {
     }
 
     private static int playerList(CommandContext<CommandSourceStack> ctx) {
-        var players = ctx.getSource().getServer().getPlayerList().getPlayers();
+        CommandSourceStack src = ctx.getSource();
+        var players = src.getServer().getPlayerList().getPlayers().stream()
+                .filter(p -> !net.rp.rpessentials.moderation.VanishManager.canHide(
+                        net.rp.rpessentials.moderation.VanishManager.Aspect.LIST, src, p.getUUID()))
+                .toList();
         StringBuilder sb = new StringBuilder();
         sb.append(MessagesConfig.get(MessagesConfig.PLAYERLIST_HEADER, "count", String.valueOf(players.size())));
         for (int i = 0; i < players.size(); i++) {
@@ -286,6 +290,7 @@ public class RpNicknameCommands {
             sb.append("§e/setrole §8<player> <role>: §7Assign a role\n");
             sb.append("§e/rpessentials inspect §8<player>: §7Full player info\n");
             sb.append("§c For further information, check the mod page or the config!\n");
+            sb.append("§e/vanish §8[player] [level]: §7Hide from the server\n");
         }
         sb.append("§6§m                              §r");
         String msg = sb.toString();

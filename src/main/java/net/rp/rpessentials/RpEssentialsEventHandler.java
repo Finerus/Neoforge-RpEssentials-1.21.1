@@ -1,34 +1,31 @@
 package net.rp.rpessentials;
 
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.api.IRpPlayerList;
+import net.rp.rpessentials.compat.LuckPermsSync;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.config.ScheduleConfig;
 import net.rp.rpessentials.identity.NicknameManager;
-import net.rp.rpessentials.api.IRpPlayerList;
 import net.rp.rpessentials.identity.RpEssentialsMessagingManager;
 import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.network.HideNametagsPacket;
-import net.rp.rpessentials.profession.ProfessionSyncHelper;
-import net.rp.rpessentials.profession.TempLicenseExpirationManager;
-
+import net.rp.rpessentials.network.SetPlayerProfilePacket;
 import net.rp.rpessentials.profession.LicenseHelper;
 import net.rp.rpessentials.profession.LicenseManager;
 import net.rp.rpessentials.profession.PendingProfileManager;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
-import net.rp.rpessentials.network.SetPlayerProfilePacket;
+import net.rp.rpessentials.profession.ProfessionSyncHelper;
+import net.rp.rpessentials.profession.TempLicenseExpirationManager;
 
 @EventBusSubscriber(modid = RpEssentials.MODID)
 public class RpEssentialsEventHandler {
@@ -59,10 +56,17 @@ public class RpEssentialsEventHandler {
         }
 
         LastConnectionManager.recordLogin(player);
+        AbsenceManager.onLogin(player.getUUID());
         PlaytimeManager.onLogin(player.getUUID());
         ProfessionSyncHelper.syncToPlayer(player);
 
-        // Application du profil préparé à l'avance par le staff, si existant
+        if (VanishManager.isVanished(player.getUUID()) && VanishManager.reminderEnabled()) {
+            player.sendSystemMessage(Component.literal("§7[Vanish] You are still vanished (level "
+                    + VanishManager.getLevel(player.getUUID()) + ")."));
+        }
+
+        PendingActionManager.applyOnLogin(server, player);
+
         PendingProfileManager.PendingEntry pending = PendingProfileManager.consumePending(player.getUUID());
         if (pending != null) {
             StringBuilder logSummary = new StringBuilder();
@@ -123,7 +127,6 @@ public class RpEssentialsEventHandler {
             }
         }
 
-        // Message join — cast via IRpPlayerList (interface injectée par MixinPlayerList)
         sendJoinLeaveMessage(server, player, true);
 
         if (RpEssentialsPermissions.isStaff(player)) {
@@ -151,20 +154,18 @@ public class RpEssentialsEventHandler {
             }
         } catch (IllegalStateException ignored) {}
 
-        // Sync nametag différé 500ms
         java.util.concurrent.CompletableFuture.runAsync(
                 () -> server.execute(() -> {
                     SyncNametagDataPacket.broadcastForPlayer(player);
                     for (ServerPlayer online : server.getPlayerList().getPlayers()) {
-                        if (!online.getUUID().equals(player.getUUID())) {
-                            PacketDistributor.sendToPlayer(player, SyncNametagDataPacket.from(online));
-                        }
+                        if (online.getUUID().equals(player.getUUID())) continue;
+                        if (VanishManager.canHide(VanishManager.Aspect.NAMETAG, player, online.getUUID())) continue;
+                        PacketDistributor.sendToPlayer(player, SyncNametagDataPacket.from(online));
                     }
                 }),
                 java.util.concurrent.CompletableFuture.delayedExecutor(
                         500, java.util.concurrent.TimeUnit.MILLISECONDS));
 
-        // Message de bienvenue
         try {
             if (ScheduleConfig.ENABLE_WELCOME != null && ScheduleConfig.ENABLE_WELCOME.get()) {
                 String playerName = player.getName().getString();
@@ -191,7 +192,6 @@ public class RpEssentialsEventHandler {
             }
         } catch (IllegalStateException ignored) {}
 
-        // Sync hideNametags state to the joining player
         try {
             boolean hideNametags = RpEssentialsConfig.HIDE_NAMETAGS.get();
             PacketDistributor.sendToPlayer(player, new HideNametagsPacket(hideNametags));
@@ -248,7 +248,6 @@ public class RpEssentialsEventHandler {
 
     @SubscribeEvent
     public static void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
-        // Initialisation anticipée pour éviter le lag au premier login
         NicknameManager.reload();
         LicenseManager.reload();
         WarnManager.reload();
@@ -258,8 +257,10 @@ public class RpEssentialsEventHandler {
         DeathRPManager.reload();
         AutoUnwhitelistHistory.reload();
         PendingProfileManager.reload();
+        AbsenceManager.reload();
+        PendingActionManager.reload();
+        VanishManager.reload();
 
-        // Validation dimension AFK
         try {
             String dimId = net.rp.rpessentials.config.RpConfig.AFK_DIMENSION.get();
             net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimKey =
@@ -278,6 +279,7 @@ public class RpEssentialsEventHandler {
                 MuteManager.getAllMutes().size(),
                 dataFolder);
         AfkPlatformInitializer.tryPlace(event.getServer());
+        LuckPermsSync.start(event.getServer());
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -287,16 +289,11 @@ public class RpEssentialsEventHandler {
         DeathRPManager.onPlayerDeathRP(player, event.getSource());
     }
 
-    // =========================================================================
-    // PRIVATE
-    // =========================================================================
-
-    /**
-     * Envoie le message join/leave via l'interface IRpPlayerList.
-     * MixinPlayerList implémente IRpPlayerList, ce qui permet le cast
-     * sans référencer directement la classe de mixin.
-     */
     private static void sendJoinLeaveMessage(MinecraftServer server, ServerPlayer player, boolean isJoin) {
+        if (VanishManager.isVanished(player.getUUID()) && VanishManager.hides(VanishManager.Aspect.JOIN_CUSTOM)) {
+            VanishManager.notifySilent(server, player, isJoin);
+            return;
+        }
         PlayerList pl = server.getPlayerList();
 
         if (pl instanceof IRpPlayerList rpl) {

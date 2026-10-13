@@ -5,6 +5,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.nbt.CompoundTag;
 import net.rp.rpessentials.identity.NicknameManager;
+import net.rp.rpessentials.moderation.VanishManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -33,6 +34,14 @@ public abstract class MixinEntity {
     )
     private void rpessentials$endSave(CompoundTag tag, CallbackInfoReturnable<CompoundTag> cir) {
         rpessentials$saving.set(false);
+    }
+
+    @Inject(method = "isIgnoringBlockTriggers", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    private void rpessentials$vanishTriggers(CallbackInfoReturnable<Boolean> cir) {
+        if ((Object) this instanceof ServerPlayer p && VanishManager.isVanished(p.getUUID())
+                && VanishManager.hides(VanishManager.Aspect.TRIGGERS)) {
+            cir.setReturnValue(true);
+        }
     }
 
     @Inject(

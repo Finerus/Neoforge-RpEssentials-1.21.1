@@ -12,6 +12,8 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.moderation.ManageService;
+import net.rp.rpessentials.network.ManagePlayerPacket;
 import net.rp.rpessentials.moderation.PlaytimeManager;
 import net.rp.rpessentials.network.OpenPlayerProfileGuiPacket;
 import net.rp.rpessentials.network.PlayerNoteActionPacket;
@@ -30,6 +32,7 @@ public class PlayerProfileScreen extends Screen {
     private final List<OpenPlayerProfileGuiPacket.PlayerData> players;
     private final List<String> availableProfessionIds;
     private final List<String> availableRoles;
+    private final List<String> availablePlatforms;
 
     private int stateSelectedPlayer = 0;
     private int stateSelectedProf   = 0;
@@ -37,6 +40,7 @@ public class PlayerProfileScreen extends Screen {
     private int playerListScroll    = 0;
     private int activeTab           = 0; // 0=Profil, 1=Stats, 2=Notes
     private int stateNotesScroll    = 0;
+    private int stateTempDays = 7;
 
     private String stateNick = "";
     private String stateRole = "";
@@ -49,6 +53,7 @@ public class PlayerProfileScreen extends Screen {
     private static final String[] FILTER_KEYS = { "online", "offline", "prepared", "all" };
     private String pendingDeletePlayerUuid = null;
     private boolean pendingNickReset = false;
+    private int pendingDeleteNoteId = -1;
 
     private static final char[]   COLOR_CHARS = { 0, 'f','e','6','c','a','b','9','d','7','8','0','1','2','3','4','5' };
     private static final String[] COLOR_KEYS  = {
@@ -61,18 +66,61 @@ public class PlayerProfileScreen extends Screen {
     private static final int PANEL_TOP    = 18;
     private static final int ROW_H        = 20;
     private static final int LIST_VISIBLE = 10;
-    private static final int NOTE_ROW_H   = 40; // hauteur fixe par note (meta + 2 lignes de texte)
+    private static final int NOTE_ROW_H   = 40;
+    private static final int MANAGE_ROW_H = 34;
+    private int manageScroll = 0;
 
-    private static final String[] TAB_KEYS = { "profile", "stats", "notes" };
-    private static final String[] TAB_COLORS = { "§e", "§a", "§b" };
+    private static final String[] TAB_KEYS = { "profile", "stats", "notes", "manage" };
+    private static final String[] TAB_COLORS = { "§e", "§a", "§b", "§c" };
+
+    private static final String[] MANAGE_SECTION_KEYS = {
+            "access", "discipline", "teleport", "send", "permissions", "vanish",
+            "inventory", "identity", "absence", "reset" };
+    private static final ManageService.Action[][] MANAGE_ACTIONS = {
+            { ManageService.Action.WHITELIST_ADD, ManageService.Action.WHITELIST_REMOVE },
+            { ManageService.Action.KICK, ManageService.Action.BAN, ManageService.Action.PARDON },
+            { ManageService.Action.TP_TO_PLAYER, ManageService.Action.TP_PLAYER_HERE },
+            { ManageService.Action.TP_PLAYER_PLATFORM, ManageService.Action.TP_PLAYER_AFK },
+            { ManageService.Action.OP, ManageService.Action.DEOP },
+            { ManageService.Action.VANISH, ManageService.Action.UNVANISH },
+            { ManageService.Action.CLEAR_INVENTORY, ManageService.Action.CLEAR_ENDER },
+            { ManageService.Action.CLEAR_NICKNAME, ManageService.Action.CLEAR_ROLE, ManageService.Action.CLEAR_PROFESSION },
+            { ManageService.Action.ABSENCE_ADD, ManageService.Action.ABSENCE_REMOVE },
+            { ManageService.Action.RESET_ALL }
+    };
+
+    private static int ownLevel() {
+        var p = Minecraft.getInstance().player;
+        if (p == null) return 0;
+        for (int l = 4; l > 0; l--) if (p.hasPermissions(l)) return l;
+        return 0;
+    }
+
+    private boolean selectedIsSelf() {
+        var p = Minecraft.getInstance().player;
+        return p != null && !players.isEmpty() && p.getUUID().equals(selectedData().uuid());
+    }
+
+    private int defaultManageNumber(ManageService.Action a) {
+        int own = ownLevel();
+        if (a == ManageService.Action.OP) return selectedIsSelf() ? own : Math.max(1, Math.min(2, own));
+        if (a == ManageService.Action.VANISH) return own;
+        return 7;
+    }
+
+    private ManageService.Action manageAction = null;
+    private String manageText = "";
+    private int manageNumber = 2;
 
     public PlayerProfileScreen(List<OpenPlayerProfileGuiPacket.PlayerData> players,
                                List<String> availableProfessionIds,
-                               List<String> availableRoles) {
+                               List<String> availableRoles,
+                               List<String> availablePlatforms) {
         super(Component.translatable("rpessentials.gui.player_profile.title"));
         this.players                = players;
         this.availableProfessionIds = availableProfessionIds;
         this.availableRoles         = availableRoles;
+        this.availablePlatforms     = availablePlatforms;
         if (!players.isEmpty()) loadPlayerState(0);
     }
 
@@ -231,7 +279,7 @@ public class PlayerProfileScreen extends Screen {
                     ? TAB_COLORS[ti] + "§l" + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i])
                     : "§7" + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i]);
             addRenderableWidget(Button.builder(Component.literal(label),
-                            btn -> { activeTab = ti; rebuild(); })
+                            btn -> { activeTab = ti; pendingDeleteNoteId = -1; rebuild(); })
                     .pos(formX - 2 + i * (tabW + 2), PANEL_TOP + 14)
                     .size(tabW, 16).build());
         }
@@ -242,6 +290,7 @@ public class PlayerProfileScreen extends Screen {
             case 0 -> buildProfileTab(formX, formW, contentY);
             case 1 -> {} // Stats : render only
             case 2 -> buildNotesTab(formX, formW, contentY);
+            case 3 -> buildManageTab(formX, formW, contentY);
         }
 
         // ── Bouton Appliquer (onglet profil seulement) ─────────────────────
@@ -295,7 +344,7 @@ public class PlayerProfileScreen extends Screen {
                             stateNickColorIndex = 0;
                             OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
                             PacketDistributor.sendToServer(new SetPlayerProfilePacket(
-                                    target.uuid(), "", "", "", false, true));
+                                    target.uuid(), "", "", "", false, true, 0));
                             players.set(stateSelectedPlayer, new OpenPlayerProfileGuiPacket.PlayerData(
                                     target.uuid(), target.mcName(), "", target.currentRole(),
                                     target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
@@ -380,19 +429,38 @@ public class PlayerProfileScreen extends Screen {
 
             String profId = selectedProfId();
             boolean owned = selectedPlayerOwns(profId);
-            addRenderableWidget(Button.builder(
-                            Component.literal(owned
-                                    ? I18n.get("rpessentials.gui.player_profile.btn_add_license_off")
-                                    : I18n.get("rpessentials.gui.player_profile.btn_add_license")),
-                            btn -> { if (!owned) grantSelectedLicense(); })
-                    .pos(navX + 40, navY).size(50, 18).build());
+            Button addBtn = Button.builder(
+                            Component.translatable("rpessentials.gui.player_profile.btn_add_license"),
+                            btn -> grantSelectedLicense())
+                    .pos(navX + 40, navY).size(50, 18).build();
+            addBtn.active = !owned;
+            addRenderableWidget(addBtn);
 
-            addRenderableWidget(Button.builder(
-                            Component.literal(owned
-                                    ? I18n.get("rpessentials.gui.player_profile.btn_revoke_license")
-                                    : I18n.get("rpessentials.gui.player_profile.btn_revoke_license_off")),
-                            btn -> { if (owned) revokeSelectedLicense(); })
-                    .pos(navX + 93, navY).size(55, 18).build());
+            Button revokeBtn = Button.builder(
+                            Component.translatable("rpessentials.gui.player_profile.btn_revoke_license"),
+                            btn -> revokeSelectedLicense())
+                    .pos(navX + 93, navY).size(55, 18).build();
+            revokeBtn.active = owned;
+            addRenderableWidget(revokeBtn);
+
+            int tempY = navY + 22;
+            EditBox daysBox = new EditBox(this.font, navX, tempY, 40, 18, Component.literal("Days"));
+            daysBox.setHint(Component.translatable("rpessentials.gui.player_profile.temp_days_hint"));
+            daysBox.setMaxLength(3);
+            daysBox.setValue(String.valueOf(stateTempDays));
+            daysBox.setResponder(val -> {
+                try { stateTempDays = Integer.parseInt(val.trim()); }
+                catch (NumberFormatException e) { stateTempDays = 0; }
+            });
+            addRenderableWidget(daysBox);
+
+            boolean tempAllowed = !owned && !selectedData().isPrepared();
+            Button tempBtn = Button.builder(
+                            Component.translatable("rpessentials.gui.player_profile.btn_temp_license"),
+                            btn -> grantTempLicense())
+                    .pos(navX + 44, tempY).size(60, 18).build();
+            tempBtn.active = tempAllowed;
+            addRenderableWidget(tempBtn);
         }
     }
 
@@ -439,9 +507,22 @@ public class PlayerProfileScreen extends Screen {
             int btnY = rowY + rh / 2 - 8;
 
             if (note.id() >= 0) {
-                addRenderableWidget(Button.builder(Component.literal("§c✗"),
-                                btn -> deleteNote(note.id()))
-                        .pos(formX, btnY).size(14, 16).build());
+                boolean confirmDelete = pendingDeleteNoteId == note.id();
+                addRenderableWidget(Button.builder(Component.literal(confirmDelete ? "§c!" : "§c✗"),
+                                btn -> {
+                                    if (pendingDeleteNoteId == note.id()) {
+                                        pendingDeleteNoteId = -1;
+                                        deleteNote(note.id());
+                                    } else {
+                                        pendingDeleteNoteId = note.id();
+                                        rebuild();
+                                    }
+                                })
+                        .pos(formX, btnY).size(14, 16)
+                        .tooltip(Tooltip.create(Component.translatable(confirmDelete
+                                ? "rpessentials.gui.player_profile.notes.confirm_delete"
+                                : "rpessentials.gui.player_profile.notes.delete_tooltip")))
+                        .build());
 
                 boolean isEditing = stateEditingNoteId == note.id();
                 addRenderableWidget(Button.builder(
@@ -490,6 +571,224 @@ public class PlayerProfileScreen extends Screen {
 
     private void rebuild() { clearWidgets(); init(); }
 
+
+    private void buildManageTab(int formX, int formW, int y) {
+        if (manageAction != null) { buildManagePopup(formX, formW, y); return; }
+
+        boolean sensitive = Minecraft.getInstance().player != null
+                && RpEssentialsPermissions.hasSensitiveLevel(Minecraft.getInstance().player);
+        boolean online = selectedData().isOnline();
+        boolean self = selectedIsSelf();
+        int gap = 6;
+        int w = (formW - 28 - gap * 2) / 3;
+        int visible = manageVisibleSections();
+        int maxScroll = MANAGE_ACTIONS.length - visible;
+        manageScroll = Math.max(0, Math.min(manageScroll, maxScroll));
+
+        for (int s = manageScroll; s < manageScroll + visible; s++) {
+            int rowY = y + (s - manageScroll) * MANAGE_ROW_H;
+            for (int c = 0; c < MANAGE_ACTIONS[s].length; c++) {
+                final ManageService.Action a = MANAGE_ACTIONS[s][c];
+                boolean reset = a == ManageService.Action.RESET_ALL;
+                String label = I18n.get("rpessentials.gui.player_profile.manage.action." + a.name().toLowerCase());
+                Button b = Button.builder(Component.literal(reset ? "§c§l" + label : label),
+                                btn -> {
+                                    manageAction = a;
+                                    manageText = "";
+                                    manageNumber = defaultManageNumber(a);
+                                    rebuild();
+                                })
+                        .pos(formX + c * (w + gap), rowY + 11)
+                        .size(reset ? w * 3 + gap * 2 : w, 16).build();
+                if (a.sensitive() && !sensitive) {
+                    b.active = false;
+                    b.setTooltip(Tooltip.create(Component.translatable(
+                            "rpessentials.gui.player_profile.manage.sensitive_tooltip")));
+                } else if (self && a.selfBlocked()) {
+                    b.active = false;
+                    b.setTooltip(Tooltip.create(Component.translatable(
+                            "rpessentials.gui.player_profile.manage.self_tooltip")));
+                } else if (a.needsOnline() && !online) {
+                    b.active = false;
+                    b.setTooltip(Tooltip.create(Component.translatable(
+                            "rpessentials.gui.player_profile.manage.offline_tooltip")));
+                } else if (a.queueable() && !online) {
+                    b.setTooltip(Tooltip.create(Component.translatable(
+                            "rpessentials.gui.player_profile.manage.queued_tooltip")));
+                }
+                addRenderableWidget(b);
+            }
+        }
+
+        if (maxScroll > 0) {
+            boolean up = manageScroll > 0;
+            boolean down = manageScroll < maxScroll;
+            int ax = formX + formW - 20;
+            addRenderableWidget(Button.builder(Component.literal(up ? "▲" : "§8▲"),
+                            btn -> { if (up) { manageScroll--; rebuild(); } })
+                    .pos(ax, y).size(18, 14).build());
+            addRenderableWidget(Button.builder(Component.literal(down ? "▼" : "§8▼"),
+                            btn -> { if (down) { manageScroll++; rebuild(); } })
+                    .pos(ax, y + visible * MANAGE_ROW_H - 18).size(18, 14).build());
+        }
+    }
+
+    // =========================================================================
+    // MANAGE
+    // =========================================================================
+    private boolean canConfirmManage() {
+        int own = ownLevel();
+        return switch (manageAction) {
+            case RESET_ALL -> manageText.trim().equalsIgnoreCase(selectedData().mcName());
+            case TP_PLAYER_PLATFORM -> !manageText.trim().isEmpty();
+            case OP -> manageNumber >= 1 && manageNumber <= own && !(selectedIsSelf() && manageNumber < own);
+            case VANISH -> manageNumber >= 0 && manageNumber <= own;
+            default -> true;
+        };
+    }
+
+    private void buildManagePopup(int formX, int formW, int y) {
+        ManageService.Action a = manageAction;
+        int boxW = Math.min(formW - 4, 260);
+        int cy = y + 34;
+        int btnY = y + 90;
+        boolean resetAll = a == ManageService.Action.RESET_ALL;
+        int confirmW = resetAll ? 130 : 100;
+
+        Button confirmBtn = Button.builder(
+                        Component.translatable(resetAll
+                                ? "rpessentials.gui.player_profile.manage.btn_confirm_reset"
+                                : "rpessentials.gui.player_profile.manage.btn_confirm"),
+                        btn -> sendManage())
+                .pos(formX, btnY).size(confirmW, 20).build();
+        confirmBtn.active = canConfirmManage();
+
+        if (a == ManageService.Action.OP || a == ManageService.Action.VANISH) {
+            int own = ownLevel();
+            boolean self = selectedIsSelf();
+            int from = a == ManageService.Action.OP ? 1 : 0;
+            for (int lvl = from; lvl <= 4; lvl++) {
+                final int l = lvl;
+                Button lb = Button.builder(Component.literal(manageNumber == l ? "§e§l" + l : "§7" + l),
+                                btn -> { manageNumber = l; rebuild(); })
+                        .pos(formX + (lvl - from) * 24, cy).size(22, 18).build();
+                if (l > own) {
+                    lb.active = false;
+                    lb.setTooltip(Tooltip.create(Component.translatable(
+                            "rpessentials.gui.player_profile.manage.level_too_high_tooltip")));
+                } else if (a == ManageService.Action.OP && self && l < own) {
+                    lb.active = false;
+                    lb.setTooltip(Tooltip.create(Component.translatable(
+                            "rpessentials.gui.player_profile.manage.cannot_lower_tooltip")));
+                }
+                addRenderableWidget(lb);
+            }
+        }
+
+        if (a == ManageService.Action.ABSENCE_ADD) {
+            EditBox days = new EditBox(this.font, formX, cy, 80, 18, Component.literal("Days"));
+            days.setHint(Component.translatable("rpessentials.gui.player_profile.manage.days_hint"));
+            days.setMaxLength(3);
+            days.setValue(String.valueOf(manageNumber));
+            days.setResponder(val -> {
+                try { manageNumber = Integer.parseInt(val.trim()); }
+                catch (NumberFormatException e) { manageNumber = 0; }
+            });
+            addRenderableWidget(days);
+            cy += 24;
+        }
+
+        if (a == ManageService.Action.KICK || a == ManageService.Action.BAN || a == ManageService.Action.ABSENCE_ADD) {
+            EditBox reason = new EditBox(this.font, formX, cy, boxW, 18, Component.literal("Reason"));
+            reason.setHint(Component.translatable("rpessentials.gui.player_profile.manage.reason_hint"));
+            reason.setMaxLength(200);
+            reason.setValue(manageText);
+            reason.setResponder(val -> manageText = val);
+            addRenderableWidget(reason);
+        }
+
+        if (resetAll) {
+            EditBox nameBox = new EditBox(this.font, formX, cy + 14, boxW, 18, Component.literal("Name"));
+            nameBox.setHint(Component.translatable("rpessentials.gui.player_profile.manage.type_name_hint"));
+            nameBox.setMaxLength(32);
+            nameBox.setValue(manageText);
+            nameBox.setResponder(val -> {
+                manageText = val;
+                confirmBtn.active = canConfirmManage();
+            });
+            addRenderableWidget(nameBox);
+        }
+
+        if (a == ManageService.Action.TP_PLAYER_PLATFORM) {
+            int shown = Math.min(availablePlatforms.size(), 6);
+            for (int i = 0; i < shown; i++) {
+                final String id = availablePlatforms.get(i);
+                boolean sel = id.equals(manageText);
+                addRenderableWidget(Button.builder(Component.literal(sel ? "§e§l" + id : "§7" + id),
+                                btn -> { manageText = id; rebuild(); })
+                        .pos(formX + (i % 3) * 84, cy + (i / 3) * 20).size(80, 16).build());
+            }
+        }
+
+        addRenderableWidget(confirmBtn);
+        addRenderableWidget(Button.builder(
+                        Component.translatable("rpessentials.gui.player_profile.manage.btn_cancel"),
+                        btn -> { manageAction = null; manageText = ""; rebuild(); })
+                .pos(formX + confirmW + 4, btnY).size(80, 20).build());
+    }
+
+    private void sendManage() {
+        if (players.isEmpty() || manageAction == null) return;
+        if (manageAction == ManageService.Action.ABSENCE_ADD && (manageNumber < 1 || manageNumber > 365)) return;
+        String text = manageAction == ManageService.Action.RESET_ALL ? "" : manageText.trim();
+        PacketDistributor.sendToServer(new ManagePlayerPacket(
+                selectedData().uuid(), manageAction, text, manageNumber));
+        manageAction = null;
+        manageText = "";
+        rebuild();
+    }
+
+    private void renderManageTab(GuiGraphics g, int formX, int y, OpenPlayerProfileGuiPacket.PlayerData sel) {
+        if (manageAction == null) {
+            int visible = manageVisibleSections();
+            for (int s = manageScroll; s < manageScroll + visible && s < MANAGE_SECTION_KEYS.length; s++) {
+                String color = MANAGE_SECTION_KEYS[s].equals("reset") ? "§c" : "§e";
+                g.drawString(this.font,
+                        color + I18n.get("rpessentials.gui.player_profile.manage.section." + MANAGE_SECTION_KEYS[s]),
+                        formX, y + (s - manageScroll) * MANAGE_ROW_H, 0xFFFFFF, false);
+            }
+            return;
+        }
+        String label = I18n.get("rpessentials.gui.player_profile.manage.action." + manageAction.name().toLowerCase());
+        g.drawString(this.font, "§c§l" + label, formX, y, 0xFFFFFF, false);
+        g.drawString(this.font,
+                I18n.get("rpessentials.gui.player_profile.manage.confirm_generic", label, sel.mcName()),
+                formX, y + 12, 0xAAAAAA, false);
+        if (manageAction == ManageService.Action.RESET_ALL) {
+            g.drawString(this.font, I18n.get("rpessentials.gui.player_profile.manage.reset_all_warning"),
+                    formX, y + 24, 0xFF5555, false);
+        }
+        if (manageAction == ManageService.Action.TP_PLAYER_PLATFORM) {
+            g.drawString(this.font, I18n.get(availablePlatforms.isEmpty()
+                            ? "rpessentials.gui.player_profile.manage.no_platform"
+                            : "rpessentials.gui.player_profile.manage.platform_label"),
+                    formX, y + 24, 0xAAAAAA, false);
+        }
+        if (manageAction == ManageService.Action.OP) {
+            g.drawString(this.font, I18n.get("rpessentials.gui.player_profile.manage.level_label"),
+                    formX, y + 24, 0xAAAAAA, false);
+        }
+        if (manageAction == ManageService.Action.VANISH) {
+            g.drawString(this.font, I18n.get("rpessentials.gui.player_profile.manage.vanish_level_label"),
+                    formX, y + 24, 0xAAAAAA, false);
+        }
+    }
+
+    private int manageVisibleSections() {
+        int avail = this.height - 16 - (PANEL_TOP + 36);
+        return Math.max(1, Math.min(MANAGE_ACTIONS.length, avail / MANAGE_ROW_H));
+    }
+
     // =========================================================================
     // RENDU
     // =========================================================================
@@ -497,6 +796,7 @@ public class PlayerProfileScreen extends Screen {
         return switch (activeTab) {
             case 1 -> 0xFF55FF55; // Stats
             case 2 -> 0xFF55FFFF; // Notes
+            case 3 -> 0xFFFF5555; // Manage
             default -> 0xFFFFFF55; // Profil
         };
     }
@@ -544,6 +844,7 @@ public class PlayerProfileScreen extends Screen {
             case 0 -> renderProfileTab(g, formX, formRight - formX, contentY, sel);
             case 1 -> renderStatsTab(g, formX, formRight, contentY, sel);
             case 2 -> renderNotesTab(g, formX, formRight, contentY, sel);
+            case 3 -> renderManageTab(g, formX, contentY, sel);
         }
 
         super.render(g, mouseX, mouseY, delta);
@@ -763,6 +1064,13 @@ public class PlayerProfileScreen extends Screen {
             return true;
         }
 
+        if (activeTab == 3 && manageAction == null && mx >= formX) {
+            int max = Math.max(0, MANAGE_ACTIONS.length - manageVisibleSections());
+            manageScroll = (int) Math.max(0, Math.min(max, manageScroll - sy));
+            rebuild();
+            return true;
+        }
+
         if (activeTab == 2 && mx >= formX) {
             int maxScroll = Math.max(0, selectedData().notes().size() - 1);
             stateNotesScroll = (int) Math.max(0, Math.min(maxScroll, stateNotesScroll - sy));
@@ -782,6 +1090,7 @@ public class PlayerProfileScreen extends Screen {
         stateEditingNoteId  = -1;
         pendingDeletePlayerUuid = null;
         pendingNickReset = false;
+        pendingDeleteNoteId = -1;
         OpenPlayerProfileGuiPacket.PlayerData p = players.get(idx);
         String rawNick = p.currentNick();
         stateNickColorIndex = 0;
@@ -795,6 +1104,9 @@ public class PlayerProfileScreen extends Screen {
         stateRole  = p.currentRole();
         stateSelectedProf = 0;
         stateNoteInput    = "";
+
+        manageAction = null;
+        manageScroll = 0;
     }
 
     private void applyProfile() {
@@ -807,7 +1119,7 @@ public class PlayerProfileScreen extends Screen {
                 : "§" + COLOR_CHARS[stateNickColorIndex] + stateNick.trim();
 
         PacketDistributor.sendToServer(new SetPlayerProfilePacket(
-                target.uuid(), finalNick, stateRole.trim(), "", false, false));
+                target.uuid(), finalNick, stateRole.trim(), "", false, false, 0));
 
         players.set(stateSelectedPlayer, new OpenPlayerProfileGuiPacket.PlayerData(
                 target.uuid(), target.mcName(), finalNick, stateRole.trim(),
@@ -824,7 +1136,27 @@ public class PlayerProfileScreen extends Screen {
 
         OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
         PacketDistributor.sendToServer(new SetPlayerProfilePacket(
-                target.uuid(), "", "", profId, false, false));
+                target.uuid(), "", "", profId, false, false, 0));
+
+        List<String> updated = new ArrayList<>(target.currentLicenses());
+        updated.add(profId);
+        players.set(stateSelectedPlayer, new OpenPlayerProfileGuiPacket.PlayerData(
+                target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
+                updated, target.activeWarnCount(), target.isMuted(), target.muteExpiry(),
+                target.playtimeMs(), target.sessionMs(), target.noteCount(), target.isOnline(),
+                target.notes(), target.isPrepared()));
+        rebuild();
+    }
+
+    private void grantTempLicense() {
+        if (players.isEmpty() || stateTempDays < 1 || stateTempDays > 365) return;
+        String profId = selectedProfId();
+        if (profId.isEmpty() || selectedPlayerOwns(profId)) return;
+
+        OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
+        if (target.isPrepared()) return;
+        PacketDistributor.sendToServer(new SetPlayerProfilePacket(
+                target.uuid(), "", "", profId, false, false, stateTempDays));
 
         List<String> updated = new ArrayList<>(target.currentLicenses());
         updated.add(profId);
@@ -843,7 +1175,7 @@ public class PlayerProfileScreen extends Screen {
 
         OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
         PacketDistributor.sendToServer(new SetPlayerProfilePacket(
-                target.uuid(), "", "", profId, true, false));
+                target.uuid(), "", "", profId, true, false, 0));
 
         List<String> updated = new ArrayList<>(target.currentLicenses());
         updated.remove(profId);

@@ -52,20 +52,24 @@ public class LicenseScreen extends Screen {
     @Override
     protected void init() {
         int cx = this.width / 2;
-        int cy = this.height / 2;
-        int cardY = cy - TEX_H / 2;
-
+        int cardY = this.height / 2 - TEX_H / 2;
+        int btnY = Math.min(cardY + TEX_H + 6, this.height - 22);
         addRenderableWidget(Button.builder(Component.translatable("rpessentials.license.screen.close"), btn -> onClose())
-                .pos(cx - 25, cardY + TEX_H + 6)
-                .size(50, 16).build());
+                .pos(cx - 25, btnY).size(50, 16).build());
     }
 
+    private static final int FOOTER_Y = 136;
+
     private int field(GuiGraphics g, String labelKey, String value, int x, int y) {
+        String shown = value;
+        if (this.font.width(shown) > 260) {
+            shown = this.font.plainSubstrByWidth(shown, 260 - this.font.width("...")) + "...";
+        }
         g.pose().pushPose();
         g.pose().translate(x, y, 0);
         g.pose().scale(0.85f, 0.85f, 1f);
         g.drawString(this.font, "§8" + I18n.get(labelKey), 0, 0, 0xFFFFFF);
-        g.drawString(this.font, "§f" + value, 8, 10, 0xFFFFFF);
+        g.drawString(this.font, "§f" + shown, 8, 10, 0xFFFFFF);
         g.pose().popPose();
         return y + 22;
     }
@@ -97,16 +101,17 @@ public class LicenseScreen extends Screen {
         y = field(g, "rpessentials.license.card.profession", profId, pad, y);
         y = field(g, "rpessentials.license.card.holder", holder, pad, y);
         y = field(g, "rpessentials.license.card.issued", issueDate, pad, y);
-        if (expiryDate != null) y = field(g, "rpessentials.license.card.until", expiryDate, pad, y);
+        if (expiryDate != null) field(g, "rpessentials.license.card.until", expiryDate, pad, y);
 
-        g.fill(cardX + 14, y + 2, cardX + TEX_W - 14, y + 3, 0x88FFFFFF);
-        y += 12;
-
+        int footerY = cardY + FOOTER_Y;
+        g.fill(cardX + 14, footerY, cardX + TEX_W - 14, footerY + 1, 0x88FFFFFF);
         g.drawCenteredString(this.font,
                 revoked
                         ? "§c" + I18n.get("rpessentials.license.card.invalid")
                         : "§a" + I18n.get("rpessentials.license.card.valid"),
-                cx, y, 0xFFFFFF);
+                cx, footerY + 10, 0xFFFFFF);
+
+        super.render(g, mouseX, mouseY, delta);
     }
 
     @Override

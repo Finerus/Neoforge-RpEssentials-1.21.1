@@ -162,8 +162,10 @@ public class DeathRPManager {
                     try { overrides.put(UUID.fromString(u), v); } catch (Exception ignored) {}
                 });
             }
-        } catch (Exception e) { LOGGER.error("[DeathRP] Failed to load deathrp.json", e); }
-        RpEssentialsIO.quarantine(dataFile);
+        } catch (Exception e) {
+            LOGGER.error("[DeathRP] Failed to load deathrp.json", e);
+            RpEssentialsIO.quarantine(dataFile);
+        }
     }
 
     private static void saveToFile() {

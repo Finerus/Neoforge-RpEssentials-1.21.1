@@ -18,7 +18,18 @@
     "MixinSmithingMenu",
     "MixinItemCombinerMenuBase",
     "MixinServerPlayerGameMode",
-    "MixinDeathMessage"
+    "MixinDeathMessage",
+    "MixinTrackedEntity",
+    "ChunkMapAccessor",
+    "MixinEntitySelector",
+    "MixinCommandSourceStack",
+    "MixinPlayerListSound",
+    "MixinPlayerListJoin",
+    "MixinListenerLeave",
+    "MixinPlayerAdvancements",
+    "MixinContainerOpenersCounter",
+    "MixinMinecraftServerStatus",
+    "MixinPlayerListAdvancement"
   ],
   "client": [
     "client.MixinEntityRenderer",

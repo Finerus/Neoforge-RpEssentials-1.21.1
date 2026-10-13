@@ -11,6 +11,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ConfigInspector;
+import net.rp.rpessentials.config.ModerationConfig;
 import net.rp.rpessentials.config.ProfessionConfig;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.identity.NicknameManager;
@@ -150,11 +151,14 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         Set<UUID> knownIds = new HashSet<>();
 
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (VanishManager.canHide(VanishManager.Aspect.GUI, admin, p.getUUID())) {
+                knownIds.add(p.getUUID());
+                continue;
+            }
             players.add(buildPlayerData(p));
             knownIds.add(p.getUUID());
         }
 
-        // Joueurs hors ligne déjà connectés au moins une fois sur le serveur
         for (var entry : LastConnectionManager.getAllSortedByLogin()) {
             UUID uuid = entry.getKey();
             if (knownIds.contains(uuid)) continue;
@@ -162,7 +166,6 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
             knownIds.add(uuid);
         }
 
-        // Joueurs préparés à l'avance par le staff, jamais connectés
         for (net.rp.rpessentials.profession.PendingProfileManager.PendingEntry entry :
                 net.rp.rpessentials.profession.PendingProfileManager.getAllPending()) {
             UUID uuid;
@@ -176,7 +179,6 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
             knownIds.add(uuid);
         }
 
-        // Professions disponibles
         List<String> professionIds = new ArrayList<>();
         try {
             for (String line : ProfessionConfig.PROFESSIONS.get()) {
@@ -186,7 +188,6 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
             }
         } catch (IllegalStateException ignored) {}
 
-        // Rôles disponibles
         List<String> roleIds = new ArrayList<>();
         try {
             for (String entry : RpEssentialsConfig.ROLES.get()) {
@@ -196,8 +197,16 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
             }
         } catch (IllegalStateException ignored) {}
 
+        List<String> platformIds = new ArrayList<>();
+        try {
+            for (String p : ModerationConfig.PLATFORMS.get()) {
+                String id = p.split(";", 2)[0].trim();
+                if (!id.isEmpty()) platformIds.add(id);
+            }
+        } catch (IllegalStateException ignored) {}
+
         PacketDistributor.sendToPlayer(admin,
-                new OpenPlayerProfileGuiPacket(players, professionIds, roleIds));
+                new OpenPlayerProfileGuiPacket(players, professionIds, roleIds, platformIds));
     }
 
     /**

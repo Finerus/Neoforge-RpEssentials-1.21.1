@@ -68,6 +68,8 @@ public class RpEssentialsConfig {
 
     // === ROLES ===
     public static ModConfigSpec.ConfigValue<List<? extends String>> ROLES;
+    public static final ModConfigSpec.BooleanValue LP_SYNC_ENABLED;
+    public static final ModConfigSpec.BooleanValue LP_SYNC_IMPORT_ALL_GROUPS;
 
     static {
         // =========================================================================
@@ -374,6 +376,20 @@ public class RpEssentialsConfig {
                                 "player;player"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";"));
+
+        LP_SYNC_ENABLED = BUILDER
+                .comment("Two way sync between the roles and the LuckPerms groups.",
+                        "Each role permission is mirrored as a rpessentials.<permission> node (e.g. rpessentials.seeall)",
+                        "on the LuckPerms group of the role. Roles created here appear in LuckPerms, and groups holding",
+                        "rpessentials.* nodes appear here as roles. Nodes given directly to a player are also applied.",
+                        "Ignored if LuckPerms is absent.")
+                .define("luckPermsSync", true);
+
+        LP_SYNC_IMPORT_ALL_GROUPS = BUILDER
+                .comment("If true, every LuckPerms group becomes a role, even without any rpessentials.* node.",
+                        "If false, a group becomes a role as soon as it holds at least one rpessentials.* node.",
+                        "When true, deleting a role here has no lasting effect unless the LuckPerms group is deleted too.")
+                .define("luckPermsImportAllGroups", false);
 
         BUILDER.pop(); // Roles
 

@@ -1,6 +1,7 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.chat.Component;
@@ -8,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.GuiFeedback;
 import net.rp.rpessentials.config.ProfessionConfig;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 import net.rp.rpessentials.RpEssentials;
@@ -142,16 +144,24 @@ public record SaveProfessionPacket(
     private static Component buildConfirmation(String id, String name, String color,
                                                List<String> crafts, List<String> blocks,
                                                List<String> items, List<String> equipment, String verb) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("§a[RpEssentials] Profession §e").append(id).append(" §a").append(verb).append(".\n");
-        sb.append("§7  §6Name: §f").append(name)
-                .append("  §6Color: §").append(color.replace("&", "").replace("§", ""))
-                .append("■§r\n");
-        sb.append(formatRestrictionLine("Crafts", crafts));
-        sb.append(formatRestrictionLine("Blocks", blocks));
-        sb.append(formatRestrictionLine("Items", items));
-        sb.append(formatRestrictionLine("Equipment", equipment));
-        return Component.literal(sb.toString().stripTrailing());
+        MutableComponent out = Component.literal("§a[RpEssentials] Profession §e" + id + " §a" + verb + ".\n"
+                + "§7  §6Name: §f" + name + "  §6Color: §" + color.replace("&", "").replace("§", "") + "■§r");
+        out.append(restrictionLine("Crafts", crafts));
+        out.append(restrictionLine("Blocks", blocks));
+        out.append(restrictionLine("Items", items));
+        out.append(restrictionLine("Equipment", equipment));
+        return out;
+    }
+
+    private static MutableComponent restrictionLine(String label, List<String> items) {
+        if (items.isEmpty()) return Component.literal("\n§7  " + label + ": §8none");
+        int max = 3;
+        String text = "\n§7  " + label + ": §f"
+                + String.join("§7, §f", items.subList(0, Math.min(items.size(), max)));
+        if (items.size() <= max) return Component.literal(text + " §8(" + items.size() + ")");
+        List<String> tip = items.stream().map(s -> "§f" + s).toList();
+        return GuiFeedback.withTooltip(
+                Component.literal(text + " §8(+" + (items.size() - max) + " more)"), tip);
     }
 
     /**

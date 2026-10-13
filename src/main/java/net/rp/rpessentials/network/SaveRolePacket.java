@@ -8,6 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.*;
+import net.rp.rpessentials.compat.LuckPermsSync;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 
@@ -95,6 +96,7 @@ public record SaveRolePacket(
                 RpEssentialsRoleManager.reload();
                 RpEssentialsPermissions.clearCache();
                 RpEssentialsScheduleManager.enforceOnlineDelayed(player.getServer());
+                LuckPermsSync.pushRole(lpGroup.isBlank() ? cleanId : lpGroup, newPerms);
 
                 List<String> details = new ArrayList<>();
                 if (oldLine == null) {

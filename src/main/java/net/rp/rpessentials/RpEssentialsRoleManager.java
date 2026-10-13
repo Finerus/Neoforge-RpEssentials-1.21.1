@@ -140,6 +140,15 @@ public class RpEssentialsRoleManager {
                         }
                     }
                 } catch (IllegalStateException ignored) {}
+
+                boolean nodes = true;
+                try { nodes = RpEssentialsConfig.LP_SYNC_ENABLED.get(); } catch (IllegalStateException ignored) {}
+                if (nodes) {
+                    for (Permission perm : Permission.values()) {
+                        String node = "rpessentials." + perm.name().replace("_", "").toLowerCase();
+                        if (user.getCachedData().getPermissionData().checkPermission(node).asBoolean()) result.add(perm);
+                    }
+                }
             }
         } catch (NoClassDefFoundError | IllegalStateException ignored) {
         } catch (Exception e) {

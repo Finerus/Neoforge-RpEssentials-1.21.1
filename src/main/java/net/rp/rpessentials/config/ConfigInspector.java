@@ -397,7 +397,7 @@ public class ConfigInspector {
 
     private static final Set<String> SENSITIVE_KEYS = Set.of(
             "autoUnwhitelistExtraCommands", "opLevelBypass", "staffTags",
-            "useLuckPermsGroups", "luckPermsStaffGroups", "roles");
+            "useLuckPermsGroups", "luckPermsStaffGroups", "roles", "luckPermsSync", "luckPermsImportAllGroups");
 
     public static List<EntryData> getEntries(String fileId, boolean includeSensitive) {
         List<EntryData> all = getEntries(fileId);

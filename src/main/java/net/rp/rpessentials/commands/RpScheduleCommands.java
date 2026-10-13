@@ -22,39 +22,13 @@ import java.util.List;
 public class RpScheduleCommands {
 
     public static void registerAliases(com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("schedule")
-                .executes(RpScheduleCommands::showSchedule)
-                .then(Commands.literal("forceopen")
-                        .requires(src -> src.hasPermission(2))
-                        .executes(RpScheduleCommands::forceOpen))
-                .then(Commands.literal("forceclose")
-                        .requires(src -> src.hasPermission(2))
-                        .executes(RpScheduleCommands::forceClose))
-                .then(Commands.literal("resetforcestate")
-                        .requires(src -> src.hasPermission(2))
-                        .executes(RpScheduleCommands::forceReset))
-                .then(Commands.literal("whitelist")
-                        .requires(src -> src.hasPermission(2))
-                        .then(Commands.literal("add")
-                                .then(Commands.argument("player", StringArgumentType.word())
-                                        .suggests((ctx, builder) -> {
-                                            ctx.getSource().getServer().getPlayerList().getPlayers()
-                                                    .forEach(p -> builder.suggest(p.getName().getString()));
-                                            return builder.buildFuture();
-                                        })
-                                        .executes(RpScheduleCommands::scheduleWhitelistAdd)))
-                        .then(Commands.literal("remove")
-                                .then(Commands.argument("player", StringArgumentType.word())
-                                        .suggests((ctx, builder) -> {
-                                            try { ScheduleConfig.SCHEDULE_WHITELIST.get().forEach(builder::suggest); }
-                                            catch (IllegalStateException ignored) {}
-                                            return builder.buildFuture();
-                                        })
-                                        .executes(RpScheduleCommands::scheduleWhitelistRemove)))
-                        .then(Commands.literal("list")
-                                .executes(RpScheduleCommands::scheduleWhitelistList))));
+        for (String name : new String[]{"schedule", "calendar", "horaires"}) {
+            dispatcher.register(scheduleNode(name));
+        }
+    }
 
-        dispatcher.register(Commands.literal("calendar")
+    private static LiteralArgumentBuilder<CommandSourceStack> scheduleNode(String name) {
+        return Commands.literal(name)
                 .executes(RpScheduleCommands::showSchedule)
                 .then(Commands.literal("forceopen")
                         .requires(src -> src.hasPermission(2))
@@ -70,7 +44,7 @@ public class RpScheduleCommands {
                         .then(Commands.literal("add")
                                 .then(Commands.argument("player", StringArgumentType.word())
                                         .suggests((ctx, builder) -> {
-                                            ctx.getSource().getServer().getPlayerList().getPlayers()
+                                            net.rp.rpessentials.moderation.VanishManager.visibleTo(ctx.getSource())
                                                     .forEach(p -> builder.suggest(p.getName().getString()));
                                             return builder.buildFuture();
                                         })
@@ -84,39 +58,7 @@ public class RpScheduleCommands {
                                         })
                                         .executes(RpScheduleCommands::scheduleWhitelistRemove)))
                         .then(Commands.literal("list")
-                                .executes(RpScheduleCommands::scheduleWhitelistList))));
-
-        dispatcher.register(Commands.literal("horaires")
-                .executes(RpScheduleCommands::showSchedule)
-                .then(Commands.literal("forceopen")
-                        .requires(src -> src.hasPermission(2))
-                        .executes(RpScheduleCommands::forceOpen))
-                .then(Commands.literal("forceclose")
-                        .requires(src -> src.hasPermission(2))
-                        .executes(RpScheduleCommands::forceClose))
-                .then(Commands.literal("resetforcestate")
-                        .requires(src -> src.hasPermission(2))
-                        .executes(RpScheduleCommands::forceReset))
-                .then(Commands.literal("whitelist")
-                        .requires(src -> src.hasPermission(2))
-                        .then(Commands.literal("add")
-                                .then(Commands.argument("player", StringArgumentType.word())
-                                        .suggests((ctx, builder) -> {
-                                            ctx.getSource().getServer().getPlayerList().getPlayers()
-                                                    .forEach(p -> builder.suggest(p.getName().getString()));
-                                            return builder.buildFuture();
-                                        })
-                                        .executes(RpScheduleCommands::scheduleWhitelistAdd)))
-                        .then(Commands.literal("remove")
-                                .then(Commands.argument("player", StringArgumentType.word())
-                                        .suggests((ctx, builder) -> {
-                                            try { ScheduleConfig.SCHEDULE_WHITELIST.get().forEach(builder::suggest); }
-                                            catch (IllegalStateException ignored) {}
-                                            return builder.buildFuture();
-                                        })
-                                        .executes(RpScheduleCommands::scheduleWhitelistRemove)))
-                        .then(Commands.literal("list")
-                                .executes(RpScheduleCommands::scheduleWhitelistList))));
+                                .executes(RpScheduleCommands::scheduleWhitelistList)));
     }
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildSetRole() {

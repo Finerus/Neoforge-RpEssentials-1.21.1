@@ -57,6 +57,12 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
                 RpEssentialsPermissions.clearCache();
                 RpEssentialsScheduleManager.enforceOnlineDelayed(player.getServer());
 
+                if (removed != null) {
+                    String[] o = removed.split(";", 3);
+                    net.rp.rpessentials.compat.LuckPermsSync.pushRole(
+                            o.length > 1 && !o[1].isBlank() ? o[1].trim() : o[0].trim(), List.of());
+                }
+
                 List<String> details = new ArrayList<>();
                 if (removed != null) {
                     String[] o = removed.split(";", 3);

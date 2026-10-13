@@ -6,16 +6,17 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
 import net.rp.rpessentials.moderation.LastConnectionManager;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.MutableComponent;
+import net.rp.rpessentials.moderation.VanishManager;
 
 import java.util.UUID;
 
@@ -36,9 +37,6 @@ public class RpLastConnectionCommands {
         return lastConnNode;
     }
 
-    // =========================================================================
-    // HANDLERS
-    // =========================================================================
     private static int lastConnectionPlayer(CommandContext<CommandSourceStack> ctx) {
         try {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
@@ -55,6 +53,9 @@ public class RpLastConnectionCommands {
 
         ServerPlayer online = server.getPlayerList().getPlayerByName(targetName);
         UUID targetUUID = online != null ? online.getUUID() : LastConnectionManager.findUUIDByName(targetName);
+        if (online != null && VanishManager.canHide(VanishManager.Aspect.LIST, ctx.getSource(), online.getUUID())) {
+            online = null;
+        }
 
         if (targetUUID == null) {
             ctx.getSource().sendFailure(Component.literal(
@@ -132,7 +133,9 @@ public class RpLastConnectionCommands {
             UUID uuid = e.getKey();
             LastConnectionManager.ConnectionEntry entry = e.getValue();
             String name = entry.mcName != null ? entry.mcName : uuid.toString().substring(0, 8);
-            String bullet = server.getPlayerList().getPlayer(uuid) != null ? "§a●" : "§7○";
+            boolean shownOnline = server.getPlayerList().getPlayer(uuid) != null
+                    && !VanishManager.canHide(VanishManager.Aspect.LIST, ctx.getSource(), uuid);
+            String bullet = shownOnline ? "§a●" : "§7○";
             String loginStr = entry.lastLogin != null ? entry.lastLogin : unknown;
             sb.append(bullet).append(" §e").append(name).append(" §8- §7").append(loginStr).append("\n");
         }

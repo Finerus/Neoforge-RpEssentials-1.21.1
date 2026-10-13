@@ -1,6 +1,127 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [5.0.0] - RELEASE
+
+### Added
+
+* **"Manage" tab in the Player Profile GUI:** whitelist, unwhitelist, kick, ban, pardon, OP (with level choice), deop, clear inventory, clear ender chest, clear nickname, clear role, clear professions and absences. Every action asks for a confirmation, and kick and ban accept an optional reason.
+
+* **Full reset:** a red button that resets inventory, ender chest, professions, role, nickname, absence, OP and whitelist in one action. It requires typing the player name to confirm. Warns, notes, bans and mutes are never touched.
+
+* **`/rpessentials manage <player> <action> [value]`:** command version of the Manage tab, with a clickable confirmation. `reset_all` requires the player name as an extra confirmation.
+
+* **Clickable management suggestions in chat:** when a player is unwhitelisted (command, GUI or auto-unwhitelist), deopped or banned, staff receive a list of clickable follow-up actions.
+
+* **Player absences:** `/rpessentials absence add|remove|list`. The auto-unwhitelist countdown starts from the end of the absence, and the absence is cleared when the player reconnects.
+
+* **`/op <targets> [level]`:** the vanilla `/op` now accepts an OP level from 1 to 4, and can raise or lower the level of an existing operator. Without a level, the vanilla behavior is kept.
+
+* **Temporary licenses in the Player Profile GUI:** a days field and a "Temp" button, behaving like `/rpessentials license tempgive`.
+
+* **Deletion confirmations:** deleting a staff note, an entry in the Config Manager list editor, or a restriction entry now needs a second click.
+
+* **`/rpessentials vanish [player] [level]` (alias `/vanish`):** hides a player from everyone up to a chosen OP level. The level is capped to the OP level of the executor, and without a level the configured default level is used. The level can be written before or after the player: `/vanish 4`, `/vanish 4 <player>` and `/vanish <player> 4` all work. `/vanish list` shows the vanished players. The state is saved and survives restarts.
+
+* **Vanish coverage:** a vanished player is removed from the world, the tab list, `/list`, the server list ping (count and sample), the Player Profile GUI, nametags, join, leave, death and advancement messages, and from every command: selectors (`@a`, `@p`, `@r`, `@e`, names and UUIDs) and name suggestions are filtered, so `/tp`, `/msg`, `/gamemode`, `/execute` and every other command taking a player no longer find them. Sounds and block break particles caused by the player are hidden for viewers who cannot see them. Staff who are allowed to see a vanished player are told when they join or leave silently.
+
+* **Vanish configuration (new `Vanish` section in the moderation config):** `enableVanish`, `defaultLevel`, `persist`, `notifyStaffOnSilentJoinLeave`, `loginReminder`, `invulnerable`, and a `Tab List` sub section with `mode` (`REMOVE`, `OBFUSCATE`, `KEEP`), `markerEnabled` and `marker`. A `Hidden Aspects` sub section lets you enable or disable each aspect independently: `hideFromWorld`, `hideFromListCommand`, `hideFromSelectors`, `hideVanillaJoinLeave`, `hideCustomJoinLeave`, `hideDeathMessages`, `hideAdvancements`, `hideSounds`, `hideVibrations`, `silentContainers`, `hideNametags`, `hideFromProfileGui`, `hideFromServerList`, `mobsIgnore`, `blockItemPickup` and `ignorePhysicalTriggers`. Changes are applied live on config reload.
+
+* **Vanish tab marker:** viewers who can see a vanished player, and the player themselves, get a configurable marker before the name in the tab list.
+
+* **Vanish actions in the Manage tab:** "Vanish" with a level choice and "Unvanish". Levels above your own OP level are disabled. These actions never alert other staff members. Also available through `/rpessentials manage`.
+
+* **Two way LuckPerms sync:** each role permission is mirrored as a `rpessentials.<permission>` node (for example `rpessentials.seeall`) on the LuckPerms group of the role. Roles created in the GUI appear in LuckPerms, and groups holding `rpessentials.*` nodes appear as roles with the matching boxes ticked. Nodes given directly to a player are applied too. Two new config options: `luckPermsSync` and `luckPermsImportAllGroups`.
+
+* **Teleport actions in the Manage tab:** go to the player, bring the player to you, send the player to a platform or to the AFK zone. Also available through `/rpessentials manage`.
+
+* **Queued actions for offline players:** clearing the inventory, the ender chest or the role of an offline player is queued and applied at the next login, before the prepared profile.
+
+* **Item icons in restriction lists:** the item texture is displayed next to each entry, in the global restrictions screen and in the entries sub screen.
+
+* **Full list tooltip on "(+X more)":** hovering a truncated chat report shows every entry.
+
+### Improved
+
+* **Global restrictions screen:** the list is now displayed in the center of the screen and can be scrolled with the mouse wheel. The "Manage entries" button sits right below the list.
+
+* **Profession editor:** restrictions are only reachable through the "Manage entries" sub screen. The inline text box was removed.
+
+* **Sub screens:** a Save button is now available inside the restriction sub screens.
+
+* **Save logic:** added restriction entries are only saved when the Save button is pressed. Removing an entry from the global restrictions is still applied immediately and never saves pending additions.
+
+* **Scroll arrows:** they only appear when a list overflows, and no longer overlap on empty lists.
+
+* **Player Profile buttons:** "Add", "Revoke" and "Temp" are now disabled instead of showing greyed text.
+
+* **Manage tab layout:** wider spacing between sections and buttons, with scrolling on small screens.
+
+* **License text:** text that is too long is now scaled down to fit the card, in hand and in the license GUI.
+
+* **Suggestion picker:** it now opens above the buttons, highlights the hovered line, underlines the matching part of the text, shows item icons, and can be scrolled with the mouse wheel without scrolling the list behind it. Enter adds what is typed, even without a suggestion.
+
+* **Manage tab:** actions that cannot be used on yourself (kick, ban, deop, full reset, teleports to yourself) are now disabled, as are actions that need the player to be online.
+
+* **OP level selection in the Manage tab:** levels higher than your own OP level are disabled, and you can no longer lower your own OP level. The server enforces the same rules.
+
+* **Online status commands:** `/rpessentials lastconnection`, `/rpessentials inspect`, `/rpessentials stats` and `/r` no longer reveal vanished players to staff who are not allowed to see them.
+
+### Fixed
+
+* **License GUI close button invisible:** the screen never rendered its widgets.
+
+* **License GUI footer bar:** the bottom bar no longer covers the texture on permanent licenses, its position no longer depends on the number of lines.
+
+* **Staff "Server closed" message spam:** the notice is now sent once per closing instead of on every config save, role change or command.
+
+* **LuckPerms sync preventing the server from starting:** the event subscription used a wrong plugin object. It now uses the mod container, and any sync error is logged instead of stopping the server.
+
+* **Profession editor compile errors:** the screen was rebuilt in full to remove inconsistent leftovers from the previous layout.
+
+* **Keyboard selection in the suggestion picker:** navigating with the arrows no longer resets the selection.
+
+### Security
+
+* **Server side checks on management actions:** staff status is always verified. BAN, PARDON, OP, DEOP, CLEAR ROLE and FULL RESET require the OP level defined by `opLevelBypass`. Staff cannot kick, ban, deop or reset themselves, grant a level above their own, or deop a higher level operator.
+
+### Technical
+
+* **New classes:** `AbsenceManager`, `ManageService`, `ManageSuggestions`, `RpManageCommands` and `ManagePlayerPacket`.
+
+* **`SetPlayerProfilePacket`:** new `tempDays` field.
+
+* **`RpEssentialsScheduleManager`:** new lock preventing duplicate closing notices.
+
+* **New classes:** `VanishManager`, `VanishEvents`, `RpVanishCommands`, `VanishTrackable`, `PendingActionManager`, `LuckPermsSync`.
+
+* **New mixins:** `MixinTrackedEntity`, `ChunkMapAccessor`, `MixinEntitySelector`, `MixinCommandSourceStack`, `MixinPlayerListSound`, `MixinPlayerListJoin`, `MixinPlayerListAdvancement`, `MixinListenerLeave`, `MixinPlayerAdvancements`, `MixinContainerOpenersCounter` and `MixinMinecraftServerStatus`. The less critical ones are not required: if their target changes, they are skipped with a log instead of preventing the game from starting.
+
+* **Tab list filtering:** `MixinServerCommonPacketListenerImpl` now filters vanished players and applies the vanish marker even when the name blur is disabled.
+
+* **`ManageService`:** new `VANISH` and `UNVANISH` actions appended at the end of the enum, so the packet order is unchanged.
+
+### Migration Notes
+
+* New network packets were added: the server and the clients must run the same version.
+
+* A new data file `absences.json` is created in the `rpessentials` data folder. No manual action is needed.
+
+* `OpenPlayerProfileGuiPacket` changed (platform list) and `ManageService.Action` gained two values: the server and the clients must run the same version.
+
+* New data files are created in the `rpessentials` data folder: `vanish.json` and `pending-actions.json`. No manual action is needed.
+
+* New config options: `luckPermsSync` and `luckPermsImportAllGroups` (Permissions System, treated as sensitive keys), and the whole `Vanish` section of the moderation config.
+
+* Join and leave messages of vanished players are controlled by `hideVanillaJoinLeave` and `hideCustomJoinLeave`, independently of `enableCustomJoinLeave`.
+
+* Mods other than RpEssentials are not aware of the vanish: map mods, Jade and similar can still reveal a vanished player.
+
+### Personnal Notes
+
+I'm really happy to finally release this version! I've spent a lot of time on it and added tons of useful features to the mod, including lots of little quality-of-life tweaks and plenty of other stuff! You're, of course, welcome to check out the beta changelogs to see the changes added since 4.2.0! And as always: have a great day!
+(Oh, and check out the new track by TheManBeHisLa, it’s absolutely incredible, byyyeee.)
+
 ## [5.0.0] - Beta 4
 
 ### Breaking Changes

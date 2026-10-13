@@ -10,6 +10,7 @@ import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.moderation.MuteManager;
+import net.rp.rpessentials.moderation.VanishManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -93,7 +94,8 @@ public class RpEssentialsMessagingManager {
             return 0;
         }
         ServerPlayer target = server.getPlayerList().getPlayer(lastId);
-        if (target == null) {
+        if (target == null
+                || VanishManager.canHide(VanishManager.Aspect.SELECTORS, sender, lastId)) {
             sender.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.MP_TARGET_OFFLINE))
                     .withStyle(style -> style.withColor(0xFF5555).withItalic(true)));
             return 0;

@@ -95,6 +95,7 @@ public class ConfigManagerScreen extends Screen {
     private int     deferredTooltipY       = 0;
 
     private boolean pendingRebuild = false;
+    private int pendingRemoveIdx = -1;
 
     // =========================================================================
     // CONSTRUCTOR
@@ -735,6 +736,7 @@ public class ConfigManagerScreen extends Screen {
         private final String              originalComma;
         private final List<String>        items;
         private int scrollOffset = 0;
+        private int pendingRemoveIdx = -1;
 
         ListEditorSubScreen(ConfigManagerScreen parent, String fullPath, String key,
                             String rawValue, String originalValue) {
@@ -771,25 +773,46 @@ public class ConfigManagerScreen extends Screen {
                 box.setResponder(val -> items.set(idx, val));
                 addRenderableWidget(box);
 
-                addRenderableWidget(Button.builder(Component.literal("§c✗"),
-                                btn -> { items.remove(idx); rebuild(); })
+                boolean confirmRemove = pendingRemoveIdx == idx;
+                addRenderableWidget(Button.builder(Component.literal(confirmRemove ? "§c!" : "§c✗"),
+                                btn -> {
+                                    if (pendingRemoveIdx == idx) {
+                                        pendingRemoveIdx = -1;
+                                        items.remove(idx);
+                                    } else {
+                                        pendingRemoveIdx = idx;
+                                    }
+                                    rebuild();
+                                })
                         .pos(midX + 134, rowY).size(16, 18).build());
 
                 if (i > 0)
                     addRenderableWidget(Button.builder(Component.literal("▲"),
-                                    btn -> { Collections.swap(items, idx, idx - 1); rebuild(); })
+                                    btn -> {
+                                        pendingRemoveIdx = -1;
+                                        Collections.swap(items, idx, idx - 1);
+                                        rebuild();
+                                    })
                             .pos(midX + 152, rowY).size(14, 8).build());
 
                 if (i < items.size() - 1)
                     addRenderableWidget(Button.builder(Component.literal("▼"),
-                                    btn -> { Collections.swap(items, idx, idx + 1); rebuild(); })
+                                    btn -> {
+                                        pendingRemoveIdx = -1;
+                                        Collections.swap(items, idx, idx + 1);
+                                        rebuild();
+                                    })
                             .pos(midX + 152, rowY + 10).size(14, 8).build());
             }
 
             int btnY = this.height - 48;
 
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_add"),
-                            btn -> { items.add(""); rebuild(); })
+                            btn -> {
+                                pendingRemoveIdx = -1;
+                                items.add("");
+                                rebuild();
+                            })
                     .pos(midX - 170, btnY).size(110, 20).build());
 
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_save"), btn -> {

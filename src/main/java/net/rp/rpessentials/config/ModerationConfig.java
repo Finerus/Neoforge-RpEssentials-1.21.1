@@ -62,6 +62,26 @@ public class ModerationConfig {
     public static final ModConfigSpec.IntValue MUTE_AUTO_WARN_COUNT;
     public static final ModConfigSpec.IntValue MUTE_AUTO_DURATION_MINUTES;
 
+    // =========================================================================
+    // VANISH SYSTEM
+    // =========================================================================
+    public static final ModConfigSpec.BooleanValue ENABLE_VANISH;
+    public static final ModConfigSpec.IntValue VANISH_DEFAULT_LEVEL;
+    public static final ModConfigSpec.BooleanValue VANISH_PERSIST;
+    public static final ModConfigSpec.BooleanValue VANISH_NOTIFY_STAFF;
+    public static final ModConfigSpec.BooleanValue VANISH_LOGIN_REMINDER;
+    public static final ModConfigSpec.BooleanValue VANISH_INVULNERABLE;
+    public static final ModConfigSpec.ConfigValue<String> VANISH_TAB_MODE;
+    public static final ModConfigSpec.BooleanValue VANISH_TAB_MARKER_ENABLED;
+    public static final ModConfigSpec.ConfigValue<String> VANISH_TAB_MARKER;
+    public static final ModConfigSpec.BooleanValue VH_WORLD, VH_LIST, VH_SELECTORS, VH_JOIN_VANILLA,
+            VH_JOIN_CUSTOM, VH_DEATH, VH_ADVANCEMENTS, VH_NOISE, VH_GAME_EVENTS, VH_CONTAINERS,
+            VH_NAMETAG, VH_GUI, VH_PING, VH_MOBS, VH_PICKUP, VH_TRIGGERS;
+
+    private static ModConfigSpec.BooleanValue vh(String key, String comment) {
+        return BUILDER.comment(comment).define(key, true);
+    }
+
     static {
         // ===============================================================================
         // CATEGORY: SILENT COMMANDS
@@ -252,6 +272,80 @@ public class ModerationConfig {
                 .defineList("autoUnwhitelistExtraCommands",
                         java.util.Collections.emptyList(), obj -> obj instanceof String);
 
+        BUILDER.pop();
+
+        // ===============================================================================
+        // CATEGORY: VANISH SYSTEM
+        // ===============================================================================
+        BUILDER.push("Vanish");
+
+        ENABLE_VANISH = BUILDER
+                .comment("Master switch of the vanish system. When false, /vanish is refused and nobody is hidden.")
+                .define("enableVanish", true);
+
+        VANISH_DEFAULT_LEVEL = BUILDER
+                .comment("OP level used when /vanish is run with a player but without a level.",
+                        "A vanished player is hidden from everyone whose OP level is lower than or equal to this level.")
+                .defineInRange("defaultLevel", 4, 0, 4);
+
+        VANISH_PERSIST = BUILDER
+                .comment("If true, vanished players stay vanished after a restart (vanish.json).")
+                .define("persist", true);
+
+        VANISH_NOTIFY_STAFF = BUILDER
+                .comment("If true, staff who are allowed to see a vanished player are told when they join or leave silently.")
+                .define("notifyStaffOnSilentJoinLeave", true);
+
+        VANISH_LOGIN_REMINDER = BUILDER
+                .comment("If true, a vanished player is reminded of their state when they log in.")
+                .define("loginReminder", true);
+
+        VANISH_INVULNERABLE = BUILDER
+                .comment("If true, vanished players cannot take damage.")
+                .define("invulnerable", false);
+
+        BUILDER.push("Tab List");
+
+        VANISH_TAB_MODE = BUILDER
+                .comment("What viewers who cannot see a vanished player get in the tab list.",
+                        "REMOVE    : the entry is removed.",
+                        "OBFUSCATE : the entry stays with an obfuscated name and no head.",
+                        "KEEP      : the entry is untouched (the player stays listed).")
+                .defineInList("mode", "REMOVE",
+                        Arrays.asList("REMOVE", "OBFUSCATE", "KEEP"));
+
+        VANISH_TAB_MARKER_ENABLED = BUILDER
+                .comment("If true, viewers who can see a vanished player (and the player themselves) get a marker before the name.")
+                .define("markerEnabled", true);
+
+        VANISH_TAB_MARKER = BUILDER
+                .comment("Marker placed before the name of a vanished player in the tab list. Supports & and § color codes.")
+                .define("marker", "&7[V] ");
+
+        BUILDER.pop();
+
+        BUILDER.push("Hidden Aspects");
+
+        VH_WORLD = vh("hideFromWorld", "Hide the player entity in the world (no model, no particles, no equipment).");
+        VH_LIST = vh("hideFromListCommand", "Hide the player from /list and from online counters.");
+        VH_SELECTORS = vh("hideFromSelectors",
+                "Hide the player from every command: selectors (@a, @p, @r, @e, names, UUIDs) and name suggestions. " +
+                        "This covers /tp, /msg, /gamemode, /effect, /execute and every other command taking a player.");
+        VH_JOIN_VANILLA = vh("hideVanillaJoinLeave", "Suppress the vanilla join and leave messages, even if enableCustomJoinLeave is false.");
+        VH_JOIN_CUSTOM = vh("hideCustomJoinLeave", "Suppress the custom join and leave messages of this mod.");
+        VH_DEATH = vh("hideDeathMessages", "Suppress the vanilla death message.");
+        VH_ADVANCEMENTS = vh("hideAdvancements", "Suppress the advancement announcements in chat.");
+        VH_NOISE = vh("hideSounds", "Hide the sounds and block break particles caused by the player (steps, blocks, hits).");
+        VH_GAME_EVENTS = vh("hideVibrations", "Prevent the player from triggering sculk sensors, wardens and other vibrations.");
+        VH_CONTAINERS = vh("silentContainers", "Opening chests, barrels and ender chests makes no sound and plays no lid animation.");
+        VH_NAMETAG = vh("hideNametags", "Stop sending the nametag data of the player to viewers who cannot see them.");
+        VH_GUI = vh("hideFromProfileGui", "Hide the player from the Player Profile GUI.");
+        VH_PING = vh("hideFromServerList", "Remove the player from the player count and the sample of the server list ping.");
+        VH_MOBS = vh("mobsIgnore", "Hostile mobs never target the player.");
+        VH_PICKUP = vh("blockItemPickup", "The player cannot pick up items (avoids visible item pickups).");
+        VH_TRIGGERS = vh("ignorePhysicalTriggers", "The player does not trigger pressure plates and tripwires.");
+
+        BUILDER.pop();
         BUILDER.pop();
 
         SPEC = BUILDER.build();

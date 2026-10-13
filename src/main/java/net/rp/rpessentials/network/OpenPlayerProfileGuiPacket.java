@@ -24,7 +24,8 @@ import java.util.UUID;
 public record OpenPlayerProfileGuiPacket(
         List<PlayerData> players,
         List<String> availableProfessionIds,
-        List<String> availableRoles
+        List<String> availableRoles,
+        List<String> availablePlatforms
 ) implements CustomPacketPayload {
 
     // =========================================================================
@@ -107,10 +108,16 @@ public record OpenPlayerProfileGuiPacket(
                     int profCount = buf.readVarInt();
                     List<String> profIds = new ArrayList<>(profCount);
                     for (int i = 0; i < profCount; i++) profIds.add(buf.readUtf());
+
+                    int platCount = buf.readVarInt();
+                    List<String> plats = new ArrayList<>(platCount);
+                    for (int i = 0; i < platCount; i++) plats.add(buf.readUtf());
+
                     int roleCount = buf.readVarInt();
                     List<String> roles = new ArrayList<>(roleCount);
                     for (int i = 0; i < roleCount; i++) roles.add(buf.readUtf());
-                    return new OpenPlayerProfileGuiPacket(players, profIds, roles);
+
+                    return new OpenPlayerProfileGuiPacket(players, profIds, roles, plats);
                 }
 
                 @Override
@@ -123,7 +130,7 @@ public record OpenPlayerProfileGuiPacket(
                         buf.writeUtf(p.currentRole());
                         buf.writeVarInt(p.currentLicenses().size());
                         for (String lic : p.currentLicenses()) buf.writeUtf(lic);
-                        // Champs 4.1.6
+
                         buf.writeVarInt(p.activeWarnCount());
                         buf.writeBoolean(p.isMuted());
                         buf.writeUtf(p.muteExpiry());
@@ -142,6 +149,8 @@ public record OpenPlayerProfileGuiPacket(
                     }
                     buf.writeVarInt(packet.availableProfessionIds().size());
                     for (String id : packet.availableProfessionIds()) buf.writeUtf(id);
+                    buf.writeVarInt(packet.availablePlatforms().size());
+                    for (String p : packet.availablePlatforms()) buf.writeUtf(p);
                     buf.writeVarInt(packet.availableRoles().size());
                     for (String r : packet.availableRoles()) buf.writeUtf(r);
                 }
@@ -160,7 +169,8 @@ public record OpenPlayerProfileGuiPacket(
             ClientGuiOpener.openPlayerProfileGui(
                     packet.players(),
                     packet.availableProfessionIds(),
-                    packet.availableRoles()
+                    packet.availableRoles(),
+                    packet.availablePlatforms()
             );
         });
     }

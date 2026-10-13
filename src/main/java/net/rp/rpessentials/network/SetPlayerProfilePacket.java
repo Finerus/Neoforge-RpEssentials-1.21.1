@@ -1,3 +1,4 @@
+
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -29,7 +30,8 @@ public record SetPlayerProfilePacket(
         String role,          // "" = ne pas modifier
         String licenseId,     // "" = ne pas modifier
         boolean revokeMode,   // true = révoquer licenseId, false = donner licenseId
-        boolean resetNickname // true = réinitialise le nickname, prioritaire sur nickname
+        boolean resetNickname, // true = réinitialise le nickname, prioritaire sur nickname
+        int tempDays          // 0 = permanente
 ) implements CustomPacketPayload {
 
     public static final Type<SetPlayerProfilePacket> TYPE =
@@ -45,7 +47,8 @@ public record SetPlayerProfilePacket(
                             buf.readUtf(),
                             buf.readUtf(),
                             buf.readBoolean(),
-                            buf.readBoolean()
+                            buf.readBoolean(),
+                            buf.readVarInt()
                     );
                 }
                 @Override
@@ -56,6 +59,7 @@ public record SetPlayerProfilePacket(
                     buf.writeUtf(p.licenseId());
                     buf.writeBoolean(p.revokeMode());
                     buf.writeBoolean(p.resetNickname());
+                    buf.writeVarInt(p.tempDays());
                 }
             };
 
@@ -206,22 +210,34 @@ public record SetPlayerProfilePacket(
                         "§e[RpEssentials] §f" + targetName + " §ealready has the §f" + licenseId
                                 + " §elicense. Use §f/rpessentials license reissue §eto give a replacement item."));
             } else {
-                LicenseManager.addLicense(target.getUUID(), licenseId);
-                LicenseManager.logAction("GIVE", admin, target, licenseId, "via GUI");
-
-                boolean itemGiven = LicenseHelper.giveLicenseItem(server, admin, target, licenseId);
-
-                if (itemGiven) {
-                    ProfessionRestrictionManager.ProfessionData profData =
-                            ProfessionRestrictionManager.getProfessionData(licenseId);
-                    String profDisplay = profData != null ? profData.getFormattedName() : licenseId;
-                    target.sendSystemMessage(Component.literal(
-                            MessagesConfig.get(MessagesConfig.LICENSE_GIVE_PLAYER,
-                                    "profession", profDisplay)));
-                    report.append(" §flicense=").append(licenseId);
-                } else {
+                ProfessionRestrictionManager.ProfessionData profData =
+                        ProfessionRestrictionManager.getProfessionData(licenseId);
+                if (profData == null) {
                     admin.sendSystemMessage(Component.literal(
                             "§c[RpEssentials] Unknown profession: §f" + licenseId));
+                } else {
+                    int days = Math.max(0, Math.min(365, packet.tempDays()));
+                    String expires = null;
+                    if (days > 0) {
+                        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                        String issued = java.time.LocalDate.now().format(fmt);
+                        expires = java.time.LocalDate.now().plusDays(days).format(fmt);
+                        LicenseManager.addLicense(target.getUUID(), licenseId);
+                        LicenseManager.addTempLicense(admin, target, licenseId, days, issued, expires);
+                        LicenseManager.logAction("TEMPGIVE", admin, target, licenseId,
+                                days + " days, expires " + expires + " (via GUI)");
+                    } else {
+                        LicenseManager.addLicense(target.getUUID(), licenseId);
+                        LicenseManager.logAction("GIVE", admin, target, licenseId, "via GUI");
+                    }
+                    LicenseHelper.giveLicenseItem(server, admin, target, licenseId, expires);
+
+                    target.sendSystemMessage(Component.literal(days > 0
+                            ? MessagesConfig.get(MessagesConfig.LICENSE_GIVE_RP_PLAYER,
+                            "profession", profData.getFormattedName(), "date", expires)
+                            : MessagesConfig.get(MessagesConfig.LICENSE_GIVE_PLAYER,
+                            "profession", profData.getFormattedName())));
+                    report.append(" §flicense=").append(licenseId).append(days > 0 ? " (" + days + "d)" : "");
                 }
             }
         }
