@@ -1,6 +1,23 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [5.0.1] 
+
+### Added
+
+* **Config Manager**: external mods can now register their own config files with `ConfigInspector.register(id, displayName, color, class, spec, onApplied)`. Registered files show up in the file panel next to the built-in ones, with the same editing, range validation and list editor.
+* **Config Manager:** each file can have its own accent color (RGB). It colors the file button and the accent line of the entries panel. Files registered without a color keep the default gold.
+* **Config Manager:** an optional server-side callback runs after changes are applied, so a companion mod can reload its cached data.
+
+### Changed
+
+* `ConfigGuiFilesPacket` now carries a color for each file. Client and server must both run 5.0.1.
+
+### Notes
+
+* The 7 built-in config files are unchanged.
+* RpImmersion 1.1.0 is the first mod using this API.
+
 ## [5.0.0] - RELEASE
 
 ### Added

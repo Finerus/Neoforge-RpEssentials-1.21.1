@@ -284,10 +284,10 @@ public class ScheduleConfig {
                         java.util.Arrays.asList("22:00-23:59"), obj -> obj instanceof String);
         HRP_TOLERATED_MESSAGE = BUILDER
                 .comment("Message broadcast when HRP-tolerated hours begin. Placeholders: {start} {end}")
-                .define("hrpToleratedMessage", "§6[HRP] §fHRP is tolerated until {end}.");
+                .define("hrpToleratedMessage", "§6[HRP] §fHRP (Out-of-Roleplay) is tolerated until {end}.");
         HRP_ALLOWED_MESSAGE = BUILDER
                 .comment("Message broadcast when HRP-allowed hours begin. Placeholders: {start} {end}")
-                .define("hrpAllowedMessage", "§a[HRP] §fHRP is freely allowed until {end}.");
+                .define("hrpAllowedMessage", "§a[HRP] §fHRP (Out-of-Roleplay) is freely allowed until {end}.");
         HRP_MESSAGE_MODE = BUILDER
                 .comment("Display mode for HRP messages: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
                 .define("hrpMessageMode", "CHAT");

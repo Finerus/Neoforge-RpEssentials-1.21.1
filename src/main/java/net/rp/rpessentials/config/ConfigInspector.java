@@ -25,9 +25,16 @@ public class ConfigInspector {
         }
     }
 
-    public record FileInfo(String id, String displayName) {}
+    public record FileInfo(String id, String displayName, int color) {
+        public FileInfo(String id, String displayName) { this(id, displayName, 0); }
+    }
 
-    private record ConfigClassInfo(String id, String displayName, Class<?> clazz, ModConfigSpec spec) {}
+    private record ConfigClassInfo(String id, String displayName, int color, Class<?> clazz, ModConfigSpec spec,
+                                   java.util.function.Consumer<net.minecraft.server.MinecraftServer> onApplied) {
+        ConfigClassInfo(String id, String displayName, Class<?> clazz, ModConfigSpec spec) {
+            this(id, displayName, 0, clazz, spec, null);
+        }
+    }
 
     private static final List<ConfigClassInfo> CONFIGS = List.of(
             new ConfigClassInfo("core",        "Core",        RpEssentialsConfig.class, RpEssentialsConfig.SPEC),
@@ -39,6 +46,20 @@ public class ConfigInspector {
             new ConfigClassInfo("rp",    "RP",                RpConfig.class,            RpConfig.SPEC)
     );
 
+    private static final List<ConfigClassInfo> EXTERNAL = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public static void register(String id, String displayName, int color, Class<?> clazz, ModConfigSpec spec,
+                                java.util.function.Consumer<net.minecraft.server.MinecraftServer> onApplied) {
+        EXTERNAL.removeIf(c -> c.id().equals(id));
+        EXTERNAL.add(new ConfigClassInfo(id, displayName, color, clazz, spec, onApplied));
+    }
+
+    private static List<ConfigClassInfo> all() {
+        List<ConfigClassInfo> out = new ArrayList<>(CONFIGS);
+        out.addAll(EXTERNAL);
+        return out;
+    }
+
     private static final Map<Class<?>, Map<String, ModConfigSpec.ConfigValue<?>>> VALUE_MAP_CACHE =
             new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -46,11 +67,11 @@ public class ConfigInspector {
     // PUBLIC API
     // =========================================================================
     public static List<FileInfo> getFileInfos() {
-        return CONFIGS.stream().map(c -> new FileInfo(c.id(), c.displayName())).toList();
+        return all().stream().map(c -> new FileInfo(c.id(), c.displayName(), c.color())).toList();
     }
 
     public static List<EntryData> getEntries(String fileId) {
-        return CONFIGS.stream()
+        return all().stream()
                 .filter(c -> c.id().equals(fileId))
                 .findFirst()
                 .map(ConfigInspector::inspectClass)
@@ -58,7 +79,7 @@ public class ConfigInspector {
     }
 
     public static int applyAndSave(String fileId, Map<String, String> changes) {
-        Optional<ConfigClassInfo> opt = CONFIGS.stream().filter(c -> c.id().equals(fileId)).findFirst();
+        Optional<ConfigClassInfo> opt = all().stream().filter(c -> c.id().equals(fileId)).findFirst();
         if (opt.isEmpty()) return 0;
 
         ConfigClassInfo info = opt.get();
@@ -103,6 +124,16 @@ public class ConfigInspector {
             try { info.spec().save(); }
             catch (Exception e) {
                 RpEssentials.LOGGER.error("[ConfigInspector] Failed to save spec '{}': {}", fileId, e.getMessage());
+            }
+            if (info.onApplied() != null) {
+                net.minecraft.server.MinecraftServer server =
+                        net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+                if (server != null) {
+                    try { info.onApplied().accept(server); }
+                    catch (Exception e) {
+                        RpEssentials.LOGGER.error("[ConfigInspector] Callback failed for '{}': {}", fileId, e.getMessage());
+                    }
+                }
             }
         }
         return applied;

@@ -302,7 +302,7 @@ public class ModerationConfig {
 
         VANISH_INVULNERABLE = BUILDER
                 .comment("If true, vanished players cannot take damage.")
-                .define("invulnerable", false);
+                .define("invulnerable", true);
 
         BUILDER.push("Tab List");
 

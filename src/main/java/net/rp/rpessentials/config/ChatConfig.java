@@ -65,7 +65,7 @@ public class ChatConfig {
                         "Variables: $time, $name (or $nick / $nick_real / $real), $msg",
                         "See playerNameFormat comment for the full variable list."
                 )
-                .define("chatMessageFormat", "[$time] $name: $msg");
+                .define("chatMessageFormat", "§7[$time] §r$name: $msg");
 
         CHAT_MESSAGE_COLOR = BUILDER
                 .comment("Global color for chat messages.",
@@ -128,7 +128,7 @@ public class ChatConfig {
         GLOBAL_CHAT_FORMAT = BUILDER
                 .comment("Format for global chat (bypass prefix or proximity disabled).",
                         "Variables: $time, $name (or $nick / $nick_real / $real), $msg")
-                .define("globalChatFormat", "[$time] §f$name§r: $msg");
+                .define("globalChatFormat", "§7[$time] §f$name§r: $msg");
 
         ENABLE_COLORS_COMMAND = BUILDER
                 .comment("Enable /colors command.")
@@ -154,7 +154,7 @@ public class ChatConfig {
                         "     {nick_real} = 'Nick (Real)' when they differ.",
                         "Set to 'none' to disable."
                 )
-                .define("joinMessage", "§e{player} §7woke up");
+                .define("joinMessage", "§e{player} §7woke up.");
 
         LEAVE_MESSAGE = BUILDER
                 .comment(
@@ -163,7 +163,7 @@ public class ChatConfig {
                         "NEW: {nick}, {real}, {nick_real}.",
                         "Set to 'none' to disable."
                 )
-                .define("leaveMessage", "§e{player} §7went to sleep");
+                .define("leaveMessage", "§e{player} §7went to sleep.");
 
         BUILDER.pop();
 

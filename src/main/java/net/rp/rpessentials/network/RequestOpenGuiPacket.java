@@ -312,7 +312,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
     private static void handleConfigManagerGui(ServerPlayer player) {
         List<ConfigInspector.FileInfo> fileInfos = ConfigInspector.getFileInfos();
         List<ConfigGuiFilesPacket.FileEntry> entries = fileInfos.stream()
-                .map(fi -> new ConfigGuiFilesPacket.FileEntry(fi.id(), fi.displayName()))
+                .map(fi -> new ConfigGuiFilesPacket.FileEntry(fi.id(), fi.displayName(), fi.color()))
                 .toList();
         PacketDistributor.sendToPlayer(player, new ConfigGuiFilesPacket(entries));
         RpEssentials.LOGGER.debug("[ConfigGUI] Sent {} config files to {}",

@@ -79,7 +79,7 @@ public class RpConfig {
         BUILDER.push("Action");
         ACTION_DISTANCE = BUILDER
                 .comment("Radius in blocks for /rp action and /me messages.")
-                .defineInRange("actionDistance", 16, 1, 256);
+                .defineInRange("actionDistance", 24, 1, 256);
         BUILDER.pop();
 
         // ── DICE ──────────────────────────────────────────────────────────────
@@ -92,15 +92,15 @@ public class RpConfig {
                 .defineList("diceTypes",
                         Arrays.asList("d4;4","d6;6","d8;8","d10;10","d12;12","d20;20","d100;100"),
                         obj -> obj instanceof String && ((String)obj).contains(";"));
-        DICE_ROLL_DISTANCE   = BUILDER.comment("Radius (-1 = global).").defineInRange("diceRollDistance", 32, -1, 256);
+        DICE_ROLL_DISTANCE   = BUILDER.comment("Radius (-1 = global).").defineInRange("diceRollDistance", 12, -1, 256);
         BUILDER.pop();
 
         // ── COOLDOWN ──────────────────────────────────────────────────────────
         BUILDER.push("RP Cooldowns");
         ACTION_COOLDOWN_SECONDS    = BUILDER.comment("Cooldown for /rp action and /me (0=disabled).").defineInRange("actionCooldownSeconds",    0, 0, 300);
-        COMMERCE_COOLDOWN_SECONDS  = BUILDER.comment("Cooldown for /rp commerce (0=disabled).").defineInRange("commerceCooldownSeconds",  0, 0, 300);
-        INCOGNITO_COOLDOWN_SECONDS = BUILDER.comment("Cooldown for /rp incognito (0=disabled).").defineInRange("incognitoCooldownSeconds", 0, 0, 300);
-        DICE_COOLDOWN_SECONDS = BUILDER.comment("Cooldown for dice rolls (0=disabled).").defineInRange("diceCooldownSeconds", 0, 0, 300);
+        COMMERCE_COOLDOWN_SECONDS  = BUILDER.comment("Cooldown for /rp commerce (0=disabled).").defineInRange("commerceCooldownSeconds",  300, 0, 300);
+        INCOGNITO_COOLDOWN_SECONDS = BUILDER.comment("Cooldown for /rp incognito (0=disabled).").defineInRange("incognitoCooldownSeconds", 30, 0, 300);
+        DICE_COOLDOWN_SECONDS = BUILDER.comment("Cooldown for dice rolls (0=disabled).").defineInRange("diceCooldownSeconds", 5, 0, 300);
         BUILDER.pop();
 
         // ── SELF NICK ─────────────────────────────────────────────────────
@@ -110,13 +110,13 @@ public class RpConfig {
                 .define("enableSelfNick", false);
         SELF_NICK_COOLDOWN_SECONDS = BUILDER
                 .comment("Cooldown for /rp selfnick in seconds (0 = disabled).")
-                .defineInRange("selfNickCooldownSeconds", 300, 0, 86400);
+                .defineInRange("selfNickCooldownSeconds", 3600, 0, 86400);
         SELF_NICK_ALLOW_COLORS = BUILDER
                 .comment("Allow color codes (& and §) in self-assigned nicknames.")
                 .define("selfNickAllowColors", false);
         SELF_NICK_MAX_LENGTH = BUILDER
                 .comment("Maximum nickname length (excluding color codes).")
-                .defineInRange("selfNickMaxLength", 24, 1, 64);
+                .defineInRange("selfNickMaxLength", 15, 1, 64);
         BUILDER.pop();
 
         // ── ANNONCE ───────────────────────────────────────────────────────────

@@ -147,24 +147,24 @@ public class ConfigManagerScreen extends Screen {
     }
 
     // ── File panel (left side) ─────────────────────────────────────────────
-
     private void buildFilePanel() {
         int x = MARGIN;
         int y = PANEL_TOP + 14;
 
         for (ConfigGuiFilesPacket.FileEntry file : files) {
             final String fid = file.id();
-            boolean selected = fid.equals(selectedFileId);
-            String label = selected ? "§e▶ " + file.displayName() : "§7  " + file.displayName();
-            addRenderableWidget(Button.builder(Component.literal(label),
-                            btn -> requestFile(fid))
+            final boolean selected = fid.equals(selectedFileId);
+            Component label = file.color() == 0
+                    ? Component.literal(selected ? "§e▶ " + file.displayName() : "§7  " + file.displayName())
+                    : Component.literal((selected ? "▶ " : "  ") + file.displayName())
+                    .withStyle(s -> s.withColor(file.color()).withBold(selected));
+            addRenderableWidget(Button.builder(label, btn -> requestFile(fid))
                     .pos(x, y).size(FILE_PANEL_W, 16).build());
             y += 18;
         }
     }
 
     // ── Loading placeholder ────────────────────────────────────────────────
-
     private void buildLoadingPanel() {
         int cx = (FILE_PANEL_W + MARGIN * 3 + this.width) / 2;
         int cy = this.height / 2;
@@ -377,7 +377,7 @@ public class ConfigManagerScreen extends Screen {
         // ── Entries panel background ─────────────────────────────────────────
         int formX = FILE_PANEL_W + MARGIN * 3;
         g.fill(formX - 2, PANEL_TOP, this.width - MARGIN + 2, this.height - 6, 0xBB111111);
-        g.fill(formX - 2, PANEL_TOP, this.width - MARGIN + 2, PANEL_TOP + 2, 0xFF8B6914);
+        g.fill(formX - 2, PANEL_TOP, this.width - MARGIN + 2, PANEL_TOP + 2, accentColor());
 
         // Title + file name
         String title = selectedFileId != null
@@ -447,7 +447,7 @@ public class ConfigManagerScreen extends Screen {
             if (entry.isSection()) {
                 // Section header
                 g.fill(formX, y + 2, formRight, y + rh, 0xBB1A1A1A);
-                g.fill(formX, y + rh - 1, formRight, y + rh, 0xFF8B6914);
+                g.fill(formX, y + rh - 1, formRight, y + rh, accentColor());
                 g.drawString(this.font, "§6§l" + formatSectionName(entry.key()),
                         formX + 4, y + 3, 0xFFD700, false);
             } else {
@@ -632,7 +632,6 @@ public class ConfigManagerScreen extends Screen {
     // =========================================================================
     // HELPERS
     // =========================================================================
-
     private void rebuild() { clearWidgets(); init(); }
 
     /**
@@ -720,10 +719,16 @@ public class ConfigManagerScreen extends Screen {
     @Override
     public boolean isPauseScreen() { return false; }
 
+    private int accentColor() {
+        for (ConfigGuiFilesPacket.FileEntry f : files) {
+            if (f.id().equals(selectedFileId) && f.color() != 0) return 0xFF000000 | f.color();
+        }
+        return 0xFF8B6914;
+    }
+
     // =========================================================================
     // LIST EDITOR SUB-SCREEN
     // =========================================================================
-
     /**
      * Sub-screen for editing LIST_STRING values as individual lines.
      * Each line = one list element. The user can add, remove, and reorder entries.

@@ -165,7 +165,7 @@ public class RpEssentialsConfig {
         LUCKPERMS_STAFF_GROUPS = BUILDER
                 .comment("LuckPerms groups considered as staff. Only used if useLuckPermsGroups = true.")
                 .defineList("luckPermsStaffGroups",
-                        Arrays.asList("admin", "moderateur", "staff"),
+                        Arrays.asList("admin", "moderator", "staff"),
                         obj -> obj instanceof String);
 
         BUILDER.pop(); // Permissions System
@@ -181,7 +181,7 @@ public class RpEssentialsConfig {
 
         WORLD_BORDER_DISTANCE = BUILDER
                 .comment("Distance from spawn (blocks) before warning is triggered.")
-                .defineInRange("worldBorderDistance", 1500, 100, 100000);
+                .defineInRange("worldBorderDistance", 5000, 100, 100000);
 
         WORLD_BORDER_TELEPORT_ENABLED = BUILDER
                 .comment("If true, players reaching the world border are teleported to the opposite side.")
@@ -206,7 +206,7 @@ public class RpEssentialsConfig {
                         "Distance from spawn at which the pre-warning is sent, before the hard border.",
                         "Must be less than worldBorderDistance. Set to 0 to disable."
                 )
-                .defineInRange("worldBorderPrewarnDistance", 0, 0, 100000);
+                .defineInRange("worldBorderPrewarnDistance", 4950, 0, 100000);
 
         WORLD_BORDER_PREWARN_MESSAGE = BUILDER
                 .comment(
@@ -223,7 +223,7 @@ public class RpEssentialsConfig {
 
         WORLD_BORDER_CHECK_INTERVAL = BUILDER
                 .comment("Check interval in ticks (20 = 1 second).")
-                .defineInRange("worldBorderCheckInterval", 40, 20, 200);
+                .defineInRange("worldBorderCheckInterval", 100, 20, 200);
 
         NAMED_ZONES = BUILDER
                 .comment("Named zones with entry/exit messages.",
