@@ -365,5 +365,7 @@
   "rpessentials.gui.coverage.picker_confirm": "§aAutoriser (%s)",
   "rpessentials.gui.pattern_contents.title": "%s §7(%s)",
   "rpessentials.gui.pattern_contents.empty": "Cette entrée ne correspond à rien.",
-  "rpessentials.gui.pattern_contents.open_tooltip": "Clique pour voir les %s éléments qu'elle contient"
+  "rpessentials.gui.pattern_contents.open_tooltip": "Clique pour voir les %s éléments qu'elle contient",
+  "rpessentials.gui.config.search_hint": "Rechercher dans tous les fichiers...",
+  "rpessentials.gui.config.search_none": "Aucune option de ce fichier ne correspond à la recherche."
 }

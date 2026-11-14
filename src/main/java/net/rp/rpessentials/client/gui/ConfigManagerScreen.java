@@ -92,6 +92,12 @@ public class ConfigManagerScreen extends Screen {
     private final List<ModHeader> modHeaders = new ArrayList<>();
     /** File list: Minecraft list widget, kept between rebuilds (scroll position). */
     private ButtonRowList fileList;
+
+    /** Search: text typed, the field (kept between rebuilds so it keeps focus), and entries of every file. */
+    private String searchQuery = "";
+    private net.minecraft.client.gui.components.EditBox searchBox;
+    private final Map<String, List<ConfigFileEntriesPacket.EntryTransfer>> fileCache = new java.util.HashMap<>();
+    private boolean prefetched = false;
     /** Entries of the selected file: Minecraft list widget, kept between rebuilds (scroll position). */
     private ButtonRowList entriesList;
 
@@ -113,6 +119,12 @@ public class ConfigManagerScreen extends Screen {
     // =========================================================================
 
     public void onFileDataReceived(ConfigFileEntriesPacket packet) {
+        fileCache.put(packet.fileId(), packet.entries());
+        if (selectedFileId != null && !packet.fileId().equals(selectedFileId)) {
+            // Another file, fetched for the search: only the match counts change.
+            rebuildKeepingSearchFocus();
+            return;
+        }
         selectedFileId  = packet.fileId();
         currentEntries  = packet.entries();
         loading         = false;
@@ -136,7 +148,8 @@ public class ConfigManagerScreen extends Screen {
     @Override
     protected void init() {
         addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
-        
+
+        buildSearchBox();
         buildFilePanel();
         if (loading) {
             buildLoadingPanel();
@@ -165,10 +178,15 @@ public class ConfigManagerScreen extends Screen {
             }
             final String fid = file.id();
             final boolean selected = fid.equals(selectedFileId);
-            Component label = file.color() == 0
-                    ? Component.literal(selected ? "§e▶ " + file.displayName() : "§7  " + file.displayName())
-                    : Component.literal((selected ? "▶ " : "  ") + file.displayName())
-                    .withStyle(s -> s.withColor(file.color()).withBold(selected));
+            int matches = searching() ? matchCount(fid) : -1;
+            String count = !searching() ? "" : matches < 0 ? " §8…" : " §8(" + matches + ")";
+            boolean dim = searching() && matches == 0;
+            Component label = dim
+                    ? Component.literal((selected ? "§8▶ " : "§8  ") + file.displayName() + count)
+                    : file.color() == 0
+                    ? Component.literal((selected ? "§e▶ " : "§7  ") + file.displayName() + count)
+                    : Component.literal((selected ? "▶ " : "  ") + file.displayName()).withStyle(s -> s.withColor(file.color()).withBold(selected))
+                            .append(Component.literal(count));
             rows.add(new ButtonRowList.Row().add(Button.builder(label, btn -> requestFile(fid))
                     .size(rw, 16).build(SkinnedButton.row(selected)), 0));
         }
@@ -206,7 +224,11 @@ public class ConfigManagerScreen extends Screen {
         int rw = entriesList.rowWidth();
 
         List<ButtonRowList.Row> rows = new ArrayList<>();
-        for (ConfigFileEntriesPacket.EntryTransfer entry : currentEntries) {
+        List<ConfigFileEntriesPacket.EntryTransfer> shown = filtered(currentEntries);
+        if (shown.isEmpty()) {
+            rows.add(new ButtonRowList.Row().text("§8" + I18n.get("rpessentials.gui.config.search_none"), 4, 7));
+        }
+        for (ConfigFileEntriesPacket.EntryTransfer entry : shown) {
             ButtonRowList.Row row = new ButtonRowList.Row();
             if (entry.isSection()) {
                 row.block("section_header", 0xBB1A1A1A, 0, 1)
@@ -483,6 +505,80 @@ public class ConfigManagerScreen extends Screen {
     // =========================================================================
     // ACTIONS
     // =========================================================================
+
+    // ── Search ──────────────────────────────────────────────────────────────
+    private boolean searching() {
+        return !searchQuery.isBlank();
+    }
+
+    private void buildSearchBox() {
+        int searchW = Math.min(150, (this.width - FILE_PANEL_W - MARGIN * 5) / 2);
+        int x = this.width - MARGIN - 2 - searchW;
+        if (searchBox == null) {
+            searchBox = new net.rp.rpessentials.client.skin.SkinnedEditBox(this.font, x, PANEL_TOP + 3, searchW, 14,
+                    Component.translatable("rpessentials.gui.config.search_hint"));
+            searchBox.setHint(Component.literal("§7" + I18n.get("rpessentials.gui.config.search_hint")));
+            searchBox.setMaxLength(64);
+            searchBox.setResponder(val -> {
+                searchQuery = val;
+                if (searching() && !prefetched) prefetchAllFiles();
+                if (entriesList != null) entriesList.setScrollAmount(0);
+                rebuildKeepingSearchFocus();
+            });
+        } else {
+            searchBox.setX(x);
+            searchBox.setWidth(searchW);
+        }
+        addRenderableWidget(searchBox);
+    }
+
+    /** Asks the server for every file once, so the file list can show how many options match. */
+    private void prefetchAllFiles() {
+        prefetched = true;
+        for (ConfigGuiFilesPacket.FileEntry f : files) {
+            if (!fileCache.containsKey(f.id()) && !f.id().equals(selectedFileId)) {
+                PacketDistributor.sendToServer(new RequestConfigFilePacket(f.id()));
+            }
+        }
+    }
+
+    private void rebuildKeepingSearchFocus() {
+        boolean focused = searchBox != null && searchBox.isFocused();
+        rebuild();
+        if (focused) setFocused(searchBox);
+    }
+
+    private boolean matches(ConfigFileEntriesPacket.EntryTransfer e) {
+        String q = searchQuery.trim().toLowerCase(java.util.Locale.ROOT);
+        return e.key().toLowerCase(java.util.Locale.ROOT).contains(q)
+                || formatKeyName(e.key()).toLowerCase(java.util.Locale.ROOT).contains(q)
+                || e.comment().toLowerCase(java.util.Locale.ROOT).contains(q)
+                || e.currentValue().toLowerCase(java.util.Locale.ROOT).contains(q);
+    }
+
+    /** Matching options of a file, -1 while it has not been received yet. */
+    private int matchCount(String fileId) {
+        List<ConfigFileEntriesPacket.EntryTransfer> entries =
+                fileId.equals(selectedFileId) && currentEntries != null ? currentEntries : fileCache.get(fileId);
+        if (entries == null) return -1;
+        int n = 0;
+        for (var e : entries) if (!e.isSection() && matches(e)) n++;
+        return n;
+    }
+
+    /** Entries shown: all of them, or the matching options with their section titles. */
+    private List<ConfigFileEntriesPacket.EntryTransfer> filtered(List<ConfigFileEntriesPacket.EntryTransfer> all) {
+        if (!searching()) return all;
+        List<ConfigFileEntriesPacket.EntryTransfer> out = new ArrayList<>();
+        ConfigFileEntriesPacket.EntryTransfer section = null;
+        for (var e : all) {
+            if (e.isSection()) { section = e; continue; }
+            if (!matches(e)) continue;
+            if (section != null) { out.add(section); section = null; }
+            out.add(e);
+        }
+        return out;
+    }
 
     private void requestFile(String fileId) {
         if (fileId.equals(selectedFileId) && currentEntries != null) return;

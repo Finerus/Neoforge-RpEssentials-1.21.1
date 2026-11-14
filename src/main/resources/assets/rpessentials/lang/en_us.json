@@ -365,5 +365,7 @@
   "rpessentials.gui.coverage.picker_confirm": "§aAllow (%s)",
   "rpessentials.gui.pattern_contents.title": "%s §7(%s)",
   "rpessentials.gui.pattern_contents.empty": "This entry matches nothing.",
-  "rpessentials.gui.pattern_contents.open_tooltip": "Click to see the %s entries it contains"
+  "rpessentials.gui.pattern_contents.open_tooltip": "Click to see the %s entries it contains",
+  "rpessentials.gui.config.search_hint": "Search in every file...",
+  "rpessentials.gui.config.search_none": "No option of this file matches the search."
 }
