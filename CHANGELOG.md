@@ -89,6 +89,7 @@ All notable changes to this project will be documented in this file.
 * **Hex nicknames** are displayed correctly in `/list`, success messages and the profile preview.
 * **Tab list blur:** `/blurtab whitelist|blacklist|alwaysvisible add|remove` now applies right away instead of after a config reload.
 * **Restriction patterns:** in a `*` pattern every other character is matched as written, so ids containing `$`, `+`, `(`... no longer break the pattern.
+* **French translations (`MOD` mode):** 149 messages had no French translation and were shown in English (warns, licenses, schedule display, Death RP, last connection, dice...). 7 others were translated under an old section name (`Misc.`) and never found. Every message now exists in both languages.
 * **Config not loaded yet:** saving a config value (commands, schedule, profession editor) before the server config was loaded threw an error that the old checks did not catch.
 
 ### Technical
