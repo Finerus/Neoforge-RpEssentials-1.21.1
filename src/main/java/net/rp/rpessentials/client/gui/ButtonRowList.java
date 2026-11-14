@@ -89,7 +89,7 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         private final List<int[]> offsets = new ArrayList<>();
         private final List<FormattedCharSequence> texts = new ArrayList<>();
         private final List<int[]> textPos = new ArrayList<>();
-        private final List<net.minecraft.world.item.ItemStack> items = new ArrayList<>();
+        private final List<java.util.function.Supplier<net.minecraft.world.item.ItemStack>> items = new ArrayList<>();
         private final List<int[]> itemPos = new ArrayList<>();
         private String blockSprite;
         private int blockColor, blockIndex, blockSize = 1;
@@ -120,9 +120,19 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         /** Adds an item icon (16×16) at ({@code offsetX}, {@code offsetY}). Empty stacks are ignored. */
         public Row item(net.minecraft.world.item.ItemStack stack, int offsetX, int offsetY) {
             if (stack != null && !stack.isEmpty()) {
-                items.add(stack);
+                items.add(() -> stack);
                 itemPos.add(new int[]{offsetX, offsetY});
             }
+            return this;
+        }
+
+        /**
+         * Adds an item icon asked again at every frame, for icons that change over time
+         * (a {@code *} pattern or a {@code #tag} shows its items in turn). Empty stacks are not drawn.
+         */
+        public Row item(java.util.function.Supplier<net.minecraft.world.item.ItemStack> icon, int offsetX, int offsetY) {
+            items.add(icon);
+            itemPos.add(new int[]{offsetX, offsetY});
             return this;
         }
 
@@ -157,7 +167,10 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
                 }
             }
             for (int i = 0; i < items.size(); i++) {
-                g.renderItem(items.get(i), left + itemPos.get(i)[0], top + itemPos.get(i)[1]);
+                net.minecraft.world.item.ItemStack stack = items.get(i).get();
+                if (stack != null && !stack.isEmpty()) {
+                    g.renderItem(stack, left + itemPos.get(i)[0], top + itemPos.get(i)[1]);
+                }
             }
             Font font = Minecraft.getInstance().font;
             for (int i = 0; i < texts.size(); i++) {

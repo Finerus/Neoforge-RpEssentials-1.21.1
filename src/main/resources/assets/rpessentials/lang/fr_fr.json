@@ -354,11 +354,16 @@
   "rpessentials.gui.coverage.no_profession.some.blocks": "%s blocs sur %s concernés ne peuvent être cassés par aucun métier :",
   "rpessentials.gui.coverage.no_profession.some.items": "%s objets sur %s concernés ne peuvent être utilisés par aucun métier :",
   "rpessentials.gui.coverage.no_profession.some.equipment": "%s objets sur %s concernés ne peuvent être équipés par aucun métier :",
-  "rpessentials.gui.coverage.no_profession.fix": "§eClic : choisir un métier qui y aura droit (sauvegardé tout de suite).",
+  "rpessentials.gui.coverage.no_profession.fix": "§eClic : choisir les métiers qui y auront droit (sauvegardé tout de suite).",
   "rpessentials.gui.coverage.no_profession.fix_none": "§eCrée d'abord un métier pour pouvoir l'autoriser.",
   "rpessentials.gui.coverage.more": "...et %s de plus",
   "rpessentials.gui.coverage.added_global": "§a[RpEssentials] §f%s §aajouté à %s.",
   "rpessentials.gui.coverage.added_profession": "§a[RpEssentials] §f%s §aautorisé pour §f%s §a(%s).",
-  "rpessentials.gui.coverage.picker_title": "Autoriser « %s » pour quel métier ?",
-  "rpessentials.gui.coverage.picker_hint": "Il sera ajouté à sa liste %s et sauvegardé."
+  "rpessentials.gui.coverage.picker_title": "Autoriser « %s » pour quels métiers ?",
+  "rpessentials.gui.coverage.picker_hint": "Coche les métiers puis confirme : il sera ajouté à leur liste %s et sauvegardé.",
+  "rpessentials.gui.coverage.picker_already": "(déjà autorisé)",
+  "rpessentials.gui.coverage.picker_confirm": "§aAutoriser (%s)",
+  "rpessentials.gui.pattern_contents.title": "%s §7(%s)",
+  "rpessentials.gui.pattern_contents.empty": "Cette entrée ne correspond à rien.",
+  "rpessentials.gui.pattern_contents.open_tooltip": "Clique pour voir les %s éléments qu'elle contient"
 }

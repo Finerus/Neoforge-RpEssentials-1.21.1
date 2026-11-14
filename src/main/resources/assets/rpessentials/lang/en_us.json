@@ -354,11 +354,16 @@
   "rpessentials.gui.coverage.no_profession.some.blocks": "%s of %s matching blocks cannot be broken by any profession:",
   "rpessentials.gui.coverage.no_profession.some.items": "%s of %s matching items cannot be used by any profession:",
   "rpessentials.gui.coverage.no_profession.some.equipment": "%s of %s matching items cannot be equipped by any profession:",
-  "rpessentials.gui.coverage.no_profession.fix": "§eClick: choose a profession that will be allowed (saved right away).",
+  "rpessentials.gui.coverage.no_profession.fix": "§eClick: choose the professions that will be allowed (saved right away).",
   "rpessentials.gui.coverage.no_profession.fix_none": "§eCreate a profession first to allow it.",
   "rpessentials.gui.coverage.more": "...and %s more",
   "rpessentials.gui.coverage.added_global": "§a[RpEssentials] §f%s §aadded to %s.",
   "rpessentials.gui.coverage.added_profession": "§a[RpEssentials] §f%s §aallowed for §f%s §a(%s).",
-  "rpessentials.gui.coverage.picker_title": "Allow \"%s\" for which profession?",
-  "rpessentials.gui.coverage.picker_hint": "It will be added to its %s list and saved."
+  "rpessentials.gui.coverage.picker_title": "Allow \"%s\" for which professions?",
+  "rpessentials.gui.coverage.picker_hint": "Tick the professions, then confirm: it is added to their %s list and saved.",
+  "rpessentials.gui.coverage.picker_already": "(already allowed)",
+  "rpessentials.gui.coverage.picker_confirm": "§aAllow (%s)",
+  "rpessentials.gui.pattern_contents.title": "%s §7(%s)",
+  "rpessentials.gui.pattern_contents.empty": "This entry matches nothing.",
+  "rpessentials.gui.pattern_contents.open_tooltip": "Click to see the %s entries it contains"
 }

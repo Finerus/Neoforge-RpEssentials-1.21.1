@@ -348,7 +348,20 @@ public class PlayerProfileScreen extends Screen {
         addRenderableWidget(Button.builder(
                         Component.translatable("rpessentials.gui.player_profile.btn_close"),
                         btn -> onClose())
-                .pos(this.width - MARGIN - 65, this.height - 35).size(60, 20).build(SkinnedButton::new));
+                .pos(closeButtonX(), this.height - 35).size(60, 20).build(SkinnedButton::new));
+    }
+
+    /** Left edge of the Close button, the footer fields stop before it. */
+    private int closeButtonX() {
+        return this.width - MARGIN - 65;
+    }
+
+    /** Space kept under a tab list for the footer: separator, then the field / buttons line. */
+    private static final int FOOTER_LIST_GAP = 44;
+
+    /** Separator right above the footer line (Notes and Reports tabs). */
+    private void renderFooterSeparator(GuiGraphics g, int formX, int formRight) {
+        GuiSkin.separator(g, formX, this.height - 41, formRight - MARGIN, this.height - 40, 0xFF333333);
     }
 
     private void sendAddPlayerRequest() {
@@ -516,7 +529,7 @@ public class PlayerProfileScreen extends Screen {
         // One block per note: a first row with the delete / edit buttons and the author line,
         // then one row per line of text. Rows are 12 px high.
         if (notesList == null) notesList = new ButtonRowList(Minecraft.getInstance(), 12);
-        notesList.layout(formX - 6, contentY, formW + 12, this.height - 58 - contentY);
+        notesList.layout(formX - 6, contentY, formW + 12, this.height - FOOTER_LIST_GAP - contentY);
         int rw = notesList.rowWidth();
         int textX = 32;
         List<ButtonRowList.Row> rows = new ArrayList<>();
@@ -573,10 +586,12 @@ public class PlayerProfileScreen extends Screen {
         notesList.setRows(rows);
         addRenderableWidget(notesList);
 
-        int addBoxY = this.height - 50;
-        int addBoxW = Math.max(60, Math.min(formW - 44 - 46 - UiLayout.GAP * 2, 280));
+        // Footer: on the same line and with the same height as the Close button.
+        int addBoxY = this.height - 35;
+        int buttonsW = 44 + UiLayout.GAP + (stateEditingNoteId != -1 ? 46 + UiLayout.GAP : 0);
+        int addBoxW = Math.max(60, closeButtonX() - UiLayout.GAP - buttonsW - formX);
 
-        EditBox noteBox = new SkinnedEditBox(this.font, formX, addBoxY, addBoxW, 18,
+        EditBox noteBox = new SkinnedEditBox(this.font, formX, addBoxY, addBoxW, 20,
                 Component.translatable("rpessentials.gui.field.note"));
         noteBox.setHint(Component.literal(stateEditingNoteId != -1
                 ? I18n.get("rpessentials.gui.player_profile.notes.edit_hint")
@@ -591,12 +606,12 @@ public class PlayerProfileScreen extends Screen {
                 : I18n.get("rpessentials.gui.player_profile.notes.btn_add");
         addRenderableWidget(Button.builder(Component.literal(addLabel),
                         btn -> addNote())
-                .pos(formX + addBoxW + 4, addBoxY).size(44, 18).build(SkinnedButton::new));
+                .pos(formX + addBoxW + UiLayout.GAP, addBoxY).size(44, 20).build(SkinnedButton::new));
 
         if (stateEditingNoteId != -1) {
             addRenderableWidget(Button.builder(Component.literal(I18n.get("rpessentials.gui.player_profile.notes.btn_cancel")),
                             btn -> { stateEditingNoteId = -1; stateNoteInput = ""; rebuild(); })
-                    .pos(formX + addBoxW + 4 + 44 + UiLayout.GAP, addBoxY).size(46, 18).build(SkinnedButton::new));
+                    .pos(formX + addBoxW + UiLayout.GAP + 44 + UiLayout.GAP, addBoxY).size(46, 20).build(SkinnedButton::new));
         }
     }
 
@@ -643,7 +658,7 @@ public class PlayerProfileScreen extends Screen {
         String k = "rpessentials.gui.player_profile.reports.";
 
         if (reportsList == null) reportsList = new ButtonRowList(Minecraft.getInstance(), 12);
-        reportsList.layout(formX - 6, contentY, formW + 12, this.height - 58 - contentY);
+        reportsList.layout(formX - 6, contentY, formW + 12, this.height - FOOTER_LIST_GAP - contentY);
         int rw = reportsList.rowWidth();
         List<ButtonRowList.Row> rows = new ArrayList<>();
         List<PlayerReportsPacket.View> reports = reportsCache.get(uuid);
@@ -717,8 +732,9 @@ public class PlayerProfileScreen extends Screen {
         addRenderableWidget(reportsList);
 
         // Optional closing note, used by the next close (check mark) click.
-        int boxY = this.height - 50;
-        EditBox noteBox = new SkinnedEditBox(this.font, formX, boxY, Math.max(60, Math.min(formW, 320)), 18,
+        int boxY = this.height - 35;
+        EditBox noteBox = new SkinnedEditBox(this.font, formX, boxY,
+                Math.max(60, closeButtonX() - UiLayout.GAP - formX), 20,
                 Component.translatable(k + "note_hint"));
         noteBox.setHint(Component.literal("§7" + I18n.get(k + "note_hint")));
         noteBox.setMaxLength(ReportActionPacket.MAX_NOTE);
@@ -989,7 +1005,8 @@ public class PlayerProfileScreen extends Screen {
             case 1 -> renderStatsTab(g, formX, formRight, contentY, sel);
             case 2 -> renderNotesTab(g, formX, formRight, contentY, sel);
             case 3 -> renderManageTab(g, formX, contentY, sel);
-            case 4, 5 -> {} // History / Reports: list widgets, drawn with the other widgets
+            case 4 -> {} // History: list widget, drawn with the other widgets
+            case 5 -> renderFooterSeparator(g, formX, formRight); // Reports: list widget + footer field
         }
 
         super.render(g, mouseX, mouseY, delta);
@@ -1166,12 +1183,8 @@ public class PlayerProfileScreen extends Screen {
 
     private void renderNotesTab(GuiGraphics g, int formX, int formRight, int contentY,
                                 OpenPlayerProfileGuiPacket.PlayerData sel) {
-        // The notes are a list widget (buildNotesTab); only the footer is drawn here.
-        GuiSkin.separator(g, formX, this.height - 56, formRight - MARGIN, this.height - 55, 0xFF333333);
-        String footerLabel = stateEditingNoteId != -1
-                ? String.format(I18n.get("rpessentials.gui.player_profile.notes.footer_edit"), stateEditingNoteId)
-                : I18n.get("rpessentials.gui.player_profile.notes.footer_new");
-        g.drawString(this.font, footerLabel, formX, this.height - 52, 0x888888, false);
+        // The notes are a list widget and the field is in the footer (buildNotesTab): only the separator is drawn here.
+        renderFooterSeparator(g, formX, formRight);
     }
 
     @Override

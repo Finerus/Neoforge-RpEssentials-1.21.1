@@ -313,9 +313,9 @@ public class ProfessionEditorScreen extends Screen {
                     .build(SkinnedButton::new);
             String color = dirty.contains(value) ? "§e§o" : "§7";
             Warning warn = warnings != null ? warnings.apply(value) : null;
-            Button val = Button.builder(Component.literal(color + value), btn -> {})
-                    .size(Math.max(40, rw - 38 - (warn != null ? 18 : 0)), 16).build(SkinnedButton::new);
-            ButtonRowList.Row row = new ButtonRowList.Row().add(del, 0).item(iconFor(value), 19, 0).add(val, 38);
+            Button val = valueButton(color, value, globalActiveCategory == 4 ? null : poolFor(globalActiveCategory), this,
+                    Math.max(40, rw - 38 - (warn != null ? 18 : 0)), 16);
+            ButtonRowList.Row row = new ButtonRowList.Row().add(del, 0).item(() -> iconFor(value), 19, 0).add(val, 38);
             if (warn != null) row.add(warningButton(warn, 16, this::rebuild), rw - 16);
             rows.add(row);
         }
@@ -764,6 +764,22 @@ public class ProfessionEditorScreen extends Screen {
                 .size(16, height)
                 .tooltip(Tooltip.create(w.tooltip()))
                 .build(SkinnedButton::new);
+    }
+
+    /**
+     * Button showing an entry. For a {@code *} pattern or a {@code #tag}, clicking it lists everything it contains.
+     */
+    static Button valueButton(String color, String value, List<String> pool, Screen back, int width, int height) {
+        // No pool = container entries (block;professions), never expanded.
+        boolean pattern = pool != null && RestrictionCoverage.isPattern(value);
+        Button.Builder b = Button.builder(Component.literal(color + value + (pattern ? " §8▸" : "")),
+                btn -> {
+                    if (pattern) Minecraft.getInstance().setScreen(new PatternContentsSubScreen(back, value, pool));
+                })
+                .size(width, height);
+        if (pattern) b.tooltip(Tooltip.create(Component.translatable("rpessentials.gui.pattern_contents.open_tooltip",
+                RestrictionCoverage.expand(value, pool).size())));
+        return b.build(SkinnedButton::new);
     }
 
     private static List<String> poolFor(int category) {
@@ -1248,9 +1264,8 @@ public class ProfessionEditorScreen extends Screen {
                                 : "rpessentials.gui.restriction_list.delete_tooltip")))
                         .build(SkinnedButton::new);
                 Warning warn = warnings != null ? warnings.apply(value) : null;
-                Button val = Button.builder(Component.literal(color + value), btn -> {})
-                        .size(rw - 38 - (warn != null ? 18 : 0), 18).build(SkinnedButton::new);
-                ButtonRowList.Row row = new ButtonRowList.Row().add(del, 0).item(iconFor(value), 19, 1).add(val, 38);
+                Button val = valueButton(color, value, pool, this, rw - 38 - (warn != null ? 18 : 0), 18);
+                ButtonRowList.Row row = new ButtonRowList.Row().add(del, 0).item(() -> iconFor(value), 19, 1).add(val, 38);
                 if (warn != null) row.add(warningButton(warn, 18, this::rebuild), rw - 16);
                 listRows.add(row);
             }
@@ -1508,7 +1523,60 @@ public class ProfessionEditorScreen extends Screen {
         public boolean isPauseScreen() { return false; }
     }
 
-    /** Chooses the profession that will be allowed to use a globally blocked entry. */
+    /** Read-only list of the items or blocks matched by a {@code *} pattern or a {@code #tag}. */
+    @OnlyIn(Dist.CLIENT)
+    private static class PatternContentsSubScreen extends Screen {
+
+        private final Screen back;
+        private final String entry;
+        private final List<String> ids;
+        private ButtonRowList list;
+
+        PatternContentsSubScreen(Screen back, String entry, List<String> pool) {
+            super(Component.literal(""));
+            this.back = back;
+            this.entry = entry;
+            this.ids = RestrictionCoverage.expand(entry, pool);
+        }
+
+        @Override
+        protected void init() {
+            int midX = this.width / 2;
+            if (list == null) list = new ButtonRowList(Minecraft.getInstance(), 18);
+            list.layout(midX - 160, 34, 320, this.height - 34 - 40);
+            List<ButtonRowList.Row> rows = new ArrayList<>();
+            for (String id : ids) {
+                rows.add(new ButtonRowList.Row().item(() -> iconFor(id), 2, 1).text("§f" + id, 22, 5));
+            }
+            if (ids.isEmpty()) {
+                rows.add(new ButtonRowList.Row().text("§8" + I18n.get("rpessentials.gui.pattern_contents.empty"), 4, 5));
+            }
+            list.setRows(rows);
+            addRenderableWidget(list);
+            addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.restriction_list.close"),
+                            btn -> Minecraft.getInstance().setScreen(back))
+                    .pos(midX - 40, this.height - 30).size(80, 20).build(SkinnedButton::new));
+        }
+
+        @Override
+        public void render(GuiGraphics g, int mx, int my, float delta) {
+            GuiSkin.background(g, this.width, this.height, 0xAA000000);
+            super.render(g, mx, my, delta);
+            g.drawCenteredString(this.font, I18n.get("rpessentials.gui.pattern_contents.title", entry, ids.size()),
+                    this.width / 2, 16, 0xFFD700);
+        }
+
+        @Override
+        public void onClose() { Minecraft.getInstance().setScreen(back); }
+
+        @Override
+        public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+
+        @Override
+        public boolean isPauseScreen() { return false; }
+    }
+
+    /** Check list of the professions that will be allowed to use a globally blocked entry. */
     @OnlyIn(Dist.CLIENT)
     private static class ProfessionPickerSubScreen extends Screen {
 
@@ -1516,6 +1584,8 @@ public class ProfessionEditorScreen extends Screen {
         private final ProfessionEditorScreen editor;
         private final int category;
         private final String entry;
+        /** Indexes of the professions ticked by the user (not the ones that already allow it). */
+        private final Set<Integer> checked = new HashSet<>();
         private ButtonRowList list;
 
         ProfessionPickerSubScreen(Screen back, ProfessionEditorScreen editor, int category, String entry) {
@@ -1537,19 +1607,35 @@ public class ProfessionEditorScreen extends Screen {
                 final int idx = i;
                 var pe = editor.existingProfessions.get(i);
                 String color = pe.color().replace("&", "§");
-                rows.add(new ButtonRowList.Row().add(Button.builder(
-                                Component.literal(color + pe.displayName() + " §8(" + pe.id() + ")"),
+                // A profession that already allows the whole entry is shown ticked and cannot be changed here.
+                boolean already = RestrictionCoverage.uncovered(entry, profList(pe, category), poolFor(category)).isEmpty();
+                boolean on = already || checked.contains(idx);
+                String box = already ? "§8☑ " : on ? "§a☑ " : "§7☐ ";
+                String suffix = already ? " §8" + I18n.get("rpessentials.gui.coverage.picker_already") : "";
+                Button b = Button.builder(Component.literal(box + color + pe.displayName() + " §8(" + pe.id() + ")" + suffix),
                                 btn -> {
-                                    editor.allowForProfession(idx, category, entry);
-                                    Minecraft.getInstance().setScreen(back);
+                                    if (!checked.remove(idx)) checked.add(idx);
+                                    rebuildWidgets();
                                 })
-                        .size(rw, 18).build(SkinnedButton::new), 0));
+                        .size(rw, 18).build(SkinnedButton::new);
+                b.active = !already;
+                rows.add(new ButtonRowList.Row().add(b, 0));
             }
             list.setRows(rows);
             addRenderableWidget(list);
+
+            Button confirm = Button.builder(Component.literal(
+                                    I18n.get("rpessentials.gui.coverage.picker_confirm", checked.size())),
+                            btn -> {
+                                for (int idx : new TreeSet<>(checked)) editor.allowForProfession(idx, category, entry);
+                                Minecraft.getInstance().setScreen(back);
+                            })
+                    .pos(midX - 124, this.height - 30).size(120, 20).build(SkinnedButton::new);
+            confirm.active = !checked.isEmpty();
+            addRenderableWidget(confirm);
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.restriction_list.close"),
                             btn -> Minecraft.getInstance().setScreen(back))
-                    .pos(midX - 40, this.height - 30).size(80, 20).build(SkinnedButton::new));
+                    .pos(midX + 4, this.height - 30).size(80, 20).build(SkinnedButton::new));
         }
 
         @Override
@@ -1650,7 +1736,7 @@ public class ProfessionEditorScreen extends Screen {
                             rebuild();
                         })
                         .size(rw - 38, 18).build(SkinnedButton::new);
-                listRows.add(new ButtonRowList.Row().add(del, 0).item(iconFor(name), 19, 1).add(val, 38));
+                listRows.add(new ButtonRowList.Row().add(del, 0).item(() -> iconFor(name), 19, 1).add(val, 38));
             }
             list.setRows(listRows);
             addRenderableWidget(list);
