@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -226,8 +227,7 @@ public class RpNicknameCommands {
                 .toList();
         StringBuilder sb = new StringBuilder();
         boolean hideReal = false;
-        try { hideReal = ChatConfig.HIDE_REAL_NAMES.get() && !RpEssentialsPermissions.isStaffSource(src); }
-        catch (IllegalStateException ignored) {}
+        if (Cfg.ready(ChatConfig.SPEC)) { hideReal = ChatConfig.HIDE_REAL_NAMES.get() && !RpEssentialsPermissions.isStaffSource(src); }
         sb.append(Msg.get(ctx.getSource(), MessagesConfig.PLAYERLIST_HEADER, "count", String.valueOf(players.size())));
         for (int i = 0; i < players.size(); i++) {
             ServerPlayer p = players.get(i);

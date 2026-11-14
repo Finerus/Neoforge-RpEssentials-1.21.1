@@ -1,5 +1,6 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
@@ -42,7 +43,7 @@ public class WorldBorderManager {
         List<Zone> z = zonesCache;
         if (z != null) return z;
         List<Zone> out = new ArrayList<>();
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String zoneDef : RpEssentialsConfig.NAMED_ZONES.get()) {
                 String[] parts = zoneDef.split(";");
                 if (parts.length < 5) continue;
@@ -70,7 +71,7 @@ public class WorldBorderManager {
                     RpEssentials.LOGGER.warn("[WorldBorder] Invalid zone: {}", zoneDef);
                 }
             }
-        } catch (IllegalStateException e) {
+        } else {
             return List.of();
         }
         zonesCache = out;
@@ -81,13 +82,13 @@ public class WorldBorderManager {
         List<ZoneAction> a = actionsCache;
         if (a != null) return a;
         List<ZoneAction> out = new ArrayList<>();
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String line : RpEssentialsConfig.ZONE_ACTIONS.get()) {
                 String[] p = line.split(";", 3);
                 if (p.length < 3) continue;
                 out.add(new ZoneAction(p[0].trim(), p[1].trim().equalsIgnoreCase("enter"), p[2].trim()));
             }
-        } catch (IllegalStateException e) {
+        } else {
             return List.of();
         }
         actionsCache = out;
@@ -117,7 +118,7 @@ public class WorldBorderManager {
         Map<String, DimOverride> m = overridesCache;
         if (m != null) return m;
         Map<String, DimOverride> out = new HashMap<>();
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String entry : RpEssentialsConfig.WORLD_BORDER_DIMENSION_OVERRIDES.get()) {
                 String[] parts = entry.split(";", 4);
                 if (parts.length < 3) continue;
@@ -130,7 +131,7 @@ public class WorldBorderManager {
                     RpEssentials.LOGGER.warn("[WorldBorder] Invalid dimension override: {}", entry);
                 }
             }
-        } catch (IllegalStateException e) {
+        } else {
             return Map.of();
         }
         overridesCache = out;
@@ -411,7 +412,7 @@ public class WorldBorderManager {
     private record DimBorderConfig(int distance, boolean teleport) {}
 
     private static DimBorderConfig resolveDimConfig(String dimId) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             DimOverride o = overrides().get(dimId);
             if (o != null) {
                 int effective = o.distance() > 0 ? o.distance() : RpEssentialsConfig.WORLD_BORDER_DISTANCE.get();
@@ -420,20 +421,20 @@ public class WorldBorderManager {
             return new DimBorderConfig(
                     RpEssentialsConfig.WORLD_BORDER_DISTANCE.get(),
                     RpEssentialsConfig.WORLD_BORDER_TELEPORT_ENABLED.get());
-        } catch (IllegalStateException e) {
+        } else {
             return new DimBorderConfig(0, false);
         }
     }
 
     private static int resolvePrewarnDistance(String dimId, int borderDistance) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             DimOverride o = overrides().get(dimId);
             if (o != null && o.prewarn() >= 0) {
                 return o.prewarn() > 0 && o.prewarn() < borderDistance ? o.prewarn() : 0;
             }
             int global = RpEssentialsConfig.WORLD_BORDER_PREWARN_DISTANCE.get();
             return global > 0 && global < borderDistance ? global : 0;
-        } catch (IllegalStateException e) {
+        } else {
             return 0;
         }
     }

@@ -1,5 +1,6 @@
 package net.rp.rpessentials.mixin;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.PlayerChatMessage;
 import net.minecraft.server.level.ServerPlayer;
@@ -56,20 +57,19 @@ public abstract class MixinServerGamePacketListenerImpl {
 
         // Chat de proximité
         boolean proximityEnabled;
-        try { proximityEnabled = ChatConfig.ENABLE_PROXIMITY_CHAT.get(); }
-        catch (IllegalStateException e) { proximityEnabled = false; }
+        if (Cfg.ready(ChatConfig.SPEC)) { proximityEnabled = ChatConfig.ENABLE_PROXIMITY_CHAT.get(); } else { proximityEnabled = false; }
 
         boolean isGlobal      = !proximityEnabled;
         String  actualMessage = message;
 
         if (proximityEnabled) {
-            try {
+            if (Cfg.ready(ChatConfig.SPEC)) {
                 String bypass = ChatConfig.PROXIMITY_CHAT_BYPASS_PREFIX.get();
                 if (message.startsWith(bypass)) {
                     actualMessage = message.substring(bypass.length());
                     isGlobal      = true;
                 }
-            } catch (IllegalStateException ignored) { isGlobal = true; }
+            } else { isGlobal = true; }
         }
 
         Component formatted = RpEssentialsChatFormatter.formatChatMessage(player, actualMessage, isGlobal);
@@ -78,9 +78,9 @@ public abstract class MixinServerGamePacketListenerImpl {
             player.getServer().getPlayerList().broadcastSystemMessage(formatted, false);
         } else {
             int distance;
-            try {
+            if (Cfg.ready(ChatConfig.SPEC)) {
                 distance = ChatConfig.PROXIMITY_CHAT_DISTANCE.get();
-            } catch (IllegalStateException e) {
+            } else {
                 distance = 32;
             }
             double distSq = (double) distance * distance;
@@ -92,9 +92,9 @@ public abstract class MixinServerGamePacketListenerImpl {
                 }
             }
 
-            try {
+            if (Cfg.ready(ChatConfig.SPEC)) {
                 if (!ChatConfig.ENABLE_PROXIMITY_SPY.get()) return;
-            } catch (IllegalStateException ignored) {
+            } else {
                 return;
             }
 

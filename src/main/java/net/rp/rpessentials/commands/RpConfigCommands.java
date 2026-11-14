@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -323,11 +324,11 @@ public class RpConfigCommands {
         PendingProfileManager.reload();
 
         // Sync client
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             boolean hideNametags = RpEssentialsConfig.HIDE_NAMETAGS.get();
             ctx.getSource().getServer().getPlayerList().getPlayers().forEach(player ->
                     PacketDistributor.sendToPlayer(player, new HideNametagsPacket(hideNametags)));
-        } catch (IllegalStateException ignored) {}
+        }
 
         // Re-sync des restrictions de profession pour tous les joueurs connectés
         try {
@@ -485,7 +486,7 @@ public class RpConfigCommands {
     static int updateConfigString(CommandContext<CommandSourceStack> ctx,
                                    ModConfigSpec.ConfigValue<String> configValue) {
         String label = configValue == null ? "" : optName(configValue);
-        try {
+        if (Cfg.ready(MessagesConfig.SPEC)) {
             String value = StringArgumentType.getString(ctx, "value");
             if (configValue == null) {
                 ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UNAVAILABLE)));
@@ -496,7 +497,7 @@ public class RpConfigCommands {
             ctx.getSource().sendSuccess(() -> Component.literal(
                     Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UPDATED, "label", label, "value", value)), true);
             return 1;
-        } catch (IllegalStateException e) {
+        } else {
             ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_BUILT)));
             return 0;
         }
@@ -505,7 +506,7 @@ public class RpConfigCommands {
     static int updateConfigDouble(CommandContext<CommandSourceStack> ctx,
                                    ModConfigSpec.DoubleValue configValue) {
         String label = configValue == null ? "" : optName(configValue);
-        try {
+        if (Cfg.ready(MessagesConfig.SPEC)) {
             double value = DoubleArgumentType.getDouble(ctx, "value");
             if (configValue == null) {
                 ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UNAVAILABLE)));
@@ -516,7 +517,7 @@ public class RpConfigCommands {
             ctx.getSource().sendSuccess(() -> Component.literal(
                     Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UPDATED, "label", label, "value", String.valueOf(value))), true);
             return 1;
-        } catch (IllegalStateException e) {
+        } else {
             ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_BUILT)));
             return 0;
         }

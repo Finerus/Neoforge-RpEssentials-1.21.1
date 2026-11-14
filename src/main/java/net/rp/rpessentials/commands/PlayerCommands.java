@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,11 +17,7 @@ public final class PlayerCommands {
     private PlayerCommands() {}
 
     public static List<? extends String> get(ModConfigSpec.ConfigValue<List<? extends String>> cv) {
-        try {
-            return cv.get();
-        } catch (IllegalStateException e) {
-            return List.of();
-        }
+        return Cfg.get(cv, List.of());
     }
 
     public static void runAs(ServerPlayer player, List<? extends String> commands) {

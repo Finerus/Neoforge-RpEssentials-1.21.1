@@ -1,5 +1,6 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.api.event.DiceRollEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.minecraft.server.level.ServerPlayer;
@@ -50,9 +51,9 @@ public class DiceManager {
     /** Dice from the config, parsed once and parsed again only when the config list changes. */
     public static List<DiceType> getAvailableDice() {
         List<? extends String> source;
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             source = RpConfig.DICE_TYPES.get();
-        } catch (IllegalStateException e) {
+        } else {
             return List.of();
         }
         if (source != cachedSource) {
@@ -171,11 +172,11 @@ public class DiceManager {
     private static final java.util.regex.Pattern NAMED = java.util.regex.Pattern.compile("^(.+?)([+-]\\d+)?$");
 
     private static int intOpt(net.neoforged.neoforge.common.ModConfigSpec.IntValue v, int def) {
-        try { return v.get(); } catch (IllegalStateException e) { return def; }
+        return Cfg.get(v, def);
     }
 
     private static boolean boolOpt(net.neoforged.neoforge.common.ModConfigSpec.BooleanValue v, boolean def) {
-        try { return v.get(); } catch (IllegalStateException e) { return def; }
+        return Cfg.get(v, def);
     }
 
     /** Parse result: the request, or why it is refused. */
@@ -312,8 +313,7 @@ public class DiceManager {
         String shownDice = req.expression();
 
         int distance;
-        try { distance = RpConfig.DICE_ROLL_DISTANCE.get(); }
-        catch (IllegalStateException e) { distance = 32; }
+        if (Cfg.ready(RpConfig.SPEC)) { distance = RpConfig.DICE_ROLL_DISTANCE.get(); } else { distance = 32; }
         boolean global = distance < 0;
         double distSq = (double) distance * distance;
 

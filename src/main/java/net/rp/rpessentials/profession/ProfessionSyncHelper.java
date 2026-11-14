@@ -1,5 +1,6 @@
 package net.rp.rpessentials.profession;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.rp.rpessentials.RpEssentials;
@@ -40,7 +41,7 @@ public class ProfessionSyncHelper {
         List<List<String>> blocked = new ArrayList<>();
         List<List<String>> allowed = new ArrayList<>();
         List<String> names = new ArrayList<>();
-        try {
+        if (Cfg.ready(ProfessionConfig.SPEC)) {
             blocked.add(copy(ProfessionConfig.GLOBAL_BLOCKED_CRAFTS.get()));
             blocked.add(copy(ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS.get()));
             blocked.add(copy(ProfessionConfig.GLOBAL_BLOCKED_ITEMS.get()));
@@ -53,7 +54,7 @@ public class ProfessionSyncHelper {
             for (ProfessionRestrictionManager.ProfessionData d : ProfessionRestrictionManager.getAllProfessions()) {
                 names.add(d.id + ";" + d.getFormattedName());
             }
-        } catch (IllegalStateException e) {
+        } else {
             blocked.clear();
             allowed.clear();
             names.clear();
@@ -64,8 +65,7 @@ public class ProfessionSyncHelper {
     }
 
     private static String licenseIdMode() {
-        try { return ProfessionConfig.LICENSE_ID_DISPLAY.get(); }
-        catch (IllegalStateException e) { return "NAME_AND_ID"; }
+        return Cfg.get(ProfessionConfig.LICENSE_ID_DISPLAY, "NAME_AND_ID");
     }
 
     public static void syncToPlayer(ServerPlayer player) {

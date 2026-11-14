@@ -1,5 +1,6 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -79,7 +80,7 @@ public record SaveRolePacket(
                 return;
             }
 
-            try {
+            if (Cfg.ready(RpEssentialsConfig.SPEC)) {
                 String lpGroup = packet.lpGroup().trim().replaceAll("[^A-Za-z0-9_.-]", "");
                 List<String> newPerms = packet.permissions().stream().filter(KNOWN_PERMS::contains).distinct().toList();
                 String newLine = cleanId + ";" + lpGroup + ";" + String.join(",", newPerms);
@@ -128,7 +129,7 @@ public record SaveRolePacket(
                     return details;
                 }, true);
 
-            } catch (IllegalStateException e) {
+            } else {
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });

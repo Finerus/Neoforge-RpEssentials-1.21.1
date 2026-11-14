@@ -1,5 +1,6 @@
 package net.rp.rpessentials.identity;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -75,7 +76,7 @@ public class RpEssentialsMessagingManager {
         sender.sendSystemMessage(toSender);
         target.sendSystemMessage(toTarget);
 
-        try {
+        if (Cfg.ready(ChatConfig.SPEC)) {
             if (ChatConfig.ENABLE_PM_SPY.get()) {
                 for (ServerPlayer p : sender.getServer().getPlayerList().getPlayers()) {
                     if (p == sender || p == target) continue;
@@ -89,7 +90,7 @@ public class RpEssentialsMessagingManager {
                     }
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         try {
             if (ChatConfig.LOG_PRIVATE_MESSAGES.get()) {

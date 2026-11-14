@@ -1,5 +1,6 @@
 package net.rp.rpessentials.client.skin;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -38,18 +39,18 @@ public final class GuiSkin {
     // ── Mode ─────────────────────────────────────────────────────────────────
 
     public static boolean textured() {
-        try {
+        if (Cfg.ready(ClientConfig.SPEC)) {
             return ClientConfig.GUI_STYLE.get() == ClientConfig.GuiStyle.TEXTURED;
-        } catch (IllegalStateException e) {
+        } else {
             return true;
         }
     }
 
     public static void toggle() {
-        try {
+        if (Cfg.ready(ClientConfig.SPEC)) {
             ClientConfig.GUI_STYLE.set(textured() ? ClientConfig.GuiStyle.LEGACY : ClientConfig.GuiStyle.TEXTURED);
             ClientConfig.SPEC.save();
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
     /** True when the sprite has a PNG (the atlas returns the missing texture otherwise). */

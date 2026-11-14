@@ -1,5 +1,6 @@
 package net.rp.rpessentials.compat;
 
+import net.rp.rpessentials.config.Cfg;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.event.EventBus;
@@ -48,8 +49,7 @@ final class LuckPermsSyncImpl {
     private LuckPermsSyncImpl() {}
 
     private static boolean enabled() {
-        try { return RpEssentialsConfig.LP_SYNC_ENABLED.get(); }
-        catch (IllegalStateException e) { return false; }
+        return Cfg.get(RpEssentialsConfig.LP_SYNC_ENABLED, false);
     }
 
     // =========================================================================
@@ -123,10 +123,10 @@ final class LuckPermsSyncImpl {
         LuckPerms lp = LuckPermsProvider.get();
         List<String> roles;
         boolean importAll;
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             roles = new ArrayList<>(RpEssentialsConfig.ROLES.get());
             importAll = RpEssentialsConfig.LP_SYNC_IMPORT_ALL_GROUPS.get();
-        } catch (IllegalStateException e) { return; }
+        } else { return; }
 
         List<String> touched = new ArrayList<>();
         for (String name : names) {
@@ -185,8 +185,7 @@ final class LuckPermsSyncImpl {
         if (!enabled()) return;
         LuckPerms lp = LuckPermsProvider.get();
         List<? extends String> roles;
-        try { roles = RpEssentialsConfig.ROLES.get(); }
-        catch (IllegalStateException e) { return; }
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) { roles = RpEssentialsConfig.ROLES.get(); } else { return; }
 
         long now = System.currentTimeMillis();
         for (String entry : roles) {

@@ -1,5 +1,6 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import io.netty.buffer.ByteBuf;
@@ -39,7 +40,7 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
             String cleanId = packet.id().toLowerCase().trim();
             if (cleanId.isEmpty()) return;
 
-            try {
+            if (Cfg.ready(ProfessionConfig.SPEC)) {
                 // Suppression dans PROFESSIONS
                 List<String> professions = new ArrayList<>(ProfessionConfig.PROFESSIONS.get());
                 professions.removeIf(l -> l.split(";", 2)[0].trim().equalsIgnoreCase(cleanId));
@@ -57,7 +58,7 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_PROF_DELETED, "id", cleanId)));
                 RpEssentials.LOGGER.info("[GUI] Profession '{}' deleted by {}",
                         cleanId, player.getGameProfile().getName());
-            } catch (IllegalStateException e) {
+            } else {
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });

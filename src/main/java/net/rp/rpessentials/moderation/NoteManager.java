@@ -1,5 +1,7 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.config.Cfg;
+import net.rp.rpessentials.config.ModerationConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -144,13 +146,13 @@ public class NoteManager {
         playerNames.put(targetUUID, targetName);
         List<NoteEntry> list = notes.computeIfAbsent(targetUUID, k -> new ArrayList<>());
 
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             int max = net.rp.rpessentials.config.ModerationConfig.NOTE_MAX_PER_PLAYER.get();
             if (max > 0 && list.size() >= max) {
                 RpEssentials.LOGGER.warn("[NoteManager] Note limit ({}) reached for {}", max, targetName);
                 return -1;
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         Set<Integer> usedIds = new HashSet<>();
         for (NoteEntry e : list) usedIds.add(e.id);

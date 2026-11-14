@@ -1,5 +1,7 @@
 package net.rp.rpessentials.items;
 
+import net.rp.rpessentials.config.Cfg;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -40,10 +42,8 @@ public class LicenseItem extends Item {
      */
     private static net.minecraft.network.chat.MutableComponent text(
             net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> cv, String key) {
-        try {
-            String v = cv.get();
-            if (!v.equals(cv.getDefault())) return Component.literal(v);
-        } catch (IllegalStateException ignored) {}
+        String v = Cfg.get(cv, cv.getDefault());
+        if (!v.equals(cv.getDefault())) return Component.literal(v);
         return Component.translatable(key);
     }
 

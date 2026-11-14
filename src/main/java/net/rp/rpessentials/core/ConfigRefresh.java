@@ -1,5 +1,6 @@
 package net.rp.rpessentials.core;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -59,7 +60,7 @@ public final class ConfigRefresh {
 
         boolean hide = false;
         if (core) {
-            try { hide = RpEssentialsConfig.HIDE_NAMETAGS.get(); } catch (IllegalStateException ignored) {}
+            hide = Cfg.get(RpEssentialsConfig.HIDE_NAMETAGS, hide);
         }
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (core) PacketDistributor.sendToPlayer(p, new HideNametagsPacket(hide));

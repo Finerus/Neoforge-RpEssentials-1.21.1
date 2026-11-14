@@ -1,5 +1,6 @@
 package net.rp.rpessentials.util;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.config.RpConfig;
 
@@ -44,7 +45,7 @@ public class ImmersivePresetHelper {
     private static void ensureCache() {
         if (cacheBuilt) return;
         cache.clear();
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             for (String entry : RpConfig.IMMERSIVE_PRESETS.get()) {
                 String[] parts = entry.split(";");
                 if (parts.length < 4) continue;
@@ -58,7 +59,7 @@ public class ImmersivePresetHelper {
                     RpEssentials.LOGGER.warn("[ImmersivePreset] Invalid entry: {}", entry);
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
         cacheBuilt = true;
     }
 

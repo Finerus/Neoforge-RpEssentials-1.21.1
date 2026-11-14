@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.Cfg;
+
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
@@ -92,7 +94,12 @@ public record SaveProfessionPacket(
             List<String> items = PacketValidation.cleanItems(packet.allowedItems());
             List<String> equipment = PacketValidation.cleanItems(packet.allowedEquipment());
 
-            try {
+            if (!Cfg.ready(ProfessionConfig.SPEC)) {
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
+                RpEssentials.LOGGER.error("[GUI] Config not loaded when saving profession");
+                return;
+            }
+            {
                 // ── 1. Mise à jour de la liste des professions ────────────────────
                 List<? extends String> current = ProfessionConfig.PROFESSIONS.get();
                 List<String> updated = new ArrayList<>();
@@ -131,9 +138,6 @@ public record SaveProfessionPacket(
                 RpEssentials.LOGGER.info("[GUI] Profession '{}' {} by {}",
                         cleanId, actionVerb, player.getGameProfile().getName());
 
-            } catch (IllegalStateException e) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
-                RpEssentials.LOGGER.error("[GUI] Config not loaded when saving profession", e);
             }
         });
     }

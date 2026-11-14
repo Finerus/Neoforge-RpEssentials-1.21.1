@@ -1,5 +1,6 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -62,23 +63,19 @@ public final class TeleportWarmupManager {
 
     /** Delay configured for a kind of teleport ("spawn", "afk"), in seconds. */
     public static int configuredSeconds(String kind) {
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             return switch (kind) {
                 case "spawn" -> RpConfig.SPAWN_WARMUP_SECONDS.get();
                 case "afk" -> RpConfig.AFK_WARMUP_SECONDS.get();
                 default -> 0;
             };
-        } catch (IllegalStateException e) {
+        } else {
             return 0;
         }
     }
 
     private static boolean opt(net.neoforged.neoforge.common.ModConfigSpec.BooleanValue v, boolean def) {
-        try {
-            return v.get();
-        } catch (IllegalStateException e) {
-            return def;
-        }
+        return Cfg.get(v, def);
     }
 
     /**

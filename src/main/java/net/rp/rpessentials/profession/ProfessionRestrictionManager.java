@@ -1,5 +1,6 @@
 package net.rp.rpessentials.profession;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -209,6 +210,10 @@ public class ProfessionRestrictionManager {
         craftMessageCooldown.clear();
         isInitialized = false;
 
+        if (!Cfg.ready(ProfessionConfig.SPEC)) {
+            RpEssentials.LOGGER.warn("[ProfessionRestrictions] Config not loaded yet, skipping cache reload");
+            return;
+        }
         try {
             if (ProfessionConfig.PROFESSIONS == null) {
                 RpEssentials.LOGGER.warn("[ProfessionRestrictions] Config not loaded yet, skipping cache reload");
@@ -232,8 +237,6 @@ public class ProfessionRestrictionManager {
             lastCacheUpdate = System.currentTimeMillis();
             isInitialized = true;
             RpEssentials.LOGGER.info("[ProfessionRestrictions] Loaded {} professions", professionDataCache.size());
-        } catch (IllegalStateException e) {
-            RpEssentials.LOGGER.warn("[ProfessionRestrictions] Config not built yet: {}", e.getMessage());
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[ProfessionRestrictions] Error loading profession data", e);
         }
@@ -331,14 +334,14 @@ public class ProfessionRestrictionManager {
     }
 
     public static boolean isReservedTag(String id) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String e : RpEssentialsConfig.ROLES.get()) {
                 if (e.split(";", 2)[0].trim().equalsIgnoreCase(id)) return true;
             }
             for (String t : RpEssentialsConfig.STAFF_TAGS.get()) {
                 if (t.equalsIgnoreCase(id)) return true;
             }
-        } catch (IllegalStateException ignored) {}
+        }
         return false;
     }
 

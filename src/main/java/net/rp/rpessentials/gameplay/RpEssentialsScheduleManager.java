@@ -1,5 +1,6 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -144,8 +145,12 @@ public class RpEssentialsScheduleManager {
         configWarnings.clear();
         TimeHelper.reload();
 
+        if (!Cfg.ready(ScheduleConfig.SPEC)) {
+            RpEssentials.LOGGER.debug("[Schedule] Config not loaded yet, skipping reload.");
+            return;
+        }
         try {
-            schedules.put(DayOfWeek.MONDAY,    parseDay(ScheduleConfig.MONDAY_ENABLED,    ScheduleConfig.MONDAY_OPEN,    ScheduleConfig.MONDAY_CLOSE));
+            schedules.put(DayOfWeek.MONDAY,   parseDay(ScheduleConfig.MONDAY_ENABLED,    ScheduleConfig.MONDAY_OPEN,    ScheduleConfig.MONDAY_CLOSE));
             schedules.put(DayOfWeek.TUESDAY,   parseDay(ScheduleConfig.TUESDAY_ENABLED,   ScheduleConfig.TUESDAY_OPEN,   ScheduleConfig.TUESDAY_CLOSE));
             schedules.put(DayOfWeek.WEDNESDAY, parseDay(ScheduleConfig.WEDNESDAY_ENABLED, ScheduleConfig.WEDNESDAY_OPEN, ScheduleConfig.WEDNESDAY_CLOSE));
             schedules.put(DayOfWeek.THURSDAY,  parseDay(ScheduleConfig.THURSDAY_ENABLED,  ScheduleConfig.THURSDAY_OPEN,  ScheduleConfig.THURSDAY_CLOSE));
@@ -174,8 +179,6 @@ public class RpEssentialsScheduleManager {
                             ServerLang.get(p, MessagesConfig.SCHED_SYS_CONFIG_WARNING, "warning", w)));
                 }
             }
-        } catch (IllegalStateException e) {
-            RpEssentials.LOGGER.debug("[Schedule] Config not built yet, skipping reload.");
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[Schedule] Error parsing schedule: {}", e.getMessage());
         }
@@ -246,9 +249,9 @@ public class RpEssentialsScheduleManager {
         if (RpEssentialsPermissions.isStaff(player)) return true;
         if (player.getServer() != null && player.getServer().isSingleplayerOwner(player.getGameProfile())) return true;
         if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.SCHEDULE_WHITELIST)) return true;
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             return ScheduleConfig.SCHEDULE_WHITELIST.get().contains(player.getGameProfile().getName());
-        } catch (IllegalStateException e) {
+        } else {
             return false;
         }
     }
@@ -256,13 +259,13 @@ public class RpEssentialsScheduleManager {
     public static Component canPlayerJoin(ServerPlayer player) {
         if (isScheduleExempt(player)) return null;
 
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             String state = ScheduleConfig.FORCE_STATE.get();
             if ("FORCE_OPEN".equals(state))   return null;
             if ("FORCE_CLOSED".equals(state))
                 return ColorHelper.parseColors(ScheduleConfig.FORCE_CLOSED_MESSAGE.get());
             if (!ScheduleConfig.ENABLE_SCHEDULE.get()) return null;
-        } catch (IllegalStateException e) {
+        } else {
             return null;
         }
         if (isServerOpen()) return null;
@@ -272,12 +275,12 @@ public class RpEssentialsScheduleManager {
         String close = next != null ? next.close().format(FMT) : "?";
         String day   = getNextOpenDayName(player);
         String msg;
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             msg = ScheduleConfig.MSG_SERVER_CLOSED.get()
                     .replace("{open}",  open)
                     .replace("{close}", close)
                     .replace("{day}",   day);
-        } catch (IllegalStateException e) {
+        } else {
             msg = ScheduleConfig.MSG_SERVER_CLOSED.getDefault().replace("{open}", open).replace("{close}", close).replace("{day}", day);
         }
         return ColorHelper.parseColors(msg);
@@ -288,12 +291,12 @@ public class RpEssentialsScheduleManager {
      * Handles cross-midnight sessions transparently via {@link #getActiveSchedule()}.
      */
     public static boolean isServerOpen() {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             String state = ScheduleConfig.FORCE_STATE.get();
             if ("FORCE_OPEN".equals(state))   return true;
             if ("FORCE_CLOSED".equals(state)) return false;
             if (!ScheduleConfig.ENABLE_SCHEDULE.get()) return true;
-        } catch (IllegalStateException e) {
+        } else {
             return true;
         }
         if (schedules.isEmpty()) return true;
@@ -306,10 +309,10 @@ public class RpEssentialsScheduleManager {
 
     /** Short status ("Open: closing in 2h05"...) in the viewer's language. */
     public static String getTimeUntilNextEvent(ServerPlayer v) {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.ENABLE_SCHEDULE.get())
                 return ServerLang.get(v, MessagesConfig.SCHED_NEXT_DISABLED);
-        } catch (IllegalStateException e) {
+        } else {
             return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NOT_INIT);
         }
         if (schedules.isEmpty()) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NOT_INIT);
@@ -334,9 +337,9 @@ public class RpEssentialsScheduleManager {
 
     public static void enforceOnline(MinecraftServer server) {
         if (server == null) return;
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.ENABLE_SCHEDULE.get() && "NONE".equals(ScheduleConfig.FORCE_STATE.get())) return;
-        } catch (IllegalStateException e) { return; }
+        } else { return; }
         if (isServerOpen()) return;
         closeServer(server, false);
     }
@@ -368,9 +371,9 @@ public class RpEssentialsScheduleManager {
     // TICK MIDNIGHT — reset flags (every day)
     // =========================================================================
     public static void tickMidnightSweep(MinecraftServer server) {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.ENABLE_SCHEDULE.get()) return;
-        } catch (IllegalStateException e) {
+        } else {
             return;
         }
         DayOfWeek today = today().getDayOfWeek();
@@ -421,32 +424,32 @@ public class RpEssentialsScheduleManager {
     // DEATH HOURS / HRP HOURS
     // =========================================================================
     public static boolean isDeathHour() {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.DEATH_HOURS_ENABLED.get()) return false;
             LocalTime now = nowTime();
             for (String slot : ScheduleConfig.DEATH_HOURS_SLOTS.get())
                 if (isInSlot(now, slot)) return true;
-        } catch (IllegalStateException ignored) {}
+        }
         return false;
     }
 
     public static boolean isHrpTolerated() {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.ENABLE_HRP_HOURS.get()) return false;
             LocalTime now = nowTime();
             for (String slot : ScheduleConfig.HRP_TOLERATED_SLOTS.get())
                 if (isInSlot(now, slot)) return true;
-        } catch (IllegalStateException ignored) {}
+        }
         return false;
     }
 
     public static boolean isHrpAllowed() {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.ENABLE_HRP_HOURS.get()) return false;
             LocalTime now = nowTime();
             for (String slot : ScheduleConfig.HRP_ALLOWED_SLOTS.get())
                 if (isInSlot(now, slot)) return true;
-        } catch (IllegalStateException ignored) {}
+        }
         return false;
     }
 
@@ -458,7 +461,7 @@ public class RpEssentialsScheduleManager {
      * Uses {@code minutesUntilClose()} so it works for both normal and cross-midnight sessions.
      */
     public static void checkWarnings(MinecraftServer server, LocalTime now, DaySchedule s) {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             long remaining = s.minutesUntilClose(now);
             if (remaining < 0) return;
 
@@ -477,11 +480,11 @@ public class RpEssentialsScheduleManager {
                     server.getPlayerList().broadcastSystemMessage(ColorHelper.parseColors(msg), false);
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
     public static void sendOpeningMessage(MinecraftServer server, DaySchedule s) {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             String msg = ScheduleConfig.MSG_SERVER_OPENED.get()
                     .replace("{open}",  s.open().format(FMT))
                     .replace("{close}", s.close().format(FMT))
@@ -490,17 +493,17 @@ public class RpEssentialsScheduleManager {
             for (ServerPlayer p : server.getPlayerList().getPlayers())
                 if (RpEssentialsPermissions.isStaff(p))
                     p.sendSystemMessage(ColorHelper.parseColors(msg));
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
 
     public static void closeServer(MinecraftServer server) { closeServer(server, true); }
 
     public static void closeServer(MinecraftServer server, boolean announceToStaff) {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if ("FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) return;
             if (!ScheduleConfig.KICK_NON_STAFF.get()) return;
-        } catch (IllegalStateException e) {
+        } else {
             return;
         }
         DaySchedule next = getNextOpenSchedule();
@@ -509,12 +512,12 @@ public class RpEssentialsScheduleManager {
         String day   = getNextOpenDayName();
 
         String kickMsg;
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             kickMsg = ScheduleConfig.MSG_SERVER_CLOSED.get()
                     .replace("{open}",  open)
                     .replace("{close}", close)
                     .replace("{day}",   day);
-        } catch (IllegalStateException e) {
+        } else {
             kickMsg = ScheduleConfig.MSG_SERVER_CLOSED.getDefault().replace("{open}", open).replace("{close}", close).replace("{day}", day);
         }
         String finalKickMsg = kickMsg;
@@ -537,57 +540,57 @@ public class RpEssentialsScheduleManager {
     }
 
     public static void tickDeathHoursNotifications(MinecraftServer server, LocalTime now) {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.DEATH_HOURS_ENABLED.get()) return;
-        } catch (IllegalStateException e) { return; }
+        } else { return; }
 
         boolean active = isDeathHour();
 
         if (!active) { lastDeathHoursSlotKey = ""; return; }
 
         String currentSlot = null;
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             for (String slot : ScheduleConfig.DEATH_HOURS_SLOTS.get()) {
                 if (isInSlot(now, slot)) { currentSlot = slot; break; }
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         if (currentSlot == null || currentSlot.equals(lastDeathHoursSlotKey)) return;
         if (server.getPlayerList().getPlayers().isEmpty()) return;
         lastDeathHoursSlotKey = currentSlot;
 
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             String slots  = String.join(", ", ScheduleConfig.DEATH_HOURS_SLOTS.get());
             String mode   = ServerLang.get(null, MessagesConfig.SCHEDULE_DEATH_HOURS_NOTIFY_MODE);
             for (ServerPlayer p : server.getPlayerList().getPlayers())
                 DeathRPManager.sendMessageToPlayer(p, ServerLang.get(p, MessagesConfig.SCHEDULE_DEATH_HOURS_NOTIFY, "slots", slots), mode);
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
     public static void tickHrpNotifications(MinecraftServer server, LocalTime now) {
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.ENABLE_HRP_HOURS.get()) return;
-        } catch (IllegalStateException e) { return; }
+        } else { return; }
 
         boolean allowed   = isHrpAllowed();
         boolean tolerated = isHrpTolerated();
         if (!allowed && !tolerated) { lastHrpSlotKey = ""; return; }
 
         String currentSlot = null;
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             List<? extends String> slots = allowed
                     ? ScheduleConfig.HRP_ALLOWED_SLOTS.get()
                     : ScheduleConfig.HRP_TOLERATED_SLOTS.get();
             for (String slot : slots) {
                 if (isInSlot(now, slot)) { currentSlot = slot; break; }
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         if (currentSlot == null || currentSlot.equals(lastHrpSlotKey)) return;
         if (server.getPlayerList().getPlayers().isEmpty()) return;
         lastHrpSlotKey = currentSlot;
 
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             String rawMsg = allowed
                     ? ScheduleConfig.HRP_ALLOWED_MESSAGE.get()
                     : ScheduleConfig.HRP_TOLERATED_MESSAGE.get();
@@ -598,7 +601,7 @@ public class RpEssentialsScheduleManager {
             String mode = ScheduleConfig.HRP_MESSAGE_MODE.get();
             for (ServerPlayer p : server.getPlayerList().getPlayers())
                 DeathRPManager.sendMessageToPlayer(p, rawMsg, mode);
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
     // =========================================================================

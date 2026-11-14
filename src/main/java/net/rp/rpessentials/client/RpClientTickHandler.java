@@ -1,5 +1,7 @@
 package net.rp.rpessentials.client;
 
+import net.rp.rpessentials.config.Cfg;
+import net.rp.rpessentials.config.RpConfig;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -48,11 +50,11 @@ public class RpClientTickHandler {
 
         while (RpKeyBindings.OPEN_DICE_GUI != null
                 && RpKeyBindings.OPEN_DICE_GUI.consumeClick()) {
-            try {
+            if (Cfg.ready(RpConfig.SPEC)) {
                 if (net.rp.rpessentials.config.RpConfig.ENABLE_DICE_SYSTEM.get()) {
                     mc.setScreen(new net.rp.rpessentials.client.gui.DiceSelectionScreen());
                 }
-            } catch (IllegalStateException ignored) {}
+            }
         }
 
         while (RpKeyBindings.OPEN_CONFIG_MANAGER_GUI != null

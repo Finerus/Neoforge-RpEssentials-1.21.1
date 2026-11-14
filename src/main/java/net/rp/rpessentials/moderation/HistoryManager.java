@@ -1,5 +1,6 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.config.Cfg;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -82,17 +83,13 @@ public final class HistoryManager {
     // ── Config ───────────────────────────────────────────────────────────────
 
     public static boolean enabled() {
-        try {
-            return ModerationConfig.HISTORY_ENABLED.get();
-        } catch (IllegalStateException e) {
-            return true;
-        }
+        return Cfg.get(ModerationConfig.HISTORY_ENABLED, true);
     }
 
     /** Days kept for a type: the type's own line, else "*", else 365. -1 = forever. */
     static int retentionDays(String type) {
         int all = 365;
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             for (String line : ModerationConfig.HISTORY_RETENTION.get()) {
                 int eq = line.indexOf('=');
                 if (eq < 0) continue;
@@ -106,16 +103,12 @@ public final class HistoryManager {
                 if (k.equalsIgnoreCase(type)) return days;
                 if (k.equals("*")) all = days;
             }
-        } catch (IllegalStateException ignored) {}
+        }
         return all;
     }
 
     static int maxPerPlayer() {
-        try {
-            return ModerationConfig.HISTORY_MAX_PER_PLAYER.get();
-        } catch (IllegalStateException e) {
-            return 200;
-        }
+        return Cfg.get(ModerationConfig.HISTORY_MAX_PER_PLAYER, 200);
     }
 
     // ── Storage ──────────────────────────────────────────────────────────────

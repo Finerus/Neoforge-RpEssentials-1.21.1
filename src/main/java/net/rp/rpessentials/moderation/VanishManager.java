@@ -1,5 +1,6 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import com.google.gson.Gson;
@@ -55,8 +56,7 @@ public final class VanishManager {
     // CONFIG
     // =========================================================================
     private static boolean opt(ModConfigSpec.BooleanValue v) {
-        try { return v.get(); }
-        catch (IllegalStateException e) { return v.getDefault(); }
+        return Cfg.get(v, v.getDefault());
     }
 
     public static boolean enabled() { return opt(ModerationConfig.ENABLE_VANISH); }
@@ -88,18 +88,15 @@ public final class VanishManager {
     public static boolean reminderEnabled() { return opt(ModerationConfig.VANISH_LOGIN_REMINDER); }
 
     public static int defaultLevel() {
-        try { return ModerationConfig.VANISH_DEFAULT_LEVEL.get(); }
-        catch (IllegalStateException e) { return 4; }
+        return Cfg.get(ModerationConfig.VANISH_DEFAULT_LEVEL, 4);
     }
 
     private static String tabMode() {
-        try { return ModerationConfig.VANISH_TAB_MODE.get(); }
-        catch (IllegalStateException e) { return "REMOVE"; }
+        return Cfg.get(ModerationConfig.VANISH_TAB_MODE, "REMOVE");
     }
 
     private static String marker() {
-        try { return ColorHelper.translateAlternateColorCodes(ModerationConfig.VANISH_TAB_MARKER.get()); }
-        catch (IllegalStateException e) { return "§7[V] "; }
+        if (Cfg.ready(ModerationConfig.SPEC)) { return ColorHelper.translateAlternateColorCodes(ModerationConfig.VANISH_TAB_MARKER.get()); } else { return "§7[V] "; }
     }
 
     // =========================================================================
@@ -371,7 +368,7 @@ public final class VanishManager {
         if (!opt(ModerationConfig.VANISH_FAKE_MESSAGES)) return;
         Component c;
         String mark;
-        try {
+        if (Cfg.ready(ChatConfig.SPEC, ModerationConfig.SPEC)) {
             if (ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE.get()) {
                 String raw = join ? ChatConfig.JOIN_MESSAGE.get() : ChatConfig.LEAVE_MESSAGE.get();
                 if (raw == null || raw.isBlank() || "none".equalsIgnoreCase(raw)) return;
@@ -382,7 +379,7 @@ public final class VanishManager {
                         target.getDisplayName()).withStyle(ChatFormatting.YELLOW);
             }
             mark = ModerationConfig.VANISH_FAKE_MARK.get();
-        } catch (IllegalStateException e) {
+        } else {
             return;
         }
         Component marked = c.copy().append(ColorHelper.parseColors(mark));

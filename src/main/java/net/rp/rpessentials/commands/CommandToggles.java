@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.Cfg;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.CommandNode;
@@ -39,11 +40,7 @@ public final class CommandToggles {
     private static final List<String[]> CONFLICTS = new ArrayList<>();
 
     private static boolean opt(ModConfigSpec.BooleanValue v) {
-        try {
-            return v.get();
-        } catch (IllegalStateException e) {
-            return false;
-        }
+        return Cfg.get(v, false);
     }
 
     public static boolean flatStaff(CommandSourceStack src) {

@@ -38,7 +38,7 @@ public final class ConfigValidator {
         List<String> out = new ArrayList<>();
         for (String c : net.rp.rpessentials.commands.CommandToggles.activeConflicts())
             add(out, v, MessagesConfig.CFG_V_CMD_CONFLICT, "command", c);
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC, ProfessionConfig.SPEC, RpConfig.SPEC, RpEssentialsConfig.SPEC, ScheduleConfig.SPEC)) {
             Set<String> profs = new HashSet<>();
             for (String l : ProfessionConfig.PROFESSIONS.get()) {
                 String[] p = l.split(";", -1);
@@ -170,7 +170,7 @@ public final class ConfigValidator {
                 }
             }
             orphan.forEach((id, n) -> add(out, v, MessagesConfig.CFG_V_ORPHAN_LICENSE, "value", id, "count", String.valueOf(n)));
-        } catch (IllegalStateException e) {
+        } else {
             add(out, v, MessagesConfig.CFG_V_NOT_LOADED);
         }
         return out;

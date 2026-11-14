@@ -1,5 +1,6 @@
 package net.rp.rpessentials.core;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.io.File;
@@ -22,12 +23,12 @@ public final class BackupManager {
     private BackupManager() {}
 
     public static void tick() {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             if (!RpEssentialsConfig.BACKUP_ENABLED.get()) return;
             long every = RpEssentialsConfig.BACKUP_INTERVAL_HOURS.get() * 3_600_000L;
             if (System.currentTimeMillis() - lastRun < every) return;
             run(RpEssentialsConfig.BACKUP_KEEP.get());
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
     public static void run(int keep) {

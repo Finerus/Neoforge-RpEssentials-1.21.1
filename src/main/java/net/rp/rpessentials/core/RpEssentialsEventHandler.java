@@ -1,5 +1,6 @@
 package net.rp.rpessentials.core;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -47,14 +48,14 @@ public class RpEssentialsEventHandler {
         Component canJoin = RpEssentialsScheduleManager.canPlayerJoin(player);
         if (canJoin != null) {
             refusedJoins.add(player.getUUID());
-            try {
+            if (Cfg.ready(ScheduleConfig.SPEC)) {
                 if (ScheduleConfig.NOTIFY_REFUSED_JOIN.get()) {
                     for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                         if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(Component.literal(ServerLang.get(p,
                                 MessagesConfig.LOGIN_REFUSED_NOTICE, "player", player.getName().getString())));
                     }
                 }
-            } catch (IllegalStateException ignored) {}
+            }
             player.connection.disconnect(canJoin);
             return;
         }
@@ -133,17 +134,17 @@ public class RpEssentialsEventHandler {
         sendJoinLeaveMessage(server, player, true);
 
         if (RpEssentialsPermissions.isStaff(player)) {
-            try {
+            if (Cfg.ready(ScheduleConfig.SPEC)) {
                 if ("FORCE_CLOSED".equals(ScheduleConfig.FORCE_STATE.get())) {
                     player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.LOGIN_FORCE_CLOSED)));
                 }
-            } catch (IllegalStateException ignored) {}
+            }
             for (String w : RpEssentialsScheduleManager.getConfigWarnings(player)) {
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.SCHED_SYS_CONFIG_WARNING, "warning", w)));
             }
         }
 
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             if (ModerationConfig.ENABLE_MUTE_SYSTEM.get() && MuteManager.isMuted(player.getUUID())) {
                 MuteManager.MuteEntry entry = MuteManager.getEntry(player.getUUID());
                 if (entry != null) {
@@ -153,7 +154,7 @@ public class RpEssentialsEventHandler {
                                     "expiry", entry.getFormattedExpiry(player))));
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         java.util.concurrent.CompletableFuture.runAsync(
                 () -> server.execute(() -> {
@@ -163,7 +164,7 @@ public class RpEssentialsEventHandler {
                 java.util.concurrent.CompletableFuture.delayedExecutor(
                         500, java.util.concurrent.TimeUnit.MILLISECONDS));
 
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (ScheduleConfig.ENABLE_WELCOME != null && ScheduleConfig.ENABLE_WELCOME.get()) {
                 String playerName = player.getName().getString();
                 String nickname   = NicknameManager.getDisplayName(player);
@@ -173,35 +174,34 @@ public class RpEssentialsEventHandler {
                             ColorHelper.translateAlternateColorCodes(fmt)));
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
-        try {
+        if (Cfg.ready(ChatConfig.SPEC)) {
             if (ChatConfig.ENABLE_PM_SPY.get()) {
                 String notice = ServerLang.get(player, MessagesConfig.MP_SPY_NOTICE);
                 if (!notice.isBlank()) player.sendSystemMessage(ColorHelper.parseColors(notice));
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         TempLicenseExpirationManager.checkOnLogin(player, server);
         TempLicenseExpirationManager.markRevokedLicenseItems(player);
 
-        try { if (ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get()) WarnManager.purgeExpiredWarns(player.getUUID()); }
-        catch (IllegalStateException ignored) {}
+        if (Cfg.ready(ModerationConfig.SPEC)) { if (ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get()) WarnManager.purgeExpiredWarns(player.getUUID()); }
 
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             if (ModerationConfig.WARN_NOTIFY_ON_JOIN.get()) {
                 int count = WarnManager.getActiveWarns(player.getUUID()).size();
                 if (count > 0) player.sendSystemMessage(ColorHelper.parseColors(
                         ModerationConfig.WARN_JOIN_MESSAGE.get().replace("{count}", String.valueOf(count))));
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             boolean hideNametags = RpEssentialsConfig.HIDE_NAMETAGS.get();
             PacketDistributor.sendToPlayer(player, new HideNametagsPacket(hideNametags));
-        } catch (IllegalStateException ignored) {}
+        }
 
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             String soundId = ScheduleConfig.WELCOME_SOUND.get();
             if (soundId != null && !soundId.isBlank()) {
                 net.minecraft.resources.ResourceLocation rl =
@@ -216,7 +216,7 @@ public class RpEssentialsEventHandler {
                             1.0f, 1.0f, player.getRandom().nextLong()));
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
     @SubscribeEvent
@@ -272,13 +272,13 @@ public class RpEssentialsEventHandler {
         VanishManager.reload();
         net.rp.rpessentials.moderation.HistoryManager.reload();
 
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             String dimId = net.rp.rpessentials.config.RpConfig.AFK_DIMENSION.get();
             net.minecraft.resources.ResourceLocation dimRl = net.minecraft.resources.ResourceLocation.tryParse(dimId);
             if (dimRl == null || event.getServer().getLevel(net.minecraft.resources.ResourceKey.create(
                     net.minecraft.core.registries.Registries.DIMENSION, dimRl)) == null)
                 RpEssentials.LOGGER.warn("[RpEssentials] AFK dimension '{}' does not exist.", dimId);
-        } catch (IllegalStateException ignored) {}
+        }
 
         String dataFolder = RpEssentialsDataPaths.getDataFolder().getAbsolutePath();
         RpEssentials.LOGGER.info("[RpEssentials] Data layer ready — {} nickname(s), {} license(s), {} warn(s), {} mute(s). Data folder: {}",

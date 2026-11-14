@@ -1,5 +1,7 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.config.Cfg;
+import net.rp.rpessentials.config.ModerationConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -116,7 +118,7 @@ public class DeathRPManager {
 
 
     public static void purgeOldHistory() {
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             int maxDays = net.rp.rpessentials.config.ModerationConfig.DEATH_HISTORY_MAX_DAYS.get();
             if (maxDays <= 0) return;
             ensureHistoryInitialized();
@@ -133,7 +135,7 @@ public class DeathRPManager {
                 saveHistory();
                 LOGGER.info("[DeathRP] Purged {} history entries older than {} days", removed, maxDays);
             }
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
     public static java.util.List<DeathHistoryEntry> getHistory(UUID playerUUID) {
@@ -207,14 +209,14 @@ public class DeathRPManager {
     public static boolean isDeathRPEnabled(UUID uuid) {
         Boolean override = overrides.get(uuid);
         if (override != null) return override;
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (ScheduleConfig.DEATH_HOURS_ENABLED.get()
                     && RpEssentialsScheduleManager.isDeathHour()) return true;
-        } catch (IllegalStateException ignored) {}
-        try {
+        }
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             return RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED != null
                     && RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get();
-        } catch (IllegalStateException e) { return false; }
+        } else { return false; }
     }
 
     public static void setOverride(UUID uuid, boolean enabled) {
@@ -243,7 +245,7 @@ public class DeathRPManager {
 
         String rawDeathMsg = "";
 
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             if (RpEssentialsConfig.DEATH_RP_DEATH_MESSAGE != null) {
                 rawDeathMsg = RpEssentialsConfig.DEATH_RP_DEATH_MESSAGE.get()
                         .replace("{player}",   NicknameManager.getDisplayName(player))
@@ -252,7 +254,7 @@ public class DeathRPManager {
                 for (ServerPlayer p : server.getPlayerList().getPlayers())
                     p.sendSystemMessage(comp);
             }
-        } catch (IllegalStateException e) { LOGGER.warn("[DeathRP] Config DEATH_MESSAGE unavailable"); }
+        } else { LOGGER.warn("[DeathRP] Config DEATH_MESSAGE unavailable"); }
 
         playSound(server, null,
                 RpEssentialsConfig.DEATH_RP_DEATH_SOUND,
@@ -288,7 +290,7 @@ public class DeathRPManager {
 
     // ── Toggles ─────────────────────────────────────────────────────────────────
     public static void broadcastGlobalToggle(String staffName, boolean enabled, MinecraftServer server) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             var msgConfig  = enabled ? RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLE_MSG  : RpEssentialsConfig.DEATH_RP_GLOBAL_DISABLE_MSG;
             var modeConfig = enabled ? RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLE_MODE : RpEssentialsConfig.DEATH_RP_GLOBAL_DISABLE_MODE;
             if (msgConfig == null || modeConfig == null) return;
@@ -296,7 +298,7 @@ public class DeathRPManager {
             String mode = modeConfig.get();
             for (ServerPlayer p : server.getPlayerList().getPlayers())
                 sendMessageToPlayer(p, raw, mode);
-        } catch (IllegalStateException e) { LOGGER.warn("[DeathRP] Config GLOBAL_TOGGLE_MSG unavailable"); }
+        } else { LOGGER.warn("[DeathRP] Config GLOBAL_TOGGLE_MSG unavailable"); }
 
         playSound(server, null,
                 RpEssentialsConfig.DEATH_RP_GLOBAL_TOGGLE_SOUND,
@@ -305,7 +307,7 @@ public class DeathRPManager {
     }
 
     public static void notifyPlayerToggle(ServerPlayer target, boolean enabled) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             var msgConfig  = enabled ? RpEssentialsConfig.DEATH_RP_PLAYER_ENABLE_MSG  : RpEssentialsConfig.DEATH_RP_PLAYER_DISABLE_MSG;
             var modeConfig = enabled ? RpEssentialsConfig.DEATH_RP_PLAYER_ENABLE_MODE : RpEssentialsConfig.DEATH_RP_PLAYER_DISABLE_MODE;
             if (msgConfig == null || modeConfig == null) return;
@@ -314,7 +316,7 @@ public class DeathRPManager {
                     .replace("{realname}", target.getName().getString());
             String mode = modeConfig.get();
             sendMessageToPlayer(target, raw, mode);
-        } catch (IllegalStateException e) { LOGGER.warn("[DeathRP] Config PLAYER_TOGGLE_MSG unavailable"); }
+        } else { LOGGER.warn("[DeathRP] Config PLAYER_TOGGLE_MSG unavailable"); }
 
         playSound(target.getServer(), target,
                 RpEssentialsConfig.DEATH_RP_PLAYER_TOGGLE_SOUND,
@@ -330,6 +332,10 @@ public class DeathRPManager {
             net.neoforged.neoforge.common.ModConfigSpec.DoubleValue pitchConfig,
             String label) {
         if (server == null) return;
+        if (!Cfg.ready(RpEssentialsConfig.SPEC)) {
+            LOGGER.warn("[DeathRP] Config {} unavailable", label);
+            return;
+        }
         try {
             if (soundConfig == null) return;
             String soundId = soundConfig.get();
@@ -348,13 +354,12 @@ public class DeathRPManager {
                             p.getX(), p.getY(), p.getZ(), volume, pitch, p.getRandom().nextLong()));
                 }
             }
-        } catch (IllegalStateException e) { LOGGER.warn("[DeathRP] Config {} unavailable", label); }
-        catch (Exception e) { LOGGER.error("[DeathRP] Error playing {}", label, e); }
+        } catch (Exception e) { LOGGER.error("[DeathRP] Error playing {}", label, e); }
     }
 
     // ── Reset ──────────────────────────────
     private static void resetCharacter(MinecraftServer server, ServerPlayer player) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             UUID id = player.getUUID();
             if (RpEssentialsConfig.DEATH_RP_RESET_NICKNAME.get())
                 ManageService.execute(server, null, id, ManageService.Action.CLEAR_NICKNAME, "", 0);
@@ -362,7 +367,7 @@ public class DeathRPManager {
                 ManageService.execute(server, null, id, ManageService.Action.CLEAR_ROLE, "", 0);
             if (RpEssentialsConfig.DEATH_RP_RESET_PROFESSIONS.get())
                 ManageService.execute(server, null, id, ManageService.Action.CLEAR_PROFESSION, "", 0);
-        } catch (IllegalStateException ignored) {}
+        }
     }
 
     // ── Affichage (délègue à ImmersivePresetHelper) ──────────────────────────────

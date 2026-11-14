@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.commands.CommandToggles;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
@@ -83,11 +84,11 @@ public class RpManageCommands {
                                         builder.suggest("1d").suggest("3d").suggest("7d").suggest("12h").suggest("30m");
                                     }
                                     if (action.equals("tp_player_platform")) {
-                                        try {
+                                        if (Cfg.ready(ModerationConfig.SPEC)) {
                                             for (String p : ModerationConfig.PLATFORMS.get()) {
                                                 builder.suggest(p.split(";", 2)[0].trim());
                                             }
-                                        } catch (IllegalStateException ignored) {}
+                                        }
                                     }
                                     return builder.buildFuture();
                                 })

@@ -1,5 +1,6 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.config.Cfg;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 import com.mojang.authlib.GameProfile;
@@ -381,12 +382,12 @@ public final class ManageService {
     private static boolean clearRole(MinecraftServer server, ServerPlayer target) {
         var silent = server.createCommandSourceStack().withSuppressedOutput().withPermission(4);
         String name = target.getName().getString();
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String entry : RpEssentialsConfig.ROLES.get()) {
                 server.getCommands().performPrefixedCommand(silent,
                         "tag " + name + " remove " + entry.split(";", 2)[0].trim());
             }
-        } catch (IllegalStateException e) {
+        } else {
             return false;
         }
         server.getCommands().performPrefixedCommand(silent, "lp user " + name + " parent set default");

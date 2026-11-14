@@ -1,5 +1,6 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import io.netty.buffer.ByteBuf;
@@ -45,7 +46,7 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
             String cleanId = packet.id().toLowerCase().trim();
             if (cleanId.isEmpty()) return;
 
-            try {
+            if (Cfg.ready(RpEssentialsConfig.SPEC)) {
                 List<String> roles = new ArrayList<>(RpEssentialsConfig.ROLES.get());
                 String removed = null;
                 for (String l : roles) {
@@ -76,7 +77,7 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
                     }
                     return details;
                 }, true);
-            } catch (IllegalStateException e) {
+            } else {
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });

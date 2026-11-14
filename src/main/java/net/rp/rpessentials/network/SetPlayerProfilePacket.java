@@ -1,6 +1,8 @@
 
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.Cfg;
+
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -267,6 +269,10 @@ public record SetPlayerProfilePacket(
     public static boolean applyRole(MinecraftServer server, ServerPlayer target, String roleId) {
         var silentSource = server.createCommandSourceStack().withSuppressedOutput().withPermission(4);
         String targetName = target.getName().getString();
+        if (!Cfg.ready(RpEssentialsConfig.SPEC)) {
+            RpEssentials.LOGGER.warn("[GUI] ROLES config unavailable when applying role '{}'", roleId);
+            return false;
+        }
         try {
             String lpGroup = null;
             for (String entry : RpEssentialsConfig.ROLES.get()) {
@@ -291,8 +297,6 @@ public record SetPlayerProfilePacket(
             SyncNametagDataPacket.broadcastDelayed(target);
             RpEssentialsScheduleManager.enforceOnlineDelayed(server);
             return true;
-        } catch (IllegalStateException e) {
-            RpEssentials.LOGGER.warn("[GUI] ROLES config unavailable when applying role '{}': {}", roleId, e.getMessage());
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[GUI] Error applying role '{}' to {}: {}", roleId, targetName, e.getMessage());
         }

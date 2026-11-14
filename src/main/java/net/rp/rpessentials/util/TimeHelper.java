@@ -1,5 +1,7 @@
 package net.rp.rpessentials.util;
 
+import net.rp.rpessentials.config.Cfg;
+
 import net.rp.rpessentials.config.ScheduleConfig;
 
 import java.text.SimpleDateFormat;
@@ -23,11 +25,11 @@ public final class TimeHelper {
     public static ZoneId zone() {
         ZoneId z = cached;
         if (z != null) return z;
+        // Not cached: the configured zone is used as soon as the config is loaded.
+        if (!Cfg.ready(ScheduleConfig.SPEC)) return ZoneId.systemDefault();
         try {
             String id = ScheduleConfig.TIMEZONE.get().trim();
             z = id.isEmpty() || id.equalsIgnoreCase("SYSTEM") ? ZoneId.systemDefault() : ZoneId.of(id);
-        } catch (IllegalStateException e) {
-            return ZoneId.systemDefault();
         } catch (DateTimeException e) {
             RpEssentials.LOGGER.warn("[Time] Unknown timezone, using the system one.");
             z = ZoneId.systemDefault();

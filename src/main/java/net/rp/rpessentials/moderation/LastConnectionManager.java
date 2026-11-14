@@ -1,5 +1,6 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.ServerLang;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -152,10 +153,10 @@ public class LastConnectionManager {
     private static java.time.LocalDate lastUnwhitelistDate = null;
 
     public static void tickAutoUnwhitelist(MinecraftServer server) {
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             if (!ModerationConfig.AUTO_UNWHITELIST_ENABLED.get()) return;
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) return;
-        } catch (IllegalStateException e) { return; }
+        } else { return; }
 
         if (TimeHelper.nowTime().getHour() != 0) return;
         java.time.LocalDate today = TimeHelper.today();
@@ -167,12 +168,12 @@ public class LastConnectionManager {
         List<? extends String> extraCmds;
         String dateFormat;
         List<String> roles;
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC, RpEssentialsConfig.SPEC)) {
             thresholdDays = ModerationConfig.AUTO_UNWHITELIST_DAYS.get();
             extraCmds = ModerationConfig.AUTO_UNWHITELIST_EXTRA_COMMANDS.get();
             dateFormat = ModerationConfig.LAST_CONNECTION_DATE_FORMAT.get();
             roles = new ArrayList<>(RpEssentialsConfig.ROLES.get());
-        } catch (IllegalStateException e) { return; }
+        } else { return; }
 
         long thresholdMs = (long) thresholdDays * 86400_000L;
         long nowMs = System.currentTimeMillis();
@@ -322,8 +323,7 @@ public class LastConnectionManager {
     }
 
     private static boolean isEnabled() {
-        try { return ModerationConfig.ENABLE_LAST_CONNECTION != null && ModerationConfig.ENABLE_LAST_CONNECTION.get(); }
-        catch (IllegalStateException e) { return false; }
+        if (Cfg.ready(ModerationConfig.SPEC)) { return ModerationConfig.ENABLE_LAST_CONNECTION != null && ModerationConfig.ENABLE_LAST_CONNECTION.get(); } else { return false; }
     }
 
     // =========================================================================
@@ -366,8 +366,7 @@ public class LastConnectionManager {
 
     public static void recordLogout(ServerPlayer player) {
         if (!isEnabled()) return;
-        try { if (!ModerationConfig.LAST_CONNECTION_TRACK_LOGOUT.get()) return; }
-        catch (IllegalStateException e) { return; }
+        if (Cfg.ready(ModerationConfig.SPEC)) { if (!ModerationConfig.LAST_CONNECTION_TRACK_LOGOUT.get()) return; } else { return; }
         ensureInitialized();
         UUID uuid = player.getUUID();
         ConnectionEntry existing = entries.get(uuid);

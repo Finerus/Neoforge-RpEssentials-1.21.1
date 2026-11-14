@@ -1,5 +1,6 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.MinecraftServer;
@@ -87,7 +88,7 @@ public final class TabBlur {
     public static Settings settings() {
         Settings s = current;
         if (s != null) return s;
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             s = new Settings(
                     RpEssentialsConfig.ENABLE_BLUR.get(),
                     RpEssentialsConfig.OPS_SEE_ALL.get(),
@@ -104,7 +105,7 @@ public final class TabBlur {
                     RpEssentialsConfig.NAMETAG_BLUR_MODE.get());
             current = s;
             return s;
-        } catch (IllegalStateException e) {
+        } else {
             return null;
         }
     }

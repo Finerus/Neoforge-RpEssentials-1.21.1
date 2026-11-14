@@ -1,5 +1,7 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.config.Cfg;
+import net.rp.rpessentials.config.RpConfig;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -60,12 +62,12 @@ public class AfkPlatformInitializer {
 
         String dimId;
         double x, y, z;
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             dimId = net.rp.rpessentials.config.RpConfig.AFK_DIMENSION.get();
             x     = net.rp.rpessentials.config.RpConfig.AFK_X.get();
             y     = net.rp.rpessentials.config.RpConfig.AFK_Y.get();
             z     = net.rp.rpessentials.config.RpConfig.AFK_Z.get();
-        } catch (IllegalStateException e) {
+        } else {
             RpEssentials.LOGGER.warn("[AfkPlatform] Config not loaded, skipping.");
             return;
         }

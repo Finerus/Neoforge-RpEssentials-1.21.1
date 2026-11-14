@@ -1,5 +1,6 @@
 package net.rp.rpessentials.identity;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.chat.Component;
@@ -92,10 +93,10 @@ public class RpEssentialsChatFormatter {
                 display, real, nickReal, prefix, suffix, nick);
 
         String fmt;
-        try {
+        if (Cfg.ready(ChatConfig.SPEC)) {
             fmt = isGlobal ? ChatConfig.GLOBAL_CHAT_FORMAT.get() : ChatConfig.PROXIMITY_CHAT_FORMAT.get();
             if (fmt == null || fmt.isBlank()) fmt = ChatConfig.CHAT_MESSAGE_FORMAT.get();
-        } catch (IllegalStateException e) {
+        } else {
             fmt = safeGetString(ChatConfig.CHAT_MESSAGE_FORMAT, "$name: $msg");
         }
 
@@ -262,9 +263,9 @@ public class RpEssentialsChatFormatter {
     // PRIVATE — UTILITAIRES
     // =========================================================================
     private static boolean isShowRealEnabled() {
-        try {
+        if (Cfg.ready(ChatConfig.SPEC)) {
             return ChatConfig.SHOW_REAL_NAME_IN_CHAT != null && ChatConfig.SHOW_REAL_NAME_IN_CHAT.get();
-        } catch (IllegalStateException e) { return false; }
+        } else { return false; }
     }
 
     private static String buildTimestamp() {
@@ -275,13 +276,11 @@ public class RpEssentialsChatFormatter {
     }
 
     private static boolean safeGetBool(net.neoforged.neoforge.common.ModConfigSpec.BooleanValue v) {
-        try { return v != null && v.get(); }
-        catch (IllegalStateException e) { return false; }
+        return Cfg.get(v, false);
     }
 
     private static String safeGetString(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> v, String def) {
-        try { return v != null ? v.get() : def; }
-        catch (IllegalStateException e) { return def; }
+        return Cfg.get(v, def);
     }
 
     private static String nullToEmpty(String s) { return s != null ? s : ""; }

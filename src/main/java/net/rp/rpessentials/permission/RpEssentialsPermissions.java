@@ -1,5 +1,6 @@
 package net.rp.rpessentials.permission;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.config.RpEssentialsConfig;
@@ -37,10 +38,10 @@ public class RpEssentialsPermissions {
     }
 
     public static int sensitiveLevel() {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             int level = RpEssentialsConfig.OP_LEVEL_BYPASS.get();
             return level > 0 ? level : 4;
-        } catch (IllegalStateException e) {
+        } else {
             return 4;
         }
     }
@@ -70,10 +71,10 @@ public class RpEssentialsPermissions {
     }
 
     private static boolean checkOpLevelBypass(ServerPlayer player) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             int opLevel = RpEssentialsConfig.OP_LEVEL_BYPASS.get();
             return opLevel > 0 && player.hasPermissions(opLevel);
-        } catch (IllegalStateException e) {
+        } else {
             return false;
         }
     }

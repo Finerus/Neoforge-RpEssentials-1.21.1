@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -39,14 +40,14 @@ public class RpStaffCommands {
 
     private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> PLATFORM_SUGGESTIONS =
             (ctx, builder) -> {
-                try {
+                if (Cfg.ready(ModerationConfig.SPEC)) {
                     if (ModerationConfig.PLATFORMS != null && ModerationConfig.PLATFORMS.get() != null) {
                         for (String platform : ModerationConfig.PLATFORMS.get()) {
                             String[] parts = platform.split(";");
                             if (parts.length > 0) builder.suggest(parts[0]);
                         }
                     }
-                } catch (IllegalStateException ignored) {}
+                }
                 return builder.buildFuture();
             };
 
@@ -95,10 +96,10 @@ public class RpStaffCommands {
                 .then(Commands.argument("value", BoolArgumentType.bool())
                         .executes(ctx -> {
                             boolean newVal = BoolArgumentType.getBool(ctx, "value");
-                            try {
+                            if (Cfg.ready(ChatConfig.SPEC)) {
                                 ChatConfig.ENABLE_PROXIMITY_SPY.set(newVal);
                                 ChatConfig.SPEC.save();
-                            } catch (IllegalStateException ignored) { return 0; }
+                            } else { return 0; }
                             ctx.getSource().getPlayerOrException().sendSystemMessage(Component.literal(
                                     Msg.get(ctx.getSource(), newVal
                                             ? MessagesConfig.PROXIMITY_CHAT_SPY_ENABLED
@@ -345,17 +346,17 @@ public class RpStaffCommands {
         long warnedPlayers = activeWarns.stream().map(w -> w.targetUUID).distinct().count();
 
         String schedule;
-        try {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
             schedule = !ScheduleConfig.ENABLE_SCHEDULE.get() ? Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_DISABLED)
                     : RpEssentialsScheduleManager.isServerOpen() ? Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_OPEN)
                     : Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_CLOSED);
-        } catch (IllegalStateException e) { schedule = Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_NA); }
+        } else { schedule = Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_NA); }
 
         String deathRp = Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_OFF);
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             if (RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED != null && RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get())
                 deathRp = Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_ON);
-        } catch (IllegalStateException ignored) {}
+        }
 
         List<Map.Entry<UUID, LastConnectionManager.ConnectionEntry>> byPlaytime = new ArrayList<>(known);
         byPlaytime.sort((a, b) -> Long.compare(

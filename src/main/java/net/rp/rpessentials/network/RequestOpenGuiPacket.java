@@ -1,5 +1,6 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -71,7 +72,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         List<OpenProfessionGuiPacket.ProfessionEntry> profEntries = new ArrayList<>();
         List<OpenRolesGuiPacket.RoleEntry> roleEntries = new ArrayList<>();
 
-        try {
+        if (Cfg.ready(ProfessionConfig.SPEC)) {
             for (String line : ProfessionConfig.PROFESSIONS.get()) {
                 String[] parts = line.split(";", 3);
                 if (parts.length == 3) {
@@ -87,11 +88,11 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
                     ));
                 }
             }
-        } catch (IllegalStateException e) {
+        } else {
             RpEssentials.LOGGER.warn("[GUI] ProfessionConfig not loaded yet");
         }
 
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String line : RpEssentialsConfig.ROLES.get()) {
                 String[] parts = line.split(";", 3);
                 if (parts.length < 1) continue;
@@ -106,7 +107,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
                 }
                 roleEntries.add(new OpenRolesGuiPacket.RoleEntry(id, lp, perms));
             }
-        } catch (IllegalStateException e) {
+        } else {
             RpEssentials.LOGGER.warn("[GUI] RpEssentialsConfig not loaded yet for roles");
         }
 
@@ -116,13 +117,13 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         List<String> gCrafts = new ArrayList<>(), gBlocks = new ArrayList<>(),
                 gItems  = new ArrayList<>(), gEquip  = new ArrayList<>(),
                 gContainers = new ArrayList<>();
-        try {
+        if (Cfg.ready(ProfessionConfig.SPEC)) {
             ProfessionConfig.GLOBAL_BLOCKED_CRAFTS.get().forEach(s -> gCrafts.add((String) s));
             ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS.get().forEach(s -> gBlocks.add((String) s));
             ProfessionConfig.GLOBAL_BLOCKED_ITEMS.get().forEach(s -> gItems.add((String) s));
             ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT.get().forEach(s -> gEquip.add((String) s));
             ProfessionConfig.CONTAINER_OPEN_RESTRICTIONS.get().forEach(s -> gContainers.add((String) s));
-        } catch (IllegalStateException e) {
+        } else {
             RpEssentials.LOGGER.warn("[GUI] ProfessionConfig not loaded for global restrictions");
         }
         PacketDistributor.sendToPlayer(player,
@@ -180,30 +181,30 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         }
 
         List<String> professionIds = new ArrayList<>();
-        try {
+        if (Cfg.ready(ProfessionConfig.SPEC)) {
             for (String line : ProfessionConfig.PROFESSIONS.get()) {
                 String[] parts = line.split(";", 2);
                 if (parts.length >= 1 && !parts[0].trim().isEmpty())
                     professionIds.add(parts[0].trim());
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         List<String> roleIds = new ArrayList<>();
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String entry : RpEssentialsConfig.ROLES.get()) {
                 String[] parts = entry.split(";", 2);
                 if (parts.length >= 1 && !parts[0].trim().isEmpty())
                     roleIds.add(parts[0].trim());
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         List<String> platformIds = new ArrayList<>();
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             for (String p : ModerationConfig.PLATFORMS.get()) {
                 String id = p.split(";", 2)[0].trim();
                 if (!id.isEmpty()) platformIds.add(id);
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         PacketDistributor.sendToPlayer(admin,
                 new OpenPlayerProfileGuiPacket(players, professionIds, roleIds, platformIds));
@@ -296,7 +297,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
     }
 
     private static String detectCurrentRole(ServerPlayer player) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String entry : RpEssentialsConfig.ROLES.get()) {
                 String[] parts = entry.split(";", 2);
                 if (parts.length >= 1) {
@@ -304,7 +305,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
                     if (player.getTags().contains(roleTag)) return roleTag;
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
         return "";
     }
 
@@ -323,7 +324,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
     // ── GUI Role ─────────────────────────────────────────────────────
     private static void handleRolesGui(ServerPlayer player) {
         List<OpenRolesGuiPacket.RoleEntry> entries = new ArrayList<>();
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String line : RpEssentialsConfig.ROLES.get()) {
                 String[] parts = line.split(";", 3);
                 if (parts.length < 1) continue;
@@ -338,7 +339,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
                 }
                 entries.add(new OpenRolesGuiPacket.RoleEntry(id, lp, perms));
             }
-        } catch (IllegalStateException e) {
+        } else {
             RpEssentials.LOGGER.warn("[GUI] RpEssentialsConfig not loaded yet");
         }
         PacketDistributor.sendToPlayer(player, new OpenRolesGuiPacket(entries));

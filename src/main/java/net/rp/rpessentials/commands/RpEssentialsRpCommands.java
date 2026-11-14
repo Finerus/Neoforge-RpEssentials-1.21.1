@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.Cfg;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -117,12 +118,12 @@ public class RpEssentialsRpCommands {
                 .requires(src -> src.getEntity() instanceof ServerPlayer)
                 .executes(ctx -> {
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
-                    try {
+                    if (Cfg.ready(RpConfig.SPEC)) {
                         if (!RpConfig.ENABLE_DICE_SYSTEM.get()) {
                             ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_DISABLED)));
                             return 0;
                         }
-                    } catch (IllegalStateException ignored) { return 0; }
+                    } else { return 0; }
                     List<DiceManager.DiceType> dice = DiceManager.getAvailableDice();
                     if (dice.isEmpty()) {
                         ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_NONE)));
@@ -139,12 +140,12 @@ public class RpEssentialsRpCommands {
                         .executes(ctx -> {
                             ServerPlayer player = ctx.getSource().getPlayerOrException();
                             String diceName = StringArgumentType.getString(ctx, "dice");
-                            try {
+                            if (Cfg.ready(RpConfig.SPEC)) {
                                 if (!RpConfig.ENABLE_DICE_SYSTEM.get()) {
                                     ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_DISABLED)));
                                     return 0;
                                 }
-                            } catch (IllegalStateException ignored) { return 0; }
+                            } else { return 0; }
                             return diceError(player, DiceManager.rollInput(player, diceName, false), diceName);
                         })));
 
@@ -159,7 +160,7 @@ public class RpEssentialsRpCommands {
             case EXPRESSIONS_DISABLED -> player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_EXPRESSIONS_DISABLED)));
             case TOO_MANY -> {
                 int count = 20, sides = 1000;
-                try { count = RpConfig.DICE_MAX_COUNT.get(); sides = RpConfig.DICE_MAX_SIDES.get(); } catch (IllegalStateException ignored) {}
+                if (Cfg.ready(RpConfig.SPEC)) { count = RpConfig.DICE_MAX_COUNT.get(); sides = RpConfig.DICE_MAX_SIDES.get(); }
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_TOO_MANY,
                         "count", String.valueOf(count), "sides", String.valueOf(sides))));
             }
@@ -176,14 +177,14 @@ public class RpEssentialsRpCommands {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         MinecraftServer server = ctx.getSource().getServer();
 
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             int combat = RpConfig.AFK_COMBAT_BLOCK_SECONDS.get();
             int hurt = player.getLastHurtByMobTimestamp();
             if (combat > 0 && hurt > 0 && player.tickCount - hurt < combat * 20) {
                 player.displayClientMessage(Component.literal(ServerLang.get(player, MessagesConfig.AFK_COMBAT)), true);
                 return 0;
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "afk")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "afk");
@@ -197,14 +198,14 @@ public class RpEssentialsRpCommands {
         double x = 0, y = 64, z = 0;
         float yaw = 0, pitch = 0;
 
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             dimId = RpConfig.AFK_DIMENSION.get();
             x     = RpConfig.AFK_X.get();
             y     = RpConfig.AFK_Y.get();
             z     = RpConfig.AFK_Z.get();
             yaw   = RpConfig.AFK_YAW.get().floatValue();
             pitch = RpConfig.AFK_PITCH.get().floatValue();
-        } catch (IllegalStateException ignored) {}
+        }
 
         ResourceLocation dimRl = ResourceLocation.tryParse(dimId);
         ServerLevel level = dimRl == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, dimRl));
@@ -228,8 +229,7 @@ public class RpEssentialsRpCommands {
     // /rp spawn
     // =========================================================================
     private static boolean spawnEnabled() {
-        try { return RpConfig.ENABLE_SPAWN_COMMAND.get(); }
-        catch (IllegalStateException e) { return false; }
+        return Cfg.get(RpConfig.ENABLE_SPAWN_COMMAND, false);
     }
 
     private static int executeSpawn(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -237,14 +237,14 @@ public class RpEssentialsRpCommands {
         MinecraftServer server = ctx.getSource().getServer();
         if (!spawnEnabled()) return 0;
 
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             int combat = RpConfig.SPAWN_COMBAT_BLOCK_SECONDS.get();
             int hurt = player.getLastHurtByMobTimestamp();
             if (combat > 0 && hurt > 0 && player.tickCount - hurt < combat * 20) {
                 player.displayClientMessage(ColorHelper.parseColors(ServerLang.get(player, MessagesConfig.AFK_COMBAT)), true);
                 return 0;
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "spawn")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "spawn");
@@ -258,7 +258,7 @@ public class RpEssentialsRpCommands {
         double x, y, z;
         float yaw, pitch;
         boolean worldSpawn = true;
-        try { worldSpawn = RpConfig.SPAWN_USE_WORLD_SPAWN.get(); } catch (IllegalStateException ignored) {}
+        worldSpawn = Cfg.get(RpConfig.SPAWN_USE_WORLD_SPAWN, worldSpawn);
 
         if (worldSpawn) {
             level = server.overworld();
@@ -271,14 +271,14 @@ public class RpEssentialsRpCommands {
         } else {
             String dimId = "minecraft:overworld";
             x = 0; y = 64; z = 0; yaw = 0; pitch = 0;
-            try {
+            if (Cfg.ready(RpConfig.SPEC)) {
                 dimId = RpConfig.SPAWN_DIMENSION.get();
                 x     = RpConfig.SPAWN_X.get();
                 y     = RpConfig.SPAWN_Y.get();
                 z     = RpConfig.SPAWN_Z.get();
                 yaw   = RpConfig.SPAWN_YAW.get().floatValue();
                 pitch = RpConfig.SPAWN_PITCH.get().floatValue();
-            } catch (IllegalStateException ignored) {}
+            }
             ResourceLocation dim = ResourceLocation.tryParse(dimId);
             level = dim == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, dim));
             if (level == null) {
@@ -385,8 +385,7 @@ public class RpEssentialsRpCommands {
         MinecraftServer server = ctx.getSource().getServer();
 
         int distance = 32;
-        try { distance = RpConfig.ACTION_DISTANCE.get(); }
-        catch (IllegalStateException ignored) {}
+        distance = Cfg.get(RpConfig.ACTION_DISTANCE, distance);
 
         final int    finalDist = distance;
 
@@ -417,13 +416,13 @@ public class RpEssentialsRpCommands {
             throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
 
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             if (!RpConfig.ENABLE_SELF_NICK.get()) {
                 player.displayClientMessage(
                         ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_SELFNICK_DISABLED)), false);
                 return 0;
             }
-        } catch (IllegalStateException ignored) { return 0; }
+        } else { return 0; }
 
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "selfnick")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "selfnick");
@@ -442,7 +441,7 @@ public class RpEssentialsRpCommands {
         }
 
         boolean allowColors = false;
-        try { allowColors = RpConfig.SELF_NICK_ALLOW_COLORS.get(); } catch (IllegalStateException ignored) {}
+        allowColors = Cfg.get(RpConfig.SELF_NICK_ALLOW_COLORS, allowColors);
 
         if (!allowColors && (nickname.contains("§") || nickname.contains("&"))) {
             player.displayClientMessage(
@@ -453,7 +452,7 @@ public class RpEssentialsRpCommands {
         String finalNick = allowColors ? nickname.replace("&", "§") : nickname;
 
         int maxLen = 24;
-        try { maxLen = RpConfig.SELF_NICK_MAX_LENGTH.get(); } catch (IllegalStateException ignored) {}
+        maxLen = Cfg.get(RpConfig.SELF_NICK_MAX_LENGTH, maxLen);
         String stripped = ColorHelper.stripAll(ColorHelper.translateAlternateColorCodes(finalNick)).trim();
         if (stripped.isEmpty()) return 0;
         if (stripped.length() > maxLen) {
@@ -500,10 +499,10 @@ public class RpEssentialsRpCommands {
 
         boolean playSound = true;
         String soundId = "minecraft:entity.arrow.hit_player";
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             playSound = RpConfig.ANNONCE_PLAY_SOUND.get();
             soundId   = RpConfig.ANNONCE_SOUND.get();
-        } catch (IllegalStateException ignored) {}
+        }
 
         final String finalSoundId  = soundId;
         final boolean finalPlaySnd = playSound;
@@ -549,8 +548,7 @@ public class RpEssentialsRpCommands {
     // UTILITAIRES
     // =========================================================================
     private static boolean isSelfNickEnabled() {
-        try { return RpConfig.ENABLE_SELF_NICK.get(); }
-        catch (IllegalStateException e) { return false; }
+        return Cfg.get(RpConfig.ENABLE_SELF_NICK, false);
     }
 
     private static void playAnnonceSound(ServerPlayer player, String soundId) {

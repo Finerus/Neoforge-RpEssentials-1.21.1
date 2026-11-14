@@ -1,5 +1,6 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.Cfg;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -30,9 +31,9 @@ public record DiceRollPacket(String diceName) implements CustomPacketPayload {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
 
-            try {
+            if (Cfg.ready(RpConfig.SPEC)) {
                 if (!RpConfig.ENABLE_DICE_SYSTEM.get()) return;
-            } catch (IllegalStateException ignored) { return; }
+            } else { return; }
 
             boolean success = DiceManager.roll(player, packet.diceName());
             if (!success) {

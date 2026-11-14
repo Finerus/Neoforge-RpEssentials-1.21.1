@@ -1,5 +1,6 @@
 package net.rp.rpessentials.permission;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
@@ -44,7 +45,7 @@ public class RpEssentialsRoleManager {
         rolePermissions.clear();
         cache.clear();
 
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String entry : RpEssentialsConfig.ROLES.get()) {
                 String[] parts = entry.split(";", 3);
                 if (parts.length < 1) continue;
@@ -59,7 +60,7 @@ public class RpEssentialsRoleManager {
                 }
                 rolePermissions.put(id, perms);
             }
-        } catch (IllegalStateException e) {
+        } else {
             RpEssentials.LOGGER.debug("[RoleManager] Config not loaded yet.");
         }
     }
@@ -119,18 +120,18 @@ public class RpEssentialsRoleManager {
             Set<Permission> rolePerms = rolePermissions.get(tag.toLowerCase());
             if (rolePerms != null) result.addAll(rolePerms);
         }
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String staffTag : RpEssentialsConfig.STAFF_TAGS.get()) {
                 if (playerTags.contains(staffTag)) {
                     result.add(Permission.IS_STAFF);
                     break;
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
 
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             if (!RpEssentialsConfig.USE_LUCKPERMS_GROUPS.get()) return result;
-        } catch (IllegalStateException ignored) {}
+        }
 
         try {
             net.luckperms.api.LuckPerms lp = net.luckperms.api.LuckPermsProvider.get();
@@ -141,8 +142,7 @@ public class RpEssentialsRoleManager {
                 if (primaryPerms != null) result.addAll(primaryPerms);
 
                 List<? extends String> staffGroups = List.of();
-                try { staffGroups = RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS.get(); }
-                catch (IllegalStateException ignored) {}
+                staffGroups = Cfg.get(RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS, staffGroups);
                 if (staffGroups.contains(primary)) result.add(Permission.IS_STAFF);
 
                 for (net.luckperms.api.model.group.Group group :
@@ -154,7 +154,7 @@ public class RpEssentialsRoleManager {
                 }
 
                 boolean nodes = true;
-                try { nodes = RpEssentialsConfig.LP_SYNC_ENABLED.get(); } catch (IllegalStateException ignored) {}
+                nodes = Cfg.get(RpEssentialsConfig.LP_SYNC_ENABLED, nodes);
                 if (nodes) {
                     for (Permission perm : Permission.values()) {
                         if (user.getCachedData().getPermissionData()

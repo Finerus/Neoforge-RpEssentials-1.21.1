@@ -1,5 +1,6 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
@@ -67,7 +68,7 @@ public record SaveGlobalRestrictionsPacket(
             if (!(ctx.player() instanceof ServerPlayer player)) return;
             if (!RpEssentialsPermissions.isStaff(player)) return;
 
-            try {
+            if (Cfg.ready(ProfessionConfig.SPEC)) {
                 List<Object[]> details = new ArrayList<>();
                 applyCategory(details, MessagesConfig.GUI_CAT_BLOCKED_CRAFTS, ProfessionConfig.GLOBAL_BLOCKED_CRAFTS,
                         PacketValidation.cleanItems(packet.blockedCrafts()));
@@ -103,7 +104,7 @@ public record SaveGlobalRestrictionsPacket(
                     return out;
                 }, true);
 
-            } catch (IllegalStateException e) {
+            } else {
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });

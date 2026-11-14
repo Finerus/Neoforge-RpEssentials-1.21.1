@@ -1,5 +1,6 @@
 package net.rp.rpessentials;
 
+import net.rp.rpessentials.config.Cfg;
 import com.mojang.logging.LogUtils;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -166,8 +167,7 @@ public class RpEssentials {
         if (t % 20 == 0) WorldBorderManager.tickZoneViews(server);
 
         int wbInterval = 40;
-        try { wbInterval = RpEssentialsConfig.WORLD_BORDER_CHECK_INTERVAL.get(); }
-        catch (IllegalStateException ignored) {}
+        wbInterval = Cfg.get(RpEssentialsConfig.WORLD_BORDER_CHECK_INTERVAL, wbInterval);
         if ((t + 13) % wbInterval == 0) {
             WorldBorderManager.tick(server);
         }
@@ -179,7 +179,7 @@ public class RpEssentials {
 
             LocalTime now = RpEssentialsScheduleManager.nowTime();
 
-            try {
+            if (Cfg.ready(ScheduleConfig.SPEC)) {
                 if (ScheduleConfig.ENABLE_SCHEDULE.get()
                         && !RpEssentialsScheduleManager.getSchedules().isEmpty()) {
                     RpEssentialsScheduleManager.DaySchedule active  = RpEssentialsScheduleManager.getActiveSchedule();
@@ -196,16 +196,13 @@ public class RpEssentials {
                         RpEssentialsScheduleManager.checkWarnings(server, now, active);
                     }
 
-                    if (!RpEssentialsScheduleManager.hasClosedToday() && active == null) {
-                        try {
-                            if (!"FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) {
-                                RpEssentialsScheduleManager.markClosedToday();
-                                RpEssentialsScheduleManager.closeServer(server);
-                            }
-                        } catch (IllegalStateException ignored) {}
+                    if (!RpEssentialsScheduleManager.hasClosedToday() && active == null
+                            && !"FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) {
+                        RpEssentialsScheduleManager.markClosedToday();
+                        RpEssentialsScheduleManager.closeServer(server);
                     }
                 }
-            } catch (IllegalStateException ignored) {}
+            }
 
             RpEssentialsScheduleManager.tickDeathHoursNotifications(server, now);
             RpEssentialsScheduleManager.tickHrpNotifications(server, now);
@@ -243,10 +240,10 @@ public class RpEssentials {
         PlaytimeManager.clearAll();
         TabBlur.clearAll();
         clearMetaCache();
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             if (net.rp.rpessentials.config.ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get())
                 net.rp.rpessentials.moderation.WarnManager.purgeExpiredWarns();
-        } catch (IllegalStateException ignored) {}
+        }
         NameCache.clear();
         RpEssentialsIO.shutdown();
         LuckPermsSync.stop();

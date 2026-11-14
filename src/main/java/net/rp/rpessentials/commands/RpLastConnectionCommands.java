@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -40,12 +41,12 @@ public class RpLastConnectionCommands {
     }
 
     private static int lastConnectionPlayer(CommandContext<CommandSourceStack> ctx) {
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
                 ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_DISABLED)));
                 return 0;
             }
-        } catch (IllegalStateException e) {
+        } else {
             ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }
@@ -99,12 +100,12 @@ public class RpLastConnectionCommands {
     }
 
     private static int lastConnectionList(CommandContext<CommandSourceStack> ctx, int page) {
-        try {
+        if (Cfg.ready(ModerationConfig.SPEC)) {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
                 ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_DISABLED)));
                 return 0;
             }
-        } catch (IllegalStateException e) {
+        } else {
             ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }

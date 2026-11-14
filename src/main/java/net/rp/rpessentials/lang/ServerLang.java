@@ -1,5 +1,6 @@
 package net.rp.rpessentials.lang;
 
+import net.rp.rpessentials.config.Cfg;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,13 +36,11 @@ public final class ServerLang {
     }
 
     private static boolean modSource() {
-        try { return "MOD".equalsIgnoreCase(MessagesConfig.MESSAGE_SOURCE.get()); }
-        catch (IllegalStateException e) { return false; }
+        if (Cfg.ready(MessagesConfig.SPEC)) { return "MOD".equalsIgnoreCase(MessagesConfig.MESSAGE_SOURCE.get()); } else { return false; }
     }
 
     private static String serverLang() {
-        try { return normalize(MessagesConfig.SERVER_LANGUAGE.get()); }
-        catch (IllegalStateException e) { return "en_us"; }
+        if (Cfg.ready(MessagesConfig.SPEC)) { return normalize(MessagesConfig.SERVER_LANGUAGE.get()); } else { return "en_us"; }
     }
 
     private static Map<String, String> read(String l) {
@@ -85,12 +84,7 @@ public final class ServerLang {
     }
 
     public static String get(ServerPlayer p, ModConfigSpec.ConfigValue<String> cv, String... replacements) {
-        String value;
-        try {
-            value = cv.get();
-        } catch (IllegalStateException e) {
-            value = cv.getDefault();
-        }
+        String value = Cfg.get(cv, cv.getDefault());
         if (modSource()) {
             String key = String.join(".", cv.getPath());
             String t = p != null ? load(lang(p)).get(key) : null;

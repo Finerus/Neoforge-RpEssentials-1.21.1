@@ -1,5 +1,6 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.util.Collections;
@@ -17,11 +18,11 @@ public class TabListCache {
     private static volatile boolean loaded = false;
 
     public static void reload() {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             blacklist = new HashSet<>(RpEssentialsConfig.BLACKLIST.get());
             alwaysVisible = new HashSet<>(RpEssentialsConfig.ALWAYS_VISIBLE_LIST.get());
             loaded = true;
-        } catch (IllegalStateException e) {
+        } else {
             loaded = false;
         }
     }

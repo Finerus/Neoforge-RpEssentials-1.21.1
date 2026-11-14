@@ -1,5 +1,6 @@
 package net.rp.rpessentials.identity;
 
+import net.rp.rpessentials.config.Cfg;
 import java.util.Objects;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -208,7 +209,7 @@ public class NicknameManager {
     public static String rejection(UUID self, String nick, boolean staff, ServerPlayer viewer) {
         ensureInitialized();
         String n = plain(nick);
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             if (RpConfig.NICK_UNIQUE.get()) {
                 for (Map.Entry<UUID, String> e : nicknames.entrySet()) {
                     if (!e.getKey().equals(self) && plain(e.getValue()).equalsIgnoreCase(n))
@@ -221,7 +222,7 @@ public class NicknameManager {
                         return ServerLang.get(viewer, MessagesConfig.NICK_FORBIDDEN);
                 }
             }
-        } catch (IllegalStateException ignored) {}
+        }
         return null;
     }
 

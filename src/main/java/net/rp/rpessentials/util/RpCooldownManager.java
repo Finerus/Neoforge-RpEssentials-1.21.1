@@ -1,5 +1,7 @@
 package net.rp.rpessentials.util;
 
+import net.rp.rpessentials.config.Cfg;
+import net.rp.rpessentials.config.RpConfig;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,7 +78,7 @@ public class RpCooldownManager {
     // =========================================================================
 
     private static int getCooldownMs(String command) {
-        try {
+        if (Cfg.ready(RpConfig.SPEC)) {
             return switch (command) {
                 case "action"    -> net.rp.rpessentials.config.RpConfig.ACTION_COOLDOWN_SECONDS.get() * 1000;
                 case "commerce"  -> net.rp.rpessentials.config.RpConfig.COMMERCE_COOLDOWN_SECONDS.get() * 1000;
@@ -87,7 +89,7 @@ public class RpCooldownManager {
                 case "spawn" -> net.rp.rpessentials.config.RpConfig.SPAWN_COOLDOWN_SECONDS.get() * 1000;
                 default          -> 0;
             };
-        } catch (IllegalStateException e) {
+        } else {
             return 0;
         }
     }

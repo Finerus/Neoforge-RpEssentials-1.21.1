@@ -1,5 +1,6 @@
 package net.rp.rpessentials.api;
 
+import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.identity.NicknameManager;
@@ -99,12 +100,12 @@ public final class RpPlaceholders {
     }
 
     private static String[] roleLine(ServerPlayer player) {
-        try {
+        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String entry : RpEssentialsConfig.ROLES.get()) {
                 String[] parts = entry.split(";", 3);
                 if (!parts[0].isBlank() && player.getTags().contains(parts[0].trim())) return parts;
             }
-        } catch (IllegalStateException ignored) {}
+        }
         return null;
     }
 
