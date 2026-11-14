@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -31,10 +33,10 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
             new StreamCodec<>() {
                 @Override
                 public SaveConfigEntriesPacket decode(FriendlyByteBuf buf) {
-                    String fileId = buf.readUtf();
-                    int    count  = buf.readVarInt();
+                    String fileId = buf.readUtf(128);
+                    int    count  = PacketValidation.readCount(buf);
                     Map<String, String> changes = new HashMap<>(count);
-                    for (int i = 0; i < count; i++) changes.put(buf.readUtf(), buf.readUtf());
+                    for (int i = 0; i < count; i++) changes.put(buf.readUtf(1024), buf.readUtf());
                     return new SaveConfigEntriesPacket(fileId, changes);
                 }
                 @Override
@@ -63,7 +65,7 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
                 return;
             }
             if (packet.changes().isEmpty()) {
-                player.sendSystemMessage(Component.literal("§7[Config] No changes to apply."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NO_CHANGES)));
                 return;
             }
 
@@ -89,7 +91,7 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
             }
 
             if (validatedChanges.isEmpty()) {
-                player.sendSystemMessage(Component.literal("§c[Config] No valid changes to apply."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NO_VALID)));
                 return;
             }
 
@@ -111,16 +113,19 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
                         details.add("§e" + key + " §7: §c" + shorten(oldVal) + " §7-> §a" + shorten(newVal));
                     }
                 }
-                if (applied < validatedChanges.size()) {
-                    details.add("§8" + (validatedChanges.size() - applied) + " value(s) not applied (invalid or out of range)");
-                }
-                GuiFeedback.report(player, "Config §e" + packet.fileId() + " §f: " + applied + " change(s) applied", details, true);
+                final int notApplied = validatedChanges.size() - applied;
+                GuiFeedback.report(player, MessagesConfig.GUI_CONFIG_APPLIED,
+                        new String[]{"file", packet.fileId(), "count", String.valueOf(applied)}, v -> {
+                            List<String> out = new ArrayList<>(details);
+                            if (notApplied > 0) out.add(ServerLang.get(v, MessagesConfig.GUI_CONFIG_NOT_APPLIED,
+                                    "count", String.valueOf(notApplied)));
+                            return out;
+                        }, true);
 
                 PacketDistributor.sendToPlayer(player, ConfigFileEntriesPacket.from(
                         packet.fileId(), ConfigInspector.getEntries(packet.fileId(), sensitive)));
             } else {
-                player.sendSystemMessage(Component.literal(
-                        "§c[Config] No changes could be applied (validation failed?)."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_FAILED)));
             }
         });
     }

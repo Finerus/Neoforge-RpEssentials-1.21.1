@@ -48,24 +48,32 @@ public abstract class MixinPlayerList implements IRpPlayerList {
     )
     public void onBroadcastSystemMessage(Component component, boolean bl, CallbackInfo ci) {
         if (rpessentials$isSendingCustomMessage) return;
+        if (!(component.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc)) return;
+
+        String key = tc.getKey();
+        if (key.startsWith("chat.type.advancement.")) {
+            if (net.rp.rpessentials.moderation.VanishManager.isAdvancementHidden()) {
+                ci.cancel();
+                java.util.UUID id = net.rp.rpessentials.moderation.VanishManager.awardingId();
+                for (net.minecraft.server.level.ServerPlayer p : ((PlayerList) (Object) this).getPlayers()) {
+                    if (!net.rp.rpessentials.moderation.VanishManager.isHiddenFrom(p, id))
+                        p.sendSystemMessage(component.copy().append(Component.literal(net.rp.rpessentials.ServerLang.get(p,
+                                net.rp.rpessentials.config.MessagesConfig.VANISH_ADVANCEMENT_HIDDEN))));
+                }
+            }
+            return;
+        }
+
+        boolean isJoin = key.startsWith("multiplayer.player.joined");
+        boolean isLeave = key.equals("multiplayer.player.left");
+        if (!isJoin && !isLeave) return;
 
         try {
             if (ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE == null
                     || !ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE.get()) return;
         } catch (Exception e) { return; }
 
-        if (!(component.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc)) return;
-        String key = tc.getKey();
-        boolean isJoin = key.startsWith("multiplayer.player.joined");
-        boolean isLeave = key.equals("multiplayer.player.left");
-        if (isJoin || isLeave) RpEssentials.LOGGER.debug("[JoinLeave] Intercepted key: {}", key);
-
-        if (!isJoin && !isLeave) return;
         ci.cancel();
-
-        // Le message custom est envoyé depuis RpEssentialsEventHandler
-        // qui dispose directement du ServerPlayer — on annule juste le vanilla.
-        RpEssentials.LOGGER.debug("[JoinLeave] Vanilla {} cancelled.", isJoin ? "join" : "leave");
     }
 
     // =========================================================================

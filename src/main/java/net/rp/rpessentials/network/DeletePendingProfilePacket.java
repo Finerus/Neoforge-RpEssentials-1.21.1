@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -46,7 +48,7 @@ public record DeletePendingProfilePacket(UUID targetUuid) implements CustomPacke
             String name = PendingProfileManager.getMcName(packet.targetUuid());
             PendingProfileManager.consumePending(packet.targetUuid());
 
-            admin.sendSystemMessage(Component.literal("§a[RpEssentials] Prepared profile for " + name + " deleted."));
+            admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_PENDING_DELETED, "player", name)));
             RpEssentials.LOGGER.info("[RpEssentials] Prepared profile for {} deleted by {}",
                     name, admin.getGameProfile().getName());
 

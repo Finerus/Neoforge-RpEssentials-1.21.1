@@ -1,6 +1,110 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [5.1.0]
+
+### Breaking Changes
+
+* **World border shape:** the new `worldBorderShape` option defaults to `SQUARE`. Existing servers switch from a circular limit to a square one, where `worldBorderDistance` is half of the side. Set it to `CIRCLE` to keep the previous behavior.
+* **Network:** `ConfigGuiFilesPacket`, `SyncTooltipPacket`, `ManagePlayerPacket` (new tempban action), the nametag packets and the history packets changed or were added. Server and clients must run the same version.
+
+### Added
+
+* **Item tags and wildcards:** `#namespace:tag` and `*` are accepted in every restriction list, with suggestions in the GUI and rotating item icons.
+* **Restriction scopes:** `item|dim=<dimension>` and `item|zone=<zone>` on blocked lists.
+* **Tooltips in multiplayer:** restrictions show `✔` (allowed), `✘` (blocked), `✔ (exempt)` for exempted staff, and `~` when a scoped restriction does not apply at your position.
+* **Hex colors and gradients:** `&#RRGGBB` and `<grad:#RRGGBB:#RRGGBB>text</grad>` in chat, nicknames, messages, lore and licenses.
+* **Blur options:** `blurStyle` (`OBFUSCATED`, `DASHES`, `HASHES`, `STARS`), `blurCodes`, and `nametagBlurMode` (`OFF`, `BLUR`, `HIDE`).
+* **Vanish:** advancement messages are marked `[hidden]` for players who can see the vanished player, and optional fake join and leave messages (`fakeJoinLeaveMessages`, `fakeMessageMark`).
+* **Named zones:** `circle`, `square`, `rect` and `ellipse` shapes, `zoneActions` commands on enter and exit, and `/rpessentials zone show|hide|list` with particles.
+* **Death RP:** character archive in the history, optional reset of nickname, role and professions, and `/rpessentials deathrp revive`.
+* **Private message spy:** opt-in with a login notice.
+* **Chat:** `playerChatCodes` restricts which formatting codes non-staff players can use.
+* **Nicknames:** `nicknamesUnique`, `nicknameBlacklist`, and `hideRealNames` for `/list` and command suggestions.
+* **Validation and backups:** `/rpessentials config validate` (also run at startup), `/rpessentials config backup` with rotating zip backups.
+* **Time zone:** the `timezone` option applies to every date in the mod.
+* **`/rp afk`:** cooldown and refusal after a fight, and the AFK platform is placed again when the coordinates change.
+* **Public API:** `LicenseGrantedEvent`, `LicenseRevokedEvent`, `ProfessionCheckEvent`, `DeathRpEvent` and `RpEssentialsAPI`.
+* **Config Manager:** groups per mod, per-file themes, and an extended registration API.
+* **Messages:** `messageSource` (`CONFIG` -> use message from the config or `MOD` -> use message pre-translated by the mod), `serverLanguage`, translation files in `data/rpessentials/messages/`, and `/rpessentials config exportlang`.
+* **Empty restriction lists** now display a description of what they do.
+* **Container editor:** suggestions are limited to blocks that open a menu.
+* **Staff messages:** almost every staff and command message (`manage`, `zone`, `vanish`, `blurtab`, `staff`, licenses, warn, mute, note, deathrp, absence, inspect, schedule, nicknames, `config`, `stats`, help, and the server replies of the GUI) is declared in `rpessentials-messages.toml` and translated in `data/rpessentials/messages/` in `MOD` mode. In `MOD` mode a missing translation falls back to `serverLanguage`, then `en_us`, then the toml value.
+* **Licenses:** `licenseIdDisplay` option in `rpessentials-professions.toml` (`NAME_ONLY`, `NAME_AND_ID`, `ID_ONLY`) for the profession shown on the license card.
+* **Vanish:** `{level}` placeholder in the tab `marker` (for example `&7[V{level}] `).
+* **Commands without prefix:** `unprefixedStaffCommands` and `unprefixedRpCommands` in `rpessentials-core.toml` (off by default) let you type every `/rpessentials` and `/rp` subcommand directly (`/warn`, `/nick`, `/license`, `/afk`, `/spawn`...). The prefixed commands keep working. A name already used by Minecraft or another mod (`/help`...) is skipped and listed in the log and in `/rpessentials config validate`. Takes effect on config reload. New `/manage` shortcut.
+* **`/rp spawn`:** teleports to the world spawn or to configured coordinates, with cooldown and fight lock (`Spawn` section of `rpessentials-rp.toml`, off by default).
+* **Bonus commands:** `afkCommands` and `spawnCommands` run as the player after `/rp afk` and `/rp spawn` (`@s`, `~ ~ ~` and `{player}` supported).
+* **Translations everywhere:** no more hardcoded text. Every message is sent in the language of the player who receives it in `MOD` mode, including broadcasts (announcements, `/rp commerce`, `/rp action`, dice, staff broadcast, spy messages), durations ("2h 30min remaining", "Permanent"), playtimes, day names, `/colors`, `/schedule` status, `config validate`, login notices and the license item. GUI screens, restriction tooltips and the license card use the game language (`assets/rpessentials/lang`).
+* **Stats tab:** the Player Profile Stats tab also shows the first join, last login and logout (with "x days ago"), all warns received and mutes received, the current absence, temporary licenses with their end date, RP death state and number of RP deaths, whitelist, OP level, role and LuckPerms group, and vanish level, the number of logins (total, last 7 and 30 days), the playtime of the last 7 and 30 days, and the latest RP nicknames. These lines are built on the server in the staff member's language, and the tab scrolls.
+* **Player history:** one timeline per player in `history.json` (warns, warn removals, mutes, unmutes, notes, manage actions, licenses given/revoked/expired, RP deaths, nickname changes). `/rpessentials history <player> [page]` (works for offline players), `/rpessentials history purge`, and a new History tab in the Player Profile GUI. `Player History` section of `rpessentials-moderation.toml`: `historyEnabled`, `historyRetention` (days per type, `-1` = forever, default `*=365`, `NOTE=-1`, `DEATH_RP=-1`) and `historyMaxPerPlayer`. Old lines are removed at startup and every hour. Vanish is respected: an action done by a vanished staff member, and a vanish / unvanish action, are only shown (command, GUI, stats) to staff whose OP level can see that vanish level.
+* **Drawn interface:** the RpEssentials screens can use drawn textures (`assets/rpessentials/textures/gui/sprites/`: background, panel, buttons, list lines, tabs, text fields, note lines, section titles, separators, with nine-slice scaling). Each player switches between the drawn and the classic interface with the button at the top right of every screen, or with `guiStyle` in the new client file `rpessentials-client.toml`. A missing texture keeps the classic look, and resource packs can replace the textures.
+* **Dice:** `/roll` accepts expressions (`d20`, `2d6+3`, `d100-10`, `<dice>+2`), advantage and disadvantage (`adv d20`, `dis d20`) and secret rolls (`/roll secret d20`, shown only to the roller and the staff). The details are shown next to the total (`4 + 6 + 3`). New `Dice Rolls` section in `rpessentials-rp.toml`: `allowExpressions`, `allowSecretRolls`, `maxDiceCount`, `maxDiceSides`.
+* **Dice API:** `DiceRollEvent.Pre` (cancellable, result can be replaced) and `DiceRollEvent.Post` (result and audience), with `getRoll()` (each value, modifier, advantage, secret, expression), plus `RpEssentialsAPI.getDiceTypes`, `getDice`, `rollDice`, `rollDiceSilently`, `rollDiceDetailed` and `parseDice`.
+* **Temp ban:** `manage <player> tempban <duration> [reason]` (`3d`, `12h`, `30m`, `1d12h`, `2w`), with confirmation, quick action after an unwhitelist, and a Temp ban button in the profile GUI (in days). The player sees the end date on the login screen and the ban is lifted automatically.
+* **Teleport delay:** `spawnWarmupSeconds` and `afkWarmupSeconds` (`Teleport Warmup` section of `rpessentials-rp.toml`, 0 by default) make the player wait without moving, with a countdown in the action bar. `cancelOnMove` and `cancelOnDamage` cancel it. The cooldown only starts once the teleport happened.
+* **Teleport API:** `RpTeleportEvent` (`Warmup` cancellable with a changeable delay, `Tick` every tick for animations, `Cancelled`, `Pre` cancellable, `Post`), plus `RpEssentialsAPI.teleport(...)` so other mods can use the same delayed teleport.
+* **Schedule exceptions:** `scheduleExceptions` in `rpessentials-schedule.toml` (`2026-12-25=CLOSED`, `2026-12-31=20:00-03:00`) replace the weekly schedule on given dates, overnight sessions included. Upcoming ones are listed in `/schedule`.
+* **Variables API:** `%rpessentials:<name>%` variables (`nick`, `name`, `display`, `role`, `role_group`, `vanished`, `vanish_level`, `professions`, `professions_ids`, `profession_count`, `warns`, `muted`, `playtime`) through `RpEssentialsAPI.resolvePlaceholders`, `getPlaceholder` and `registerPlaceholder`, plus `getDisplayName`, `getRole`, `getVanishLevel` and `getProfessionNames`.
+* **`config validate`:** also reports dimensions that do not exist (AFK, spawn, platforms), unknown sounds, and licenses held for professions that were removed. Results are in the viewer's language.
+
+### Improved
+
+* **Player activity:** `lastconnection.json` now records the first login (for players who joined before, the date of their save file is used at their next login), the number of logins, and logins and playtime per day for the last 35 days.
+* **Grouped saves:** data files are written at most once per second with the latest data, instead of once per change (a full reset used to rewrite `licenses.json` about ten times). Pending saves are written at server stop.
+* **Expired warns:** at login only the joining player's expired warns are purged; the global purge runs at startup and at server stop.
+* **Dice:** the dice list is parsed once and again only when the config changes, instead of at every roll.
+* **Player names:** Minecraft names are kept in memory, so saving licenses, nicknames and Death RP overrides no longer looks every player up.
+* **Tab list blur:** rewritten with a per-pair state, a packet is only sent when a name actually changes.
+* **Profession restrictions:** compiled once per reload and cached per player.
+* **LuckPerms:** prefixes and suffixes are cached, with no exception when LuckPerms is absent.
+* **Config refresh:** only what the edited file affects is reloaded.
+* **Nametags:** one batched packet at login, duplicate mixin removed, own nametag registered but displayed only when vanilla allows it (freecam).
+* **Persistence:** `lastconnection.json` is written periodically, on logout and on shutdown, and dates are stored in milliseconds.
+* **Chat format:** `chatMessageFormat` is now a real fallback and the config comments were clarified.
+* **Config Manager:** "Discard" and the apply button are disabled when there is nothing to apply.
+
+### Fixed
+
+* **GUI layout:** content now keeps the same inner margin on the right as on the left; tabs, rows of manage actions, the license buttons, the note field, the platform choices and the Config Manager footer adapt to the window width and to the number of buttons instead of overflowing (the Pardon button and the History tab went past the panel, the Config Manager footer went past the bottom and could overlap Close). Buttons are spaced 4 px apart. The left lists show as many rows as the window height allows; the profession editor puts the ID and name fields side by side when there is room, uses more color columns, and lays the role permissions out in columns so nothing goes under the bottom buttons; on short windows the nickname colors of the profile become small color squares (name in the tooltip); the Config Manager file list scrolls (wheel or arrows). The Config Manager rows stop before the scroll column, which now shows a scroll indicator, and the "No changes / Apply" text is the label of its button. The nickname and profession name palettes are the same in both screens, and the profession name shows the same colored preview as the nickname (hex and gradients included). Every list of the GUIs uses the Minecraft list widget: History, Stats, Notes and Manage tabs, player list, profession and role lists, Global restriction list, the restriction and container sub screens, the Config Manager file list, its entries (hover an option name to read its comment; ↺ turns yellow when the value differs from the default) and its list editor (smooth scrolling, mouse wheel, vanilla scroll bar; long lines wrapped and indented, every other history line slightly highlighted); the old ▲▼ arrows of these lists are gone. The left lists of the Player Profile and the Profession Editor fill the height, and their bottom field / New button are aligned with the save buttons; their rows are spread so the ▼ arrow sits right above that button.
+* **Config comments:** every display mode option lists all its values (CHAT, ACTION_BAR, TITLE, IMMERSIVE, IMMERSIVE:<preset>), `forceState` names the real commands, `licenseIdDisplay` shows the right default, and `scheduleExceptions` explains every accepted value (new `OPEN` value: open all day).
+* **Profile GUI:** the nickname set from the GUI now goes through the same checks as `/nick` (a nickname already used is refused, with a message to the staff).
+* **Restricted items:** right clicking an item you cannot use no longer plays the item animation on your side.
+* **Force closed notice:** the staff login warning pointed to commands that do not exist (`/calendar opennow`); it now shows `/schedule forceopen` and `/schedule resetforcestate`.
+* **Schedule:** players were not kicked at closing time when the server had started (or passed midnight) before the opening time. The closing now always fires after an opening.
+* **Schedule:** an overnight session (for example 22:00 to 02:00) was considered open between midnight and its closing time even on days where the previous day was closed.
+* **Network:** a malformed config save packet from any client could make the server run out of memory.
+* **Startup:** a misspelled AFK dimension (for example with capital letters) crashed the server at startup; `/rp afk` and staff platforms with a bad dimension or coordinate no longer throw an error.
+* **Cooldowns:** disconnecting and reconnecting no longer resets a running cooldown (`/rp commerce`, `/rp incognito`, dice, selfnick, afk, spawn).
+* **Temporary licenses:** the vanilla profession tag is now removed when a temporary license expires.
+* **License revoke:** the command no longer sends a "Removed tag" message to every operator.
+* **Saving:** licenses and prepared profiles are copied before being written on the save thread, which avoids rare save errors; `mutes.json` keeps the player names again.
+* **GUI:** a prepared profile can no longer receive a license for a profession that does not exist.
+* **Config reload** no longer resets nicknames and licenses.
+* **Schedule summary** is logged only when it changes.
+* **`/whois`** now finds hex and gradient nicknames.
+* **Silent commands** still log to the console when `logToStaff` is disabled.
+* **Hex nicknames** are displayed correctly in `/list`, success messages and the profile preview.
+
+### Technical
+
+* **New classes:** `CommandToggles`, `ClientRestrictionHandler`, `NameCache`, `HistoryManager`, `RequestPlayerHistoryPacket`, `PlayerHistoryPacket`, `TeleportWarmupManager`, `RpTeleportEvent`, `RpPlaceholders`. `MessagesConfig.formatExpiry`, viewer-aware `formatDuration`, `PlaytimeManager.format`, `getDayName` and `getTimeUntilNextEvent`. Unused tooltip and restriction-line builders removed.
+* **Classes:** `TabBlur`, `TimeHelper`, `ServerLang`, `BackupManager`, `ConfigValidator`, `RpZoneCommands`, `RpEssentialsAPI`, `ClientTooltipRestrictions`, `SyncTooltipPacket`, `SyncNametagBatchPacket`.
+* **Removed mixins:** `MixinEntityRenderer` and `MixinPlayerListAdvancement` (merged into existing code).
+
+### Migration Notes
+
+* New options are added to the existing config files automatically. Review `worldBorderShape` before updating a server in production.
+* `messageSource` defaults to `CONFIG`: existing message customizations keep working.
+* Entries written as `item|dim=...` or `item|zone=...` are only enforced by the server.
+
+### Personal notes
+
+Hi, so hum, as hard as it is to believe, it's not considered as a major update... Even if the changelog is huuuuugggeeee, it's technically just little details.
+I think that as the mod is beginning to be really polished, I have to focus on details and assure that everything is well-connected.
+That's also why I added so much API, when this mod will be finished I will go on other mods but those new mods will probably be connected to RpEssentials so doing that will allow me to connect those mods.
+Anyway, enjoy all those little details!
+
 ## [5.0.1] 
 
 ### Added

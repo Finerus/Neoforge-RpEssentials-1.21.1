@@ -1,9 +1,12 @@
 package net.rp.rpessentials.identity;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.TimeHelper;
 import net.rp.rpessentials.commands.RpChatUi;
 import net.rp.rpessentials.config.ChatConfig;
 
@@ -54,6 +57,7 @@ public class RpEssentialsChatFormatter {
     private static final Pattern MARKDOWN_ITALIC        = Pattern.compile("\\*(.+?)\\*");
     private static final Pattern MARKDOWN_UNDERLINE     = Pattern.compile("__(.+?)__");
     private static final Pattern MARKDOWN_STRIKETHROUGH = Pattern.compile("~~(.+?)~~");
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     // =========================================================================
     // CHAT PRINCIPAL
@@ -69,7 +73,8 @@ public class RpEssentialsChatFormatter {
         }
 
         String timestamp  = buildTimestamp();
-        String body       = safeGetBool(ChatConfig.MARKDOWN_ENABLED) ? applyMarkdown(message) : message;
+        String clean = sanitize(sender, message);
+        String body = safeGetBool(ChatConfig.MARKDOWN_ENABLED) ? applyMarkdown(clean) : clean;
         String color      = getColorCode(safeGetString(ChatConfig.CHAT_MESSAGE_COLOR, "WHITE"));
         String finalBody  = color + body;
 
@@ -89,6 +94,7 @@ public class RpEssentialsChatFormatter {
         String fmt;
         try {
             fmt = isGlobal ? ChatConfig.GLOBAL_CHAT_FORMAT.get() : ChatConfig.PROXIMITY_CHAT_FORMAT.get();
+            if (fmt == null || fmt.isBlank()) fmt = ChatConfig.CHAT_MESSAGE_FORMAT.get();
         } catch (IllegalStateException e) {
             fmt = safeGetString(ChatConfig.CHAT_MESSAGE_FORMAT, "$name: $msg");
         }
@@ -233,7 +239,7 @@ public class RpEssentialsChatFormatter {
             }
         }
 
-        return fmt.replaceAll("\\s+", " ").trim() + "§r";
+        return WHITESPACE.matcher(fmt).replaceAll(" ").trim() + "§r";
     }
 
     /** Valeur de {player} pour les commandes RP avec showRealName. */
@@ -255,7 +261,6 @@ public class RpEssentialsChatFormatter {
     // =========================================================================
     // PRIVATE — UTILITAIRES
     // =========================================================================
-
     private static boolean isShowRealEnabled() {
         try {
             return ChatConfig.SHOW_REAL_NAME_IN_CHAT != null && ChatConfig.SHOW_REAL_NAME_IN_CHAT.get();
@@ -265,7 +270,7 @@ public class RpEssentialsChatFormatter {
     private static String buildTimestamp() {
         if (!safeGetBool(ChatConfig.ENABLE_TIMESTAMP)) return "";
         try {
-            return new SimpleDateFormat(ChatConfig.TIMESTAMP_FORMAT.get()).format(new Date());
+            return TimeHelper.format(ChatConfig.TIMESTAMP_FORMAT.get());
         } catch (Exception e) { return ""; }
     }
 
@@ -281,10 +286,19 @@ public class RpEssentialsChatFormatter {
 
     private static String nullToEmpty(String s) { return s != null ? s : ""; }
 
+    private static final Pattern OBFUSCATED = Pattern.compile("(?i)§k");
+
+    private static String sanitize(ServerPlayer sender, String message) {
+        String mode = safeGetString(ChatConfig.PLAYER_CHAT_CODES, "ALL");
+        if (mode.equalsIgnoreCase("ALL") || net.rp.rpessentials.RpEssentialsPermissions.isStaff(sender)) return message;
+        String converted = ColorHelper.translateAlternateColorCodes(message);
+        if (mode.equalsIgnoreCase("NONE")) return ColorHelper.stripAll(converted);
+        return OBFUSCATED.matcher(converted).replaceAll("");
+    }
+
     // =========================================================================
     // MARKDOWN
     // =========================================================================
-
     private static String applyMarkdown(String message) {
         message = MARKDOWN_BOLD.matcher(message).replaceAll("§l$1§r");
         message = MARKDOWN_ITALIC.matcher(message).replaceAll("§o$1§r");
@@ -319,8 +333,14 @@ public class RpEssentialsChatFormatter {
     // /colors
     // =========================================================================
     public static Component getColorsHelp() {
+        return getColorsHelp(null);
+    }
+
+    /** /colors content in the viewer's language. */
+    public static Component getColorsHelp(ServerPlayer v) {
         StringBuilder sb = new StringBuilder();
-        sb.append(RpChatUi.header("Available Colors"));
+        sb.append(RpChatUi.header(ServerLang.get(v, MessagesConfig.COLORS_TITLE)));
+        String[] colorNames = ServerLang.get(v, MessagesConfig.COLORS_NAMES).split(",");
 
         String[][] colors = {
                 {"§0","0","BLACK"},     {"§1","1","DARK_BLUE"},
@@ -332,23 +352,37 @@ public class RpEssentialsChatFormatter {
                 {"§c","c","RED"},       {"§d","d","LIGHT_PURPLE"},
                 {"§e","e","YELLOW"},    {"§f","f","WHITE"}
         };
-        for (String[] c : colors)
-            sb.append(c[0]).append("███ §7").append(c[2]).append(" §8(&").append(c[1]).append(")\n");
+        for (int i = 0; i < colors.length; i++) {
+            String[] c = colors[i];
+            String name = i < colorNames.length ? colorNames[i].trim() : c[2];
+            sb.append(c[0]).append("███ §7").append(name).append(" §8(&").append(c[1]).append(")\n");
+        }
 
-        sb.append(RpChatUi.section("Formatting"));
-        sb.append("§lBold§r §7(&l)   §oItalic§r §7(&o)   §nUnderline§r §7(&n)\n");
-        sb.append("§mStrikethrough§r §7(&m)   §kObfuscated§r §7(&k)   §rReset §7(&r)\n");
+        String nick = ServerLang.get(v, MessagesConfig.COLORS_VAR_NICK);
+        String real = ServerLang.get(v, MessagesConfig.COLORS_VAR_REAL);
+        String nickReal = ServerLang.get(v, MessagesConfig.COLORS_VAR_NICK_REAL);
+        sb.append(RpChatUi.section(ServerLang.get(v, MessagesConfig.COLORS_FORMATTING)));
+        sb.append("§l").append(ServerLang.get(v, MessagesConfig.COLORS_BOLD)).append("§r §7(&l)   §o")
+                .append(ServerLang.get(v, MessagesConfig.COLORS_ITALIC)).append("§r §7(&o)   §n")
+                .append(ServerLang.get(v, MessagesConfig.COLORS_UNDERLINE)).append("§r §7(&n)\n");
+        sb.append("§m").append(ServerLang.get(v, MessagesConfig.COLORS_STRIKE)).append("§r §7(&m)   §k")
+                .append(ServerLang.get(v, MessagesConfig.COLORS_OBFUSCATED)).append("§r §7(&k)   §r")
+                .append(ServerLang.get(v, MessagesConfig.COLORS_RESET)).append(" §7(&r)\n");
 
-        sb.append(RpChatUi.section("Chat Variables"));
-        sb.append("§f$name/$nick §8nick or username\n");
-        sb.append("§f$real §8always MC username\n");
-        sb.append("§f$nick_real §8Nick (RealName)\n");
+        sb.append(RpChatUi.section(ServerLang.get(v, MessagesConfig.COLORS_CHAT_VARS)));
+        sb.append("§f$name/$nick §8").append(nick).append("\n");
+        sb.append("§f$real §8").append(real).append("\n");
+        sb.append("§f$nick_real §8").append(nickReal).append("\n");
 
-        sb.append(RpChatUi.section("RP Command Variables"));
-        sb.append("§f{player}/{nick} §8nick or username\n");
-        sb.append("§f{real} §8always MC name\n");
-        sb.append("§f{nick_real} §8Nick (RealName)\n");
+        sb.append(RpChatUi.section(ServerLang.get(v, MessagesConfig.COLORS_RP_VARS)));
+        sb.append("§f{player}/{nick} §8").append(nick).append("\n");
+        sb.append("§f{real} §8").append(real).append("\n");
+        sb.append("§f{nick_real} §8").append(nickReal).append("\n");
 
+        sb.append(RpChatUi.section(ServerLang.get(v, MessagesConfig.COLORS_HEX)));
+        sb.append("§f&#RRGGBB §8").append(ServerLang.get(v, MessagesConfig.COLORS_HEX_COLOR)).append("\n");
+        sb.append("§f<grad:#RRGGBB:#RRGGBB>").append(ServerLang.get(v, MessagesConfig.COLORS_GRADIENT_TEXT))
+                .append("</grad> §8").append(ServerLang.get(v, MessagesConfig.COLORS_GRADIENT)).append("\n");
         sb.append(RpChatUi.LINE);
         return Component.literal(sb.toString());
     }

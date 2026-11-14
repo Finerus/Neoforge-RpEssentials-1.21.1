@@ -3,6 +3,7 @@ package net.rp.rpessentials.mixin;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.identity.NicknameManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -37,7 +38,7 @@ public abstract class MixinServerPlayer {
         if (NicknameManager.hasNickname(player.getUUID())) {
             String nickname = NicknameManager.getNickname(player.getUUID());
             if (nickname != null && !nickname.isEmpty()) {
-                cir.setReturnValue(Component.literal(nickname));
+                cir.setReturnValue(ColorHelper.parseSection(nickname));
             }
         }
     }

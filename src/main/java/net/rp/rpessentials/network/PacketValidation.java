@@ -12,8 +12,8 @@ public final class PacketValidation {
     public static final int MAX_LIST = 2000;
     public static final int MAX_STRING = 256;
 
-    private static final Pattern ITEM = Pattern.compile("[a-z0-9_.\\-/*:]+");
-    private static final Pattern CONTAINER = Pattern.compile("[a-z0-9_.\\-/*:]+;[a-z0-9_]+(,[a-z0-9_]+)*");
+    private static final Pattern ITEM = Pattern.compile("#?[a-z0-9_.\\-/*:]+(\\|(dim|zone)=[A-Za-z0-9_.\\-/:]+)*");
+    private static final Pattern CONTAINER = Pattern.compile("#?[a-z0-9_.\\-/*:]+;[a-z0-9_]+(,[a-z0-9_]+)*");
 
     private PacketValidation() {}
 

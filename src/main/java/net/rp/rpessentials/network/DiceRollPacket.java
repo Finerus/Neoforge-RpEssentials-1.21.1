@@ -9,6 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.DiceManager;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpConfig;
 
 public record DiceRollPacket(String diceName) implements CustomPacketPayload {
@@ -34,9 +36,9 @@ public record DiceRollPacket(String diceName) implements CustomPacketPayload {
 
             boolean success = DiceManager.roll(player, packet.diceName());
             if (!success) {
-                player.sendSystemMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                "§c[DICE] Unknown dice type: §f" + packet.diceName()));
+                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                        ServerLang.get(player,
+                                MessagesConfig.DICE_UNKNOWN, "dice", packet.diceName())));
             }
         });
     }

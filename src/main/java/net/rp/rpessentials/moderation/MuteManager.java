@@ -4,10 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.ColorHelper;
-import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsIO;
+import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.MessagesConfig;
 
 import java.io.File;
@@ -56,16 +53,11 @@ public class MuteManager {
         }
 
         public String getFormattedExpiry() {
-            if (isPermanent()) return "Permanent";
-            if (isExpired()) return "§cExpired";
-            long remaining = expiresAt - System.currentTimeMillis();
-            long totalMinutes = remaining / 60_000;
-            long days    = totalMinutes / 1440;
-            long hours   = (totalMinutes % 1440) / 60;
-            long minutes = totalMinutes % 60;
-            if (days > 0)  return days + "d " + hours + "h remaining";
-            if (hours > 0) return hours + "h " + minutes + "min remaining";
-            return minutes + "min remaining";
+            return getFormattedExpiry(null);
+        }
+
+        public String getFormattedExpiry(ServerPlayer viewer) {
+            return MessagesConfig.formatExpiry(viewer, expiresAt);
         }
     }
 
@@ -80,14 +72,20 @@ public class MuteManager {
     // =========================================================================
     // INIT
     // =========================================================================
+    private static volatile boolean ready = false;
 
-    private static synchronized void ensureInitialized() {
-        if (dataFile != null) return;
+    private static void ensureInitialized() {
+        if (!ready) init();
+    }
+
+    private static synchronized void init() {
+        if (ready) return;
         try {
             File dataFolder = RpEssentialsDataPaths.getDataFolder();
             if (!dataFolder.exists()) dataFolder.mkdirs();
             dataFile = new File(dataFolder, "mutes.json");
             if (dataFile.exists()) loadFromFile();
+            ready = true;
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[MuteManager] Failed to initialize", e);
         }
@@ -140,7 +138,7 @@ public class MuteManager {
         }
 
         File targetFile = dataFile;
-        RpEssentialsIO.saveJson(targetFile, snapshot, GSON);
+        RpEssentialsIO.saveJson(targetFile, data, GSON);
     }
 
     // =========================================================================
@@ -163,6 +161,9 @@ public class MuteManager {
                 issuerName, reason,
                 System.currentTimeMillis(), expiresAt));
         saveToFile();
+        HistoryManager.record(targetUUID, targetName, HistoryManager.MUTE, issuerName,
+                reason + " (" + (durationMinutes > 0 ? MessagesConfig.formatDuration(durationMinutes)
+                        : ServerLang.get(null, MessagesConfig.TIME_PERMANENT)) + ")");
         RpEssentials.LOGGER.info("[MuteManager] {} muted by {} — {}", targetName, issuerName, reason);
     }
 
@@ -191,9 +192,9 @@ public class MuteManager {
     public static boolean denyIfMuted(ServerPlayer player) {
         if (!isMuted(player.getUUID())) return false;
         MuteEntry entry = getEntry(player.getUUID());
-        String expiry = entry == null || entry.isPermanent() ? "Permanent" : entry.getFormattedExpiry();
+        String expiry = entry == null ? ServerLang.get(player, MessagesConfig.TIME_PERMANENT) : entry.getFormattedExpiry(player);
         player.sendSystemMessage(ColorHelper.parseColors(
-                MessagesConfig.get(MessagesConfig.MUTE_BLOCKED_MESSAGE, "expiry", expiry)));
+                ServerLang.get(player, MessagesConfig.MUTE_BLOCKED_MESSAGE, "expiry", expiry)));
         return true;
     }
 
@@ -209,9 +210,10 @@ public class MuteManager {
         return new HashMap<>(mutes);
     }
 
-    public static void reload() {
+    public static synchronized void reload() {
+        ready = false;
         dataFile = null;
         mutes.clear();
-        ensureInitialized();
+        init();
     }
 }

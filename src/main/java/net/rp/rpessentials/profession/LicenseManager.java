@@ -5,10 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsIO;
-import net.rp.rpessentials.SyncNametagDataPacket;
+import net.rp.rpessentials.*;
+import net.rp.rpessentials.api.event.LicenseGrantedEvent;
 
 import java.io.File;
 import java.io.FileReader;
@@ -38,7 +36,7 @@ public class LicenseManager {
         public AuditEntry(String action, String staffName, String staffUUID,
                           String targetName, String targetUUID,
                           String profession, String extra) {
-            this.timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            this.timestamp = TimeHelper.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
             this.action = action;
             this.staffName = staffName;
             this.staffUUID = staffUUID;
@@ -90,9 +88,14 @@ public class LicenseManager {
     // =========================================================================
     // INITIALISATION
     // =========================================================================
+    private static volatile boolean ready = false;
 
-    private static synchronized void ensureInitialized() {
-        if (licenseFile != null) return;
+    private static void ensureInitialized() {
+        if (!ready) init();
+    }
+
+    private static synchronized void init() {
+        if (ready) return;
         try {
             File dataFolder = RpEssentialsDataPaths.getDataFolder();
             if (!dataFolder.exists()) dataFolder.mkdirs();
@@ -104,7 +107,7 @@ public class LicenseManager {
             if (licenseFile.exists()) loadFromFile();
             if (auditFile.exists())   loadAuditFromFile();
             if (tempFile.exists())    loadTempFromFile();
-
+            ready = true;
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[LicenseManager] Failed to initialize", e);
         }
@@ -178,17 +181,8 @@ public class LicenseManager {
         Map<String, List<String>> data = new HashMap<>();
         for (Map.Entry<UUID, List<String>> entry : snapshot.entrySet()) {
             UUID uuid = entry.getKey();
-            String mcName = "Unknown";
-            if (server != null) {
-                ServerPlayer online = server.getPlayerList().getPlayer(uuid);
-                if (online != null) {
-                    mcName = online.getName().getString();
-                } else if (server.getProfileCache() != null) {
-                    mcName = server.getProfileCache().get(uuid)
-                            .map(p -> p.getName()).orElse("Unknown");
-                }
-            }
-            data.put(uuid.toString() + " (" + mcName + ")", entry.getValue());
+            String mcName = net.rp.rpessentials.NameCache.getOrUnknown(uuid);
+            data.put(uuid.toString() + " (" + mcName + ")", new ArrayList<>(entry.getValue()));
         }
 
         File targetFile = licenseFile;
@@ -248,8 +242,9 @@ public class LicenseManager {
     public static void removeLicense(UUID playerUUID, String profession) {
         ensureInitialized();
         List<String> licenses = playerLicenses.get(playerUUID);
+        boolean removed = false;
         if (licenses != null) {
-            licenses.remove(profession);
+            removed = licenses.remove(profession);
             if (licenses.isEmpty()) playerLicenses.remove(playerUUID);
             saveToFile();
         }
@@ -261,6 +256,10 @@ public class LicenseManager {
         if (server != null) {
             ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
             if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
+        }
+        if (removed) {
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+                    new net.rp.rpessentials.api.event.LicenseRevokedEvent(playerUUID, profession));
         }
     }
 
@@ -313,14 +312,15 @@ public class LicenseManager {
         return null;
     }
 
-    public static void reload() {
+    public static synchronized void reload() {
+        ready = false;
         licenseFile = null;
-        auditFile   = null;
-        tempFile    = null;
+        auditFile = null;
+        tempFile = null;
         playerLicenses.clear();
         auditLog.clear();
         tempLicenses.clear();
-        ensureInitialized();
+        init();
     }
 
     // =========================================================================
@@ -339,7 +339,7 @@ public class LicenseManager {
                                  String profession, String extra) {
         ensureInitialized();
 
-        String staffName = staff != null ? staff.getName().getString() : "Console";
+        String staffName = staff != null ? staff.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
         String staffUUID = staff != null ? staff.getUUID().toString() : "console";
 
         AuditEntry entry = new AuditEntry(
@@ -352,6 +352,9 @@ public class LicenseManager {
 
         auditLog.add(entry);
         saveAuditToFile();
+        net.rp.rpessentials.moderation.HistoryManager.record(target.getUUID(), target.getName().getString(),
+                net.rp.rpessentials.moderation.HistoryManager.LICENSE, staffName,
+                action + " " + profession + (extra != null && !extra.isEmpty() ? " - " + extra : ""));
 
         RpEssentials.LOGGER.info("[LicenseAudit] {} | {} -> {} | {} | {}",
                 action, staffName, target.getName().getString(), profession,
@@ -371,10 +374,15 @@ public class LicenseManager {
     public static void logActionSystem(String action, String targetName, String targetUUID,
                                        String profession, String extra) {
         ensureInitialized();
-        AuditEntry entry = new AuditEntry(action, "System", "system",
+        AuditEntry entry = new AuditEntry(action, net.rp.rpessentials.moderation.HistoryManager.system(), "system",
                 targetName, targetUUID, profession, extra);
         auditLog.add(entry);
         saveAuditToFile();
+        try {
+            net.rp.rpessentials.moderation.HistoryManager.record(UUID.fromString(targetUUID), targetName,
+                    net.rp.rpessentials.moderation.HistoryManager.LICENSE, null,
+                    action + " " + profession + (extra != null && !extra.isEmpty() ? " - " + extra : ""));
+        } catch (IllegalArgumentException ignored) {}
         RpEssentials.LOGGER.info("[LicenseAudit] {} | System -> {} | {} | {}",
                 action, targetName, profession, extra != null ? extra : "");
     }
@@ -396,7 +404,7 @@ public class LicenseManager {
                                       String issuedAt, String expiresAt) {
         ensureInitialized();
 
-        String staffName = staff != null ? staff.getName().getString() : "Console";
+        String staffName = staff != null ? staff.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
         String staffUUID = staff != null ? staff.getUUID().toString() : "console";
 
         TempLicenseEntry entry = new TempLicenseEntry(

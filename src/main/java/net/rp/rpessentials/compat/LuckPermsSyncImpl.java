@@ -92,6 +92,7 @@ final class LuckPermsSyncImpl {
     private static void onNodeMutate(MinecraftServer server, NodeMutateEvent e) {
         if (e.isUser()) {
             UUID id = ((User) e.getTarget()).getUniqueId();
+            RpEssentials.invalidateMeta(id);
             server.execute(() -> {
                 RpEssentialsRoleManager.invalidate(id);
                 RpEssentialsPermissions.invalidateCache(id);
@@ -99,6 +100,7 @@ final class LuckPermsSyncImpl {
             return;
         }
         if (!e.isGroup()) return;
+        RpEssentials.clearMetaCache();
         if (!touchesRp(e.getDataBefore()) && !touchesRp(e.getDataAfter())) return;
         mark(server, ((Group) e.getTarget()).getName());
     }
@@ -140,10 +142,10 @@ final class LuckPermsSyncImpl {
         RpEssentialsPermissions.clearCache();
         RpEssentialsScheduleManager.enforceOnlineDelayed(server);
 
-        Component msg = Component.literal("§6[LuckPerms] §7Roles synced from LuckPerms: §f"
-                + String.join("§7, §f", touched));
+        String roleList = String.join("§7, §f", touched);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(msg);
+            if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(Component.literal(
+                    net.rp.rpessentials.ServerLang.get(p, net.rp.rpessentials.config.MessagesConfig.LP_ROLES_SYNCED, "roles", roleList)));
         }
         RpEssentials.LOGGER.info("[LuckPerms] Roles synced from LuckPerms: {}", touched);
     }

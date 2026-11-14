@@ -21,8 +21,10 @@ public class ScheduleConfig {
     // GÉNÉRAL
     // =========================================================================
     public static final ModConfigSpec.BooleanValue ENABLE_SCHEDULE;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> SCHEDULE_EXCEPTIONS;
     public static final ModConfigSpec.BooleanValue KICK_NON_STAFF;
     public static final ModConfigSpec.BooleanValue NOTIFY_REFUSED_JOIN;
+    public static final ModConfigSpec.ConfigValue<String> TIMEZONE;
     public static final ModConfigSpec.ConfigValue<List<? extends Integer>> WARNING_TIMES;
 
     // =========================================================================
@@ -117,6 +119,11 @@ public class ScheduleConfig {
                 .comment("If true, staff members are notified when a player tries to join while the server is closed.")
                 .define("notifyRefusedJoin", false);
 
+        TIMEZONE = BUILDER
+                .comment("Time zone used by the schedule, Death Hours and HRP Hours, for example Europe/Paris.",
+                        "SYSTEM = time zone of the machine running the server.")
+                .define("timezone", "SYSTEM");
+
         WARNING_TIMES = BUILDER
                 .comment("Minutes before closing at which warning messages are sent.",
                         "Example: [30, 15, 5, 1]")
@@ -205,8 +212,11 @@ public class ScheduleConfig {
         BUILDER.push("Forced State");
 
         FORCE_STATE = BUILDER
-                .comment("Forced server state. NONE = follow schedule, FORCE_OPEN = always open, FORCE_CLOSED = always closed.",
-                        "Managed by /opennow and /closenow. Do not edit manually while the server is running.")
+                .comment("Forced server state:",
+                        "  NONE         : follow the schedule (default)",
+                        "  FORCE_OPEN   : always open",
+                        "  FORCE_CLOSED : always closed",
+                        "Set by /schedule forceopen, /schedule forceclose and /schedule resetforcestate.")
                 .define("forceState", "NONE");
 
         FORCE_CLOSED_MESSAGE = BUILDER
@@ -289,10 +299,28 @@ public class ScheduleConfig {
                 .comment("Message broadcast when HRP-allowed hours begin. Placeholders: {start} {end}")
                 .define("hrpAllowedMessage", "§a[HRP] §fHRP (Out-of-Roleplay) is freely allowed until {end}.");
         HRP_MESSAGE_MODE = BUILDER
-                .comment("Display mode for HRP messages: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
+                .comment("Display mode for HRP messages:",
+                        "  CHAT       : chat message",
+                        "  ACTION_BAR : above the hotbar",
+                        "  TITLE      : big title in the middle of the screen",
+                        "  IMMERSIVE  : animated text with the 'default' preset",
+                        "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
                 .define("hrpMessageMode", "CHAT");
         BUILDER.pop();
 
+
+        BUILDER.push("Exceptions");
+        SCHEDULE_EXCEPTIONS = BUILDER
+                .comment("Special dates that replace the weekly schedule for one day. One line per date: <date>=<value>",
+                        "  <date>  : year-month-day, for example 2026-12-25",
+                        "  <value> : CLOSED      -> closed all day",
+                        "            OPEN        -> open all day (00:00 to 23:59)",
+                        "            HH:MM-HH:MM -> open between these hours, for example 14:00-23:00",
+                        "                           an end before the start runs past midnight: 20:00-03:00 closes at 3 am the next day",
+                        "Example: [\"2026-12-24=18:00-02:00\", \"2026-12-25=CLOSED\", \"2026-07-14=OPEN\"]",
+                        "Dates already passed are ignored. The next ones are listed in /schedule. A wrong line is reported to the staff.")
+                .defineList("scheduleExceptions", List.of(), obj -> obj instanceof String);
+        BUILDER.pop();
 
         SPEC = BUILDER.build();
     }

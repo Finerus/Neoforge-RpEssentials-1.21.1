@@ -45,6 +45,16 @@ public class LicenseCardRenderer {
         ps.mulPose(Axis.ZP.rotationDegrees(side * 5f));
     }
 
+    public static String shownProfession(CompoundTag tag) {
+        String id = tag.getString("professionId");
+        String name = ClientTooltipRestrictions.displayName(id);
+        if (name == null && tag.contains("professionName")) name = tag.getString("professionName");
+        String mode = ClientTooltipRestrictions.idMode();
+        if (name == null || name.isBlank() || mode.equals("ID_ONLY")) return id;
+        name = name.replace("&", "§");
+        return mode.equals("NAME_ONLY") ? name : name + " §8(" + id + ")";
+    }
+
     public static void renderCard(PoseStack poseStack, MultiBufferSource bufferSource,
                                   ItemStack stack, int combinedLight) {
 
@@ -58,7 +68,7 @@ public class LicenseCardRenderer {
         CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
         if (cd != null) {
             CompoundTag tag = cd.copyTag();
-            profId = tag.getString("professionId");
+            profId = shownProfession(tag);
             if (tag.contains("holderName")) holder = tag.getString("holderName");
             if (tag.contains("issueDate")) issueDate = tag.getString("issueDate");
             if (tag.contains("expiryDate")) expiryDate = tag.getString("expiryDate");

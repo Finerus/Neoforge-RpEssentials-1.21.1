@@ -20,10 +20,11 @@ import java.util.concurrent.TimeUnit;
 
 public class RpEssentialsScheduleManager {
 
+    private static String lastSummary = "";
+
     // =========================================================================
     // STRUCTURE
     // =========================================================================
-
     public record DaySchedule(LocalTime open, LocalTime close) {
 
         /**
@@ -72,9 +73,53 @@ public class RpEssentialsScheduleManager {
     // =========================================================================
     // STATE
     // =========================================================================
-
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("HH:mm");
     private static final Map<DayOfWeek, DaySchedule> schedules = new EnumMap<>(DayOfWeek.class);
+    /** Dated exceptions. A null value means closed that day. */
+    private static final Map<LocalDate, DaySchedule> exceptions = new java.util.TreeMap<>();
+
+    /** Schedule of a given date: its exception if there is one, else the weekly schedule. */
+    public static DaySchedule scheduleFor(LocalDate date) {
+        if (exceptions.containsKey(date)) return exceptions.get(date);
+        return schedules.get(date.getDayOfWeek());
+    }
+
+    /** Upcoming exceptions (today included), in date order. A null value means closed. */
+    public static Map<LocalDate, DaySchedule> getUpcomingExceptions() {
+        Map<LocalDate, DaySchedule> out = new java.util.LinkedHashMap<>();
+        LocalDate today = today();
+        for (Map.Entry<LocalDate, DaySchedule> e : exceptions.entrySet()) {
+            if (!e.getKey().isBefore(today)) out.put(e.getKey(), e.getValue());
+        }
+        return out;
+    }
+
+    private static void parseExceptions() {
+        exceptions.clear();
+        for (String raw : ScheduleConfig.SCHEDULE_EXCEPTIONS.get()) {
+            String line = raw.trim();
+            int eq = line.indexOf('=');
+            try {
+                if (eq < 0) throw new IllegalArgumentException();
+                LocalDate date = LocalDate.parse(line.substring(0, eq).trim());
+                String v = line.substring(eq + 1).trim();
+                if (v.equalsIgnoreCase("CLOSED")) {
+                    exceptions.put(date, null);
+                    continue;
+                }
+                if (v.equalsIgnoreCase("OPEN")) {
+                    exceptions.put(date, new DaySchedule(LocalTime.MIDNIGHT, LocalTime.of(23, 59)));
+                    continue;
+                }
+                String[] t = v.split("-");
+                if (t.length != 2 || !isValidTimeFormat(t[0].trim()) || !isValidTimeFormat(t[1].trim()))
+                    throw new IllegalArgumentException();
+                exceptions.put(date, new DaySchedule(LocalTime.parse(t[0].trim(), FMT), LocalTime.parse(t[1].trim(), FMT)));
+            } catch (Exception e) {
+                warnConfig(MessagesConfig.SCHED_WARN_INVALID_EXCEPTION, "value", line);
+            }
+        }
+    }
 
     private static final Set<Integer> sentWarnings    = new HashSet<>();
     private static boolean hasClosedToday             = false;
@@ -90,6 +135,8 @@ public class RpEssentialsScheduleManager {
     public static void reload() {
         schedules.clear();
         sentWarnings.clear();
+        configWarnings.clear();
+        TimeHelper.reload();
 
         try {
             schedules.put(DayOfWeek.MONDAY,    parseDay(ScheduleConfig.MONDAY_ENABLED,    ScheduleConfig.MONDAY_OPEN,    ScheduleConfig.MONDAY_CLOSE));
@@ -99,22 +146,26 @@ public class RpEssentialsScheduleManager {
             schedules.put(DayOfWeek.FRIDAY,    parseDay(ScheduleConfig.FRIDAY_ENABLED,    ScheduleConfig.FRIDAY_OPEN,    ScheduleConfig.FRIDAY_CLOSE));
             schedules.put(DayOfWeek.SATURDAY,  parseDay(ScheduleConfig.SATURDAY_ENABLED,  ScheduleConfig.SATURDAY_OPEN,  ScheduleConfig.SATURDAY_CLOSE));
             schedules.put(DayOfWeek.SUNDAY,    parseDay(ScheduleConfig.SUNDAY_ENABLED,    ScheduleConfig.SUNDAY_OPEN,    ScheduleConfig.SUNDAY_CLOSE));
+            parseExceptions();
 
+            StringBuilder sb = new StringBuilder();
             for (DayOfWeek day : DayOfWeek.values()) {
                 DaySchedule s = schedules.get(day);
-                if (s == null)
-                    RpEssentials.LOGGER.info("[Schedule]   {} → CLOSED", day);
-                else if (s.crossesMidnight())
-                    RpEssentials.LOGGER.info("[Schedule]   {} → {}–{} (cross-midnight)", day, s.open().format(FMT), s.close().format(FMT));
-                else
-                    RpEssentials.LOGGER.info("[Schedule]   {} → {}–{}", day, s.open().format(FMT), s.close().format(FMT));
+                sb.append(day).append(s == null ? " CLOSED" : " " + s.open().format(FMT) + "-" + s.close().format(FMT)
+                        + (s.crossesMidnight() ? "*" : "")).append("; ");
+            }
+            String summary = sb.toString();
+            if (!summary.equals(lastSummary)) {
+                lastSummary = summary;
+                RpEssentials.LOGGER.info("[Schedule] {}", summary);
             }
 
             net.minecraft.server.MinecraftServer srv = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
             if (srv != null) {
                 for (ServerPlayer p : srv.getPlayerList().getPlayers()) {
                     if (!RpEssentialsPermissions.isStaff(p)) continue;
-                    for (String w : configWarnings) p.sendSystemMessage(Component.literal("§c[Schedule] " + w));
+                    for (String w : getConfigWarnings(p)) p.sendSystemMessage(Component.literal(
+                            ServerLang.get(p, MessagesConfig.SCHED_SYS_CONFIG_WARNING, "warning", w)));
                 }
             }
         } catch (IllegalStateException e) {
@@ -132,11 +183,11 @@ public class RpEssentialsScheduleManager {
         String openStr = open.get();
         String closeStr = close.get();
         if (!isValidTimeFormat(openStr)) {
-            warnConfig("Invalid open time '" + openStr + "' (expected HH:MM): day disabled.");
+            warnConfig(MessagesConfig.SCHED_WARN_INVALID_OPEN, "day", String.join(".", open.getPath()), "value", openStr);
             return null;
         }
         if (!isValidTimeFormat(closeStr)) {
-            warnConfig("Invalid close time '" + closeStr + "' (expected HH:MM): day disabled.");
+            warnConfig(MessagesConfig.SCHED_WARN_INVALID_CLOSE, "day", String.join(".", close.getPath()), "value", closeStr);
             return null;
         }
         return new DaySchedule(LocalTime.parse(openStr, FMT), LocalTime.parse(closeStr, FMT));
@@ -159,16 +210,18 @@ public class RpEssentialsScheduleManager {
      *  3. null — no session is active.
      */
     public static DaySchedule getActiveSchedule() {
-        LocalTime now   = LocalTime.now();
-        DayOfWeek today = LocalDate.now().getDayOfWeek();
+        LocalTime now   = nowTime();
+        LocalDate todayDate = today();
 
         // Check today first
-        DaySchedule todayS = schedules.get(today);
-        if (todayS != null && todayS.isOpen(now)) return todayS;
+        DaySchedule todayS = scheduleFor(todayDate);
+        // An overnight session (22:00 -> 02:00) only belongs to today from its opening time;
+        // before midnight-close it is yesterday's session.
+        if (todayS != null && todayS.isOpen(now)
+                && (!todayS.crossesMidnight() || !now.isBefore(todayS.open()))) return todayS;
 
         // Check yesterday (cross-midnight session that started the day before)
-        DayOfWeek yesterday = today.minus(1);
-        DaySchedule yesterdayS = schedules.get(yesterday);
+        DaySchedule yesterdayS = scheduleFor(todayDate.minusDays(1));
         if (yesterdayS != null && yesterdayS.crossesMidnight() && yesterdayS.isOpen(now))
             return yesterdayS;
 
@@ -176,7 +229,7 @@ public class RpEssentialsScheduleManager {
     }
 
     public static DaySchedule getTodaySchedule() {
-        return schedules.get(LocalDate.now().getDayOfWeek());
+        return scheduleFor(today());
     }
 
     public static Map<DayOfWeek, DaySchedule> getSchedules() {
@@ -211,7 +264,7 @@ public class RpEssentialsScheduleManager {
         DaySchedule next = getNextOpenSchedule();
         String open  = next != null ? next.open().format(FMT)  : "?";
         String close = next != null ? next.close().format(FMT) : "?";
-        String day   = getNextOpenDayName();
+        String day   = getNextOpenDayName(player);
         String msg;
         try {
             msg = ScheduleConfig.MSG_SERVER_CLOSED.get()
@@ -219,7 +272,7 @@ public class RpEssentialsScheduleManager {
                     .replace("{close}", close)
                     .replace("{day}",   day);
         } catch (IllegalStateException e) {
-            msg = "§cThe server is currently closed.";
+            msg = ScheduleConfig.MSG_SERVER_CLOSED.getDefault().replace("{open}", open).replace("{close}", close).replace("{day}", day);
         }
         return ColorHelper.parseColors(msg);
     }
@@ -242,29 +295,35 @@ public class RpEssentialsScheduleManager {
     }
 
     public static String getTimeUntilNextEvent() {
+        return getTimeUntilNextEvent(null);
+    }
+
+    /** Short status ("Open: closing in 2h05"...) in the viewer's language. */
+    public static String getTimeUntilNextEvent(ServerPlayer v) {
         try {
             if (!ScheduleConfig.ENABLE_SCHEDULE.get())
-                return "Schedule disabled: server always open.";
+                return ServerLang.get(v, MessagesConfig.SCHED_NEXT_DISABLED);
         } catch (IllegalStateException e) {
-            return "Schedule not initialized";
+            return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NOT_INIT);
         }
-        if (schedules.isEmpty()) return "Schedule not initialized";
+        if (schedules.isEmpty()) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NOT_INIT);
 
         DaySchedule active = getActiveSchedule();
-        LocalTime now = LocalTime.now();
+        LocalTime now = nowTime();
 
         if (active != null) {
             long min = active.minutesUntilClose(now);
             if (min < 0) min = 0;
-            return String.format("Open: closing in %dh%02d", min / 60, min % 60);
+            return ServerLang.get(v, MessagesConfig.SCHED_NEXT_OPEN,
+                    "h", String.valueOf(min / 60), "min", String.format("%02d", min % 60));
         }
 
         // Find next opening
         NextOpening n = findNextOpening();
-        if (n == null) return "Closed: no open day configured";
-        return String.format("Closed: next open: %s at %s",
-                n.today() ? "today" : n.day().getDisplayName(TextStyle.FULL, Locale.ENGLISH),
-                n.schedule().open().format(FMT));
+        if (n == null) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NONE);
+        return ServerLang.get(v, MessagesConfig.SCHED_NEXT_CLOSED,
+                "day", n.today() ? ServerLang.get(v, MessagesConfig.SCHED_TODAY) : getDayName(v, n.day()),
+                "time", n.schedule().open().format(FMT));
     }
 
     public static void enforceOnline(MinecraftServer server) {
@@ -288,7 +347,7 @@ public class RpEssentialsScheduleManager {
     public static boolean hasOpenedToday() { return hasOpenedToday; }
     public static boolean hasClosedToday() { return hasClosedToday; }
 
-    public static void markOpenedToday() { hasOpenedToday = true; closeNoticeSent = false; }
+    public static void markOpenedToday() { hasOpenedToday = true; hasClosedToday = false; closeNoticeSent = false; }
 
     public static void resetDailyFlags() {
         hasClosedToday = false;
@@ -308,10 +367,10 @@ public class RpEssentialsScheduleManager {
         } catch (IllegalStateException e) {
             return;
         }
-        DayOfWeek today = LocalDate.now().getDayOfWeek();
+        DayOfWeek today = today().getDayOfWeek();
         if (today.equals(lastResetDay)) return;
 
-        LocalTime now = LocalTime.now();
+        LocalTime now = nowTime();
 
         lastResetDay          = today;
         sentWarnings.clear();
@@ -320,37 +379,36 @@ public class RpEssentialsScheduleManager {
 
         // Only reset open/close flags if yesterday's schedule does NOT cross midnight
         // (if it does, the session is still ongoing and we must not prematurely reset).
-        DayOfWeek yesterday = today.minus(1);
-        DaySchedule yesterdayS = schedules.get(yesterday);
+        DaySchedule yesterdayS = scheduleFor(today().minusDays(1));
         boolean midnightSessionOngoing = yesterdayS != null
                 && yesterdayS.crossesMidnight()
                 && yesterdayS.isOpen(now);
 
-        if (!midnightSessionOngoing) {
-            hasClosedToday = false;
-            hasOpenedToday = false;
-            RpEssentials.LOGGER.info("[Schedule] Daily flags reset for {}", today);
-        } else {
-            // Don't reset — the overnight session is still active.
-            // Only clear sentWarnings so closing warnings for today's close time can fire.
-            RpEssentials.LOGGER.info("[Schedule] Cross-midnight session ongoing at midnight: flags NOT reset for {}", today);
-        }
+        // Both flags are reset every day. While yesterday's overnight session is still running the
+        // active schedule is yesterday's, so today's opening is only announced when it really starts,
+        // and the close at the end of the overnight session still kicks players.
+        hasClosedToday = false;
+        hasOpenedToday = false;
+        RpEssentials.LOGGER.info(midnightSessionOngoing
+                ? "[Schedule] Daily flags reset for {} (overnight session still running)"
+                : "[Schedule] Daily flags reset for {}", today);
     }
 
     public static String getDayName(java.time.DayOfWeek day) {
-        try {
-            return switch (day) {
-                case MONDAY    -> MessagesConfig.SCHEDULE_DAY_MONDAY.get();
-                case TUESDAY   -> MessagesConfig.SCHEDULE_DAY_TUESDAY.get();
-                case WEDNESDAY -> MessagesConfig.SCHEDULE_DAY_WEDNESDAY.get();
-                case THURSDAY  -> MessagesConfig.SCHEDULE_DAY_THURSDAY.get();
-                case FRIDAY    -> MessagesConfig.SCHEDULE_DAY_FRIDAY.get();
-                case SATURDAY  -> MessagesConfig.SCHEDULE_DAY_SATURDAY.get();
-                case SUNDAY    -> MessagesConfig.SCHEDULE_DAY_SUNDAY.get();
-            };
-        } catch (IllegalStateException e) {
-            return day.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH);
-        }
+        return getDayName(null, day);
+    }
+
+    /** Day name in the viewer's language (null = server language). */
+    public static String getDayName(ServerPlayer v, java.time.DayOfWeek day) {
+        return ServerLang.get(v, switch (day) {
+            case MONDAY    -> MessagesConfig.SCHEDULE_DAY_MONDAY;
+            case TUESDAY   -> MessagesConfig.SCHEDULE_DAY_TUESDAY;
+            case WEDNESDAY -> MessagesConfig.SCHEDULE_DAY_WEDNESDAY;
+            case THURSDAY  -> MessagesConfig.SCHEDULE_DAY_THURSDAY;
+            case FRIDAY    -> MessagesConfig.SCHEDULE_DAY_FRIDAY;
+            case SATURDAY  -> MessagesConfig.SCHEDULE_DAY_SATURDAY;
+            case SUNDAY    -> MessagesConfig.SCHEDULE_DAY_SUNDAY;
+        });
     }
 
     // =========================================================================
@@ -359,7 +417,7 @@ public class RpEssentialsScheduleManager {
     public static boolean isDeathHour() {
         try {
             if (!ScheduleConfig.DEATH_HOURS_ENABLED.get()) return false;
-            LocalTime now = LocalTime.now();
+            LocalTime now = nowTime();
             for (String slot : ScheduleConfig.DEATH_HOURS_SLOTS.get())
                 if (isInSlot(now, slot)) return true;
         } catch (IllegalStateException ignored) {}
@@ -369,7 +427,7 @@ public class RpEssentialsScheduleManager {
     public static boolean isHrpTolerated() {
         try {
             if (!ScheduleConfig.ENABLE_HRP_HOURS.get()) return false;
-            LocalTime now = LocalTime.now();
+            LocalTime now = nowTime();
             for (String slot : ScheduleConfig.HRP_TOLERATED_SLOTS.get())
                 if (isInSlot(now, slot)) return true;
         } catch (IllegalStateException ignored) {}
@@ -379,7 +437,7 @@ public class RpEssentialsScheduleManager {
     public static boolean isHrpAllowed() {
         try {
             if (!ScheduleConfig.ENABLE_HRP_HOURS.get()) return false;
-            LocalTime now = LocalTime.now();
+            LocalTime now = nowTime();
             for (String slot : ScheduleConfig.HRP_ALLOWED_SLOTS.get())
                 if (isInSlot(now, slot)) return true;
         } catch (IllegalStateException ignored) {}
@@ -422,7 +480,7 @@ public class RpEssentialsScheduleManager {
                     .replace("{open}",  s.open().format(FMT))
                     .replace("{close}", s.close().format(FMT))
                     .replace("{day}", RpEssentialsScheduleManager.getDayName(
-                            java.time.LocalDate.now().getDayOfWeek()));
+                            RpEssentialsScheduleManager.today().getDayOfWeek()));
             for (ServerPlayer p : server.getPlayerList().getPlayers())
                 if (RpEssentialsPermissions.isStaff(p))
                     p.sendSystemMessage(ColorHelper.parseColors(msg));
@@ -451,7 +509,7 @@ public class RpEssentialsScheduleManager {
                     .replace("{close}", close)
                     .replace("{day}",   day);
         } catch (IllegalStateException e) {
-            kickMsg = "§cThe server is now closed.";
+            kickMsg = ScheduleConfig.MSG_SERVER_CLOSED.getDefault().replace("{open}", open).replace("{close}", close).replace("{day}", day);
         }
         String finalKickMsg = kickMsg;
         boolean announce = announceToStaff && !closeNoticeSent;
@@ -459,7 +517,7 @@ public class RpEssentialsScheduleManager {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (!isScheduleExempt(p)) toKick.add(p);
             else if (announce && RpEssentialsPermissions.isStaff(p))
-                p.sendSystemMessage(Component.literal("§6[STAFF] Server closed: you may remain connected."));
+                p.sendSystemMessage(Component.literal(ServerLang.get(p, MessagesConfig.SCHED_SYS_STAFF_CLOSED)));
         }
         if (announce) closeNoticeSent = true;
         for (ServerPlayer p : toKick) {
@@ -494,10 +552,9 @@ public class RpEssentialsScheduleManager {
 
         try {
             String slots  = String.join(", ", ScheduleConfig.DEATH_HOURS_SLOTS.get());
-            String rawMsg = MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_NOTIFY, "slots", slots);
-            String mode   = MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_NOTIFY_MODE);
+            String mode   = ServerLang.get(null, MessagesConfig.SCHEDULE_DEATH_HOURS_NOTIFY_MODE);
             for (ServerPlayer p : server.getPlayerList().getPlayers())
-                DeathRPManager.sendMessageToPlayer(p, rawMsg, mode);
+                DeathRPManager.sendMessageToPlayer(p, ServerLang.get(p, MessagesConfig.SCHEDULE_DEATH_HOURS_NOTIFY, "slots", slots), mode);
         } catch (IllegalStateException ignored) {}
     }
 
@@ -544,11 +601,13 @@ public class RpEssentialsScheduleManager {
     private record NextOpening(DayOfWeek day, DaySchedule schedule, boolean today) {}
 
     private static NextOpening findNextOpening() {
-        LocalTime now = LocalTime.now();
-        DayOfWeek today = LocalDate.now().getDayOfWeek();
-        for (int i = 0; i <= 7; i++) {
-            DayOfWeek day = today.plus(i);
-            DaySchedule s = schedules.get(day);
+        LocalTime now = nowTime();
+        LocalDate todayDate = today();
+        // Look a bit further than a week: a closed exception can push the next opening.
+        for (int i = 0; i <= 31; i++) {
+            LocalDate date = todayDate.plusDays(i);
+            DayOfWeek day = date.getDayOfWeek();
+            DaySchedule s = scheduleFor(date);
             if (s == null) continue;
             if (i == 0 && !now.isBefore(s.open())) continue;
             return new NextOpening(day, s, i == 0);
@@ -562,13 +621,17 @@ public class RpEssentialsScheduleManager {
     }
 
     private static String getNextOpenDayName() {
-        NextOpening n = findNextOpening();
-        return n != null ? getDayName(n.day()) : "N/A";
+        return getNextOpenDayName(null);
     }
 
-    // =========================================================================
-    // UTILITAIRE — parsing de plage "HH:MM-HH:MM", supporte cross-minuit
-    // =========================================================================
+    private static String getNextOpenDayName(ServerPlayer v) {
+        NextOpening n = findNextOpening();
+        return n != null ? getDayName(v, n.day()) : ServerLang.get(v, MessagesConfig.UI_NA);
+    }
+
+    // =====================================================================================
+    // UTILITAIRE — parsing de plage "HH:MM-HH:MM", supporte cross-minuit, fuseau horaire
+    // =====================================================================================
     public static boolean isInSlot(LocalTime now, String slot) {
         if (slot == null || !slot.contains("-")) return false;
         String[] p = slot.split("-", 2);
@@ -583,11 +646,25 @@ public class RpEssentialsScheduleManager {
         }
     }
 
-    private static final List<String> configWarnings = new ArrayList<>();
-    public static List<String> getConfigWarnings() { return new ArrayList<>(configWarnings); }
+    private record ConfigWarning(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key, String[] args) {}
+    private static final List<ConfigWarning> configWarnings = new ArrayList<>();
 
-    private static void warnConfig(String msg) {
-        RpEssentials.LOGGER.error("[Schedule] {}", msg);
-        configWarnings.add(msg);
+    /** Schedule config problems, in the viewer's language (null = server language). */
+    public static List<String> getConfigWarnings(ServerPlayer viewer) {
+        List<String> out = new ArrayList<>();
+        for (ConfigWarning w : configWarnings) out.add(ServerLang.get(viewer, w.key(), w.args()));
+        return out;
     }
+
+    private static void warnConfig(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key, String... args) {
+        ConfigWarning w = new ConfigWarning(key, args);
+        RpEssentials.LOGGER.error("[Schedule] {}", ServerLang.get(null, key, args));
+        configWarnings.add(w);
+    }
+
+    public static java.time.ZoneId zone() { return TimeHelper.zone(); }
+
+    public static LocalTime nowTime() { return TimeHelper.nowTime(); }
+
+    public static LocalDate today() { return TimeHelper.today(); }
 }

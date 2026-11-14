@@ -25,14 +25,15 @@ public class ConfigInspector {
         }
     }
 
-    public record FileInfo(String id, String displayName, int color) {
-        public FileInfo(String id, String displayName) { this(id, displayName, 0); }
+    public record FileInfo(String id, String displayName, int color, String mod, int modColor, Theme theme) {
+        public FileInfo(String id, String displayName) { this(id, displayName, 0, "", 0, Theme.DEFAULT); }
     }
 
-    private record ConfigClassInfo(String id, String displayName, int color, Class<?> clazz, ModConfigSpec spec,
+    private record ConfigClassInfo(String id, String displayName, int color, String mod, int modColor, Theme theme,
+                                   Class<?> clazz, ModConfigSpec spec,
                                    java.util.function.Consumer<net.minecraft.server.MinecraftServer> onApplied) {
         ConfigClassInfo(String id, String displayName, Class<?> clazz, ModConfigSpec spec) {
-            this(id, displayName, 0, clazz, spec, null);
+            this(id, displayName, 0, "RpEssentials", 0xFFD700, Theme.DEFAULT, clazz, spec, null);
         }
     }
 
@@ -48,10 +49,20 @@ public class ConfigInspector {
 
     private static final List<ConfigClassInfo> EXTERNAL = new java.util.concurrent.CopyOnWriteArrayList<>();
 
+    public record Theme(int accent, int section, int title) {
+        public static final Theme DEFAULT = new Theme(0, 0, 0);
+    }
+
     public static void register(String id, String displayName, int color, Class<?> clazz, ModConfigSpec spec,
                                 java.util.function.Consumer<net.minecraft.server.MinecraftServer> onApplied) {
+        register("Other", 0xAAAAAA, id, displayName, color, Theme.DEFAULT, clazz, spec, onApplied);
+    }
+
+    public static void register(String mod, int modColor, String id, String displayName, int color, Theme theme,
+                                Class<?> clazz, ModConfigSpec spec,
+                                java.util.function.Consumer<net.minecraft.server.MinecraftServer> onApplied) {
         EXTERNAL.removeIf(c -> c.id().equals(id));
-        EXTERNAL.add(new ConfigClassInfo(id, displayName, color, clazz, spec, onApplied));
+        EXTERNAL.add(new ConfigClassInfo(id, displayName, color, mod, modColor, theme, clazz, spec, onApplied));
     }
 
     private static List<ConfigClassInfo> all() {
@@ -67,7 +78,9 @@ public class ConfigInspector {
     // PUBLIC API
     // =========================================================================
     public static List<FileInfo> getFileInfos() {
-        return all().stream().map(c -> new FileInfo(c.id(), c.displayName(), c.color())).toList();
+        return all().stream()
+                .map(c -> new FileInfo(c.id(), c.displayName(), c.color(), c.mod(), c.modColor(), c.theme()))
+                .toList();
     }
 
     public static List<EntryData> getEntries(String fileId) {
@@ -146,32 +159,20 @@ public class ConfigInspector {
         List<EntryData> entries     = new ArrayList<>();
         String          lastSection = null;
 
-        for (Field field : info.clazz().getDeclaredFields()) {
-            if (!Modifier.isStatic(field.getModifiers())) continue;
-            if (!ModConfigSpec.ConfigValue.class.isAssignableFrom(field.getType())) continue;
-
-            ModConfigSpec.ConfigValue<?> cv;
-            try {
-                field.setAccessible(true);
-                cv = (ModConfigSpec.ConfigValue<?>) field.get(null);
-            } catch (Exception e) { continue; }
-            if (cv == null || cv.getPath().isEmpty()) continue;
-
+        for (ModConfigSpec.ConfigValue<?> cv : buildValueMap(info.clazz()).values()) {
             List<String> path = cv.getPath();
+            if (path.isEmpty()) continue;
 
-            // ── Section header ────────────────────────────────────────────────
             String sectionKey = path.size() > 1
                     ? String.join(".", path.subList(0, path.size() - 1))
                     : "";
             if (!Objects.equals(sectionKey, lastSection)) {
                 if (!sectionKey.isEmpty()) {
-                    String sectionDisplay = path.get(path.size() - 2);
-                    entries.add(EntryData.section(sectionDisplay, sectionKey));
+                    entries.add(EntryData.section(path.get(path.size() - 2), sectionKey));
                 }
                 lastSection = sectionKey;
             }
 
-            // ── Retrieve the ValueSpec object ─────────────────────────────────
             Object vs = getValueSpecObj(info.spec(), path);
 
             ValueType type       = detectType(cv);
@@ -296,7 +297,6 @@ public class ConfigInspector {
     // =========================================================================
     // SPEC FIELD EXTRACTION (reflection on ValueSpec)
     // =========================================================================
-
     private static String extractComment(Object vs) {
         if (vs == null) return "";
         // getComment() is public on NeoForge ValueSpec
@@ -463,5 +463,16 @@ public class ConfigInspector {
     private static String getStringField(Object obj, String name) {
         Object val = getFieldValue(obj, name);
         return val instanceof String s ? s : "";
+    }
+
+    public static String exportDefaults(Class<?>... classes) {
+        com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+        for (Class<?> c : classes) {
+            for (Map.Entry<String, ModConfigSpec.ConfigValue<?>> e : buildValueMap(c).entrySet()) {
+                if (e.getKey().startsWith("Message Source")) continue;
+                if (e.getValue().getDefault() instanceof String s) o.addProperty(e.getKey(), s);
+            }
+        }
+        return new com.google.gson.GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(o);
     }
 }

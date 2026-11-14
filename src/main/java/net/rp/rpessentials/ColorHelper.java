@@ -4,40 +4,45 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Helper pour parser les codes couleur Minecraft (§ et &)
  */
 public class ColorHelper {
 
+    private static final Pattern AMP_CODE = Pattern.compile("&(?=[0-9a-fk-orA-FK-OR#])");
+    private static final Pattern STRIP_CODE = Pattern.compile("(?i)§(?:#[0-9a-f]{6}|[0-9a-fk-or])");
+    private static final Pattern ANY_CODE = Pattern.compile("§(?:#[0-9a-fA-F]{6}|.)");
+    private static final Pattern GRADIENT = Pattern.compile("<grad:#([0-9a-fA-F]{6}):#([0-9a-fA-F]{6})>(.*?)</grad>");
+
     /**
      * Parse un texte avec des codes couleur et retourne un Component
      * Support § et & comme préfixes
      */
     public static Component parseColors(String text) {
-        if (text == null || text.isEmpty()) {
-            return Component.empty();
-        }
+        if (text == null || text.isEmpty()) return Component.empty();
+        return parseSection(AMP_CODE.matcher(expandGradients(text)).replaceAll("§"));
+    }
 
-        // Remplacer & par §
-        text = text.replaceAll("&(?=[0-9a-fk-orA-FK-OR])", "§");
-
-        // Si pas de codes couleur, retour simple
-        if (!text.contains("§")) {
-            return Component.literal(text);
-        }
-
+    public static Component parseSection(String text) {
+        if (text == null || text.isEmpty()) return Component.empty();
+        if (text.indexOf('§') < 0) return Component.literal(text);
         MutableComponent result = Component.empty();
-        List<TextSegment> segments = parseSegments(text);
-
-        for (TextSegment segment : segments) {
+        for (TextSegment segment : parseSegments(text)) {
             result.append(Component.literal(segment.text).setStyle(segment.style));
         }
-
         return result;
+    }
+
+    public static String stripAll(String text) {
+        if (text == null) return "";
+        return ANY_CODE.matcher(text).replaceAll("");
     }
 
     /**
@@ -50,28 +55,53 @@ public class ColorHelper {
 
         for (int i = 0; i < text.length(); i++) {
             if (text.charAt(i) == '§' && i + 1 < text.length()) {
-                // Sauvegarder le texte actuel si présent
                 if (currentText.length() > 0) {
                     segments.add(new TextSegment(currentText.toString(), currentStyle));
                     currentText = new StringBuilder();
                 }
-
-                // Appliquer le nouveau code de formatage
                 char code = text.charAt(i + 1);
-                currentStyle = applyFormatting(currentStyle, code);
-                i++; // Skip le code
+                if (code == '#' && i + 7 < text.length() + 0 && text.length() >= i + 8
+                        && text.substring(i + 2, i + 8).matches("[0-9a-fA-F]{6}")) {
+                    currentStyle = currentStyle.withColor(TextColor.fromRgb(Integer.parseInt(text.substring(i + 2, i + 8), 16)));
+                    i += 7;
+                } else {
+                    currentStyle = applyFormatting(currentStyle, code);
+                    i++;
+                }
             } else {
                 currentText.append(text.charAt(i));
             }
         }
 
-        // Ajouter le dernier segment
         if (currentText.length() > 0) {
             segments.add(new TextSegment(currentText.toString(), currentStyle));
         }
-
         return segments;
     }
+
+    private static String expandGradients(String text) {
+        if (text.indexOf("<grad:") < 0) return text;
+        Matcher m = GRADIENT.matcher(text);
+        StringBuilder out = new StringBuilder();
+        while (m.find()) {
+            int a = Integer.parseInt(m.group(1), 16);
+            int b = Integer.parseInt(m.group(2), 16);
+            String body = m.group(3);
+            int n = Math.max(1, body.length() - 1);
+            StringBuilder g = new StringBuilder();
+            for (int i = 0; i < body.length(); i++) {
+                float t = (float) i / n;
+                int r = Math.round(((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t);
+                int gr = Math.round(((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t);
+                int bl = Math.round((a & 255) * (1 - t) + (b & 255) * t);
+                g.append(String.format("§#%02x%02x%02x", r, gr, bl)).append(body.charAt(i));
+            }
+            m.appendReplacement(out, Matcher.quoteReplacement(g.toString()));
+        }
+        m.appendTail(out);
+        return out.toString();
+    }
+
 
     /**
      * Applique un code de formatage à un style
@@ -114,7 +144,7 @@ public class ColorHelper {
      */
     public static String stripColors(String text) {
         if (text == null) return "";
-        return text.replaceAll("(?i)§[0-9a-fk-or]", "");
+        return STRIP_CODE.matcher(text).replaceAll("");
     }
 
     /**
@@ -122,7 +152,7 @@ public class ColorHelper {
      */
     public static String translateAlternateColorCodes(String text) {
         if (text == null) return "";
-        return text.replaceAll("&(?=[0-9a-fk-orA-FK-OR])", "§");
+        return AMP_CODE.matcher(expandGradients(text)).replaceAll("§");
     }
 
     /**

@@ -58,6 +58,14 @@ public class ClientGuiOpener {
         }
     }
 
+    public static void receiveStats(java.util.UUID uuid, List<String> lines) {
+        if (Minecraft.getInstance().screen instanceof PlayerProfileScreen s) s.setStats(uuid, lines);
+    }
+
+    public static void receiveHistory(java.util.UUID uuid, boolean enabled, List<String> lines) {
+        if (Minecraft.getInstance().screen instanceof PlayerProfileScreen s) s.setHistory(uuid, enabled, lines);
+    }
+
     public static void openPlayerProfileGui(
             List<OpenPlayerProfileGuiPacket.PlayerData> players,
             List<String> professionIds,

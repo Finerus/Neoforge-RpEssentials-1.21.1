@@ -1,5 +1,9 @@
 package net.rp.rpessentials.moderation;
 
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.ColorHelper;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -30,6 +34,8 @@ public class ManageSuggestions {
     public static void onCommand(CommandEvent event) {
         String raw = event.getParseResults().getReader().getString().trim();
         if (raw.startsWith("/")) raw = raw.substring(1);
+        if (!(raw.startsWith("whitelist ") || raw.startsWith("deop ") || raw.startsWith("ban ")
+                || raw.startsWith("minecraft:"))) return;
         String[] t = raw.split("\\s+");
         if (t.length < 2) return;
         String root = t[0].startsWith("minecraft:") ? t[0].substring(10) : t[0];
@@ -65,39 +71,42 @@ public class ManageSuggestions {
         Long last = recent.put(uuid + ":" + kind, now);
         if (last != null && now - last < 5000L) return;
 
-        String base = "/rpessentials manage " + name + " ";
-        String header = switch (kind) {
-            case UNWHITELISTED -> "§6[Manage] §e" + name + " §7has been removed from the whitelist. Quick actions:";
-            case DEOPPED -> "§6[Manage] §e" + name + " §7is no longer an operator. Quick actions:";
-            case BANNED -> "§6[Manage] §e" + name + " §7has been banned. Quick actions:";
-        };
-
-        Component[] lines = switch (kind) {
-            case UNWHITELISTED -> new Component[]{
-                    line("Re-whitelist", "Add back to the whitelist", base + "whitelist_add", true),
-                    line("Ban", "Ban (type a reason)", base + "ban ", false),
-                    line("Clear inventory", "Clear the inventory (online only)", base + "clear_inventory", true),
-                    line("Absence", "Declare an absence: days then reason", base + "absence_add ", false)};
-            case DEOPPED -> new Component[]{
-                    line("Re-op", "Grant OP (type the level 1 to 4)", base + "op ", false),
-                    line("Kick", "Kick (type a reason)", base + "kick ", false),
-                    line("Ban", "Ban (type a reason)", base + "ban ", false)};
-            case BANNED -> new Component[]{
-                    line("Pardon", "Lift the ban", base + "pardon", true),
-                    line("Unwhitelist", "Remove from the whitelist", base + "whitelist_remove", true),
-                    line("Clear inventory", "Clear the inventory (online only)", base + "clear_inventory", true)};
+        String base = net.rp.rpessentials.CommandToggles.manage() + " " + name + " ";
+        ModConfigSpec.ConfigValue<String> header = switch (kind) {
+            case UNWHITELISTED -> MessagesConfig.MANAGE_SUG_HEAD_WL;
+            case DEOPPED -> MessagesConfig.MANAGE_SUG_HEAD_DEOP;
+            case BANNED -> MessagesConfig.MANAGE_SUG_HEAD_BAN;
         };
 
         for (ServerPlayer p : pl.getPlayers()) {
             if (!RpEssentialsPermissions.isStaff(p)) continue;
-            p.sendSystemMessage(Component.literal(header));
+            p.sendSystemMessage(ColorHelper.parseSection(ServerLang.get(p, header, "player", name)));
+            Component[] lines = switch (kind) {
+                case UNWHITELISTED -> new Component[]{
+                        line(p, MessagesConfig.MANAGE_SUG_L_REWL, MessagesConfig.MANAGE_SUG_H_REWL, base + "whitelist_add", true),
+                        line(p, MessagesConfig.MANAGE_SUG_L_BAN, MessagesConfig.MANAGE_SUG_H_BAN, base + "ban ", false),
+                        line(p, MessagesConfig.MANAGE_SUG_L_TEMPBAN, MessagesConfig.MANAGE_SUG_H_TEMPBAN, base + "tempban 7d ", false),
+                        line(p, MessagesConfig.MANAGE_SUG_L_CLRINV, MessagesConfig.MANAGE_SUG_H_CLRINV, base + "clear_inventory", true),
+                        line(p, MessagesConfig.MANAGE_SUG_L_ABS, MessagesConfig.MANAGE_SUG_H_ABS, base + "absence_add ", false)};
+                case DEOPPED -> new Component[]{
+                        line(p, MessagesConfig.MANAGE_SUG_L_REOP, MessagesConfig.MANAGE_SUG_H_REOP, base + "op ", false),
+                        line(p, MessagesConfig.MANAGE_SUG_L_KICK, MessagesConfig.MANAGE_SUG_H_KICK, base + "kick ", false),
+                        line(p, MessagesConfig.MANAGE_SUG_L_BAN, MessagesConfig.MANAGE_SUG_H_BAN, base + "ban ", false)};
+                case BANNED -> new Component[]{
+                        line(p, MessagesConfig.MANAGE_SUG_L_PARDON, MessagesConfig.MANAGE_SUG_H_PARDON, base + "pardon", true),
+                        line(p, MessagesConfig.MANAGE_SUG_L_UNWL, MessagesConfig.MANAGE_SUG_H_UNWL, base + "whitelist_remove", true),
+                        line(p, MessagesConfig.MANAGE_SUG_L_CLRINV, MessagesConfig.MANAGE_SUG_H_CLRINV, base + "clear_inventory", true)};
+            };
             for (Component c : lines) p.sendSystemMessage(c);
         }
     }
 
-    private static Component line(String label, String hover, String command, boolean run) {
-        return Component.literal("  §8> ").append(Component.literal("§e[" + label + "]").withStyle(s -> s
-                .withClickEvent(new ClickEvent(run ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND, command))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("§7" + hover)))));
+    private static Component line(ServerPlayer p, ModConfigSpec.ConfigValue<String> label,
+                                  ModConfigSpec.ConfigValue<String> hover, String command, boolean run) {
+        Component hoverText = ColorHelper.parseSection(ServerLang.get(p, hover));
+        return Component.literal("  §8> ").append(ColorHelper.parseSection(ServerLang.get(p, label)).copy()
+                .withStyle(s -> s
+                        .withClickEvent(new ClickEvent(run ? ClickEvent.Action.RUN_COMMAND : ClickEvent.Action.SUGGEST_COMMAND, command))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverText))));
     }
 }

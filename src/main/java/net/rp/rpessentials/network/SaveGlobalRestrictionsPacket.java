@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -66,20 +68,20 @@ public record SaveGlobalRestrictionsPacket(
             if (!RpEssentialsPermissions.isStaff(player)) return;
 
             try {
-                List<String> details = new ArrayList<>();
-                applyCategory(details, "Blocked crafts", ProfessionConfig.GLOBAL_BLOCKED_CRAFTS,
+                List<Object[]> details = new ArrayList<>();
+                applyCategory(details, MessagesConfig.GUI_CAT_BLOCKED_CRAFTS, ProfessionConfig.GLOBAL_BLOCKED_CRAFTS,
                         PacketValidation.cleanItems(packet.blockedCrafts()));
-                applyCategory(details, "Unbreakable blocks", ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS,
+                applyCategory(details, MessagesConfig.GUI_CAT_UNBREAKABLE, ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS,
                         PacketValidation.cleanItems(packet.unbreakableBlocks()));
-                applyCategory(details, "Blocked items", ProfessionConfig.GLOBAL_BLOCKED_ITEMS,
+                applyCategory(details, MessagesConfig.GUI_CAT_BLOCKED_ITEMS, ProfessionConfig.GLOBAL_BLOCKED_ITEMS,
                         PacketValidation.cleanItems(packet.blockedItems()));
-                applyCategory(details, "Blocked equipment", ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT,
+                applyCategory(details, MessagesConfig.GUI_CAT_BLOCKED_EQUIPMENT, ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT,
                         PacketValidation.cleanItems(packet.blockedEquipment()));
-                applyCategory(details, "Container restrictions", ProfessionConfig.CONTAINER_OPEN_RESTRICTIONS,
+                applyCategory(details, MessagesConfig.GUI_CAT_CONTAINERS, ProfessionConfig.CONTAINER_OPEN_RESTRICTIONS,
                         PacketValidation.cleanContainers(packet.containerRestrictions()));
 
                 if (details.isEmpty()) {
-                    player.sendSystemMessage(Component.literal("§7[RpEssentials] Global restrictions: no change."));
+                    player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_GLOBAL_NO_CHANGE)));
                     return;
                 }
 
@@ -88,22 +90,32 @@ public record SaveGlobalRestrictionsPacket(
                 for (ServerPlayer p : player.getServer().getPlayerList().getPlayers())
                     ProfessionSyncHelper.syncToPlayer(p);
 
-                GuiFeedback.report(player, "Global restrictions updated", details, true);
+                GuiFeedback.report(player, MessagesConfig.GUI_GLOBAL_UPDATED, new String[0], v -> {
+                    List<String> out = new ArrayList<>();
+                    for (Object[] cat : details) {
+                        @SuppressWarnings("unchecked")
+                        ModConfigSpec.ConfigValue<String> label = (ModConfigSpec.ConfigValue<String>) cat[0];
+                        out.add("§e" + ServerLang.get(v, label) + "§7:");
+                        @SuppressWarnings("unchecked")
+                        List<String> lines = (List<String>) cat[1];
+                        for (String line : lines) out.add("    " + line);
+                    }
+                    return out;
+                }, true);
 
             } catch (IllegalStateException e) {
-                player.sendSystemMessage(Component.literal("§c[RpEssentials] Config not loaded, please try again."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });
     }
 
-    private static void applyCategory(List<String> details, String label,
+    private static void applyCategory(List<Object[]> details, ModConfigSpec.ConfigValue<String> label,
                                       ModConfigSpec.ConfigValue<List<? extends String>> cfg,
                                       List<String> next) {
         List<String> before = new ArrayList<>(cfg.get());
         List<String> d = GuiFeedback.diff(before, next);
         if (d.isEmpty()) return;
         cfg.set(next);
-        details.add("§e" + label + "§7:");
-        for (String line : d) details.add("    " + line);
+        details.add(new Object[]{label, d});
     }
 }

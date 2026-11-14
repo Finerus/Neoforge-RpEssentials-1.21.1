@@ -101,7 +101,7 @@ public class PendingActionManager {
         for (PendingAction a : e.actions) {
             try {
                 ManageService.Action action = ManageService.Action.valueOf(a.action);
-                ManageService.execute(server, null, player.getUUID(), action, "pending from " + a.issuer, 0);
+                ManageService.execute(server, null, player.getUUID(), action, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.MANAGE_QUEUED_REASON, "issuer", String.valueOf(a.issuer)), 0);
             } catch (IllegalArgumentException ex) {
                 RpEssentials.LOGGER.warn("[PendingActionManager] Unknown action: {}", a.action);
             }

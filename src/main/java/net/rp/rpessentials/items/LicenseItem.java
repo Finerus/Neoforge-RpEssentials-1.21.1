@@ -34,6 +34,19 @@ public class LicenseItem extends Item {
         });
     }
 
+    /**
+     * Tooltip lines are drawn on the client, so they follow the game language.
+     * A value changed by the server admin in the config is still used as is.
+     */
+    private static net.minecraft.network.chat.MutableComponent text(
+            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> cv, String key) {
+        try {
+            String v = cv.get();
+            if (!v.equals(cv.getDefault())) return Component.literal(v);
+        } catch (IllegalStateException ignored) {}
+        return Component.translatable(key);
+    }
+
     @Override
     public void appendHoverText(@NotNull ItemStack stack, TooltipContext context,
                                 @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
@@ -41,15 +54,15 @@ public class LicenseItem extends Item {
             net.minecraft.nbt.CompoundTag tag = stack.get(
                     net.minecraft.core.component.DataComponents.CUSTOM_DATA).copyTag();
             if (tag.getBoolean("revoked")) {
-                tooltip.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_REVOKED_TITLE))
+                tooltip.add(text(MessagesConfig.LICENSE_REVOKED_TITLE, "rpessentials.license.tooltip.revoked_title")
                         .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-                tooltip.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_REVOKED_BODY))
+                tooltip.add(text(MessagesConfig.LICENSE_REVOKED_BODY, "rpessentials.license.tooltip.revoked_body")
                         .withStyle(ChatFormatting.RED, ChatFormatting.ITALIC));
             }
         }
-        tooltip.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_TOOLTIP_OFFICIAL))
+        tooltip.add(text(MessagesConfig.LICENSE_TOOLTIP_OFFICIAL, "rpessentials.license.tooltip.official")
                 .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
-        tooltip.add(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_TOOLTIP_NONTRANSFERABLE))
+        tooltip.add(text(MessagesConfig.LICENSE_TOOLTIP_NONTRANSFERABLE, "rpessentials.license.tooltip.non_transferable")
                 .withStyle(ChatFormatting.DARK_GRAY));
     }
 }

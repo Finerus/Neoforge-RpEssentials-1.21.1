@@ -6,7 +6,9 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.ServerLang;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.moderation.MuteManager;
@@ -34,38 +36,37 @@ public class RpEssentialsMessagingManager {
         String senderDisplay = (senderNick != null) ? senderNick : sender.getName().getString();
         String targetDisplay = (targetNick != null) ? targetNick : target.getName().getString();
 
-        String hoverText = MessagesConfig.get(MessagesConfig.MP_HOVER_REPLY);
+        String hoverToSender = ServerLang.get(sender, MessagesConfig.MP_HOVER_REPLY);
+        String hoverToTarget = ServerLang.get(target, MessagesConfig.MP_HOVER_REPLY);
 
-        MutableComponent targetNameComponent = Component.literal(targetDisplay)
+        MutableComponent targetNameComponent = ColorHelper.parseSection(targetDisplay).copy()
                 .withStyle(style -> style
                         .withBold(true)
                         .withItalic(true)
                         .withColor(0x999999)
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                                Component.literal(hoverText)))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(hoverToSender)))
                         .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
                                 "/msg " + target.getName().getString() + " ")));
 
-        MutableComponent senderNameComponent = Component.literal(senderDisplay)
+        MutableComponent senderNameComponent = ColorHelper.parseSection(senderDisplay).copy()
                 .withStyle(style -> style
                         .withBold(true)
                         .withItalic(true)
                         .withColor(0x999999)
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                                Component.literal(hoverText)))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(hoverToTarget)))
                         .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
                                 "/msg " + sender.getName().getString() + " ")));
 
-        String toSenderPrefix = MessagesConfig.get(MessagesConfig.MP_TO_SENDER, "target", targetDisplay);
-        String fromTargetPrefix = MessagesConfig.get(MessagesConfig.MP_FROM_TARGET, "sender", senderDisplay);
+        String toSenderPrefix = ServerLang.get(sender, MessagesConfig.MP_TO_SENDER, "target", targetDisplay);
+        String fromTargetPrefix = ServerLang.get(target, MessagesConfig.MP_FROM_TARGET, "sender", senderDisplay);
 
-        MutableComponent toSender = Component.literal(toSenderPrefix)
+        MutableComponent toSender = ColorHelper.parseSection(toSenderPrefix).copy()
                 .withStyle(style -> style.withColor(0x999999).withItalic(true))
                 .append(targetNameComponent)
                 .append(Component.literal(" : " + message)
                         .withStyle(style -> style.withColor(0x999999).withItalic(true)));
 
-        MutableComponent toTarget = Component.literal(fromTargetPrefix)
+        MutableComponent toTarget = ColorHelper.parseSection(fromTargetPrefix).copy()
                 .withStyle(style -> style.withColor(0x999999).withItalic(true))
                 .append(senderNameComponent)
                 .append(Component.literal(" : " + message)
@@ -73,6 +74,22 @@ public class RpEssentialsMessagingManager {
 
         sender.sendSystemMessage(toSender);
         target.sendSystemMessage(toTarget);
+
+        try {
+            if (ChatConfig.ENABLE_PM_SPY.get()) {
+                for (ServerPlayer p : sender.getServer().getPlayerList().getPlayers()) {
+                    if (p == sender || p == target) continue;
+                    if (net.rp.rpessentials.RpEssentialsRoleManager.has(p,
+                            net.rp.rpessentials.RpEssentialsRoleManager.Permission.SPY_MESSAGES)) {
+                        p.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(
+                                net.rp.rpessentials.ServerLang.get(p, MessagesConfig.MP_SPY_FORMAT,
+                                        "sender", sender.getName().getString(),
+                                        "target", target.getName().getString(),
+                                        "msg", message)));
+                    }
+                }
+            }
+        } catch (IllegalStateException ignored) {}
 
         try {
             if (ChatConfig.LOG_PRIVATE_MESSAGES.get()) {
@@ -89,14 +106,14 @@ public class RpEssentialsMessagingManager {
     public static int reply(ServerPlayer sender, String message, MinecraftServer server) {
         UUID lastId = lastMessaged.get(sender.getUUID());
         if (lastId == null) {
-            sender.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.MP_NO_ONE_TO_REPLY))
+            sender.sendSystemMessage(Component.literal(ServerLang.get(sender, MessagesConfig.MP_NO_ONE_TO_REPLY))
                     .withStyle(style -> style.withColor(0xFF5555).withItalic(true)));
             return 0;
         }
         ServerPlayer target = server.getPlayerList().getPlayer(lastId);
         if (target == null
                 || VanishManager.canHide(VanishManager.Aspect.SELECTORS, sender, lastId)) {
-            sender.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.MP_TARGET_OFFLINE))
+            sender.sendSystemMessage(Component.literal(ServerLang.get(sender, MessagesConfig.MP_TARGET_OFFLINE))
                     .withStyle(style -> style.withColor(0xFF5555).withItalic(true)));
             return 0;
         }

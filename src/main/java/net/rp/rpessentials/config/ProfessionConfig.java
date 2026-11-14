@@ -35,6 +35,8 @@ public class ProfessionConfig {
     public static final ModConfigSpec.ConfigValue<String> MSG_EQUIPMENT_BLOCKED;
     public static final ModConfigSpec.ConfigValue<String> MSG_CONTAINER_OPEN_BLOCKED;
 
+    public static final ModConfigSpec.ConfigValue<String> LICENSE_ID_DISPLAY;
+
     static {
         BUILDER.comment(
                 "═══════════════════════════════════════════════════════════════",
@@ -134,7 +136,9 @@ public class ProfessionConfig {
                                 "minecraft:diamond_pickaxe",
                                 "minecraft:diamond_axe",
                                 "minecraft:netherite_sword",
-                                "minecraft:netherite_pickaxe"
+                                "minecraft:netherite_pickaxe",
+                                "minecraft:iron_pickaxe",
+                                "minecraft:iron_axe"
                         ),
                         obj -> obj instanceof String
                 );
@@ -339,6 +343,15 @@ public class ProfessionConfig {
                 .define("containerOpenBlockedMessage",
                         "§c✘ You cannot open this block. §7Required profession: §e{profession}");
 
+        BUILDER.pop();
+
+        BUILDER.push("Licenses");
+        LICENSE_ID_DISPLAY = BUILDER
+                .comment("What the license card shows for the profession.",
+                        "NAME_ONLY   : the display name (default)",
+                        "NAME_AND_ID : the display name followed by the id in brackets",
+                        "ID_ONLY     : the id only")
+                .defineInList("licenseIdDisplay", "NAME_ONLY", Arrays.asList("NAME_ONLY", "NAME_AND_ID", "ID_ONLY"));
         BUILDER.pop();
 
         SPEC = BUILDER.build();

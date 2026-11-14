@@ -1,5 +1,6 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -58,18 +59,17 @@ public record SaveRolePacket(
             if (!(ctx.player() instanceof ServerPlayer player)) return;
             if (!RpEssentialsPermissions.isStaff(player)) return;
             if (!RpEssentialsPermissions.canManageRoles(player)) {
-                player.sendSystemMessage(Component.literal(
-                        "§c[RpEssentials] Managing roles requires the OP level set in opLevelBypass."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
                 return;
             }
 
             String cleanId = packet.id().toLowerCase().trim().replaceAll("[^a-z0-9_]", "_");
             if (cleanId.isEmpty()) {
-                player.sendSystemMessage(Component.literal("§c[RpEssentials] Invalid role ID."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLE_INVALID)));
                 return;
             }
             if (packet.isNew() && ProfessionRestrictionManager.getProfessionData(cleanId) != null) {
-                player.sendSystemMessage(Component.literal("§c[RpEssentials] This ID is already used by a profession."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLE_ID_TAKEN)));
                 return;
             }
 
@@ -98,26 +98,32 @@ public record SaveRolePacket(
                 RpEssentialsScheduleManager.enforceOnlineDelayed(player.getServer());
                 LuckPermsSync.pushRole(lpGroup.isBlank() ? cleanId : lpGroup, newPerms);
 
-                List<String> details = new ArrayList<>();
-                if (oldLine == null) {
-                    details.add("§7LuckPerms group: §f" + lpGroup);
-                    if (newPerms.isEmpty()) details.add("§8No permissions");
-                    for (String p : newPerms) details.add("§a+ §7" + p);
-                } else {
-                    String[] o = oldLine.split(";", 3);
-                    String oldLp = o.length > 1 ? o[1].trim() : "";
-                    List<String> oldPerms = new ArrayList<>();
-                    if (o.length > 2) {
-                        for (String s : o[2].split(",")) if (!s.isBlank()) oldPerms.add(s.trim());
+                final String previous = oldLine;
+                final String group = lpGroup;
+                GuiFeedback.report(player, previous == null ? MessagesConfig.GUI_ROLE_CREATED : MessagesConfig.GUI_ROLE_UPDATED,
+                        new String[]{"id", cleanId}, v -> {
+                    List<String> details = new ArrayList<>();
+                    if (previous == null) {
+                        details.add(ServerLang.get(v, MessagesConfig.GUI_LP_GROUP, "group", group));
+                        if (newPerms.isEmpty()) details.add(ServerLang.get(v, MessagesConfig.GUI_NO_PERMISSIONS));
+                        for (String p : newPerms) details.add("§a+ §7" + p);
+                    } else {
+                        String[] o = previous.split(";", 3);
+                        String oldLp = o.length > 1 ? o[1].trim() : "";
+                        List<String> oldPerms = new ArrayList<>();
+                        if (o.length > 2) {
+                            for (String s : o[2].split(",")) if (!s.isBlank()) oldPerms.add(s.trim());
+                        }
+                        if (!oldLp.equals(group)) details.add(ServerLang.get(v, MessagesConfig.GUI_LP_GROUP_CHANGED,
+                                "old", oldLp, "new", group));
+                        details.addAll(GuiFeedback.diff(oldPerms, newPerms));
+                        if (details.isEmpty()) details.add(ServerLang.get(v, MessagesConfig.GUI_NO_CHANGE));
                     }
-                    if (!oldLp.equals(lpGroup)) details.add("§7LuckPerms group: §c" + oldLp + " §7-> §a" + lpGroup);
-                    details.addAll(GuiFeedback.diff(oldPerms, newPerms));
-                    if (details.isEmpty()) details.add("§8No change");
-                }
-                GuiFeedback.report(player, "Role §e" + cleanId + " §f" + (oldLine == null ? "created" : "updated"), details, true);
+                    return details;
+                }, true);
 
             } catch (IllegalStateException e) {
-                player.sendSystemMessage(Component.literal("§c[RpEssentials] Config not loaded, please try again."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });
     }

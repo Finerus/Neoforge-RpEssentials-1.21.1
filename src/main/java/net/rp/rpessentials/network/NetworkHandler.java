@@ -63,6 +63,30 @@ public class NetworkHandler {
         );
 
         registrar.playToServer(
+                RequestPlayerStatsPacket.TYPE,
+                RequestPlayerStatsPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, RequestPlayerStatsPacket::handleOnServer)
+        );
+
+        registrar.playToClient(
+                PlayerStatsPacket.TYPE,
+                PlayerStatsPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(PlayerStatsPacket::handleOnClient, null)
+        );
+
+        registrar.playToServer(
+                RequestPlayerHistoryPacket.TYPE,
+                RequestPlayerHistoryPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, RequestPlayerHistoryPacket::handleOnServer)
+        );
+
+        registrar.playToClient(
+                PlayerHistoryPacket.TYPE,
+                PlayerHistoryPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(PlayerHistoryPacket::handleOnClient, null)
+        );
+
+        registrar.playToServer(
                 SaveProfessionPacket.TYPE,
                 SaveProfessionPacket.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(null, SaveProfessionPacket::handleOnServer)
@@ -167,6 +191,16 @@ public class NetworkHandler {
                 ManagePlayerPacket.TYPE,
                 ManagePlayerPacket.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(null, ManagePlayerPacket::handleOnServer)
+        );
+        registrar.playToClient(
+                net.rp.rpessentials.SyncNametagBatchPacket.TYPE,
+                net.rp.rpessentials.SyncNametagBatchPacket.CODEC,
+                new DirectionalPayloadHandler<>(net.rp.rpessentials.SyncNametagBatchPacket::handle, null)
+        );
+        registrar.playToClient(
+                SyncTooltipPacket.TYPE,
+                SyncTooltipPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(SyncTooltipPacket::handle, null)
         );
     }
 

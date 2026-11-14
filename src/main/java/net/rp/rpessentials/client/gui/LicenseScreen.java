@@ -1,5 +1,8 @@
 package net.rp.rpessentials.client.gui;
 
+import net.rp.rpessentials.client.skin.SkinnedEditBox;
+import net.rp.rpessentials.client.skin.SkinnedButton;
+import net.rp.rpessentials.client.skin.GuiSkin;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -11,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.client.LicenseCardRenderer;
 
 @OnlyIn(Dist.CLIENT)
@@ -26,16 +30,16 @@ public class LicenseScreen extends Screen {
     private final boolean revoked;
 
     public LicenseScreen(ItemStack stack) {
-        super(Component.literal("License"));
+        super(Component.translatable("item.rpessentials.license"));
 
-        String p = "", h = "Unknown", d = "Unknown";
+        String p = "", h = I18n.get("rpessentials.gui.unknown"), d = h;
         String e = null;
         boolean r = false;
 
         CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
         if (cd != null) {
             CompoundTag tag = cd.copyTag();
-            p = tag.getString("professionId");
+            p = LicenseCardRenderer.shownProfession(tag);
             if (tag.contains("holderName"))  h = tag.getString("holderName");
             if (tag.contains("issueDate"))   d = tag.getString("issueDate");
             if (tag.contains("expiryDate"))  e = tag.getString("expiryDate");
@@ -54,8 +58,9 @@ public class LicenseScreen extends Screen {
         int cx = this.width / 2;
         int cardY = this.height / 2 - TEX_H / 2;
         int btnY = Math.min(cardY + TEX_H + 6, this.height - 22);
+        addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
         addRenderableWidget(Button.builder(Component.translatable("rpessentials.license.screen.close"), btn -> onClose())
-                .pos(cx - 25, btnY).size(50, 16).build());
+                .pos(cx - 25, btnY).size(50, 16).build(SkinnedButton::new));
     }
 
     private static final int FOOTER_Y = 136;
@@ -69,14 +74,14 @@ public class LicenseScreen extends Screen {
         g.pose().translate(x, y, 0);
         g.pose().scale(0.85f, 0.85f, 1f);
         g.drawString(this.font, "§8" + I18n.get(labelKey), 0, 0, 0xFFFFFF);
-        g.drawString(this.font, "§f" + shown, 8, 10, 0xFFFFFF);
+        g.drawString(this.font, ColorHelper.parseSection("§f" + shown), 8, 10, 0xFFFFFF);
         g.pose().popPose();
         return y + 22;
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        g.fill(0, 0, this.width, this.height, 0xAA000000);
+        GuiSkin.background(g, this.width, this.height, 0xAA000000);
 
         int cx = this.width  / 2;
         int cy = this.height / 2;
@@ -95,7 +100,7 @@ public class LicenseScreen extends Screen {
                 cx, y, 0xFFFFFF);
         y += 18;
 
-        g.fill(cardX + 14, y, cardX + TEX_W - 14, y + 1, 0x88FFFFFF);
+        GuiSkin.separator(g, cardX + 14, y, cardX + TEX_W - 14, y + 1, 0x88FFFFFF);
         y += 10;
 
         y = field(g, "rpessentials.license.card.profession", profId, pad, y);
@@ -104,7 +109,7 @@ public class LicenseScreen extends Screen {
         if (expiryDate != null) field(g, "rpessentials.license.card.until", expiryDate, pad, y);
 
         int footerY = cardY + FOOTER_Y;
-        g.fill(cardX + 14, footerY, cardX + TEX_W - 14, footerY + 1, 0x88FFFFFF);
+        GuiSkin.separator(g, cardX + 14, footerY, cardX + TEX_W - 14, footerY + 1, 0x88FFFFFF);
         g.drawCenteredString(this.font,
                 revoked
                         ? "§c" + I18n.get("rpessentials.license.card.invalid")

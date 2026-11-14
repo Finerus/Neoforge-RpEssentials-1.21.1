@@ -32,6 +32,7 @@ public class RpEssentialsCommands {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+        java.util.Set<String> ownBefore = CommandToggles.names(dispatcher);
 
         // =========================================================================
         // ROOT: /rpessentials (requires OP 2)
@@ -57,7 +58,9 @@ public class RpEssentialsCommands {
         root.then(RpStaffCommands.buildStats());
         root.then(RpManageCommands.build());
         root.then(RpModerationCommands.buildAbsence());
+        root.then(RpModerationCommands.buildHistory());
         root.then(RpVanishCommands.build());
+        root.then(RpZoneCommands.build());
 
         dispatcher.register(root);
 
@@ -70,6 +73,8 @@ public class RpEssentialsCommands {
         RpLicenseCommands.registerAliases(dispatcher);
         RpModerationCommands.registerMyWarn(dispatcher);
         RpVanishCommands.registerAliases(dispatcher);
+        RpManageCommands.registerAliases(dispatcher);
+        CommandToggles.markOwn(dispatcher, ownBefore);
 
         // =========================================================================
         // PRIVATE MESSAGING: /msg /tell /w /whisper /r
@@ -86,9 +91,9 @@ public class RpEssentialsCommands {
                                             RpEssentialsMessagingManager.sendMessage(sender, target, msg);
                                         } else {
                                             target.sendSystemMessage(Component.literal(
-                                                    MessagesConfig.get(MessagesConfig.MP_CONSOLE_TO_PLAYER, "msg", msg)));
+                                                    Msg.get(target, MessagesConfig.MP_CONSOLE_TO_PLAYER, "msg", msg)));
                                             ctx.getSource().sendSuccess(() -> Component.literal(
-                                                    MessagesConfig.get(MessagesConfig.MP_CONSOLE_FROM_SERVER,
+                                                    Msg.get(ctx.getSource(), MessagesConfig.MP_CONSOLE_FROM_SERVER,
                                                             "target", target.getName().getString(), "msg", msg)), false);
                                         }
                                         return 1;
@@ -148,7 +153,7 @@ public class RpEssentialsCommands {
         MinecraftServer server = src.getServer();
         int level = requested > 0 ? requested : server.getOperatorUserPermissionLevel();
         if (!src.hasPermission(level)) {
-            src.sendFailure(Component.literal("§c[RpEssentials] You cannot grant a level higher than your own."));
+            src.sendFailure(Msg.c(src, MessagesConfig.STAFF_TOOLSX_OP_TOO_HIGH));
             return 0;
         }
         int count = 0;
@@ -159,11 +164,11 @@ public class RpEssentialsCommands {
             if (pl.isOp(profile) && !src.hasPermission(current)) continue;
             ManageService.setOp(server, profile, level);
             count++;
-            src.sendSuccess(() -> Component.literal("§a[RpEssentials] §f" + profile.getName()
-                    + " §ais now OP level §e" + level), true);
+            src.sendSuccess(() -> Msg.c(src, MessagesConfig.STAFF_TOOLSX_OP_SET,
+                    "player", profile.getName(), "level", String.valueOf(level)), true);
         }
         if (count == 0) {
-            src.sendFailure(Component.literal("§c[RpEssentials] Nothing changed (already at this level or higher than you)."));
+            src.sendFailure(Msg.c(src, MessagesConfig.STAFF_TOOLSX_OP_NOTHING));
         }
         return count;
     }

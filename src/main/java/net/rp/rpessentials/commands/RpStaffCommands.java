@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -26,6 +27,7 @@ import net.minecraft.world.phys.Vec3;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.RpEssentialsScheduleManager;
+import net.rp.rpessentials.TimeHelper;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.*;
@@ -98,7 +100,7 @@ public class RpStaffCommands {
                                 ChatConfig.SPEC.save();
                             } catch (IllegalStateException ignored) { return 0; }
                             ctx.getSource().getPlayerOrException().sendSystemMessage(Component.literal(
-                                    MessagesConfig.get(newVal
+                                    Msg.get(ctx.getSource(), newVal
                                             ? MessagesConfig.PROXIMITY_CHAT_SPY_ENABLED
                                             : MessagesConfig.PROXIMITY_CHAT_SPY_DISABLED)));
                             return 1;
@@ -172,26 +174,26 @@ public class RpStaffCommands {
 
     private static int setGamemode(CommandContext<CommandSourceStack> ctx, ServerPlayer target, String modeName) {
         if (!ModerationConfig.ENABLE_SILENT_COMMANDS.get()) {
-            ctx.getSource().sendFailure(Component.literal("§cSilent commands are disabled."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_TOOLS_SILENT_OFF));
             return 0;
         }
         GameType type = parseGameMode(modeName);
         if (type == null) {
-            ctx.getSource().sendFailure(Component.literal("§cInvalid gamemode."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_TOOLS_BAD_GAMEMODE));
             return 0;
         }
         target.setGameMode(type);
-        String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : "Console";
+        String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
         logToStaff(ctx.getSource(), sourceName + " set " + target.getName().getString() + " to " + modeName);
         if (ModerationConfig.NOTIFY_TARGET.get() && target != ctx.getSource().getEntity()) {
-            target.sendSystemMessage(Component.literal("§7[Staff] Your gamemode has been changed to " + modeName));
+            target.sendSystemMessage(Msg.c(target, MessagesConfig.STAFF_TOOLS_GAMEMODE_SET, "mode", modeName));
         }
         return 1;
     }
 
     private static int silentTeleport(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         if (!ModerationConfig.ENABLE_SILENT_COMMANDS.get()) {
-            ctx.getSource().sendFailure(Component.literal("§cSilent commands are disabled."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_TOOLS_SILENT_OFF));
             return 0;
         }
         ServerPlayer executor = ctx.getSource().getPlayerOrException();
@@ -203,7 +205,7 @@ public class RpStaffCommands {
 
     private static int silentEffect(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         if (!ModerationConfig.ENABLE_SILENT_COMMANDS.get()) {
-            ctx.getSource().sendFailure(Component.literal("§cSilent commands are disabled."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_TOOLS_SILENT_OFF));
             return 0;
         }
         ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
@@ -214,13 +216,13 @@ public class RpStaffCommands {
                 BuiltInRegistries.MOB_EFFECT.getHolder(ResourceKey.create(BuiltInRegistries.MOB_EFFECT.key(), effectId));
         if (effect.isPresent()) {
             target.addEffect(new MobEffectInstance(effect.get(), duration * 20, amplifier, false, false));
-            String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : "Console";
+            String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
             logToStaff(ctx.getSource(), sourceName + " gave effect " + effectId + " to " + target.getName().getString());
             if (ModerationConfig.NOTIFY_TARGET.get()) {
-                target.sendSystemMessage(Component.literal("§7[Staff] An effect has been applied to you."));
+                target.sendSystemMessage(Msg.c(target, MessagesConfig.STAFF_TOOLS_EFFECT_APPLIED));
             }
         } else {
-            ctx.getSource().sendFailure(Component.literal("§cInvalid effect."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_TOOLS_BAD_EFFECT));
             return 0;
         }
         return 1;
@@ -244,28 +246,35 @@ public class RpStaffCommands {
 
     private static int teleportToPlatform(CommandSourceStack source, ServerPlayer executor, ServerPlayer target, String platformId) {
         if (!ModerationConfig.ENABLE_PLATFORMS.get()) {
-            source.sendFailure(Component.literal("§cPlatforms system is disabled."));
+            source.sendFailure(Msg.c(source, MessagesConfig.STAFF_TOOLS_PLATFORMS_OFF));
             return 0;
         }
         for (String pData : ModerationConfig.PLATFORMS.get()) {
             String[] parts = pData.split(";");
             if (parts.length >= 6 && parts[0].equals(platformId)) {
-                ResourceKey<Level> dim = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, ResourceLocation.parse(parts[2]));
-                ServerLevel level = source.getServer().getLevel(dim);
-                if (level == null) { source.sendFailure(Component.literal("§cDimension not found: " + parts[2])); continue; }
-                Vec3 pos = new Vec3(Double.parseDouble(parts[3]), Double.parseDouble(parts[4]), Double.parseDouble(parts[5]));
+                ResourceLocation dimRl = ResourceLocation.tryParse(parts[2]);
+                ServerLevel level = dimRl == null ? null : source.getServer().getLevel(
+                        ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, dimRl));
+                if (level == null) { source.sendFailure(Msg.c(source, MessagesConfig.STAFF_TOOLS_DIM_MISSING, "dim", parts[2])); continue; }
+                Vec3 pos;
+                try {
+                    pos = new Vec3(Double.parseDouble(parts[3]), Double.parseDouble(parts[4]), Double.parseDouble(parts[5]));
+                } catch (NumberFormatException e) {
+                    source.sendFailure(Msg.c(source, MessagesConfig.STAFF_TOOLS_PLATFORM_MISSING, "platform", platformId));
+                    continue;
+                }
                 if (target != null) {
                     target.teleportTo(level, pos.x, pos.y, pos.z, 0, 0);
-                    target.sendSystemMessage(Component.literal("§e[Staff] You have been teleported to: " + parts[1]));
+                    target.sendSystemMessage(Msg.c(target, MessagesConfig.STAFF_TOOLS_TP_TARGET, "name", parts[1]));
                     logToStaff(source, executor.getName().getString() + " TP'd " + target.getName().getString() + " to " + parts[1]);
                 } else {
                     executor.teleportTo(level, pos.x, pos.y, pos.z, 0, 0);
-                    executor.sendSystemMessage(Component.literal("§aTeleported to: " + parts[1]));
+                    executor.sendSystemMessage(Msg.c(executor, MessagesConfig.STAFF_TOOLS_TP_SELF, "name", parts[1]));
                 }
                 return 1;
             }
         }
-        source.sendFailure(Component.literal("§cPlatform not found: " + platformId));
+        source.sendFailure(Msg.c(source, MessagesConfig.STAFF_TOOLS_PLATFORM_MISSING, "platform", platformId));
         return 0;
     }
 
@@ -289,22 +298,27 @@ public class RpStaffCommands {
         ModerationConfig.PLATFORMS.set(platforms);
         ModerationConfig.SPEC.save();
         final boolean wasUpdated = updated;
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] Platform '" + platformName + "' " +
-                (wasUpdated ? "updated" : "created") + " at " + dimension + " " + x + " " + y + " " + z), true);
+        ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(),
+                wasUpdated ? MessagesConfig.STAFF_TOOLS_PLATFORM_UPDATED : MessagesConfig.STAFF_TOOLS_PLATFORM_CREATED,
+                "name", platformName, "dim", String.valueOf(dimension),
+                "x", String.valueOf(x), "y", String.valueOf(y), "z", String.valueOf(z)), true);
         return 1;
     }
 
     private static int staffBroadcast(CommandContext<CommandSourceStack> ctx) {
         String message = StringArgumentType.getString(ctx, "message");
-        String staffName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : "Console";
-        Component formatted = net.rp.rpessentials.ColorHelper.parseColors("§8[STAFF] §e" + staffName + "§7: §f" + message);
+        String staffName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : Msg.get(ctx.getSource(), MessagesConfig.UI_CONSOLE);
         int count = 0;
         for (ServerPlayer p : ctx.getSource().getServer().getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(p)) { p.sendSystemMessage(formatted); count++; }
+            if (!RpEssentialsPermissions.isStaff(p)) continue;
+            p.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(
+                    Msg.get(p, MessagesConfig.STAFF_TOOLS_BROADCAST_FORMAT, "staff", staffName, "message", message)));
+            count++;
         }
         RpEssentials.LOGGER.info("[STAFF-BROADCAST] {}: {}", staffName, message);
         final int finalCount = count;
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[STAFF] Broadcast sent to §e" + finalCount + " §astaff member(s)."), false);
+        ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_TOOLS_BROADCAST_SENT,
+                "count", String.valueOf(finalCount)), false);
         return 1;
     }
 
@@ -318,7 +332,7 @@ public class RpStaffCommands {
         var licenses = LicenseManager.getAllLicenses();
         int licenseCount = licenses.values().stream().mapToInt(List::size).sum();
 
-        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate today = TimeHelper.today();
         java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
         long expiringSoon = LicenseManager.getAllTempLicenses().stream().filter(e -> {
             try {
@@ -332,14 +346,15 @@ public class RpStaffCommands {
 
         String schedule;
         try {
-            schedule = !ScheduleConfig.ENABLE_SCHEDULE.get() ? "§7Disabled"
-                    : RpEssentialsScheduleManager.isServerOpen() ? "§aOpen" : "§cClosed";
-        } catch (IllegalStateException e) { schedule = "§8N/A"; }
+            schedule = !ScheduleConfig.ENABLE_SCHEDULE.get() ? Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_DISABLED)
+                    : RpEssentialsScheduleManager.isServerOpen() ? Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_OPEN)
+                    : Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_CLOSED);
+        } catch (IllegalStateException e) { schedule = Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_NA); }
 
-        String deathRp = "§cOFF";
+        String deathRp = Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_OFF);
         try {
             if (RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED != null && RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get())
-                deathRp = "§aON";
+                deathRp = Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_ON);
         } catch (IllegalStateException ignored) {}
 
         List<Map.Entry<UUID, LastConnectionManager.ConnectionEntry>> byPlaytime = new ArrayList<>(known);
@@ -351,39 +366,39 @@ public class RpStaffCommands {
                 .count();
 
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.STATS_HEADER)).append("\n").append(RpChatUi.LINE).append("\n");
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.STATS_HEADER)).append("\n").append(RpChatUi.LINE).append("\n");
 
-        sb.append("§eServer\n")
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_S_SERVER)).append("\n")
                 .append(RpChatUi.row(
-                        RpChatUi.kv("Online", "§f" + onlineVisible),
-                        RpChatUi.kv("Known", "§f" + known.size()),
-                        RpChatUi.kv("Playtime", "§f" + PlaytimeManager.format(totalPlaytime))))
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_ONLINE), "§f" + onlineVisible),
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_KNOWN), "§f" + known.size()),
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_PLAYTIME), "§f" + PlaytimeManager.format(ctx.getSource().getPlayer(), totalPlaytime))))
                 .append(RpChatUi.row(
-                        RpChatUi.kv("Nicknames", "§f" + NicknameManager.count()),
-                        RpChatUi.kv("Schedule", schedule)));
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_NICKNAMES), "§f" + NicknameManager.count()),
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_SCHEDULE), schedule)));
 
-        sb.append("§eProfessions\n")
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_S_PROFESSIONS)).append("\n")
                 .append(RpChatUi.row(
-                        RpChatUi.kv("Holders", "§f" + licenses.size() + " §8(" + licenseCount + " licenses)"),
-                        RpChatUi.kv("Expiring in 7d", "§f" + expiringSoon)));
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_HOLDERS), Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_V_HOLDERS, "count", String.valueOf(licenses.size()), "licenses", String.valueOf(licenseCount))),
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_EXPIRING), "§f" + expiringSoon)));
 
-        sb.append("§eModeration\n")
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_S_MODERATION)).append("\n")
                 .append(RpChatUi.row(
-                        RpChatUi.kv("Active warns", "§f" + activeWarns.size() + " §8(" + warnedPlayers + " players)"),
-                        RpChatUi.kv("Active mutes", "§f" + MuteManager.getAllMutes().size())))
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_WARNS), Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_V_WARNS, "count", String.valueOf(activeWarns.size()), "players", String.valueOf(warnedPlayers))),
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_MUTES), "§f" + MuteManager.getAllMutes().size())))
                 .append(RpChatUi.row(
-                        RpChatUi.kv("Death RP", deathRp),
-                        RpChatUi.kv("Overrides", "§f" + DeathRPManager.getAllOverrides().size()),
-                        RpChatUi.kv("Deaths recorded", "§f" + DeathRPManager.getAllHistory().size())));
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_DEATHRP), deathRp),
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_OVERRIDES), "§f" + DeathRPManager.getAllOverrides().size()),
+                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_DEATHS), "§f" + DeathRPManager.getAllHistory().size())));
 
-        sb.append("§eMost playtime\n");
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_S_PLAYTIME)).append("\n");
         for (int i = 0; i < Math.min(3, byPlaytime.size()); i++) {
             UUID id = byPlaytime.get(i).getKey();
             sb.append("§8").append(i + 1).append(". §f").append(LastConnectionManager.resolveName(server, id))
-                    .append(" §8- §7").append(PlaytimeManager.format(PlaytimeManager.getTotalPlaytimeMs(id))).append("\n");
+                    .append(" §8- §7").append(PlaytimeManager.format(ctx.getSource().getPlayer(), PlaytimeManager.getTotalPlaytimeMs(id))).append("\n");
         }
 
-        sb.append("§eRecent connections\n");
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_S_RECENT)).append("\n");
         for (int i = 0; i < Math.min(5, known.size()); i++) {
             var e = known.get(i);
             boolean online = server.getPlayerList().getPlayer(e.getKey()) != null
@@ -403,11 +418,12 @@ public class RpStaffCommands {
     // =========================================================================
 
     static void logToStaff(CommandSourceStack source, String msg) {
-        if (!ModerationConfig.LOG_TO_STAFF.get()) return;
-        Component txt = Component.literal("§7§o[StaffLog] " + msg);
-        source.getServer().getPlayerList().getPlayers().forEach(p -> {
-            if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(txt);
-        });
+        if (ModerationConfig.LOG_TO_STAFF.get()) {
+            source.getServer().getPlayerList().getPlayers().forEach(p -> {
+                if (RpEssentialsPermissions.isStaff(p))
+                    p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_TOOLSX_STAFF_LOG, "message", msg));
+            });
+        }
         if (ModerationConfig.LOG_TO_CONSOLE.get()) RpEssentials.LOGGER.info("[StaffLog] " + msg);
     }
 

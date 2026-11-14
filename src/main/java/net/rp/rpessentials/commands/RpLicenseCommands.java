@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -12,7 +13,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentialsItems;
+import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.TimeHelper;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.LastConnectionManager;
@@ -134,12 +138,12 @@ public class RpLicenseCommands {
 
         ProfessionRestrictionManager.ProfessionData profData = ProfessionRestrictionManager.getProfessionData(professionId);
         if (profData == null) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
+            ctx.getSource().sendFailure(ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
             return 0;
         }
         if (LicenseManager.hasLicense(target.getUUID(), professionId)) {
-            ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] §f" + target.getName().getString()
-                    + " §calready has the §f" + professionId + " §clicense. Use §f/rpessentials license reissue §cfor a replacement item."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_LIC_ALREADY,
+                    "player", target.getName().getString(), "profession", professionId));
             return 0;
         }
 
@@ -150,9 +154,9 @@ public class RpLicenseCommands {
 
         String displayName = NicknameManager.getDisplayName(target);
         ctx.getSource().sendSuccess(() -> Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_GIVE_STAFF, "profession", profData.getFormattedName(), "player", displayName)), true);
+                Msg.get(ctx.getSource(), MessagesConfig.LICENSE_GIVE_STAFF, "profession", profData.getFormattedName(), "player", displayName)), true);
         target.sendSystemMessage(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_GIVE_PLAYER, "profession", profData.getFormattedName())));
+                ServerLang.get(target, MessagesConfig.LICENSE_GIVE_PLAYER, "profession", profData.getFormattedName())));
         return 1;
     }
 
@@ -169,14 +173,15 @@ public class RpLicenseCommands {
         TempLicenseExpirationManager.markRevokedLicenseItems(target);
 
         if (!ProfessionRestrictionManager.isReservedTag(profession)) {
-            server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), "tag " + target.getName().getString() + " remove " + profession);}
+            target.removeTag(profession);
+        }
         ProfessionRestrictionManager.ProfessionData profData = ProfessionRestrictionManager.getProfessionData(profession);
         String profDisplayName = profData != null ? profData.getFormattedName() : profession;
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_REVOKE_STAFF, "profession", profDisplayName, "player", target.getName().getString())), true);
+                Msg.get(ctx.getSource(), MessagesConfig.LICENSE_REVOKE_STAFF, "profession", profDisplayName, "player", target.getName().getString())), true);
         target.sendSystemMessage(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_REVOKE_PLAYER, "profession", profDisplayName)));
+                ServerLang.get(target, MessagesConfig.LICENSE_REVOKE_PLAYER, "profession", profDisplayName)));
         return 1;
     }
 
@@ -184,18 +189,18 @@ public class RpLicenseCommands {
         List<String> licenses = LicenseManager.getLicenses(uuid);
         if (licenses.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Component.literal(
-                    MessagesConfig.get(MessagesConfig.LICENSE_LIST_NONE, "player", name)), false);
+                    Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_NONE, "player", name)), false);
             return 1;
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_HEADER, "player", name)).append("\n")
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_HEADER, "player", name)).append("\n")
                 .append(RpChatUi.LINE).append("\n");
         for (String profession : licenses) {
             ProfessionRestrictionManager.ProfessionData data = ProfessionRestrictionManager.getProfessionData(profession);
             String expiry = LicenseManager.getTempExpirationDate(uuid, profession);
             sb.append(data != null ? data.getFormattedName() : "§f" + profession);
-            if (expiry != null) sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
+            if (expiry != null) sb.append(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
             sb.append("\n");
         }
         sb.append(RpChatUi.LINE);
@@ -217,13 +222,13 @@ public class RpLicenseCommands {
     private static int listAllLicenses(CommandContext<CommandSourceStack> ctx) {
         var allLicenses = LicenseManager.getAllLicenses();
         if (allLicenses.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_LIST_ALL_NONE)), false);
+            ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_ALL_NONE)), false);
             return 1;
         }
 
         var server = ctx.getSource().getServer();
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_ALL_HEADER)).append("\n")
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_ALL_HEADER)).append("\n")
                 .append(RpChatUi.LINE).append("\n");
 
         for (var entry : allLicenses.entrySet()) {
@@ -234,7 +239,7 @@ public class RpLicenseCommands {
                 ProfessionRestrictionManager.ProfessionData data = ProfessionRestrictionManager.getProfessionData(lic);
                 licLine.append(data != null ? data.getFormattedName() : "§f" + lic);
                 String expiry = LicenseManager.getTempExpirationDate(uuid, lic);
-                if (expiry != null) licLine.append(MessagesConfig.get(MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
+                if (expiry != null) licLine.append(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_RP_EXPIRY, "date", expiry));
             }
             sb.append("§f").append(LastConnectionManager.resolveName(server, uuid)).append("§7: ").append(licLine).append("\n");
         }
@@ -252,31 +257,31 @@ public class RpLicenseCommands {
 
         ProfessionRestrictionManager.ProfessionData profData = ProfessionRestrictionManager.getProfessionData(professionId);
         if (profData == null) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
+            ctx.getSource().sendFailure(ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
             return 0;
         }
         if (LicenseManager.hasLicense(target.getUUID(), professionId)) {
-            ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] §f" + target.getName().getString()
-                    + " §calready has the §f" + professionId + " §clicense."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_LIC_ALREADY_TEMP,
+                    "player", target.getName().getString(), "profession", professionId));
             return 0;
         }
 
         java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String issued = java.time.LocalDate.now().format(fmt);
-        String expires = java.time.LocalDate.now().plusDays(days).format(fmt);
+        String issued = TimeHelper.today().format(fmt);
+        String expires = TimeHelper.today().plusDays(days).format(fmt);
         String displayName = NicknameManager.getDisplayName(target);
         ServerPlayer staff = ctx.getSource().getPlayer();
 
         LicenseManager.addLicense(target.getUUID(), professionId);
         LicenseManager.addTempLicense(staff, target, professionId, days, issued, expires);
-        LicenseManager.logAction("TEMPGIVE", staff, target, professionId, days + " days, expires " + expires);
+        LicenseManager.logAction("TEMPGIVE", staff, target, professionId, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_TEMP, "days", String.valueOf(days), "date", String.valueOf(expires)));
         LicenseHelper.giveLicenseItem(server, staff, target, professionId, expires);
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_GIVE_RP_STAFF, "profession", profData.getFormattedName(),
+                Msg.get(ctx.getSource(), MessagesConfig.LICENSE_GIVE_RP_STAFF, "profession", profData.getFormattedName(),
                         "player", displayName, "days", String.valueOf(days), "date", expires)), true);
         target.sendSystemMessage(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_GIVE_RP_PLAYER, "profession", profData.getFormattedName(), "date", expires)));
+                ServerLang.get(target, MessagesConfig.LICENSE_GIVE_RP_PLAYER, "profession", profData.getFormattedName(), "date", expires)));
         return 1;
     }
 
@@ -287,14 +292,14 @@ public class RpLicenseCommands {
 
         if (!LicenseManager.hasLicense(target.getUUID(), professionId)) {
             ctx.getSource().sendFailure(Component.literal(
-                    MessagesConfig.get(MessagesConfig.LICENSE_REISSUE_NOT_FOUND,
+                    Msg.get(ctx.getSource(), MessagesConfig.LICENSE_REISSUE_NOT_FOUND,
                             "player", target.getName().getString(), "profession", professionId)));
             return 0;
         }
 
         ProfessionRestrictionManager.ProfessionData profData = ProfessionRestrictionManager.getProfessionData(professionId);
         if (profData == null) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
             return 0;
         }
 
@@ -302,18 +307,18 @@ public class RpLicenseCommands {
         boolean gave = LicenseHelper.giveLicenseItem(server, staff, target, professionId,
                 LicenseManager.getTempExpirationDate(target.getUUID(), professionId));
         if (!gave) {
-            ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] Could not create item for: " + professionId));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_LIC_CREATE_FAILED, "profession", professionId));
             return 0;
         }
 
         LicenseManager.logActionSystem("REISSUE", target.getName().getString(), target.getUUID().toString(),
-                professionId, "Item reissued by " + (staff != null ? staff.getName().getString() : "Console"));
+                professionId, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_REISSUED, "staff", staff != null ? staff.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE)));
 
         ctx.getSource().sendSuccess(() -> Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_REISSUE_STAFF, "profession", profData.getFormattedName(),
+                Msg.get(ctx.getSource(), MessagesConfig.LICENSE_REISSUE_STAFF, "profession", profData.getFormattedName(),
                         "player", target.getName().getString())), true);
         target.sendSystemMessage(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_REISSUE_PLAYER, "profession", profData.getFormattedName())));
+                ServerLang.get(target, MessagesConfig.LICENSE_REISSUE_PLAYER, "profession", profData.getFormattedName())));
         return 1;
     }
 
@@ -328,13 +333,13 @@ public class RpLicenseCommands {
         }
 
         if (log.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("§7[Audit] No entries found."), false);
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_LIC_AUDIT_NONE), false);
             return 1;
         }
 
         List<LicenseManager.AuditEntry> recent = log.subList(Math.max(0, log.size() - count), log.size());
         StringBuilder sb = new StringBuilder();
-        sb.append("§6License Audit §8(").append(recent.size()).append("/").append(log.size()).append(")\n")
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.LIC_AUDIT_HEADER, "shown", String.valueOf(recent.size()), "total", String.valueOf(log.size()))).append("\n")
                 .append(RpChatUi.LINE).append("\n");
         for (LicenseManager.AuditEntry e : recent) {
             String actionColor = switch (e.action) {
@@ -342,11 +347,9 @@ public class RpLicenseCommands {
                 case "REVOKE", "TEMPEXPIRE", "EXPIRE_RP" -> "§c";
                 default -> "§7";
             };
-            sb.append(actionColor).append(e.action)
-                    .append(" §7| §f").append(e.targetName)
-                    .append(" §7| by §e").append(e.staffName)
-                    .append(" §7| §b").append(e.profession)
-                    .append(" §8(").append(e.timestamp).append(")\n");
+            sb.append(Msg.get(ctx.getSource(), MessagesConfig.LIC_AUDIT_LINE, "color", actionColor, "action", e.action,
+                    "player", String.valueOf(e.targetName), "staff", String.valueOf(e.staffName),
+                    "profession", String.valueOf(e.profession), "date", String.valueOf(e.timestamp))).append("\n");
         }
         sb.append(RpChatUi.LINE);
         String msg = sb.toString();

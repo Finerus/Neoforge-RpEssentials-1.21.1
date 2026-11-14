@@ -1,5 +1,8 @@
 package net.rp.rpessentials.client.gui;
 
+import net.rp.rpessentials.client.skin.SkinnedEditBox;
+import net.rp.rpessentials.client.skin.SkinnedButton;
+import net.rp.rpessentials.client.skin.GuiSkin;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -23,6 +26,7 @@ public class DiceSelectionScreen extends Screen {
     private static final int BTN_H = 20;
     private static final int COLS  = 3;
     private static final int PAD   = 6;
+    private List<DiceManager.DiceType> dice = List.of();
 
     public DiceSelectionScreen() {
         super(Component.translatable("rpessentials.gui.dice.title"));
@@ -30,13 +34,13 @@ public class DiceSelectionScreen extends Screen {
 
     @Override
     protected void init() {
-        List<DiceManager.DiceType> dice = DiceManager.getAvailableDice();
+        dice = DiceManager.getAvailableDice();
         if (dice.isEmpty()) {
-            // Pas de dés configurés — on ferme immédiatement
             onClose();
             return;
         }
 
+        addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
         int totalW  = COLS * (BTN_W + PAD) - PAD;
         int rows    = (dice.size() + COLS - 1) / COLS;
         int totalH  = rows * (BTN_H + PAD) - PAD;
@@ -50,7 +54,6 @@ public class DiceSelectionScreen extends Screen {
             int x   = startX + col * (BTN_W + PAD);
             int y   = startY + row * (BTN_H + PAD);
 
-            // Label : nom + max (ex: "d20 (1-20)" ou "coin (Heads/Tails)")
             String label = d.hasCustomFaces()
                     ? "§e" + d.name() + " §8(" + String.join("/", d.customFaces()) + ")"
                     : "§e" + d.name() + " §8(1-" + d.maxValue() + ")";
@@ -58,25 +61,22 @@ public class DiceSelectionScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal(label), btn -> {
                 PacketDistributor.sendToServer(new DiceRollPacket(d.name()));
                 onClose();
-            }).pos(x, y).size(BTN_W, BTN_H).build());
+            }).pos(x, y).size(BTN_W, BTN_H).build(SkinnedButton::new));
         }
 
-        // Bouton fermer
         addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.dice.cancel"), btn -> onClose())
                 .pos((this.width - 60) / 2, startY + totalH + PAD + 4)
-                .size(60, BTN_H).build());
+                .size(60, BTN_H).build(SkinnedButton::new));
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        // Fond semi-transparent
-        g.fill(0, 0, this.width, this.height, 0x88000000);
+        GuiSkin.background(g, this.width, this.height, 0x88000000);
 
-        // Titre centré
+        int rows = (dice.size() + COLS - 1) / COLS;
         g.drawCenteredString(this.font, this.title,
                 this.width / 2,
-                (this.height / 2) - (((DiceManager.getAvailableDice().size() + COLS - 1) / COLS)
-                        * (BTN_H + PAD)) / 2 - 16,
+                (this.height / 2) - (rows * (BTN_H + PAD)) / 2 - 16,
                 0xFFD700);
 
         super.render(g, mouseX, mouseY, delta);

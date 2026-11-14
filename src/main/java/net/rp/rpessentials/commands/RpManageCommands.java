@@ -1,5 +1,10 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.CommandToggles;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.ColorHelper;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -44,13 +49,18 @@ public class RpManageCommands {
     private static final UUID CONSOLE = new UUID(0L, 0L);
     private static final long EXPIRY_MS = 60_000L;
 
+    /** /manage shortcut, used by the clickable buttons when /rpessentials is turned off. */
+    public static void registerAliases(com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(build());
+    }
+
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         var node = Commands.literal("manage").requires(RpEssentialsPermissions::isStaffSource);
 
         node.then(Commands.literal("confirm").executes(RpManageCommands::confirm));
         node.then(Commands.literal("cancel").executes(ctx -> {
             pending.remove(key(ctx));
-            ctx.getSource().sendSuccess(() -> Component.literal("§7[Manage] Cancelled."), false);
+            ctx.getSource().sendSuccess(() -> ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_CANCELLED)), false);
             return 1;
         }));
 
@@ -69,6 +79,9 @@ public class RpManageCommands {
                                     if (action.equals("reset_all")) {
                                         builder.suggest(StringArgumentType.getString(ctx, "player"));
                                     }
+                                    if (action.equals("tempban")) {
+                                        builder.suggest("1d").suggest("3d").suggest("7d").suggest("12h").suggest("30m");
+                                    }
                                     if (action.equals("tp_player_platform")) {
                                         try {
                                             for (String p : ModerationConfig.PLATFORMS.get()) {
@@ -80,6 +93,10 @@ public class RpManageCommands {
                                 })
                                 .executes(ctx -> request(ctx, StringArgumentType.getString(ctx, "value"))))));
         return node;
+    }
+
+    private static String t(CommandContext<CommandSourceStack> ctx, ModConfigSpec.ConfigValue<String> cv, String... a) {
+        return ServerLang.get(ctx.getSource().getEntity() instanceof ServerPlayer p ? p : null, cv, a);
     }
 
     private static UUID key(CommandContext<CommandSourceStack> ctx) {
@@ -97,12 +114,13 @@ public class RpManageCommands {
         try {
             action = ManageService.Action.valueOf(StringArgumentType.getString(ctx, "action").toUpperCase());
         } catch (IllegalArgumentException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Manage] Unknown action."));
+            ctx.getSource().sendFailure(ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_UNKNOWN_ACTION)));
             return 0;
         }
         UUID target = RpEssentialsCommands.findUUIDByName(ctx.getSource().getServer(), playerName);
         if (target == null || VanishManager.canHide(VanishManager.Aspect.SELECTORS, ctx.getSource(), target)) {
-            ctx.getSource().sendFailure(Component.literal("§c[Manage] Player not found: " + playerName));
+            ctx.getSource().sendFailure(ColorHelper.parseSection(
+                    t(ctx, MessagesConfig.MANAGE_PLAYER_NOT_FOUND, "player", playerName)));
             return 0;
         }
 
@@ -115,22 +133,29 @@ public class RpManageCommands {
             } else if (action == ManageService.Action.VANISH) {
                 number = text.isEmpty() ? VanishManager.defaultLevel() : Integer.parseInt(text);
                 text = "";
+            } else if (action == ManageService.Action.TEMPBAN) {
+                String[] parts = text.split("\\s+", 2);
+                number = ManageService.parseDurationMinutes(parts[0]);
+                if (number <= 0) {
+                    ctx.getSource().sendFailure(ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_DURATION_EXPECTED)));
+                    return 0;
+                }
+                text = parts.length > 1 ? parts[1] : "";
             } else if (action == ManageService.Action.ABSENCE_ADD) {
                 String[] parts = text.split("\\s+", 2);
                 number = Integer.parseInt(parts[0]);
                 text = parts.length > 1 ? parts[1] : "";
             }
         } catch (NumberFormatException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Manage] A number is expected."));
+            ctx.getSource().sendFailure(ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_NUMBER_EXPECTED)));
             return 0;
         }
 
         boolean reset = action == ManageService.Action.RESET_ALL;
         if (reset) {
             if (!text.equalsIgnoreCase(playerName)) {
-                ctx.getSource().sendFailure(Component.literal(
-                        "§c[Manage] Full reset requires the player name as confirmation: /rpessentials manage "
-                                + playerName + " reset_all " + playerName));
+                ctx.getSource().sendFailure(ColorHelper.parseSection(
+                        t(ctx, MessagesConfig.MANAGE_RESET_NEEDS_NAME, "player", playerName)));
                 return 0;
             }
             text = "";
@@ -138,28 +163,30 @@ public class RpManageCommands {
 
         pending.put(key(ctx), new Pending(target, action, text, number, System.currentTimeMillis()));
 
-        final String shownText = text;
-        final int shownNumber = number;
-        Component confirm = reset
-                ? Component.literal("§c§l[Manage] FULL RESET of §e§l" + playerName
-                        + "§c§l: inventory, ender chest, role, professions, nickname, absence, OP and whitelist. ")
-                .append(button("§c§l[CONFIRM FULL RESET]", "/rpessentials manage confirm"))
-                .append(Component.literal(" "))
-                .append(button("§7[Cancel]", "/rpessentials manage cancel"))
-                : Component.literal("§6[Manage] §7Confirm §f" + action.name() + " §7on §e" + playerName
-                        + (shownNumber > 0 ? " §8(" + shownNumber + ")" : "")
-                        + (shownText.isEmpty() ? "" : " §8(" + shownText + ")") + "§7? ")
-                .append(button("§a[Confirm]", "/rpessentials manage confirm"))
-                .append(Component.literal(" "))
-                .append(button("§c[Cancel]", "/rpessentials manage cancel"));
-        ctx.getSource().sendSuccess(() -> confirm, false);
+        Component confirm;
+        if (reset) {
+            confirm = ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_RESET_PROMPT, "player", playerName)).copy()
+                    .append(button(t(ctx, MessagesConfig.MANAGE_BTN_CONFIRM_RESET), CommandToggles.manage() + " confirm"))
+                    .append(Component.literal(" "))
+                    .append(button(t(ctx, MessagesConfig.MANAGE_BTN_CANCEL_GREY), CommandToggles.manage() + " cancel"));
+        } else {
+            String detail = (number > 0 ? " §8(" + number + ")" : "")
+                    + (text.isEmpty() ? "" : " §8(" + text + ")");
+            confirm = ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_CONFIRM_PROMPT,
+                            "action", action.name(), "player", playerName, "detail", detail)).copy()
+                    .append(button(t(ctx, MessagesConfig.MANAGE_BTN_CONFIRM), CommandToggles.manage() + " confirm"))
+                    .append(Component.literal(" "))
+                    .append(button(t(ctx, MessagesConfig.MANAGE_BTN_CANCEL), CommandToggles.manage() + " cancel"));
+        }
+        final Component finalConfirm = confirm;
+        ctx.getSource().sendSuccess(() -> finalConfirm, false);
         return 1;
     }
 
     private static int confirm(CommandContext<CommandSourceStack> ctx) {
         Pending p = pending.remove(key(ctx));
         if (p == null || System.currentTimeMillis() - p.at() > EXPIRY_MS) {
-            ctx.getSource().sendFailure(Component.literal("§c[Manage] Nothing to confirm."));
+            ctx.getSource().sendFailure(ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_NOTHING)));
             return 0;
         }
         ManageService.Result r = ManageService.execute(ctx.getSource().getServer(), ctx.getSource().getPlayer(),

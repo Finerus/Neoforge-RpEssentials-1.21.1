@@ -1,5 +1,7 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -40,11 +42,11 @@ public class RpLastConnectionCommands {
     private static int lastConnectionPlayer(CommandContext<CommandSourceStack> ctx) {
         try {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
-                ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.LASTCONN_DISABLED)));
+                ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_DISABLED)));
                 return 0;
             }
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }
 
@@ -59,7 +61,7 @@ public class RpLastConnectionCommands {
 
         if (targetUUID == null) {
             ctx.getSource().sendFailure(Component.literal(
-                    MessagesConfig.get(MessagesConfig.LASTCONN_PLAYER_NOT_FOUND, "player", targetName)));
+                    Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_PLAYER_NOT_FOUND, "player", targetName)));
             return 0;
         }
 
@@ -67,30 +69,30 @@ public class RpLastConnectionCommands {
         LastConnectionManager.ConnectionEntry entry = LastConnectionManager.getEntry(finalTargetUUID);
         if (entry == null) {
             ctx.getSource().sendFailure(Component.literal(
-                    MessagesConfig.get(MessagesConfig.LASTCONN_NO_DATA, "player", targetName)));
+                    Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_NO_DATA, "player", targetName)));
             return 0;
         }
 
         String status = online != null
-                ? MessagesConfig.get(MessagesConfig.LASTCONN_ONLINE)
-                : MessagesConfig.get(MessagesConfig.LASTCONN_OFFLINE);
-        String unknown = MessagesConfig.get(MessagesConfig.LASTCONN_UNKNOWN);
+                ? Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_ONLINE)
+                : Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_OFFLINE);
+        String unknown = Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_UNKNOWN);
         String loginStr = entry.lastLogin != null ? "§f" + entry.lastLogin : unknown;
         String logoutStr = entry.lastLogout != null ? "§f" + entry.lastLogout : unknown;
         String displayName = entry.mcName != null ? entry.mcName : targetName;
 
         MutableComponent nameComp = Component.literal("§e" + displayName).withStyle(style -> style
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        Component.literal("§7" + finalTargetUUID + "\n§8Click to copy")))
+                        ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.STAFF_LASTCO_COPY_HOVER, "uuid", finalTargetUUID.toString()))))
                 .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, finalTargetUUID.toString())));
 
         MutableComponent out = Component.literal(
-                        MessagesConfig.get(MessagesConfig.LASTCONN_BOX_HEADER) + "\n" + RpChatUi.LINE + "\n"
-                                + MessagesConfig.get(MessagesConfig.LASTCONN_BOX_PLAYER))
+                        Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_BOX_HEADER) + "\n" + RpChatUi.LINE + "\n"
+                                + Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_BOX_PLAYER))
                 .append(nameComp)
-                .append(Component.literal("\n" + MessagesConfig.get(MessagesConfig.LASTCONN_BOX_STATUS) + status
-                        + "\n" + MessagesConfig.get(MessagesConfig.LASTCONN_BOX_LOGIN) + loginStr
-                        + "\n" + MessagesConfig.get(MessagesConfig.LASTCONN_BOX_LOGOUT) + logoutStr
+                .append(Component.literal("\n" + Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_BOX_STATUS) + status
+                        + "\n" + Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_BOX_LOGIN) + loginStr
+                        + "\n" + Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_BOX_LOGOUT) + logoutStr
                         + "\n" + RpChatUi.LINE));
         ctx.getSource().sendSuccess(() -> out, false);
         return 1;
@@ -99,11 +101,11 @@ public class RpLastConnectionCommands {
     private static int lastConnectionList(CommandContext<CommandSourceStack> ctx, int page) {
         try {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
-                ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.LASTCONN_DISABLED)));
+                ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_DISABLED)));
                 return 0;
             }
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }
 
@@ -112,7 +114,7 @@ public class RpLastConnectionCommands {
         int total = allEntries.size();
 
         if (total == 0) {
-            ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.LASTCONN_NO_DATA_LIST)), false);
+            ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_NO_DATA_LIST)), false);
             return 1;
         }
 
@@ -121,9 +123,9 @@ public class RpLastConnectionCommands {
         int from = (current - 1) * RpChatUi.PAGE_SIZE;
         int to = Math.min(total, from + RpChatUi.PAGE_SIZE);
 
-        String unknown = MessagesConfig.get(MessagesConfig.LASTCONN_UNKNOWN);
+        String unknown = Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_UNKNOWN);
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.LASTCONN_LIST_HEADER,
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_LIST_HEADER,
                         "page", String.valueOf(current), "pages", String.valueOf(pages),
                         "total", String.valueOf(total), "shown", String.valueOf(to - from)))
                 .append("\n").append(RpChatUi.LINE).append("\n");
@@ -143,7 +145,7 @@ public class RpLastConnectionCommands {
 
         MutableComponent out = Component.literal(sb.toString());
         if (pages > 1) {
-            out.append(Component.literal("\n")).append(RpChatUi.pager(current, pages, "/rpessentials lastconnection list"));
+            out.append(Component.literal("\n")).append(RpChatUi.pager(ctx.getSource(), current, pages, "/rpessentials lastconnection list"));
         }
         ctx.getSource().sendSuccess(() -> out, false);
         return 1;

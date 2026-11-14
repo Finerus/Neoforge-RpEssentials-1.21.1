@@ -1,5 +1,7 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.moderation.HistoryManager;
+import net.rp.rpessentials.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -15,6 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentialsCommands;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.RpEssentialsScheduleManager;
+import net.rp.rpessentials.ServerLang;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.profession.LicenseManager;
@@ -27,7 +30,6 @@ import java.util.*;
 public class RpModerationCommands {
 
     // ── Suggest helpers ─────────────────────────────────────────────────────────
-
     private static final com.mojang.brigadier.suggestion.SuggestionProvider<CommandSourceStack> SUGGEST_WARNED_PLAYERS =
             (ctx, builder) -> {
                 WarnManager.getAll().stream().map(w -> w.targetName).distinct().sorted().forEach(builder::suggest);
@@ -84,7 +86,7 @@ public class RpModerationCommands {
                             String name = StringArgumentType.getString(ctx, "player");
                             ServerPlayer op = ctx.getSource().getServer().getPlayerList().getPlayerByName(name);
                             UUID uuid = op != null ? op.getUUID() : LastConnectionManager.findUUIDByName(name);
-                            if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[RpEssentials] Player not found: " + name)); return 0; }
+                            if (uuid == null) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_WARN_PLAYER_NOT_FOUND, "player", name)); return 0; }
                             return displayWarnList(ctx, uuid, name, true);
                         })
                         .then(Commands.argument("warnId", StringArgumentType.word())
@@ -113,9 +115,9 @@ public class RpModerationCommands {
         var muteNode = Commands.literal("mute")
                 .requires(RpEssentialsPermissions::isStaffSource);
         muteNode.then(Commands.argument("player", EntityArgument.player())
-                .executes(ctx -> executeMute(ctx, -1, "No reason specified"))
+                .executes(ctx -> executeMute(ctx, -1, ServerLang.get(null, MessagesConfig.REASON_NONE)))
                 .then(Commands.argument("minutes", IntegerArgumentType.integer(0))
-                        .executes(ctx -> executeMute(ctx, IntegerArgumentType.getInteger(ctx, "minutes"), "No reason specified"))
+                        .executes(ctx -> executeMute(ctx, IntegerArgumentType.getInteger(ctx, "minutes"), ServerLang.get(null, MessagesConfig.REASON_NONE)))
                         .then(Commands.argument("reason", StringArgumentType.greedyString())
                                 .executes(ctx -> executeMute(ctx, IntegerArgumentType.getInteger(ctx, "minutes"),
                                         StringArgumentType.getString(ctx, "reason"))))));
@@ -129,9 +131,10 @@ public class RpModerationCommands {
                         .executes(ctx -> {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                             MuteManager.unmute(target.getUUID());
+                            HistoryManager.record(target.getUUID(), target.getName().getString(), HistoryManager.UNMUTE, actorName(ctx), "");
                             ctx.getSource().sendSuccess(() -> Component.literal(
-                                    MessagesConfig.get(MessagesConfig.MUTE_STAFF_REMOVED, "player", target.getName().getString())), true);
-                            target.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.MUTE_EXPIRED)));
+                                    Msg.get(ctx.getSource(), MessagesConfig.MUTE_STAFF_REMOVED, "player", target.getName().getString())), true);
+                            target.sendSystemMessage(Component.literal(ServerLang.get(target, MessagesConfig.MUTE_EXPIRED)));
                             return 1;
                         }));
     }
@@ -150,16 +153,16 @@ public class RpModerationCommands {
                                     ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                                     String text = StringArgumentType.getString(ctx, "text");
                                     ServerPlayer author = ctx.getSource().getPlayer();
-                                    String authorName = author != null ? author.getName().getString() : "Console";
+                                    String authorName = author != null ? author.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
                                     String authorUUID = author != null ? author.getUUID().toString() : "console";
                                     int id = NoteManager.addNote(target.getUUID(), target.getName().getString(), authorName, authorUUID, text);
                                     if (id < 0) {
-                                        ctx.getSource().sendFailure(Component.literal(
-                                                "§c[NOTE] Note limit reached for §e" + target.getName().getString() + "§c."));
+                                        ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_NOTE_LIMIT,
+                                                "player", target.getName().getString()));
                                         return 0;
                                     }
                                     ctx.getSource().sendSuccess(() -> Component.literal(
-                                            MessagesConfig.get(MessagesConfig.NOTE_ADDED,
+                                            Msg.get(ctx.getSource(), MessagesConfig.NOTE_ADDED,
                                                     "player", target.getName().getString(), "id", String.valueOf(id))), false);
                                     return 1;
                                 }))));
@@ -171,15 +174,15 @@ public class RpModerationCommands {
                             List<NoteManager.NoteEntry> notes = NoteManager.getNotes(target.getUUID());
                             if (notes.isEmpty()) {
                                 ctx.getSource().sendSuccess(() -> Component.literal(
-                                        MessagesConfig.get(MessagesConfig.NOTE_NONE, "player", target.getName().getString())), false);
+                                        Msg.get(ctx.getSource(), MessagesConfig.NOTE_NONE, "player", target.getName().getString())), false);
                                 return 1;
                             }
                             StringBuilder sb = new StringBuilder();
-                            sb.append(MessagesConfig.get(MessagesConfig.NOTE_LIST_HEADER, "player", target.getName().getString())).append("\n")
+                            sb.append(Msg.get(ctx.getSource(), MessagesConfig.NOTE_LIST_HEADER, "player", target.getName().getString())).append("\n")
                                     .append(RpChatUi.LINE).append("\n");
                             for (NoteManager.NoteEntry n : notes) {
-                                sb.append("§e#").append(n.id).append(" §8[").append(n.timestamp).append("§8] §7by §f").append(n.authorName)
-                                        .append("\n §7-> §f").append(n.text).append("\n");
+                                sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_NOTE_ENTRY, "id", String.valueOf(n.id),
+                                        "date", String.valueOf(n.timestamp), "author", n.authorName, "text", n.text)).append("\n");
                             }
                             sb.append(RpChatUi.LINE);
                             String msg = sb.toString();
@@ -194,9 +197,10 @@ public class RpModerationCommands {
                                     ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                                     int id = IntegerArgumentType.getInteger(ctx, "id");
                                     boolean removed = NoteManager.removeNote(target.getUUID(), id);
-                                    if (!removed) { ctx.getSource().sendFailure(Component.literal("§c[NOTE] Note #" + id + " not found.")); return 0; }
+                                    if (!removed) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_NOTE_NOT_FOUND, "id", String.valueOf(id))); return 0; }
+                                    HistoryManager.record(target.getUUID(), target.getName().getString(), HistoryManager.NOTE_REMOVE, actorName(ctx), "#" + id);
                                     ctx.getSource().sendSuccess(() -> Component.literal(
-                                            MessagesConfig.get(MessagesConfig.NOTE_REMOVED,
+                                            Msg.get(ctx.getSource(), MessagesConfig.NOTE_REMOVED,
                                                     "player", target.getName().getString(), "id", String.valueOf(id))), false);
                                     return 1;
                                 }))));
@@ -206,7 +210,9 @@ public class RpModerationCommands {
                         .executes(ctx -> {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                             NoteManager.clearNotes(target.getUUID());
-                            ctx.getSource().sendSuccess(() -> Component.literal("§a[NOTE] All notes cleared for §e" + target.getName().getString()), false);
+                            HistoryManager.record(target.getUUID(), target.getName().getString(), HistoryManager.NOTE_REMOVE, actorName(ctx),
+                                    ServerLang.get(null, MessagesConfig.HISTORY_ALL_NOTES));
+                            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_NOTE_CLEARED, "player", target.getName().getString()), false);
                             return 1;
                         })));
 
@@ -235,6 +241,11 @@ public class RpModerationCommands {
                                         .executes(RpModerationCommands::deathRpSetPlayer)))
                         .then(Commands.literal("reset")
                                 .executes(RpModerationCommands::deathRpResetPlayer))));
+
+        node.then(Commands.literal("revive")
+                .then(Commands.argument("player", StringArgumentType.word())
+                        .suggests(RpManageCommands.SUGGEST_KNOWN)
+                        .executes(RpModerationCommands::deathRpRevive)));
 
         node.then(Commands.literal("status").executes(RpModerationCommands::deathRpStatus));
         return node;
@@ -290,7 +301,7 @@ public class RpModerationCommands {
         MinecraftServer server = ctx.getSource().getServer();
         String name = StringArgumentType.getString(ctx, "player");
         UUID uuid = RpEssentialsCommands.findUUIDByName(server, name);
-        if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[Absence] Player not found: " + name)); return 0; }
+        if (uuid == null) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_ABS_NOT_FOUND, "player", name)); return 0; }
         ServerPlayer staff = ctx.getSource().getPlayer();
         ManageService.Result r = ManageService.execute(server, staff, uuid, ManageService.Action.ABSENCE_ADD,
                 reason, IntegerArgumentType.getInteger(ctx, "days"));
@@ -303,7 +314,7 @@ public class RpModerationCommands {
         MinecraftServer server = ctx.getSource().getServer();
         String name = StringArgumentType.getString(ctx, "player");
         UUID uuid = RpEssentialsCommands.findUUIDByName(server, name);
-        if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[Absence] Player not found: " + name)); return 0; }
+        if (uuid == null) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_ABS_NOT_FOUND, "player", name)); return 0; }
         ManageService.Result r = ManageService.execute(server, ctx.getSource().getPlayer(), uuid,
                 ManageService.Action.ABSENCE_REMOVE, "", 0);
         if (r.ok()) ctx.getSource().sendSuccess(() -> Component.literal(r.message()), false);
@@ -314,15 +325,17 @@ public class RpModerationCommands {
     private static int absenceList(CommandContext<CommandSourceStack> ctx) {
         List<AbsenceManager.AbsenceEntry> all = AbsenceManager.getAll();
         if (all.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("§7[Absence] No absences."), false);
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_ABS_NONE), false);
             return 1;
         }
-        StringBuilder sb = new StringBuilder("§6Absences §8(" + all.size() + ")\n" + RpChatUi.LINE + "\n");
+        StringBuilder sb = new StringBuilder(Msg.get(ctx.getSource(), MessagesConfig.STAFF_ABS_HEADER,
+                "count", String.valueOf(all.size())) + "\n" + RpChatUi.LINE + "\n");
         for (AbsenceManager.AbsenceEntry e : all) {
-            sb.append(e.isExpired() ? "§8[END] " : "§a[ON] ").append("§f").append(e.mcName)
-                    .append(" §7until §f").append(e.formatEnd());
-            if (e.reason != null && !e.reason.isEmpty()) sb.append(" §8| §7").append(e.reason);
-            sb.append("\n");
+            String reason = e.reason != null && !e.reason.isEmpty()
+                    ? Msg.get(ctx.getSource(), MessagesConfig.STAFF_ABS_REASON, "reason", e.reason) : "";
+            sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_ABS_ENTRY,
+                    "tag", Msg.get(ctx.getSource(), e.isExpired() ? MessagesConfig.STAFF_ABS_TAG_ENDED : MessagesConfig.STAFF_ABS_TAG_ACTIVE),
+                    "player", e.mcName, "end", e.formatEnd(), "reason", reason)).append("\n");
         }
         sb.append(RpChatUi.LINE);
         RpChatUi.sendFormatted(ctx, sb.toString());
@@ -337,16 +350,16 @@ public class RpModerationCommands {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
         String reason = StringArgumentType.getString(ctx, "reason");
         MinecraftServer server = ctx.getSource().getServer();
-        UUID issuerUUID = null; String issuerName = "Console";
+        UUID issuerUUID = null; String issuerName = ServerLang.get(null, MessagesConfig.UI_CONSOLE);
         if (ctx.getSource().getEntity() instanceof ServerPlayer issuer) { issuerUUID = issuer.getUUID(); issuerName = issuer.getName().getString(); }
         String warnId = WarnManager.addWarn(target.getUUID(), target.getName().getString(), issuerUUID, issuerName, reason, null);
-        target.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.WARN_RECEIVED_PERM, "id", warnId, "reason", reason)));
+        target.sendSystemMessage(Component.literal(ServerLang.get(target, MessagesConfig.WARN_RECEIVED_PERM, "id", warnId, "reason", reason)));
         try {
             String fmt = ModerationConfig.WARN_ADDED_BROADCAST_FORMAT.get();
             if (!fmt.isEmpty()) RpStaffCommands.broadcastToStaff(server, fmt.replace("{id}", warnId).replace("{staff}", issuerName)
-                    .replace("{player}", target.getName().getString()).replace("{reason}", reason).replace("{expiry}", "Permanent"));
+                    .replace("{player}", target.getName().getString()).replace("{reason}", reason).replace("{expiry}", Msg.get(ctx.getSource(), MessagesConfig.TIME_PERMANENT)));
         } catch (IllegalStateException ignored) {}
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] Warn §e#" + warnId + "§a added for §e" + target.getName().getString() + "§a."), false);
+        ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_WARN_ADDED, "id", warnId, "player", target.getName().getString()), false);
         autoMuteIfNeeded(target, server);
         return 1;
     }
@@ -358,14 +371,17 @@ public class RpModerationCommands {
                 int count     = WarnManager.getActiveWarns(target.getUUID()).size();
                 if (count >= threshold && !MuteManager.isMuted(target.getUUID())) {
                     int duration = ModerationConfig.MUTE_AUTO_DURATION_MINUTES.get();
-                    MuteManager.mute(target.getUUID(), target.getName().getString(), null, "System", "Auto-mute (" + count + " warns)", duration);
-                    String d = duration == 0 ? "Permanent" : MessagesConfig.formatDuration(duration);
-                    Component msg = net.rp.rpessentials.ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.MUTE_AUTO_NOTIFY,
-                            "player", target.getName().getString(), "count", String.valueOf(count), "duration", d));
-                    for (ServerPlayer p : server.getPlayerList().getPlayers())
-                        if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(msg);
+                    String autoReason = ServerLang.get(null, MessagesConfig.MUTE_AUTO_REASON, "count", String.valueOf(count));
+                    MuteManager.mute(target.getUUID(), target.getName().getString(), null, "System", autoReason, duration);
+                    for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                        if (!RpEssentialsPermissions.isStaff(p)) continue;
+                        String d = duration == 0 ? ServerLang.get(p, MessagesConfig.TIME_PERMANENT) : MessagesConfig.formatDuration(p, duration);
+                        p.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.MUTE_AUTO_NOTIFY,
+                                "player", target.getName().getString(), "count", String.valueOf(count), "duration", d)));
+                    }
+                    String td = duration == 0 ? ServerLang.get(target, MessagesConfig.TIME_PERMANENT) : MessagesConfig.formatDuration(target, duration);
                     target.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(
-                            MessagesConfig.get(MessagesConfig.MUTE_RECEIVED, "reason", "Auto-mute (" + count + " warns)", "duration", d)));
+                            ServerLang.get(target, MessagesConfig.MUTE_RECEIVED, "reason", autoReason, "duration", td)));
                 }
             }
         } catch (IllegalStateException ignored) {}
@@ -380,24 +396,24 @@ public class RpModerationCommands {
         try {
             int maxDays = ModerationConfig.WARN_MAX_TEMP_DAYS.get();
             if (maxDays > 0 && minutes > maxDays * 1440) {
-                ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.WARN_MAX_DURATION_EXCEEDED,
+                ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WARN_MAX_DURATION_EXCEEDED,
                         "maxDays", String.valueOf(maxDays), "maxMinutes", String.valueOf(maxDays * 1440))));
                 return 0;
             }
         } catch (IllegalStateException ignored) {}
-        UUID issuerUUID = null; String issuerName = "Console";
+        UUID issuerUUID = null; String issuerName = ServerLang.get(null, MessagesConfig.UI_CONSOLE);
         if (ctx.getSource().getEntity() instanceof ServerPlayer i) { issuerUUID = i.getUUID(); issuerName = i.getName().getString(); }
         long expiresAt = System.currentTimeMillis() + (long) minutes * 60_000;
         String warnId = WarnManager.addWarn(target.getUUID(), target.getName().getString(), issuerUUID, issuerName, reason, expiresAt);
-        String dur = MessagesConfig.formatDuration(minutes);
-        target.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.WARN_RECEIVED_TEMP, "id", warnId, "reason", reason, "duration", dur)));
+        String dur = MessagesConfig.formatDuration(ctx.getSource().getPlayer(), minutes);
+        target.sendSystemMessage(Component.literal(ServerLang.get(target, MessagesConfig.WARN_RECEIVED_TEMP, "id", warnId, "reason", reason, "duration", dur)));
         try {
             String fmt = ModerationConfig.WARN_ADDED_BROADCAST_FORMAT.get();
             if (!fmt.isEmpty()) RpStaffCommands.broadcastToStaff(server, fmt.replace("{id}", warnId)
                     .replace("{staff}", issuerName).replace("{player}", target.getName().getString()).replace("{reason}", reason).replace("{expiry}", dur));
         } catch (IllegalStateException ignored) {}
         String finalDur = dur;
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] Temp warn §e#" + warnId + "§a for §e" + target.getName().getString() + "§a (" + finalDur + ")."), false);
+        ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_WARN_TEMP_ADDED, "id", warnId, "player", target.getName().getString(), "duration", finalDur), false);
         return 1;
     }
 
@@ -406,17 +422,20 @@ public class RpModerationCommands {
         String warnId = StringArgumentType.getString(ctx, "warnId");
         MinecraftServer server = ctx.getSource().getServer();
         Optional<WarnManager.WarnEntry> opt = WarnManager.getWarnById(warnId);
-        if (opt.isEmpty()) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.WARN_NOT_FOUND, "id", warnId))); return 0; }
+        if (opt.isEmpty()) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WARN_NOT_FOUND, "id", warnId))); return 0; }
         WarnManager.WarnEntry entry = opt.get();
-        if (!WarnManager.removeWarn(warnId)) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.WARN_REMOVE_FAILED, "id", warnId))); return 0; }
-        String staffName = ctx.getSource().getEntity() instanceof ServerPlayer i ? i.getName().getString() : "Console";
+        if (!WarnManager.removeWarn(warnId)) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WARN_REMOVE_FAILED, "id", warnId))); return 0; }
+        String staffName = actorName(ctx);
+        try {
+            HistoryManager.record(UUID.fromString(entry.targetUUID), entry.targetName, HistoryManager.WARN_REMOVE, staffName, "#" + warnId + " " + entry.reason);
+        } catch (IllegalArgumentException ignored) {}
         ServerPlayer online = server.getPlayerList().getPlayer(UUID.fromString(entry.targetUUID));
-        if (online != null) online.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.WARN_REMOVED_PLAYER, "id", warnId)));
+        if (online != null) online.sendSystemMessage(Component.literal(ServerLang.get(online, MessagesConfig.WARN_REMOVED_PLAYER, "id", warnId)));
         try {
             String fmt = ModerationConfig.WARN_REMOVED_BROADCAST_FORMAT.get();
             if (!fmt.isEmpty()) RpStaffCommands.broadcastToStaff(server, fmt.replace("{id}", warnId).replace("{staff}", staffName));
         } catch (IllegalStateException ignored) {}
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] Warn §e#" + warnId + "§a removed."), false);
+        ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_WARN_REMOVED, "id", warnId), false);
         return 1;
     }
 
@@ -429,11 +448,14 @@ public class RpModerationCommands {
     private static int warnListAll(CommandContext<CommandSourceStack> ctx) {
         if (!warnSystemCheck(ctx)) return 0;
         var all = WarnManager.getAll();
-        if (all.isEmpty()) { ctx.getSource().sendSuccess(() -> Component.literal("§7[RpEssentials] No warns."), false); return 1; }
-        StringBuilder sb = new StringBuilder("§6All warns §7(" + all.size() + ")\n" + RpChatUi.LINE + "\n");
+        if (all.isEmpty()) { ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_WARN_NONE), false); return 1; }
+        StringBuilder sb = new StringBuilder(Msg.get(ctx.getSource(), MessagesConfig.STAFF_WARN_ALL_HEADER,
+                "count", String.valueOf(all.size())) + "\n" + RpChatUi.LINE + "\n");
         for (WarnManager.WarnEntry w : all) {
-            String tag = w.isExpired() ? "§8[EXP]" : (w.isPermanent() ? "§c[PERM]" : "§e[TEMP]");
-            sb.append(tag).append(" §e#").append(w.id).append(" §7-> §f").append(w.targetName).append(" §7- ").append(w.reason).append("\n");
+            String tag = Msg.get(ctx.getSource(), w.isExpired() ? MessagesConfig.STAFF_WARN_TAG_EXPIRED
+                    : (w.isPermanent() ? MessagesConfig.STAFF_WARN_TAG_PERM : MessagesConfig.STAFF_WARN_TAG_TEMP));
+            sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_WARN_ALL_ENTRY,
+                    "tag", tag, "id", w.id, "player", w.targetName, "reason", w.reason)).append("\n");
         }
         sb.append(RpChatUi.LINE);
         String msg = sb.toString();
@@ -445,19 +467,19 @@ public class RpModerationCommands {
         if (!warnSystemCheck(ctx)) return 0;
         String warnId = StringArgumentType.getString(ctx, "warnId");
         Optional<WarnManager.WarnEntry> opt = WarnManager.getWarnById(warnId);
-        if (opt.isEmpty()) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.WARN_NOT_FOUND, "id", warnId))); return 0; }
+        if (opt.isEmpty()) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WARN_NOT_FOUND, "id", warnId))); return 0; }
         WarnManager.WarnEntry w = opt.get();
-        String typeStr = w.isPermanent() ? MessagesConfig.get(MessagesConfig.WARN_TYPE_PERMANENT)
-                : (w.isExpired() ? MessagesConfig.get(MessagesConfig.WARN_TYPE_EXPIRED) : MessagesConfig.get(MessagesConfig.WARN_TYPE_TEMPORARY));
+        String typeStr = w.isPermanent() ? Msg.get(ctx.getSource(), MessagesConfig.WARN_TYPE_PERMANENT)
+                : (w.isExpired() ? Msg.get(ctx.getSource(), MessagesConfig.WARN_TYPE_EXPIRED) : Msg.get(ctx.getSource(), MessagesConfig.WARN_TYPE_TEMPORARY));
         ctx.getSource().sendSuccess(() -> Component.literal(
-                MessagesConfig.get(MessagesConfig.WARN_INFO_HEADER, "id", w.id) + "\n"
+                Msg.get(ctx.getSource(), MessagesConfig.WARN_INFO_HEADER, "id", w.id) + "\n"
                         + RpChatUi.LINE + "\n"
-                        + MessagesConfig.get(MessagesConfig.WARN_INFO_PLAYER_LABEL) + "§e" + w.targetName + "\n"
-                        + MessagesConfig.get(MessagesConfig.WARN_INFO_STAFF_LABEL)  + "§e" + w.issuerName + "\n"
-                        + MessagesConfig.get(MessagesConfig.WARN_INFO_REASON_LABEL) + "§f" + w.reason + "\n"
-                        + MessagesConfig.get(MessagesConfig.WARN_INFO_DATE_LABEL)   + "§f" + w.getFormattedDate() + "\n"
-                        + MessagesConfig.get(MessagesConfig.WARN_INFO_TYPE_LABEL)   + typeStr + "\n"
-                        + MessagesConfig.get(MessagesConfig.WARN_INFO_EXPIRY_LABEL) + "§f" + w.getFormattedExpiry() + "\n"
+                        + Msg.get(ctx.getSource(), MessagesConfig.WARN_INFO_PLAYER_LABEL) + "§e" + w.targetName + "\n"
+                        + Msg.get(ctx.getSource(), MessagesConfig.WARN_INFO_STAFF_LABEL)  + "§e" + w.issuerName + "\n"
+                        + Msg.get(ctx.getSource(), MessagesConfig.WARN_INFO_REASON_LABEL) + "§f" + w.reason + "\n"
+                        + Msg.get(ctx.getSource(), MessagesConfig.WARN_INFO_DATE_LABEL)   + "§f" + w.getFormattedDate() + "\n"
+                        + Msg.get(ctx.getSource(), MessagesConfig.WARN_INFO_TYPE_LABEL)   + typeStr + "\n"
+                        + Msg.get(ctx.getSource(), MessagesConfig.WARN_INFO_EXPIRY_LABEL) + "§f" + w.getFormattedExpiry(ctx.getSource().getPlayer()) + "\n"
                         + RpChatUi.LINE), false);
         return 1;
     }
@@ -466,26 +488,27 @@ public class RpModerationCommands {
         if (!warnSystemCheck(ctx)) return 0;
         ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
         int removed = WarnManager.clearWarns(target.getUUID());
-        if (removed == 0) { ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.WARN_LIST_NONE_STAFF, "player", target.getName().getString())), false); return 1; }
-        target.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.WARN_CLEARED_PLAYER)));
+        if (removed > 0) HistoryManager.record(target.getUUID(), target.getName().getString(), HistoryManager.WARN_CLEAR, actorName(ctx), String.valueOf(removed));
+        if (removed == 0) { ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WARN_LIST_NONE_STAFF, "player", target.getName().getString())), false); return 1; }
+        target.sendSystemMessage(Component.literal(ServerLang.get(target, MessagesConfig.WARN_CLEARED_PLAYER)));
         int finalR = removed;
-        ctx.getSource().sendSuccess(() -> Component.literal("§a[RpEssentials] §e" + finalR + "§a warn(s) removed for §e" + target.getName().getString() + "§a."), false);
+        ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_WARN_CLEARED, "count", String.valueOf(finalR), "player", target.getName().getString()), false);
         return 1;
     }
 
     private static int warnPurge(CommandContext<CommandSourceStack> ctx) {
         if (!warnSystemCheck(ctx)) return 0;
         int p = WarnManager.purgeExpiredWarns();
-        ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.WARN_PURGE_DONE, "count", String.valueOf(p))), false);
+        ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WARN_PURGE_DONE, "count", String.valueOf(p))), false);
         return 1;
     }
 
     private static int myWarn(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer player)) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.COMMAND_PLAYER_ONLY)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.COMMAND_PLAYER_ONLY)));
             return 0;
         }
-        try { if (!ModerationConfig.ENABLE_WARN_SYSTEM.get()) { player.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.WARN_SYSTEM_DISABLED))); return 0; } }
+        try { if (!ModerationConfig.ENABLE_WARN_SYSTEM.get()) { player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.WARN_SYSTEM_DISABLED))); return 0; } }
         catch (IllegalStateException e) { return 0; }
         return displayWarnList(ctx, player.getUUID(), player.getName().getString(), false);
     }
@@ -493,19 +516,20 @@ public class RpModerationCommands {
     static int displayWarnList(CommandContext<CommandSourceStack> ctx, UUID uuid, String name, boolean showAll) {
         List<WarnManager.WarnEntry> list = showAll ? WarnManager.getWarns(uuid) : WarnManager.getActiveWarns(uuid);
         if (list.isEmpty()) {
-            String msg = showAll ? MessagesConfig.get(MessagesConfig.WARN_LIST_NONE, "player", name) : MessagesConfig.get(MessagesConfig.WARN_LIST_NONE_SELF);
+            String msg = showAll ? Msg.get(ctx.getSource(), MessagesConfig.WARN_LIST_NONE, "player", name) : Msg.get(ctx.getSource(), MessagesConfig.WARN_LIST_NONE_SELF);
             RpChatUi.sendFormatted(ctx, msg);
             return 1;
         }
         long active = list.stream().filter(w -> !w.isExpired()).count();
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.WARN_LIST_HEADER, "player", name, "count", String.valueOf(active))).append("\n")
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.WARN_LIST_HEADER, "player", name, "count", String.valueOf(active))).append("\n")
                 .append(RpChatUi.LINE).append("\n");
         for (WarnManager.WarnEntry w : list) {
-            String tag = w.isExpired() ? MessagesConfig.get(MessagesConfig.WARN_STATUS_EXPIRED_TAG)
-                    : (w.isPermanent() ? MessagesConfig.get(MessagesConfig.WARN_STATUS_PERM_TAG) : MessagesConfig.get(MessagesConfig.WARN_STATUS_TEMP_TAG));
-            sb.append(tag).append(" §7#").append(w.id).append(" §8(").append(w.getFormattedDate()).append(") §7by §f").append(w.issuerName)
-                    .append("\n §7-> §f").append(w.reason).append(" §8| ").append(w.getFormattedExpiry()).append("\n");
+            String tag = w.isExpired() ? Msg.get(ctx.getSource(), MessagesConfig.WARN_STATUS_EXPIRED_TAG)
+                    : (w.isPermanent() ? Msg.get(ctx.getSource(), MessagesConfig.WARN_STATUS_PERM_TAG) : Msg.get(ctx.getSource(), MessagesConfig.WARN_STATUS_TEMP_TAG));
+            sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_WARN_LIST_ENTRY, "tag", tag, "id", w.id,
+                    "date", w.getFormattedDate(), "staff", w.issuerName, "reason", w.reason,
+                    "expiry", w.getFormattedExpiry(ctx.getSource().getPlayer()))).append("\n");
         }
         sb.append(RpChatUi.LINE);
         ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
@@ -516,16 +540,16 @@ public class RpModerationCommands {
     // MUTE HANDLER
     // =========================================================================
     private static int executeMute(CommandContext<CommandSourceStack> ctx, int minutes, String reason) throws CommandSyntaxException {
-        try { if (!ModerationConfig.ENABLE_MUTE_SYSTEM.get()) { ctx.getSource().sendFailure(Component.literal("§c[MUTE] Mute system disabled.")); return 0; } }
-        catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal("§c[MUTE] Config not loaded.")); return 0; }
+        try { if (!ModerationConfig.ENABLE_MUTE_SYSTEM.get()) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_MUTE_DISABLED)); return 0; } }
+        catch (IllegalStateException e) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_MUTE_CONFIG)); return 0; }
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         ServerPlayer staff = ctx.getSource().getPlayer();
         int duration = minutes < 0 ? 0 : minutes;
         MuteManager.mute(target.getUUID(), target.getName().getString(),
-                staff != null ? staff.getUUID() : null, staff != null ? staff.getName().getString() : "Console", reason, duration);
-        String d = duration == 0 ? "Permanent" : MessagesConfig.formatDuration(duration);
-        target.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.MUTE_RECEIVED, "reason", reason, "duration", d)));
-        ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.MUTE_STAFF_ADDED, "player", target.getName().getString(), "duration", d, "reason", reason)), true);
+                staff != null ? staff.getUUID() : null, staff != null ? staff.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE), reason, duration);
+        String d = duration == 0 ? Msg.get(ctx.getSource(), MessagesConfig.TIME_PERMANENT) : MessagesConfig.formatDuration(ctx.getSource().getPlayer(), duration);
+        target.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(ServerLang.get(target, MessagesConfig.MUTE_RECEIVED, "reason", reason, "duration", d)));
+        ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.MUTE_STAFF_ADDED, "player", target.getName().getString(), "duration", d, "reason", reason)), true);
         return 1;
     }
 
@@ -535,11 +559,11 @@ public class RpModerationCommands {
     private static int deathRpSetGlobal(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         boolean enabled = BoolArgumentType.getBool(ctx, "value");
         String staff;
-        try { staff = ctx.getSource().getPlayerOrException().getName().getString(); } catch (CommandSyntaxException e) { staff = "Console"; }
+        try { staff = ctx.getSource().getPlayerOrException().getName().getString(); } catch (CommandSyntaxException e) { staff = net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE); }
         try { if (RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED != null) { RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.set(enabled); RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.save(); } }
-        catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.DEATHRP_CONFIG_UNAVAILABLE))); return 0; }
+        catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_CONFIG_UNAVAILABLE))); return 0; }
         DeathRPManager.broadcastGlobalToggle(staff, enabled, ctx.getSource().getServer());
-        ctx.getSource().sendSuccess(() -> Component.literal(enabled ? MessagesConfig.get(MessagesConfig.DEATHRP_GLOBAL_ENABLED) : MessagesConfig.get(MessagesConfig.DEATHRP_GLOBAL_DISABLED)), true);
+        ctx.getSource().sendSuccess(() -> Component.literal(enabled ? Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_GLOBAL_ENABLED) : Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_GLOBAL_DISABLED)), true);
         return 1;
     }
 
@@ -549,16 +573,31 @@ public class RpModerationCommands {
         DeathRPManager.setOverride(target.getUUID(), enabled);
         DeathRPManager.notifyPlayerToggle(target, enabled);
         ctx.getSource().sendSuccess(() -> Component.literal(enabled
-                ? MessagesConfig.get(MessagesConfig.DEATHRP_PLAYER_ENABLED, "player", target.getName().getString())
-                : MessagesConfig.get(MessagesConfig.DEATHRP_PLAYER_DISABLED, "player", target.getName().getString())), true);
+                ? Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_PLAYER_ENABLED, "player", target.getName().getString())
+                : Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_PLAYER_DISABLED, "player", target.getName().getString())), true);
         return 1;
     }
 
     private static int deathRpResetPlayer(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "joueur");
         DeathRPManager.removeOverride(target.getUUID());
-        ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.DEATHRP_OVERRIDE_RESET, "player", target.getName().getString())), true);
+        ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_OVERRIDE_RESET, "player", target.getName().getString())), true);
         return 1;
+    }
+
+    private static int deathRpRevive(CommandContext<CommandSourceStack> ctx) {
+        MinecraftServer server = ctx.getSource().getServer();
+        String name = StringArgumentType.getString(ctx, "player");
+        UUID uuid = RpEssentialsCommands.findUUIDByName(server, name);
+        if (uuid == null) {
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_DRP_NOT_FOUND, "player", name));
+            return 0;
+        }
+        ManageService.Result r = ManageService.execute(server, ctx.getSource().getPlayer(), uuid,
+                ManageService.Action.WHITELIST_ADD, "", 0);
+        if (r.ok()) ctx.getSource().sendSuccess(() -> Component.literal(r.message()), false);
+        else ctx.getSource().sendFailure(Component.literal(r.message()));
+        return r.ok() ? 1 : 0;
     }
 
     private static int deathRpStatus(CommandContext<CommandSourceStack> ctx) {
@@ -566,35 +605,37 @@ public class RpModerationCommands {
         try { global = RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED != null && RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.get(); } catch (IllegalStateException ignored) {}
         boolean wlRemove = false;
         try { wlRemove = RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE != null && RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get(); } catch (IllegalStateException ignored) {}
-        String active = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_ACTIVE);
-        String inactive = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_INACTIVE);
-        String yes = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_YES);
-        String no = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_NO);
+        String active = Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_ACTIVE);
+        String inactive = Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_INACTIVE);
+        String yes = Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_YES);
+        String no = Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_NO);
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_HEADER)).append("\n").append(RpChatUi.LINE).append("\n");
-        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_GLOBAL, "value", global ? active : inactive)).append("\n");
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_HEADER)).append("\n").append(RpChatUi.LINE).append("\n");
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_GLOBAL, "value", global ? active : inactive)).append("\n");
         try {
             boolean hoursOn = ScheduleConfig.DEATH_HOURS_ENABLED.get();
             boolean hourNow = hoursOn && RpEssentialsScheduleManager.isDeathHour();
-            sb.append("§7Death hours   : ").append(!hoursOn ? "§8Disabled" : hourNow ? active : inactive);
-            if (hoursOn) sb.append(" §8(").append(String.join(", ", ScheduleConfig.DEATH_HOURS_SLOTS.get())).append(")");
-            sb.append("\n§7Effective now : ").append(global || hourNow ? active : inactive).append("\n");
+            String hours = !hoursOn ? Msg.get(ctx.getSource(), MessagesConfig.STAFF_DRP_HOURS_DISABLED) : hourNow ? active : inactive;
+            if (hoursOn) hours += Msg.get(ctx.getSource(), MessagesConfig.STAFF_DRP_HOURS_SLOTS,
+                    "slots", String.join(", ", ScheduleConfig.DEATH_HOURS_SLOTS.get()));
+            sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_DRP_HOURS, "value", hours)).append("\n");
+            sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_DRP_EFFECTIVE, "value", global || hourNow ? active : inactive)).append("\n");
         } catch (IllegalStateException ignored) {}
-        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_WHITELIST, "value", wlRemove ? yes : no)).append("\n").append(RpChatUi.LINE).append("\n");
-        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_OVERRIDES)).append("\n");
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_WHITELIST, "value", wlRemove ? yes : no)).append("\n").append(RpChatUi.LINE).append("\n");
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_OVERRIDES)).append("\n");
         Map<UUID, Boolean> overrides = DeathRPManager.getAllOverrides();
         MinecraftServer server = ctx.getSource().getServer();
-        if (overrides.isEmpty()) { sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_NO_OVERRIDES)).append("\n"); }
+        if (overrides.isEmpty()) { sb.append(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_NO_OVERRIDES)).append("\n"); }
         else {
             for (Map.Entry<UUID, Boolean> e : overrides.entrySet()) {
-                String name = MessagesConfig.get(MessagesConfig.DEATHRP_STATUS_UNKNOWN);
+                String name = Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_STATUS_UNKNOWN);
                 if (server != null) {
                     ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
                     if (p != null) name = p.getName().getString();
                     else if (server.getProfileCache() != null) name = server.getProfileCache().get(e.getKey())
                             .map(com.mojang.authlib.GameProfile::getName).orElse(name);
                 }
-                sb.append(" §e").append(name).append(" §7-> ").append(e.getValue() ? active : inactive).append("\n");
+                sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_DRP_OVERRIDE_ENTRY, "player", name, "value", e.getValue() ? active : inactive)).append("\n");
             }
         }
         sb.append(RpChatUi.LINE);
@@ -605,15 +646,16 @@ public class RpModerationCommands {
 
     private static int showDeathHistory(CommandContext<CommandSourceStack> ctx, ServerPlayer target) {
         List<DeathRPManager.DeathHistoryEntry> h = target != null ? DeathRPManager.getHistory(target.getUUID()) : DeathRPManager.getAllHistory();
-        String label = target != null ? target.getName().getString() : "All players";
-        if (h.isEmpty()) { ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.DEATHRP_HISTORY_NONE, "player", label)), false); return 1; }
+        String label = target != null ? target.getName().getString() : Msg.get(ctx.getSource(), MessagesConfig.STAFF_DRP_ALL_PLAYERS);
+        if (h.isEmpty()) { ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_HISTORY_NONE, "player", label)), false); return 1; }
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_HISTORY_HEADER, "player", label)).append("\n")
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_HISTORY_HEADER, "player", label)).append("\n")
                 .append(RpChatUi.LINE).append("\n");
         for (int i = 0; i < h.size(); i++) {
             DeathRPManager.DeathHistoryEntry e = h.get(i);
-            if (target == null) sb.append("§e#").append(i+1).append(" §f").append(e.playerName).append(" §8: ").append(e.timestamp).append(" §7: ").append(e.damageCause).append("\n");
-            else sb.append(MessagesConfig.get(MessagesConfig.DEATHRP_HISTORY_ENTRY, "index", String.valueOf(i+1), "date", e.timestamp, "cause", e.damageCause)).append("\n");
+            if (target == null) sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_DRP_HISTORY_ALL_ENTRY, "index", String.valueOf(i + 1),
+                    "player", e.playerName, "date", String.valueOf(e.timestamp), "cause", String.valueOf(e.damageCause))).append("\n");
+            else sb.append(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_HISTORY_ENTRY, "index", String.valueOf(i+1), "date", e.timestamp, "cause", e.damageCause)).append("\n");
         }
         sb.append(RpChatUi.LINE);
         String msg = sb.toString();
@@ -632,7 +674,8 @@ public class RpModerationCommands {
         if (online != null && VanishManager.canHide(VanishManager.Aspect.LIST, ctx.getSource(), online.getUUID())) {
             online = null;
         }
-        if (uuid == null) { ctx.getSource().sendFailure(Component.literal("§c[Inspect] Player not found: " + targetName)); return 0; }
+        if (uuid == null) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_INSPECT_NOT_FOUND, "player", targetName)); return 0; }
+        CommandSourceStack src = ctx.getSource();
 
         List<String> licenses = LicenseManager.getLicenses(uuid);
         List<WarnManager.WarnEntry> warns = WarnManager.getActiveWarns(uuid);
@@ -645,10 +688,10 @@ public class RpModerationCommands {
 
         long totalPlaytimeMs   = PlaytimeManager.getTotalPlaytimeMs(uuid);
         long sessionMs         = isOnline ? PlaytimeManager.getCurrentSessionMs(uuid) : 0L;
-        String totalPlaytimeStr = PlaytimeManager.format(totalPlaytimeMs);
-        String sessionStr       = PlaytimeManager.format(sessionMs);
+        String totalPlaytimeStr = PlaytimeManager.format(ctx.getSource().getPlayer(), totalPlaytimeMs);
+        String sessionStr       = PlaytimeManager.format(ctx.getSource().getPlayer(), sessionMs);
 
-        String role = "§8-";
+        String role = Msg.get(src, MessagesConfig.STAFF_INSPECT_EMPTY);
         if (online != null) {
             try {
                 for (String entry : net.rp.rpessentials.config.RpEssentialsConfig.ROLES.get()) {
@@ -659,65 +702,65 @@ public class RpModerationCommands {
         }
 
         StringBuilder header = new StringBuilder();
-        header.append("§6Inspect: §f").append(targetName).append("\n").append(RpChatUi.LINE).append("\n");
-        header.append("§7Status   : ").append(isOnline ? "§a● Online" : "§7○ Offline").append("\n");
-        header.append("§7Nickname : ").append(nick != null ? nick : "§8-").append("\n");
-        header.append("§7Role     : ").append(role);
+        header.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_HEADER, "player", targetName)).append("\n").append(RpChatUi.LINE).append("\n");
+        header.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_STATUS, "status",
+                Msg.get(src, isOnline ? MessagesConfig.STAFF_INSPECT_ONLINE : MessagesConfig.STAFF_INSPECT_OFFLINE))).append("\n");
+        header.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_NICK, "nickname",
+                nick != null ? nick : Msg.get(src, MessagesConfig.STAFF_INSPECT_EMPTY))).append("\n");
+        header.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_ROLE, "role", role));
         RpChatUi.sendFormatted(ctx, header.toString());
 
         final UUID finalUuid = uuid;
         if (ctx.getSource().getEntity() instanceof ServerPlayer viewer) {
-            viewer.sendSystemMessage(Component.literal("§7UUID     : §8" + finalUuid)
+            viewer.sendSystemMessage(Msg.c(viewer, MessagesConfig.STAFF_INSPECT_UUID, "uuid", finalUuid.toString()).copy()
                     .withStyle(style -> style
                             .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
                                     net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
-                                    Component.literal("§7Click to open NameMC")))
+                                    Msg.c(viewer, MessagesConfig.STAFF_INSPECT_UUID_HOVER)))
                             .withClickEvent(new net.minecraft.network.chat.ClickEvent(
                                     net.minecraft.network.chat.ClickEvent.Action.OPEN_URL,
                                     "https://namemc.com/profile/" + finalUuid))));
         } else {
-            ctx.getSource().sendSuccess(() -> Component.literal("UUID     : " + finalUuid), false);
+            ctx.getSource().sendSuccess(() -> Msg.c(src, MessagesConfig.STAFF_INSPECT_UUID, "uuid", finalUuid.toString()), false);
         }
 
         StringBuilder sb = new StringBuilder();
         sb.append(RpChatUi.LINE).append("\n");
 
-        sb.append("§eLicenses §7(").append(licenses.size()).append(")§7: ");
-        if (licenses.isEmpty()) sb.append("§8None");
+        StringBuilder lic = new StringBuilder();
+        if (licenses.isEmpty()) lic.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_NONE_GREY));
         else {
             for (int i = 0; i < licenses.size(); i++) {
                 String expiry = LicenseManager.getTempExpirationDate(uuid, licenses.get(i));
-                sb.append("§f").append(licenses.get(i));
-                if (expiry != null) sb.append("§8(RP:").append(expiry).append(")");
-                if (i < licenses.size() - 1) sb.append("§7, ");
+                lic.append("§f").append(licenses.get(i));
+                if (expiry != null) lic.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_LICENSE_TEMP, "date", expiry));
+                if (i < licenses.size() - 1) lic.append("§7, ");
             }
         }
-        sb.append("\n");
+        sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_LICENSES, "count", String.valueOf(licenses.size()), "list", lic.toString())).append("\n");
 
-        sb.append("§eWarns §7(").append(warns.size()).append(" active)§7: ");
-        if (warns.isEmpty()) sb.append("§aNone");
-        else warns.forEach(w -> sb.append("\n §c#").append(w.id).append(" §7").append(w.reason));
-        sb.append("\n");
+        StringBuilder warnList = new StringBuilder();
+        if (warns.isEmpty()) warnList.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_NONE_GREEN));
+        else warns.forEach(w -> warnList.append("\n ").append(Msg.get(src, MessagesConfig.STAFF_INSPECT_WARN_ENTRY, "id", w.id, "reason", w.reason)));
+        sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_WARNS, "count", String.valueOf(warns.size()), "list", warnList.toString())).append("\n");
 
-        sb.append("§eMute     : ");
-        if (isMuted && mute != null) sb.append("§c").append(mute.getFormattedExpiry()).append(" §7: §f").append(mute.reason);
-        else sb.append("§aNone");
-        sb.append("\n");
+        String muteValue = isMuted && mute != null
+                ? Msg.get(src, MessagesConfig.STAFF_INSPECT_MUTE_ACTIVE, "expiry", mute.getFormattedExpiry(src.getPlayer()), "reason", mute.reason)
+                : Msg.get(src, MessagesConfig.STAFF_INSPECT_NONE_GREEN);
+        sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_MUTE, "value", muteValue)).append("\n");
 
-        sb.append("§eLast seen: §f")
-                .append(conn != null && conn.lastLogin != null ? conn.lastLogin : "§8Unknown").append("\n");
+        sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_LAST_SEEN, "date",
+                conn != null && conn.lastLogin != null ? String.valueOf(conn.lastLogin) : Msg.get(src, MessagesConfig.STAFF_INSPECT_UNKNOWN))).append("\n");
 
-        sb.append("§ePlaytime : §f").append(totalPlaytimeStr);
-        if (isOnline && sessionMs > 60_000L) {
-            sb.append(" §8(session: §7").append(sessionStr).append("§8)");
-        }
-        sb.append("\n");
+        String session = isOnline && sessionMs > 60_000L
+                ? Msg.get(src, MessagesConfig.STAFF_INSPECT_SESSION, "session", sessionStr) : "";
+        sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_PLAYTIME, "total", totalPlaytimeStr, "session", session)).append("\n");
 
         if (!notes.isEmpty()) {
             sb.append(RpChatUi.LINE).append("\n");
-            sb.append("§eNotes §7(").append(notes.size()).append("):\n");
-            notes.forEach(n -> sb.append(" §8#").append(n.id).append(" §7by §f").append(n.authorName)
-                    .append("§7: §f").append(n.text).append("\n"));
+            sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_NOTES, "count", String.valueOf(notes.size()))).append("\n");
+            notes.forEach(n -> sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_NOTE_ENTRY,
+                    "id", String.valueOf(n.id), "author", n.authorName, "text", n.text)).append("\n"));
         }
 
         sb.append(RpChatUi.LINE);
@@ -729,14 +772,71 @@ public class RpModerationCommands {
     // UTILS
     // =========================================================================
 
+    /** Name of the staff member (or the console) running the command, for stored data. */
+    static String actorName(CommandContext<CommandSourceStack> ctx) {
+        return ctx.getSource().getEntity() instanceof ServerPlayer p ? p.getName().getString()
+                : ServerLang.get(null, MessagesConfig.UI_CONSOLE);
+    }
+
+    // =========================================================================
+    // /rpessentials history <player> [page] | purge
+    // =========================================================================
+    public static LiteralArgumentBuilder<CommandSourceStack> buildHistory() {
+        var node = Commands.literal("history");
+        node.then(Commands.literal("purge").executes(ctx -> {
+            if (!HistoryManager.enabled()) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.HISTORY_DISABLED)); return 0; }
+            int n = HistoryManager.purge();
+            HistoryManager.tick();
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.HISTORY_PURGED, "count", String.valueOf(n)), true);
+            return 1;
+        }));
+        var player = Commands.argument("player", StringArgumentType.word())
+                .suggests((ctx, b) -> {
+                    ctx.getSource().getServer().getPlayerList().getPlayers().forEach(p -> b.suggest(p.getName().getString()));
+                    return b.buildFuture();
+                })
+                .executes(ctx -> showHistory(ctx, 1))
+                .then(Commands.argument("page", IntegerArgumentType.integer(1))
+                        .executes(ctx -> showHistory(ctx, IntegerArgumentType.getInteger(ctx, "page"))));
+        node.then(player);
+        return node;
+    }
+
+    private static int showHistory(CommandContext<CommandSourceStack> ctx, int page) {
+        if (!HistoryManager.enabled()) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.HISTORY_DISABLED)); return 0; }
+        String name = StringArgumentType.getString(ctx, "player");
+        UUID uuid = net.rp.rpessentials.RpEssentialsCommands.findUUIDByName(ctx.getSource().getServer(), name);
+        if (uuid == null) uuid = HistoryManager.findByName(name);
+        if (uuid == null) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.HISTORY_UNKNOWN_PLAYER, "player", name)); return 0; }
+        String shown = HistoryManager.nameOf(uuid) != null ? HistoryManager.nameOf(uuid) : name;
+        List<HistoryManager.Entry> all = HistoryManager.get(uuid, ctx.getSource().getPlayer());
+        if (all.isEmpty()) { ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.HISTORY_EMPTY, "player", shown), false); return 1; }
+
+        int pages = RpChatUi.pageCount(all.size());
+        int current = Math.min(page, pages);
+        ServerPlayer viewer = ctx.getSource().getPlayer();
+        net.minecraft.network.chat.MutableComponent out = Component.literal(
+                Msg.get(ctx.getSource(), MessagesConfig.HISTORY_HEADER, "player", shown, "count", String.valueOf(all.size()))
+                        + "\n" + RpChatUi.LINE);
+        int from = (current - 1) * RpChatUi.PAGE_SIZE;
+        for (int i = from; i < Math.min(all.size(), from + RpChatUi.PAGE_SIZE); i++) {
+            out.append(Component.literal("\n")).append(net.rp.rpessentials.ColorHelper.parseSection(HistoryManager.format(viewer, all.get(i))));
+        }
+        if (pages > 1) {
+            out.append(Component.literal("\n")).append(RpChatUi.pager(ctx.getSource(), current, pages, "/rpessentials history " + shown));
+        }
+        ctx.getSource().sendSuccess(() -> out, false);
+        return 1;
+    }
+
     private static boolean warnSystemCheck(CommandContext<CommandSourceStack> ctx) {
         try {
             if (!ModerationConfig.ENABLE_WARN_SYSTEM.get()) {
-                ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.WARN_SYSTEM_DISABLED_CONFIG)));
+                ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WARN_SYSTEM_DISABLED_CONFIG)));
                 return false;
             }
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return false;
         }
         return true;

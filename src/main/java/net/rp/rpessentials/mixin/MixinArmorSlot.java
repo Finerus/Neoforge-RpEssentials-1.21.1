@@ -39,14 +39,8 @@ public class MixinArmorSlot {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
 
         if (!ProfessionRestrictionManager.canEquip(serverPlayer, itemId)) {
-            long now = System.currentTimeMillis();
-            UUID uuid = serverPlayer.getUUID();
-            Long last = lastEquipMessage.get(uuid);
-            if (last == null || now - last > COOLDOWN_MS) {
-                lastEquipMessage.put(uuid, now);
-                String msg = ProfessionRestrictionManager.getEquipmentBlockedMessage(itemId);
-                serverPlayer.displayClientMessage(Component.literal(msg), true);
-            }
+            ProfessionRestrictionManager.notifyBlocked(serverPlayer, "equip",
+                    () -> ProfessionRestrictionManager.getEquipmentBlockedMessage(serverPlayer, itemId));
             cir.setReturnValue(false);
         }
     }

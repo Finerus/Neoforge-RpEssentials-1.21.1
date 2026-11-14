@@ -1,5 +1,8 @@
 package net.rp.rpessentials.client.gui;
 
+import net.rp.rpessentials.client.skin.SkinnedEditBox;
+import net.rp.rpessentials.client.skin.SkinnedButton;
+import net.rp.rpessentials.client.skin.GuiSkin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -34,7 +37,7 @@ import java.util.*;
  *  │ Messages     │  [Apply Changes]  [Discard]  [↑/↓ scroll]   │
  *  └──────────────┴──────────────────────────────────────────────┘
  * <p>
- * Scrolling: managed by scrollOffset (entry index).
+ * Scrolling: the file list and the entries are Minecraft list widgets (ButtonRowList).
  * Rebuilds widgets on scroll, file switch, or after server response.
  * <p>
  * Pending changes are stored in a Map<path, newValue> and highlighted in yellow.
@@ -49,10 +52,9 @@ public class ConfigManagerScreen extends Screen {
     private static final int FILE_PANEL_W = 90;
     private static final int MARGIN       = 6;
     private static final int PANEL_TOP    = 16;
-    private static final int FOOTER_H     = 28;
+    private static final int FOOTER_H     = 30;
 
-    /** Pixel height of each entry row (section: SECTION_H, normal: ENTRY_H). */
-    private static final int SECTION_H = 14;
+    /** Pixel height of each row of the entries list. */
     private static final int ENTRY_H   = 22;
 
     /** Widget widths for value editors. */
@@ -63,7 +65,6 @@ public class ConfigManagerScreen extends Screen {
     // =========================================================================
     // STATE
     // =========================================================================
-
     /** Config file list received from server. */
     private final List<ConfigGuiFilesPacket.FileEntry> files;
 
@@ -79,23 +80,20 @@ public class ConfigManagerScreen extends Screen {
     /** Current value of each EditBox, keyed by fullPath. */
     private final Map<String, String> editBoxValues  = new LinkedHashMap<>();
 
-    /** How many entry rows are scrolled past the top. */
-    private int scrollOffset = 0;
-
     /** "Loading…" state while waiting for server response. */
     private boolean loading = false;
 
-    /**
-     * Comment tooltip deferred rendering.
-     * Set by renderEntries() when the mouse hovers the ℹ icon.
-     * Actually drawn AFTER super.render() so it always appears above all widgets.
-     */
-    private String  deferredTooltipComment = null;
-    private int     deferredTooltipX       = 0;
-    private int     deferredTooltipY       = 0;
-
     private boolean pendingRebuild = false;
     private int pendingRemoveIdx = -1;
+    private Button applyButton;
+    private Button discardButton;
+
+    private record ModHeader(int y, String name, int color) {}
+    private final List<ModHeader> modHeaders = new ArrayList<>();
+    /** File list: Minecraft list widget, kept between rebuilds (scroll position). */
+    private ButtonRowList fileList;
+    /** Entries of the selected file: Minecraft list widget, kept between rebuilds (scroll position). */
+    private ButtonRowList entriesList;
 
     // =========================================================================
     // CONSTRUCTOR
@@ -118,7 +116,7 @@ public class ConfigManagerScreen extends Screen {
         selectedFileId  = packet.fileId();
         currentEntries  = packet.entries();
         loading         = false;
-        scrollOffset    = 0;
+        if (entriesList != null) entriesList.setScrollAmount(0);
         // Preserve editBox values for entries that were already being edited
         // (happens on refresh after apply — keep any unsaved changes)
         // We only clear editBox values for entries that DON'T have pending changes
@@ -137,6 +135,8 @@ public class ConfigManagerScreen extends Screen {
 
     @Override
     protected void init() {
+        addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
+        
         buildFilePanel();
         if (loading) {
             buildLoadingPanel();
@@ -148,20 +148,37 @@ public class ConfigManagerScreen extends Screen {
 
     // ── File panel (left side) ─────────────────────────────────────────────
     private void buildFilePanel() {
-        int x = MARGIN;
-        int y = PANEL_TOP + 14;
-
+        modHeaders.clear();
+        if (fileList == null) fileList = new ButtonRowList(Minecraft.getInstance(), 18);
+        fileList.layout(MARGIN - 2, PANEL_TOP + 14, FILE_PANEL_W + 12, this.height - 10 - (PANEL_TOP + 14));
+        int rw = fileList.rowWidth();
+        List<ButtonRowList.Row> rows = new ArrayList<>();
+        String lastMod = null;
         for (ConfigGuiFilesPacket.FileEntry file : files) {
+            if (!file.mod().isEmpty() && !file.mod().equals(lastMod)) {
+                lastMod = file.mod();
+                int color = file.modColor() == 0 ? 0xFFD700 : file.modColor();
+                net.minecraft.client.gui.components.StringWidget title = new net.minecraft.client.gui.components.StringWidget(
+                        rw, 16, Component.literal(this.font.plainSubstrByWidth(file.mod(), rw)).withStyle(s -> s.withColor(color)), this.font);
+                title.alignLeft();
+                rows.add(new ButtonRowList.Row().add(title, 2));
+            }
             final String fid = file.id();
             final boolean selected = fid.equals(selectedFileId);
             Component label = file.color() == 0
                     ? Component.literal(selected ? "§e▶ " + file.displayName() : "§7  " + file.displayName())
                     : Component.literal((selected ? "▶ " : "  ") + file.displayName())
                     .withStyle(s -> s.withColor(file.color()).withBold(selected));
-            addRenderableWidget(Button.builder(label, btn -> requestFile(fid))
-                    .pos(x, y).size(FILE_PANEL_W, 16).build());
-            y += 18;
+            rows.add(new ButtonRowList.Row().add(Button.builder(label, btn -> requestFile(fid))
+                    .size(rw, 16).build(SkinnedButton.row(selected)), 0));
         }
+        fileList.setRows(rows);
+        addRenderableWidget(fileList);
+    }
+
+    private ConfigGuiFilesPacket.FileEntry selectedEntry() {
+        for (ConfigGuiFilesPacket.FileEntry f : files) if (f.id().equals(selectedFileId)) return f;
+        return null;
     }
 
     // ── Loading placeholder ────────────────────────────────────────────────
@@ -173,7 +190,7 @@ public class ConfigManagerScreen extends Screen {
         addRenderableWidget(Button.builder(
                         Component.translatable("rpessentials.gui.config.btn_refresh"),
                         btn -> refreshFile())
-                .pos(cx - 30, cy + 20).size(60, 18).build());
+                .pos(cx - 30, cy + 20).size(60, 18).build(SkinnedButton::new));
     }
 
     // ── Entries panel (right side, scrollable) ─────────────────────────────
@@ -181,31 +198,50 @@ public class ConfigManagerScreen extends Screen {
     private void buildEntriesPanel() {
         if (currentEntries == null || currentEntries.isEmpty()) return;
 
-        int formX         = FILE_PANEL_W + MARGIN * 3;
-        int formW         = this.width - formX - MARGIN;
-        int availableH    = this.height - PANEL_TOP - FOOTER_H - 24;
-        int startY        = PANEL_TOP + 20;
+        int formX  = FILE_PANEL_W + MARGIN * 3;
+        int formW  = this.width - formX - MARGIN * 2;
+        int startY = PANEL_TOP + 20;
+        if (entriesList == null) entriesList = new ButtonRowList(Minecraft.getInstance(), ENTRY_H);
+        entriesList.layout(formX - 6, startY, formW + 12, this.height - FOOTER_H - 4 - startY);
+        int rw = entriesList.rowWidth();
 
-        int[] visibleRange = computeVisibleRange(availableH, startY);
-        int firstVisible   = visibleRange[0];
-        int lastVisible    = visibleRange[1];
-
-        int y = startY;
-
-        for (int i = firstVisible; i <= lastVisible && i < currentEntries.size(); i++) {
-            ConfigFileEntriesPacket.EntryTransfer entry = currentEntries.get(i);
-            int rh = rowHeight(entry);
-
+        List<ButtonRowList.Row> rows = new ArrayList<>();
+        for (ConfigFileEntriesPacket.EntryTransfer entry : currentEntries) {
+            ButtonRowList.Row row = new ButtonRowList.Row();
             if (entry.isSection()) {
-                y += rh;
+                row.block("section_header", 0xBB1A1A1A, 0, 1)
+                        .text(Component.literal(formatSectionName(entry.key()))
+                                .withStyle(s -> s.withBold(true).withColor(sectionColor())).getVisualOrderText(), 4, 7);
+                rows.add(row);
                 continue;
             }
+            boolean isPending = pendingChanges.containsKey(entry.fullPath());
+            row.block(GuiSkin.LIST_ROW, isPending ? 0x33FFAA00 : 0x22FFFFFF, 0, 1);
 
-            buildEntryWidget(entry, formX, formW, y);
-            y += rh;
+            // Key label; hovering it shows the comment of the option.
+            String keyLabel = formatKeyName(entry.key());
+            int labelColor = isPending ? 0xFFDD44 : 0xCCCCCC;
+            net.minecraft.client.gui.components.StringWidget label = new net.minecraft.client.gui.components.StringWidget(
+                    this.font.width(keyLabel), 9, Component.literal(keyLabel).withStyle(s -> s.withColor(labelColor)), this.font);
+            if (!entry.comment().isBlank()) label.setTooltip(Tooltip.create(Component.literal(entry.comment())));
+            row.add(label, 18, 6);
+            int infoX = 18 + this.font.width(keyLabel) + 4;
+            if (!entry.comment().isBlank()) {
+                row.text("§8ℹ", infoX, 6);
+                infoX += 10;
+            }
+            if (entry.hasRange()) {
+                row.text("§8[" + formatNum(entry.rangeMin()) + " – " + formatNum(entry.rangeMax()) + "]", infoX, 6);
+            }
+
+            // Value widget(s), built at row coordinates (0, 0) then placed in the row.
+            List<net.minecraft.client.gui.components.AbstractWidget> widgets = new ArrayList<>();
+            buildEntryWidget(entry, 0, rw, 0, widgets);
+            for (net.minecraft.client.gui.components.AbstractWidget w : widgets) row.add(w, w.getX(), w.getY());
+            rows.add(row);
         }
-
-        buildScrollButtons(formX, formW, startY, availableH);
+        entriesList.setRows(rows);
+        addRenderableWidget(entriesList);
     }
 
     /**
@@ -213,7 +249,8 @@ public class ConfigManagerScreen extends Screen {
      * The key label and comment indicator are drawn in render() for performance.
      */
     private void buildEntryWidget(ConfigFileEntriesPacket.EntryTransfer entry,
-                                  int formX, int formW, int y) {
+                                  int formX, int formW, int y,
+                                  List<net.minecraft.client.gui.components.AbstractWidget> out) {
         String currentEdit = editBoxValues.getOrDefault(entry.fullPath(), entry.currentValue());
         int widgetY = y + 2;
 
@@ -224,25 +261,25 @@ public class ConfigManagerScreen extends Screen {
                 String label = boolVal
                         ? I18n.get("rpessentials.gui.config.bool_on")
                         : I18n.get("rpessentials.gui.config.bool_off");
-                addRenderableWidget(Button.builder(Component.literal(label), btn -> {
+                out.add(Button.builder(Component.literal(label), btn -> {
                     boolean cur = "true".equalsIgnoreCase(
                             editBoxValues.getOrDefault(entry.fullPath(), entry.currentValue()));
                     String newVal = cur ? "false" : "true";
                     markChange(entry.fullPath(), newVal, entry.currentValue());
                     rebuild();
-                }).pos(formX + formW - BOOL_W - 2, widgetY).size(BOOL_W, 16).build());
+                }).pos(formX + formW - BOOL_W - 2, widgetY).size(BOOL_W, 16).build(SkinnedButton::new));
             }
 
             case INT, LONG, DOUBLE -> {
                 // Numeric EditBox
                 int w = Math.min(NUMERIC_W, formW / 3);
-                EditBox box = new EditBox(this.font,
+                EditBox box = new SkinnedEditBox(this.font,
                         formX + formW - w - 2, widgetY, w, 16,
                         Component.literal(entry.key()));
                 box.setMaxLength(32);
                 box.setValue(currentEdit);
                 box.setResponder(val -> markChange(entry.fullPath(), val, entry.currentValue()));
-                addRenderableWidget(box);
+                out.add(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
             }
 
@@ -250,13 +287,13 @@ public class ConfigManagerScreen extends Screen {
                 // String EditBox — wider
                 int w = Math.min(STRING_W, formW - labelWidth(entry.key()) - 12);
                 w = Math.max(w, 80);
-                EditBox box = new EditBox(this.font,
+                EditBox box = new SkinnedEditBox(this.font,
                         formX + formW - w - 2, widgetY, w, 16,
                         Component.literal(entry.key()));
                 box.setMaxLength(512);
                 box.setValue(currentEdit);
                 box.setResponder(val -> markChange(entry.fullPath(), val, entry.currentValue()));
-                addRenderableWidget(box);
+                out.add(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
             }
 
@@ -265,32 +302,32 @@ public class ConfigManagerScreen extends Screen {
                 int boxW = Math.max(formW - labelWidth(entry.key()) - btnW - 16, 80);
                 int boxX = formX + formW - boxW - btnW - 4;
 
-                EditBox box = new EditBox(this.font, boxX, widgetY, boxW, 16, Component.literal(entry.key()));
+                EditBox box = new SkinnedEditBox(this.font, boxX, widgetY, boxW, 16, Component.literal(entry.key()));
                 box.setMaxLength(8192);
                 box.setValue(currentEdit.replace("\n", " | "));
                 box.setEditable(false);
-                addRenderableWidget(box);
+                out.add(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
 
                 final String path = entry.fullPath();
                 final String entryKey = entry.key();
                 final String original = entry.currentValue();
-                addRenderableWidget(Button.builder(Component.literal(
+                out.add(Button.builder(Component.literal(
                                         I18n.get("rpessentials.gui.config.edit_list")),
                                 btn -> openListEditor(path, entryKey, currentEdit, original))
-                        .pos(boxX + boxW + 2, widgetY).size(btnW, 16).build());
+                        .pos(boxX + boxW + 2, widgetY).size(btnW, 16).build(SkinnedButton::new));
             }
 
             default -> {
                 // UNKNOWN: render as string EditBox
                 int w = Math.min(STRING_W, formW / 2);
-                EditBox box = new EditBox(this.font,
+                EditBox box = new SkinnedEditBox(this.font,
                         formX + formW - w - 2, widgetY, w, 16,
                         Component.literal(entry.key()));
                 box.setMaxLength(512);
                 box.setValue(currentEdit);
                 box.setResponder(val -> markChange(entry.fullPath(), val, entry.currentValue()));
-                addRenderableWidget(box);
+                out.add(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
             }
         }
@@ -300,60 +337,57 @@ public class ConfigManagerScreen extends Screen {
                 && !entry.isSection()
                 && entry.type() != ConfigInspector.ValueType.UNKNOWN) {
             String def = entry.defaultValue();
-            addRenderableWidget(Button.builder(Component.literal("§8↺"),
+            boolean differs = !editBoxValues.getOrDefault(entry.fullPath(), entry.currentValue()).equals(def);
+            out.add(Button.builder(Component.literal(differs ? "§e↺" : "§8↺"),
                             btn -> {
                                 markChange(entry.fullPath(), def, entry.currentValue());
                                 editBoxValues.put(entry.fullPath(), def);
                                 rebuild();
                             })
-                    .pos(FILE_PANEL_W + MARGIN * 3 + 2, y + 2).size(14, 16)
-                    .build());
+                    .pos(formX + 2, y + 2).size(14, 16)
+                    .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.config.reset_tooltip", def)))
+                    .build(SkinnedButton::new));
         }
     }
 
     // ── Scroll buttons ─────────────────────────────────────────────────────
 
-    private void buildScrollButtons(int formX, int formW, int startY, int availableH) {
-        if (currentEntries == null || currentEntries.isEmpty()) return;
 
-        boolean canScrollUp   = scrollOffset > 0;
-        boolean canScrollDown = canScrollDown(availableH);
-
-        addRenderableWidget(Button.builder(Component.literal(canScrollUp ? "▲" : "§8▲"),
-                        btn -> { if (canScrollUp) { scrollOffset = Math.max(0, scrollOffset - 1); rebuild(); } })
-                .pos(formX + formW - 20, PANEL_TOP + 4).size(18, 12).build());
-
-        addRenderableWidget(Button.builder(Component.literal(canScrollDown ? "▼" : "§8▼"),
-                        btn -> { if (canScrollDown) { scrollOffset++; rebuild(); } })
-                .pos(formX + formW - 20, this.height - FOOTER_H - 16).size(18, 12).build());
-    }
 
     // ── Footer (Apply / Discard buttons) ──────────────────────────────────
 
     private void buildFooter() {
-        int y   = this.height - FOOTER_H + 4;
-        int mid = (FILE_PANEL_W + MARGIN * 3 + this.width) / 2;
+        int y     = this.height - FOOTER_H + 3;
+        int formX = FILE_PANEL_W + MARGIN * 3;
+        int formW = this.width - formX - MARGIN * 2;
+        int closeW = 52;
+        // Apply | Discard | Refresh ............ Close
+        int[] r = UiLayout.row(formX, formW - closeW - UiLayout.GAP * 2, UiLayout.GAP, 160, 60, 20);
 
         // Apply button
-        addRenderableWidget(Button.builder(Component.literal(""), btn -> {
+        applyButton = Button.builder(Component.literal(""), btn -> {
             if (!pendingChanges.isEmpty()) applyChanges();
-        }).pos(mid - 110, y).size(160, 20).build());
+        }).pos(r[0], y).size(r[1], 20).build(SkinnedButton::new);
+        applyButton.active = !pendingChanges.isEmpty();
+        addRenderableWidget(applyButton);
 
         // Discard
-        addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.btn_discard"), btn -> {
+        discardButton = Button.builder(Component.translatable("rpessentials.gui.config.btn_discard"), btn -> {
             pendingChanges.clear();
             editBoxValues.clear();
             rebuild();
-        }).pos(mid + 54, y).size(60, 20).build());
+        }).pos(r[2], y).size(r[3], 20).build(SkinnedButton::new);
+        discardButton.active = !pendingChanges.isEmpty();
+        addRenderableWidget(discardButton);
 
         addRenderableWidget(Button.builder(Component.literal("§e↻"), btn -> refreshFile())
-                .pos(mid + 118, y).size(20, 20)
+                .pos(r[4], y).size(r[5], 20)
                 .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
-                .build());
+                .build(SkinnedButton::new));
 
         // Close
         addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.btn_close"), btn -> onClose())
-                .pos(this.width - MARGIN - 52, y).size(52, 20).build());
+                .pos(formX + formW - closeW, y).size(closeW, 20).build(SkinnedButton::new));
     }
 
     // =========================================================================
@@ -362,28 +396,36 @@ public class ConfigManagerScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        boolean hasChanges = !pendingChanges.isEmpty();
+        if (applyButton != null) applyButton.active = hasChanges;
+        if (discardButton != null) discardButton.active = hasChanges;
+
         if (pendingRebuild) {
             pendingRebuild = false;
         }
         // Dim background
-        g.fill(0, 0, this.width, this.height, 0x99000000);
+        GuiSkin.background(g, this.width, this.height, 0x99000000);
 
         // ── File panel background ────────────────────────────────────────────
         int panelRight = FILE_PANEL_W + MARGIN * 2;
-        g.fill(MARGIN - 2, PANEL_TOP, panelRight + 2, this.height - 6, 0xBB111111);
-        g.fill(MARGIN - 2, PANEL_TOP, panelRight + 2, PANEL_TOP + 2, 0xFF8B6914);
+        GuiSkin.panel(g, MARGIN - 2, PANEL_TOP, panelRight + 2, this.height - 6, 0xBB111111);
+        GuiSkin.accent(g, MARGIN - 2, PANEL_TOP, panelRight + 2, PANEL_TOP + 2, modBarColor());
         g.drawString(this.font, I18n.get("rpessentials.gui.config.files_header"), MARGIN + 2, PANEL_TOP + 4, 0xFFD700, false);
+        for (ModHeader h : modHeaders) {
+            g.drawString(this.font, this.font.plainSubstrByWidth(h.name(), FILE_PANEL_W),
+                    MARGIN + 2, h.y() + 2, h.color(), false);
+        }
 
         // ── Entries panel background ─────────────────────────────────────────
         int formX = FILE_PANEL_W + MARGIN * 3;
-        g.fill(formX - 2, PANEL_TOP, this.width - MARGIN + 2, this.height - 6, 0xBB111111);
-        g.fill(formX - 2, PANEL_TOP, this.width - MARGIN + 2, PANEL_TOP + 2, accentColor());
+        GuiSkin.panel(g, formX - 2, PANEL_TOP, this.width - MARGIN + 2, this.height - 6, 0xBB111111);
+        GuiSkin.accent(g, formX - 2, PANEL_TOP, this.width - MARGIN + 2, PANEL_TOP + 2, accentColor());
 
         // Title + file name
         String title = selectedFileId != null
                 ? I18n.get("rpessentials.gui.config.title_with_file", selectedFileId)
                 : I18n.get("rpessentials.gui.config.title");
-        g.drawString(this.font, title, formX, PANEL_TOP + 5, 0xFFD700, false);
+        g.drawString(this.font, title, formX, PANEL_TOP + 5, titleColor(), false);
 
         // Pending indicator
         if (!pendingChanges.isEmpty()) {
@@ -392,145 +434,34 @@ public class ConfigManagerScreen extends Screen {
         }
 
         // ── Entries ──────────────────────────────────────────────────────────
-        // Reset deferred tooltip before scanning entries
-        deferredTooltipComment = null;
 
         if (loading) {
             g.drawCenteredString(this.font, I18n.get("rpessentials.gui.config.loading"),
                     (formX + this.width) / 2, this.height / 2 - 10, 0x888888);
         } else if (currentEntries != null) {
-            renderEntries(g, formX, this.width - MARGIN, mouseX, mouseY);
+            // Entries: list widget, drawn with the other widgets.
         } else {
             g.drawCenteredString(this.font, I18n.get("rpessentials.gui.config.select_file"),
                     (formX + this.width) / 2, this.height / 2, 0x666666);
         }
 
         // Footer separator
-        g.fill(formX - 2, this.height - FOOTER_H, this.width - MARGIN + 2,
+        GuiSkin.separator(g, formX - 2, this.height - FOOTER_H, this.width - MARGIN + 2,
                 this.height - FOOTER_H + 1, 0xFF444444);
 
-        // Render all widgets (EditBox, Button…) first
+        if (applyButton != null) {
+            applyButton.setMessage(Component.literal(!pendingChanges.isEmpty()
+                    ? I18n.get("rpessentials.gui.config.btn_apply", pendingChanges.size())
+                    : I18n.get("rpessentials.gui.config.btn_no_change")));
+        }
+
+        // Render all widgets (EditBox, Button…)
         super.render(g, mouseX, mouseY, delta);
 
-        int applyBtnX = (FILE_PANEL_W + MARGIN * 3 + this.width) / 2 - 110;
-        int applyBtnY = this.height - FOOTER_H + 4;
-        String applyLabel = !pendingChanges.isEmpty()
-                ? I18n.get("rpessentials.gui.config.btn_apply", pendingChanges.size())
-                : I18n.get("rpessentials.gui.config.btn_no_change");
-        g.drawCenteredString(this.font, applyLabel, applyBtnX + 80, applyBtnY + 6, 0xFFFFFF);
-
-        // ── Deferred comment tooltip — drawn LAST so it appears above all widgets ──
-        if (deferredTooltipComment != null) {
-            renderCommentTooltip(g, deferredTooltipComment, deferredTooltipX, deferredTooltipY);
-        }
     }
 
-    private void renderEntries(GuiGraphics g, int formX, int formRight, int mouseX, int mouseY) {
-        int availableH = this.height - PANEL_TOP - FOOTER_H - 24;
-        int startY     = PANEL_TOP + 20;
-        int[] range    = computeVisibleRange(availableH, startY);
-        int first      = range[0];
-        int last       = range[1];
 
-        int y = startY;
 
-        int clipTop    = PANEL_TOP + 20;
-        int clipBottom = this.height - FOOTER_H - 4;
-
-        for (int i = first; i <= last && i < currentEntries.size(); i++) {
-            ConfigFileEntriesPacket.EntryTransfer entry = currentEntries.get(i);
-            int rh = rowHeight(entry);
-
-            if (y > clipBottom) break;
-            if (y + rh < clipTop) { y += rh; continue; }
-
-            if (entry.isSection()) {
-                // Section header
-                g.fill(formX, y + 2, formRight, y + rh, 0xBB1A1A1A);
-                g.fill(formX, y + rh - 1, formRight, y + rh, accentColor());
-                g.drawString(this.font, "§6§l" + formatSectionName(entry.key()),
-                        formX + 4, y + 3, 0xFFD700, false);
-            } else {
-                // Entry row
-                boolean isPending = pendingChanges.containsKey(entry.fullPath());
-                int bgColor = isPending ? 0x33FFAA00 : 0x22FFFFFF;
-                if (mouseX >= formX && mouseX <= formRight - 20
-                        && mouseY >= y && mouseY < y + rh) {
-                    bgColor = isPending ? 0x55FFAA00 : 0x44FFFFFF;
-                }
-                g.fill(formX, y, formRight, y + rh - 1, bgColor);
-
-                // Key label
-                String keyLabel = formatKeyName(entry.key());
-                int labelColor = isPending ? 0xFFDD44 : 0xCCCCCC;
-                g.drawString(this.font, keyLabel, formX + 18, y + 6, labelColor, false);
-
-                // Comment indicator (ℹ) — defers tooltip rendering to after super.render()
-                if (!entry.comment().isBlank()) {
-                    g.drawString(this.font, "§8ℹ", formX + 18 + this.font.width(keyLabel) + 4,
-                            y + 6, 0x666666, false);
-                    // Store tooltip data; it will be drawn after all widgets
-                    int cx = formX + 18 + this.font.width(keyLabel) + 4;
-                    if (mouseX >= cx && mouseX <= cx + 8 && mouseY >= y && mouseY < y + rh) {
-                        deferredTooltipComment = entry.comment();
-                        deferredTooltipX       = mouseX;
-                        deferredTooltipY       = mouseY;
-                    }
-                }
-
-                // Range hint (shown in light gray below key for numeric types)
-                if (entry.hasRange()) {
-                    String rangeHint = "§f[" + formatNum(entry.rangeMin()) + " – " + formatNum(entry.rangeMax()) + "]";
-                    g.drawString(this.font, rangeHint, formX + 18, y + 14, 0x555555, false);
-                }
-
-                // Default indicator — shows if value differs from default
-                if (!entry.defaultValue().isBlank()) {
-                    String current = editBoxValues.getOrDefault(entry.fullPath(), entry.currentValue());
-                    if (!current.equals(entry.defaultValue())) {
-                        g.drawString(this.font, "§8≠def", formRight - 72, y + 6, 0x444444, false);
-                    }
-                }
-            }
-            y += rh;
-        }
-
-        // Scroll indicators
-        if (scrollOffset > 0) {
-            g.drawCenteredString(this.font,
-                    I18n.get("rpessentials.gui.config.scroll_above", scrollOffset),
-                    (formX + formRight) / 2, clipTop, 0x444444);
-        }
-        long below = currentEntries.stream().skip(last + 1).count();
-        if (below > 0) {
-            g.drawCenteredString(this.font,
-                    I18n.get("rpessentials.gui.config.scroll_below", below),
-                    (formX + formRight) / 2, clipBottom - 8, 0x444444);
-        }
-    }
-
-    private void renderCommentTooltip(GuiGraphics g, String comment, int mx, int my) {
-        List<String> lines = new ArrayList<>();
-        for (String line : comment.split("\n")) {
-            // Word-wrap at 50 chars
-            while (line.length() > 50) {
-                lines.add(line.substring(0, 50));
-                line = line.substring(50);
-            }
-            lines.add(line);
-        }
-        int tw = lines.stream().mapToInt(this.font::width).max().orElse(60) + 8;
-        int th = lines.size() * 10 + 6;
-        int tx = Math.min(mx + 4, this.width - tw - 4);
-        int ty = my - th - 4;
-        if (ty < 0) ty = my + 16;
-
-        g.fill(tx - 1, ty - 1, tx + tw + 1, ty + th + 1, 0xFF222222);
-        g.fill(tx, ty, tx + tw, ty + th, 0xFF111111);
-        for (int i = 0; i < lines.size(); i++) {
-            g.drawString(this.font, "§7" + lines.get(i), tx + 4, ty + 3 + i * 10, 0xAAAAAA, false);
-        }
-    }
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {
@@ -544,17 +475,8 @@ public class ConfigManagerScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
         int formX = FILE_PANEL_W + MARGIN * 3;
-        if (mx > formX && currentEntries != null) {
-            if (scrollY < 0 && canScrollDown(this.height - PANEL_TOP - FOOTER_H - 24)) {
-                scrollOffset++;
-                rebuild();
-                return true;
-            } else if (scrollY > 0 && scrollOffset > 0) {
-                scrollOffset = Math.max(0, scrollOffset - 1);
-                rebuild();
-                return true;
-            }
-        }
+        
+        
         return super.mouseScrolled(mx, my, scrollX, scrollY);
     }
 
@@ -567,7 +489,7 @@ public class ConfigManagerScreen extends Screen {
         selectedFileId  = fileId;
         currentEntries  = null;
         loading         = true;
-        scrollOffset    = 0;
+        if (entriesList != null) entriesList.setScrollAmount(0);
         pendingChanges.clear();
         editBoxValues.clear();
         PacketDistributor.sendToServer(new RequestConfigFilePacket(fileId));
@@ -609,7 +531,7 @@ public class ConfigManagerScreen extends Screen {
         sent.forEach(pendingChanges::remove);
         if (tooLong > 0 && Minecraft.getInstance().player != null) {
             Minecraft.getInstance().player.displayClientMessage(
-                    Component.literal("§c[Config] " + tooLong + " value(s) too long (max 8000 characters), not sent."), false);
+                    Component.translatable("rpessentials.gui.config.too_long", tooLong), false);
         }
     }
 
@@ -632,38 +554,28 @@ public class ConfigManagerScreen extends Screen {
     // =========================================================================
     // HELPERS
     // =========================================================================
-    private void rebuild() { clearWidgets(); init(); }
+    private void rebuild() { if (this.minecraft == null) return; /* not shown yet: init() will run when it opens */ clearWidgets(); init(); }
 
     /**
      * Computes which entry indices are visible given the available pixel height.
      * Returns {firstVisible, lastVisible}.
      */
-    private int[] computeVisibleRange(int availableH, int startY) {
-        if (currentEntries == null || currentEntries.isEmpty()) return new int[]{0, -1};
-
-        int first = Math.max(0, scrollOffset);
-        int usedH = 0;
-        int last  = first - 1;
-
-        for (int i = first; i < currentEntries.size(); i++) {
-            int rh = rowHeight(currentEntries.get(i));
-            if (usedH + rh > availableH) break;
-            usedH += rh;
-            last = i;
-        }
-        return new int[]{first, last};
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        
+        return super.mouseClicked(mx, my, button);
     }
 
-    private boolean canScrollDown(int availableH) {
-        if (currentEntries == null) return false;
-        int[] r = computeVisibleRange(availableH, 0);
-        return r[1] < currentEntries.size() - 1;
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        
+        return super.mouseDragged(mx, my, button, dx, dy);
     }
 
-    private int rowHeight(ConfigFileEntriesPacket.EntryTransfer entry) {
-        if (entry.isSection()) return SECTION_H;
-        // Numeric entries with a range hint get a tiny extra line
-        return entry.hasRange() ? ENTRY_H + 6 : ENTRY_H;
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        
+        return super.mouseReleased(mx, my, button);
     }
 
     private int labelWidth(String key) {
@@ -720,10 +632,27 @@ public class ConfigManagerScreen extends Screen {
     public boolean isPauseScreen() { return false; }
 
     private int accentColor() {
-        for (ConfigGuiFilesPacket.FileEntry f : files) {
-            if (f.id().equals(selectedFileId) && f.color() != 0) return 0xFF000000 | f.color();
+        ConfigGuiFilesPacket.FileEntry f = selectedEntry();
+        if (f != null) {
+            if (f.accent() != 0) return 0xFF000000 | f.accent();
+            if (f.color() != 0) return 0xFF000000 | f.color();
         }
         return 0xFF8B6914;
+    }
+
+    private int titleColor() {
+        ConfigGuiFilesPacket.FileEntry f = selectedEntry();
+        return f != null && f.title() != 0 ? f.title() : 0xFFD700;
+    }
+
+    private int sectionColor() {
+        ConfigGuiFilesPacket.FileEntry f = selectedEntry();
+        return f != null && f.section() != 0 ? f.section() : 0xFFD700;
+    }
+
+    private int modBarColor() {
+        ConfigGuiFilesPacket.FileEntry f = selectedEntry();
+        return f != null && f.modColor() != 0 ? 0xFF000000 | f.modColor() : 0xFF8B6914;
     }
 
     // =========================================================================
@@ -740,8 +669,13 @@ public class ConfigManagerScreen extends Screen {
         private final String              fullPath;
         private final String              originalComma;
         private final List<String>        items;
-        private int scrollOffset = 0;
         private int pendingRemoveIdx = -1;
+        private ButtonRowList list;
+
+        /** Adds a widget built at screen x to a list row, relative to the row (originX = left of the row). */
+        private static void rowAdd(ButtonRowList.Row row, int originX, net.minecraft.client.gui.components.AbstractWidget w) {
+            row.add(w, w.getX() - originX, w.getY());
+        }
 
         ListEditorSubScreen(ConfigManagerScreen parent, String fullPath, String key,
                             String rawValue, String originalValue) {
@@ -762,24 +696,25 @@ public class ConfigManagerScreen extends Screen {
             int midX = this.width / 2;
             int startY = 40;
             int rowH = 22;
-            int visMax = Math.max(1, (this.height - startY - 60) / rowH);
-            scrollOffset = Math.min(scrollOffset, Math.max(0, items.size() - visMax));
+            // Minecraft list widget: one editable value per row, remove and move up / down buttons.
+            if (list == null) list = new ButtonRowList(Minecraft.getInstance(), rowH);
+            list.layout(midX - 166, startY, 338, this.height - 52 - startY);
+            List<ButtonRowList.Row> listRows = new ArrayList<>();
 
-            int first = scrollOffset;
-            int last = Math.min(items.size() - 1, first + visMax - 1);
-
-            for (int i = first; i <= last; i++) {
+            for (int i = 0; i < items.size(); i++) {
                 final int idx = i;
-                int rowY = startY + (i - first) * rowH + 2;
+                int rowY = 0;
+                ButtonRowList.Row row = new ButtonRowList.Row();
+                listRows.add(row);
 
-                EditBox box = new EditBox(this.font, midX - 160, rowY, 290, 18, Component.empty());
+                EditBox box = new SkinnedEditBox(this.font, midX - 160, rowY, 290, 18, Component.empty());
                 box.setMaxLength(512);
                 box.setValue(items.get(i));
                 box.setResponder(val -> items.set(idx, val));
-                addRenderableWidget(box);
+                rowAdd(row, midX - 160, box);
 
                 boolean confirmRemove = pendingRemoveIdx == idx;
-                addRenderableWidget(Button.builder(Component.literal(confirmRemove ? "§c!" : "§c✗"),
+                rowAdd(row, midX - 160, Button.builder(Component.literal(confirmRemove ? "§c!" : "§c✗"),
                                 btn -> {
                                     if (pendingRemoveIdx == idx) {
                                         pendingRemoveIdx = -1;
@@ -789,26 +724,29 @@ public class ConfigManagerScreen extends Screen {
                                     }
                                     rebuild();
                                 })
-                        .pos(midX + 134, rowY).size(16, 18).build());
+                        .pos(midX + 134, rowY).size(16, 18).build(SkinnedButton::new));
 
                 if (i > 0)
-                    addRenderableWidget(Button.builder(Component.literal("▲"),
+                    rowAdd(row, midX - 160, Button.builder(Component.literal("▲"),
                                     btn -> {
                                         pendingRemoveIdx = -1;
                                         Collections.swap(items, idx, idx - 1);
                                         rebuild();
                                     })
-                            .pos(midX + 152, rowY).size(14, 8).build());
+                            .pos(midX + 152, rowY).size(14, 8).build(SkinnedButton::new));
 
                 if (i < items.size() - 1)
-                    addRenderableWidget(Button.builder(Component.literal("▼"),
+                    rowAdd(row, midX - 160, Button.builder(Component.literal("▼"),
                                     btn -> {
                                         pendingRemoveIdx = -1;
                                         Collections.swap(items, idx, idx + 1);
                                         rebuild();
                                     })
-                            .pos(midX + 152, rowY + 10).size(14, 8).build());
+                            .pos(midX + 152, rowY + 10).size(14, 8).build(SkinnedButton::new));
             }
+
+            list.setRows(listRows);
+            addRenderableWidget(list);
 
             int btnY = this.height - 48;
 
@@ -818,35 +756,19 @@ public class ConfigManagerScreen extends Screen {
                                 items.add("");
                                 rebuild();
                             })
-                    .pos(midX - 170, btnY).size(110, 20).build());
+                    .pos(midX - 170, btnY).size(110, 20).build(SkinnedButton::new));
 
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_save"), btn -> {
                 items.removeIf(String::isBlank);
                 parent.onListEdited(fullPath, String.join("\n", items), originalComma);
-            }).pos(midX - 55, btnY).size(110, 20).build());
+            }).pos(midX - 55, btnY).size(110, 20).build(SkinnedButton::new));
 
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_cancel"),
                             btn -> net.minecraft.client.Minecraft.getInstance().setScreen(parent))
-                    .pos(midX + 59, btnY).size(70, 20).build());
+                    .pos(midX + 59, btnY).size(70, 20).build(SkinnedButton::new));
         }
 
-        private void rebuild() { clearWidgets(); init(); }
-
-        @Override
-        public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
-            int visMax = (this.height - 40 - 60) / 22;
-            int maxScroll = Math.max(0, items.size() - visMax);
-            if (scrollY < 0 && scrollOffset < maxScroll) {
-                scrollOffset++;
-                rebuild();
-                return true;
-            } else if (scrollY > 0 && scrollOffset > 0) {
-                scrollOffset = Math.max(0, scrollOffset - 1);
-                rebuild();
-                return true;
-            }
-            return super.mouseScrolled(mx, my, scrollX, scrollY);
-        }
+        private void rebuild() { if (this.minecraft == null) return; /* not shown yet: init() will run when it opens */ clearWidgets(); init(); }
 
         @Override
         public void render(GuiGraphics g, int mx, int my, float delta) {
@@ -866,7 +788,7 @@ public class ConfigManagerScreen extends Screen {
         if (selectedFileId == null) return;
         currentEntries = null;
         loading = true;
-        scrollOffset = 0;
+        if (entriesList != null) entriesList.setScrollAmount(0);
         pendingChanges.clear();
         editBoxValues.clear();
         PacketDistributor.sendToServer(new RequestConfigFilePacket(selectedFileId));

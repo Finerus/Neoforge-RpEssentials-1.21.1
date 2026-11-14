@@ -28,11 +28,9 @@
     "MixinListenerLeave",
     "MixinPlayerAdvancements",
     "MixinContainerOpenersCounter",
-    "MixinMinecraftServerStatus",
-    "MixinPlayerListAdvancement"
+    "MixinMinecraftServerStatus"
   ],
   "client": [
-    "client.MixinEntityRenderer",
     "client.MixinPlayerTabOverlay",
     "client.MixinItemInHandRenderer"
   ]

@@ -46,13 +46,15 @@ public class DeathRPManager {
     private static File dataFile = null;
 
     // ── Historique ──────────────────────────────────────────────────────────────
-
     public static class DeathHistoryEntry {
         public String playerName;
         public String playerUUID;
         public String timestamp;
         public String damageCause;
         public String broadcastMessage;
+        public String nickname;
+        public java.util.List<String> licenses;
+        public long playtimeMs;
 
         public DeathHistoryEntry() {}
 
@@ -62,7 +64,7 @@ public class DeathRPManager {
             this.playerUUID       = playerUUID;
             this.damageCause      = damageCause;
             this.broadcastMessage = broadcastMessage;
-            this.timestamp        = java.time.LocalDateTime.now()
+            this.timestamp        = TimeHelper.now()
                     .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
         }
     }
@@ -111,7 +113,7 @@ public class DeathRPManager {
             int maxDays = net.rp.rpessentials.config.ModerationConfig.DEATH_HISTORY_MAX_DAYS.get();
             if (maxDays <= 0) return;
             ensureHistoryInitialized();
-            java.time.LocalDateTime cutoff = java.time.LocalDateTime.now().minusDays(maxDays);
+            java.time.LocalDateTime cutoff = TimeHelper.now().minusDays(maxDays);
             java.time.format.DateTimeFormatter fmt =
                     java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
             int before = history.size();
@@ -177,15 +179,8 @@ public class DeathRPManager {
 
         Map<String, Boolean> out = new HashMap<>();
         for (Map.Entry<UUID, Boolean> e : snapshot.entrySet()) {
-            String mcName = "Unknown";
-            if (server != null) {
-                ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
-                if (p != null) mcName = p.getName().getString();
-                else if (server.getProfileCache() != null)
-                    mcName = server.getProfileCache().get(e.getKey())
-                            .map(GameProfile::getName).orElse("Unknown");
-            }
-            out.put(e.getKey() + (mcName.equals("Unknown") ? "" : " (" + mcName + ")"), e.getValue());
+            String mcName = net.rp.rpessentials.NameCache.get(e.getKey());
+            out.put(e.getKey() + (mcName == null ? "" : " (" + mcName + ")"), e.getValue());
         }
 
         File targetFile = dataFile;
@@ -236,6 +231,8 @@ public class DeathRPManager {
     public static void onPlayerDeathRP(ServerPlayer player, DamageSource damageSource) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
+        HistoryManager.record(player.getUUID(), player.getName().getString(), HistoryManager.DEATH_RP, null,
+                damageSource != null ? damageSource.getMsgId() : "");
 
         String rawDeathMsg = "";
 
@@ -271,14 +268,18 @@ public class DeathRPManager {
                     .unwrapKey().map(k -> k.location().getPath()).orElse("unknown")
                     : "unknown";
             ensureHistoryInitialized();
-            history.add(new DeathHistoryEntry(
-                    player.getName().getString(), player.getUUID().toString(), cause, rawDeathMsg));
+            DeathHistoryEntry entry = new DeathHistoryEntry(
+                    player.getName().getString(), player.getUUID().toString(), cause, rawDeathMsg);
+            entry.nickname = NicknameManager.getNickname(player.getUUID());
+            entry.licenses = net.rp.rpessentials.profession.LicenseManager.getLicenses(player.getUUID());
+            entry.playtimeMs = PlaytimeManager.getTotalPlaytimeMs(player.getUUID());
+            history.add(entry);
             saveHistory();
+            resetCharacter(server, player);
         } catch (Exception e) { LOGGER.error("[DeathRP] Failed to record history", e); }
     }
 
     // ── Toggles ─────────────────────────────────────────────────────────────────
-
     public static void broadcastGlobalToggle(String staffName, boolean enabled, MinecraftServer server) {
         try {
             var msgConfig  = enabled ? RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLE_MSG  : RpEssentialsConfig.DEATH_RP_GLOBAL_DISABLE_MSG;
@@ -315,7 +316,6 @@ public class DeathRPManager {
     }
 
     // ── Son ─────────────────────────────────────────────────────────────────────
-
     private static void playSound(
             MinecraftServer server, ServerPlayer solo,
             net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> soundConfig,
@@ -345,8 +345,20 @@ public class DeathRPManager {
         catch (Exception e) { LOGGER.error("[DeathRP] Error playing {}", label, e); }
     }
 
-    // ── Affichage (délègue à ImmersivePresetHelper) ──────────────────────────────
+    // ── Reset ──────────────────────────────
+    private static void resetCharacter(MinecraftServer server, ServerPlayer player) {
+        try {
+            UUID id = player.getUUID();
+            if (RpEssentialsConfig.DEATH_RP_RESET_NICKNAME.get())
+                ManageService.execute(server, null, id, ManageService.Action.CLEAR_NICKNAME, "", 0);
+            if (RpEssentialsConfig.DEATH_RP_RESET_ROLE.get())
+                ManageService.execute(server, null, id, ManageService.Action.CLEAR_ROLE, "", 0);
+            if (RpEssentialsConfig.DEATH_RP_RESET_PROFESSIONS.get())
+                ManageService.execute(server, null, id, ManageService.Action.CLEAR_PROFESSION, "", 0);
+        } catch (IllegalStateException ignored) {}
+    }
 
+    // ── Affichage (délègue à ImmersivePresetHelper) ──────────────────────────────
     /**
      * Envoie un message à un joueur en utilisant le mode d'affichage configuré.
      *

@@ -39,14 +39,8 @@ public abstract class MixinAnvilMenu extends MixinItemCombinerMenuBase {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(result.getItem());
 
         if (!ProfessionRestrictionManager.canCraft(serverPlayer, itemId)) {
-            long now = System.currentTimeMillis();
-            UUID uuid = serverPlayer.getUUID();
-            Long last = lastAnvilMessage.get(uuid);
-            if (last == null || now - last > COOLDOWN_MS) {
-                lastAnvilMessage.put(uuid, now);
-                serverPlayer.displayClientMessage(
-                        Component.literal(ProfessionRestrictionManager.getCraftBlockedMessage(itemId)), true);
-            }
+            ProfessionRestrictionManager.notifyBlocked(serverPlayer, "craft",
+                    () -> ProfessionRestrictionManager.getCraftBlockedMessage(itemId));
             cir.setReturnValue(false);
         }
     }

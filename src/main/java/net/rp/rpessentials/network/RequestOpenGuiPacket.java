@@ -155,14 +155,14 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
                 knownIds.add(p.getUUID());
                 continue;
             }
-            players.add(buildPlayerData(p));
+            players.add(buildPlayerData(admin, p));
             knownIds.add(p.getUUID());
         }
 
         for (var entry : LastConnectionManager.getAllSortedByLogin()) {
             UUID uuid = entry.getKey();
             if (knownIds.contains(uuid)) continue;
-            players.add(buildOfflineKnownPlayerData(uuid));
+            players.add(buildOfflineKnownPlayerData(admin, uuid));
             knownIds.add(uuid);
         }
 
@@ -213,7 +213,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
      * Construit les données d'un joueur hors ligne mais déjà connu (déjà connecté au moins une fois).
      * Le rôle n'est pas détectable hors ligne (les tags scoreboard nécessitent une entité chargée).
      */
-    private static OpenPlayerProfileGuiPacket.PlayerData buildOfflineKnownPlayerData(UUID uuid) {
+    private static OpenPlayerProfileGuiPacket.PlayerData buildOfflineKnownPlayerData(ServerPlayer admin, UUID uuid) {
         LastConnectionManager.ConnectionEntry conn = LastConnectionManager.getEntry(uuid);
         String mcName = conn != null && conn.mcName != null ? conn.mcName : uuid.toString();
         String nick   = NicknameManager.hasNickname(uuid) ? NicknameManager.getNickname(uuid) : "";
@@ -229,7 +229,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
             isMuted = MuteManager.isMuted(uuid);
             if (isMuted) {
                 MuteManager.MuteEntry muteEntry = MuteManager.getEntry(uuid);
-                muteExpiry = muteEntry != null ? muteEntry.getFormattedExpiry() : "";
+                muteExpiry = muteEntry != null ? muteEntry.getFormattedExpiry(admin) : "";
             }
         } catch (Exception ignored) {}
 
@@ -253,7 +253,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
      * Construit le snapshot complet d'un joueur en ligne pour le GUI.
      * Collecte warns, mute, playtime, notes.
      */
-    private static OpenPlayerProfileGuiPacket.PlayerData buildPlayerData(ServerPlayer p) {
+    private static OpenPlayerProfileGuiPacket.PlayerData buildPlayerData(ServerPlayer admin, ServerPlayer p) {
         UUID uuid     = p.getUUID();
         String mcName = p.getGameProfile().getName();
         String nick   = NicknameManager.hasNickname(uuid) ? NicknameManager.getNickname(uuid) : "";
@@ -272,7 +272,7 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
             isMuted = MuteManager.isMuted(uuid);
             if (isMuted) {
                 MuteManager.MuteEntry muteEntry = MuteManager.getEntry(uuid);
-                muteExpiry = muteEntry != null ? muteEntry.getFormattedExpiry() : "";
+                muteExpiry = muteEntry != null ? muteEntry.getFormattedExpiry(admin) : "";
             }
         } catch (Exception ignored) {}
 
@@ -312,7 +312,8 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
     private static void handleConfigManagerGui(ServerPlayer player) {
         List<ConfigInspector.FileInfo> fileInfos = ConfigInspector.getFileInfos();
         List<ConfigGuiFilesPacket.FileEntry> entries = fileInfos.stream()
-                .map(fi -> new ConfigGuiFilesPacket.FileEntry(fi.id(), fi.displayName(), fi.color()))
+                .map(fi -> new ConfigGuiFilesPacket.FileEntry(fi.id(), fi.displayName(), fi.color(), fi.mod(), fi.modColor(),
+                        fi.theme().accent(), fi.theme().section(), fi.theme().title()))
                 .toList();
         PacketDistributor.sendToPlayer(player, new ConfigGuiFilesPacket(entries));
         RpEssentials.LOGGER.debug("[ConfigGUI] Sent {} config files to {}",

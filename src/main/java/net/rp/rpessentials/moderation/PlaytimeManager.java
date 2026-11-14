@@ -1,5 +1,7 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import net.rp.rpessentials.RpEssentials;
 
 import java.util.Map;
@@ -83,16 +85,21 @@ public class PlaytimeManager {
      * Ex : "3j 4h 12min" ou "45min" ou "< 1min"
      */
     public static String format(long ms) {
-        if (ms < 60_000L) return "< 1min";
+        return format(null, ms);
+    }
+
+    /** Playtime such as "3d 4h 12min", in the viewer's language (null = server language). */
+    public static String format(net.minecraft.server.level.ServerPlayer v, long ms) {
+        if (ms < 60_000L) return ServerLang.get(v, MessagesConfig.TIME_LESS_MINUTE);
         long totalMin = ms / 60_000L;
         long days  = totalMin / 1440L;
         long hours = (totalMin % 1440L) / 60L;
         long min   = totalMin % 60L;
 
         StringBuilder sb = new StringBuilder();
-        if (days  > 0) sb.append(days).append("j ");
-        if (hours > 0) sb.append(hours).append("h ");
-        sb.append(min).append("min");
+        if (days  > 0) sb.append(ServerLang.get(v, MessagesConfig.TIME_UNIT_DAYS, "n", String.valueOf(days))).append(' ');
+        if (hours > 0) sb.append(ServerLang.get(v, MessagesConfig.TIME_UNIT_HOURS, "n", String.valueOf(hours))).append(' ');
+        sb.append(ServerLang.get(v, MessagesConfig.TIME_UNIT_MINUTES, "n", String.valueOf(min)));
         return sb.toString().trim();
     }
 
@@ -110,18 +117,15 @@ public class PlaytimeManager {
     }
 
     public static void flush() {
-        if (sessionStart.isEmpty()) return;
         long now = System.currentTimeMillis();
-        boolean anyUpdate = false;
         for (Map.Entry<UUID, Long> entry : new java.util.HashMap<>(sessionStart).entrySet()) {
             long elapsed = now - entry.getValue();
             if (elapsed > 0) {
                 LastConnectionManager.addPlaytimeSilent(entry.getKey(), elapsed);
-                sessionStart.put(entry.getKey(), now);
-                anyUpdate = true;
+                sessionStart.replace(entry.getKey(), now);
             }
         }
-        if (anyUpdate) LastConnectionManager.flushToDisk();
+        LastConnectionManager.flushToDisk();
     }
 
     // =========================================================================

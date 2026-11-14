@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -52,13 +54,11 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
                 ProfessionRestrictionManager.reloadCache();
                 ProfessionConfig.SPEC.save();
 
-                player.sendSystemMessage(Component.literal(
-                        "§a[RpEssentials] Profession §e" + cleanId + " §adeleted."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_PROF_DELETED, "id", cleanId)));
                 RpEssentials.LOGGER.info("[GUI] Profession '{}' deleted by {}",
                         cleanId, player.getGameProfile().getName());
             } catch (IllegalStateException e) {
-                player.sendSystemMessage(Component.literal(
-                        "§c[RpEssentials] Config not loaded, please try again."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });
     }

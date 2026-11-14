@@ -23,6 +23,28 @@ public class RpConfig {
     public static final ModConfigSpec.DoubleValue         AFK_Z;
     public static final ModConfigSpec.DoubleValue         AFK_YAW;
     public static final ModConfigSpec.DoubleValue         AFK_PITCH;
+    public static final ModConfigSpec.IntValue AFK_COOLDOWN_SECONDS;
+    public static final ModConfigSpec.IntValue AFK_COMBAT_BLOCK_SECONDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> AFK_COMMANDS;
+
+    // =========================================================================
+    // SPAWN
+    // =========================================================================
+    public static final ModConfigSpec.BooleanValue        ENABLE_SPAWN_COMMAND;
+    public static final ModConfigSpec.IntValue            SPAWN_WARMUP_SECONDS;
+    public static final ModConfigSpec.IntValue            AFK_WARMUP_SECONDS;
+    public static final ModConfigSpec.BooleanValue        TELEPORT_CANCEL_ON_MOVE;
+    public static final ModConfigSpec.BooleanValue        TELEPORT_CANCEL_ON_DAMAGE;
+    public static final ModConfigSpec.BooleanValue        SPAWN_USE_WORLD_SPAWN;
+    public static final ModConfigSpec.ConfigValue<String> SPAWN_DIMENSION;
+    public static final ModConfigSpec.DoubleValue         SPAWN_X;
+    public static final ModConfigSpec.DoubleValue         SPAWN_Y;
+    public static final ModConfigSpec.DoubleValue         SPAWN_Z;
+    public static final ModConfigSpec.DoubleValue         SPAWN_YAW;
+    public static final ModConfigSpec.DoubleValue         SPAWN_PITCH;
+    public static final ModConfigSpec.IntValue            SPAWN_COOLDOWN_SECONDS;
+    public static final ModConfigSpec.IntValue            SPAWN_COMBAT_BLOCK_SECONDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> SPAWN_COMMANDS;
 
     // =========================================================================
     // ACTION / ME
@@ -49,6 +71,10 @@ public class RpConfig {
     public static final ModConfigSpec.IntValue COMMERCE_COOLDOWN_SECONDS;
     public static final ModConfigSpec.IntValue INCOGNITO_COOLDOWN_SECONDS;
     public static final ModConfigSpec.IntValue DICE_COOLDOWN_SECONDS;
+    public static final ModConfigSpec.BooleanValue DICE_ALLOW_EXPRESSIONS;
+    public static final ModConfigSpec.BooleanValue DICE_ALLOW_SECRET;
+    public static final ModConfigSpec.IntValue DICE_MAX_COUNT;
+    public static final ModConfigSpec.IntValue DICE_MAX_SIDES;
 
     // =========================================================================
     // SELF NICK
@@ -57,6 +83,8 @@ public class RpConfig {
     public static final ModConfigSpec.IntValue     SELF_NICK_COOLDOWN_SECONDS;
     public static final ModConfigSpec.BooleanValue SELF_NICK_ALLOW_COLORS;
     public static final ModConfigSpec.IntValue     SELF_NICK_MAX_LENGTH;
+    public static final ModConfigSpec.BooleanValue NICK_UNIQUE;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> NICK_BLACKLIST;
 
     // =========================================================================
     // IMMERSIVE PRESETS
@@ -73,6 +101,44 @@ public class RpConfig {
         AFK_Z     = BUILDER.comment("Z coordinate.").defineInRange("z",     0, -30000000.0, 30000000.0);
         AFK_YAW   = BUILDER.comment("Yaw.").defineInRange("yaw",   90, -180.0, 180.0);
         AFK_PITCH = BUILDER.comment("Pitch.").defineInRange("pitch",  0, -90.0, 90.0);
+        AFK_COOLDOWN_SECONDS = BUILDER
+                .comment("Cooldown for /rp afk in seconds (0 = disabled).")
+                .defineInRange("afkCooldownSeconds", 0, 0, 3600);
+        AFK_COMBAT_BLOCK_SECONDS = BUILDER
+                .comment("/rp afk is refused for this many seconds after the player was hurt by a mob or player (0 = disabled).")
+                .defineInRange("afkCombatBlockSeconds", 0, 0, 600);
+        AFK_COMMANDS = BUILDER
+                .comment("Commands run after /rp afk, as the player: @s is the player, ~ ~ ~ is the destination,",
+                        "{player} is the Minecraft name. They run with OP level 4 and their output is hidden.",
+                        "Example: [\"effect give @s minecraft:resistance 30 4 true\", \"playsound minecraft:block.bell.use master @s\"]")
+                .defineList("afkCommands", List.of(), obj -> obj instanceof String);
+        BUILDER.pop();
+
+        // ── SPAWN ─────────────────────────────────────────────────────────────
+        BUILDER.push("Spawn");
+        ENABLE_SPAWN_COMMAND = BUILDER
+                .comment("Enable /rp spawn for every player.")
+                .define("enableSpawnCommand", false);
+        SPAWN_USE_WORLD_SPAWN = BUILDER
+                .comment("If true, /rp spawn teleports to the world spawn of the overworld.",
+                        "If false, it uses the dimension and coordinates below.")
+                .define("useWorldSpawn", true);
+        SPAWN_DIMENSION = BUILDER.comment("Dimension used when useWorldSpawn is false.").define("dimension", "minecraft:overworld");
+        SPAWN_X     = BUILDER.comment("X coordinate.").defineInRange("x",   0, -30000000.0, 30000000.0);
+        SPAWN_Y     = BUILDER.comment("Y coordinate.").defineInRange("y",  64, -64.0, 320.0);
+        SPAWN_Z     = BUILDER.comment("Z coordinate.").defineInRange("z",   0, -30000000.0, 30000000.0);
+        SPAWN_YAW   = BUILDER.comment("Yaw.").defineInRange("yaw",   0, -180.0, 180.0);
+        SPAWN_PITCH = BUILDER.comment("Pitch.").defineInRange("pitch", 0, -90.0, 90.0);
+        SPAWN_COOLDOWN_SECONDS = BUILDER
+                .comment("Cooldown for /rp spawn in seconds (0 = disabled).")
+                .defineInRange("spawnCooldownSeconds", 0, 0, 3600);
+        SPAWN_COMBAT_BLOCK_SECONDS = BUILDER
+                .comment("/rp spawn is refused for this many seconds after the player was hurt by a mob or player (0 = disabled).")
+                .defineInRange("spawnCombatBlockSeconds", 0, 0, 600);
+        SPAWN_COMMANDS = BUILDER
+                .comment("Commands run after /rp spawn, as the player: @s is the player, ~ ~ ~ is the destination,",
+                        "{player} is the Minecraft name. They run with OP level 4 and their output is hidden.")
+                .defineList("spawnCommands", List.of(), obj -> obj instanceof String);
         BUILDER.pop();
 
         // ── ACTION / ME ───────────────────────────────────────────────────────
@@ -117,6 +183,12 @@ public class RpConfig {
         SELF_NICK_MAX_LENGTH = BUILDER
                 .comment("Maximum nickname length (excluding color codes).")
                 .defineInRange("selfNickMaxLength", 15, 1, 64);
+        NICK_UNIQUE = BUILDER
+                .comment("If true, two players cannot have the same nickname (case and colors ignored).")
+                .define("nicknamesUnique", false);
+        NICK_BLACKLIST = BUILDER
+                .comment("Words forbidden in nicknames (case and colors ignored). Staff are not affected.")
+                .defineList("nicknameBlacklist", List.of(), obj -> obj instanceof String);
         BUILDER.pop();
 
         // ── ANNONCE ───────────────────────────────────────────────────────────
@@ -157,6 +229,34 @@ public class RpConfig {
                                 "title;5.0;1.0;1.0"
                         ),
                         obj -> obj instanceof String && ((String)obj).contains(";"));
+        BUILDER.pop();
+
+        BUILDER.push("Dice Rolls");
+        DICE_ALLOW_EXPRESSIONS = BUILDER
+                .comment("Allow /roll with expressions: d20, 2d6+3, d100-10, <dice name>+2, adv d20 (advantage), dis d20 (disadvantage).",
+                        "Configured dice names (diceTypes) always work.")
+                .define("allowExpressions", true);
+        DICE_ALLOW_SECRET = BUILDER
+                .comment("Allow /roll secret <dice>: the result is only shown to the roller and the staff.")
+                .define("allowSecretRolls", true);
+        DICE_MAX_COUNT = BUILDER.comment("Maximum number of dice in one expression (2d6 = 2).").defineInRange("maxDiceCount", 20, 1, 100);
+        DICE_MAX_SIDES = BUILDER.comment("Maximum number of sides of a dice in an expression.").defineInRange("maxDiceSides", 1000, 2, 100000);
+        BUILDER.pop();
+
+        BUILDER.push("Teleport Warmup");
+        SPAWN_WARMUP_SECONDS = BUILDER
+                .comment("Seconds the player must wait without moving before /rp spawn teleports them. 0 = instant.",
+                        "A countdown is shown in the action bar. Other mods can add animations through RpTeleportEvent.")
+                .defineInRange("spawnWarmupSeconds", 0, 0, 120);
+        AFK_WARMUP_SECONDS = BUILDER
+                .comment("Seconds the player must wait without moving before /rp afk teleports them. 0 = instant.")
+                .defineInRange("afkWarmupSeconds", 0, 0, 120);
+        TELEPORT_CANCEL_ON_MOVE = BUILDER
+                .comment("Cancel the teleport when the player moves during the delay.")
+                .define("cancelOnMove", true);
+        TELEPORT_CANCEL_ON_DAMAGE = BUILDER
+                .comment("Cancel the teleport when the player takes damage during the delay (prevents escaping a fight).")
+                .define("cancelOnDamage", true);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

@@ -51,16 +51,12 @@ public abstract class MixinEntity {
             remap = false
     )
     private void onGetCustomName(CallbackInfoReturnable<Component> cir) {
+        if (!((Object) this instanceof ServerPlayer serverPlayer)) return;
         if (rpessentials$saving.get()) return;
 
-        Entity entity = (Entity) (Object) this;
-
-        // Afficher le nickname uniquement pour les ServerPlayer
-        if (entity instanceof ServerPlayer serverPlayer) {
-            Component nametagDisplay = NicknameManager.getNametagDisplay(serverPlayer);
-            if (nametagDisplay != null) {
-                cir.setReturnValue(nametagDisplay);
-            }
+        Component nametagDisplay = NicknameManager.getNametagDisplay(serverPlayer);
+        if (nametagDisplay != null) {
+            cir.setReturnValue(nametagDisplay);
         }
     }
 }

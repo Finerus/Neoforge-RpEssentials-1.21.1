@@ -1,5 +1,8 @@
 package net.rp.rpessentials.client.gui;
 
+import net.rp.rpessentials.client.skin.SkinnedEditBox;
+import net.rp.rpessentials.client.skin.SkinnedButton;
+import net.rp.rpessentials.client.skin.GuiSkin;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -11,10 +14,10 @@ import net.minecraft.util.FormattedCharSequence;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.moderation.ManageService;
 import net.rp.rpessentials.network.ManagePlayerPacket;
-import net.rp.rpessentials.moderation.PlaytimeManager;
 import net.rp.rpessentials.network.OpenPlayerProfileGuiPacket;
 import net.rp.rpessentials.network.PlayerNoteActionPacket;
 import net.rp.rpessentials.network.SetPlayerProfilePacket;
@@ -37,9 +40,27 @@ public class PlayerProfileScreen extends Screen {
     private int stateSelectedPlayer = 0;
     private int stateSelectedProf   = 0;
     private int stateNickColorIndex = 0;
-    private int playerListScroll    = 0;
+    /** Player list: Minecraft list widget, kept between rebuilds (scroll position). */
+    private ButtonRowList playerList;
+    /** Stats tab: Minecraft list widget. */
+    private TextLinesList statsList;
     private int activeTab           = 0; // 0=Profil, 1=Stats, 2=Notes
-    private int stateNotesScroll    = 0;
+    /** Notes and Manage tabs: Minecraft list widgets, kept between rebuilds (scroll position). */
+    private ButtonRowList notesList, manageList;
+    
+    
+    /** History tab: Minecraft list widget, kept between rebuilds so the scroll position stays. */
+    private TextLinesList historyList;
+    
+    /** Extra stats received from the server, per player. */
+    private final java.util.Map<java.util.UUID, List<String>> statsCache = new java.util.HashMap<>();
+    private final java.util.Set<java.util.UUID> statsRequested = new java.util.HashSet<>();
+
+    // History tab: lines received from the server, per player.
+    private final java.util.Map<java.util.UUID, List<String>> historyCache = new java.util.HashMap<>();
+    private final java.util.Set<java.util.UUID> historyRequested = new java.util.HashSet<>();
+    private boolean historyEnabled = true;
+    
     private int stateTempDays = 7;
 
     private String stateNick = "";
@@ -55,30 +76,25 @@ public class PlayerProfileScreen extends Screen {
     private boolean pendingNickReset = false;
     private int pendingDeleteNoteId = -1;
 
-    private static final char[]   COLOR_CHARS = { 0, 'f','e','6','c','a','b','9','d','7','8','0','1','2','3','4','5' };
-    private static final String[] COLOR_KEYS  = {
-            "none","white","yellow","gold","red","green","cyan","blue","pink","gray","dark_gray",
-            "black","dark_blue","dark_green","dark_aqua","dark_red","dark_purple"
-    };
+    private static final char[]   COLOR_CHARS = ColorPalette.CHARS;
+    private static final String[] COLOR_KEYS  = ColorPalette.KEYS;
 
     private static final int LIST_W       = 130;
     private static final int MARGIN       = 8;
     private static final int PANEL_TOP    = 18;
     private static final int ROW_H        = 20;
-    private static final int LIST_VISIBLE = 10;
-    private static final int NOTE_ROW_H   = 40;
     private static final int MANAGE_ROW_H = 34;
-    private int manageScroll = 0;
+    
 
-    private static final String[] TAB_KEYS = { "profile", "stats", "notes", "manage" };
-    private static final String[] TAB_COLORS = { "§e", "§a", "§b", "§c" };
+    private static final String[] TAB_KEYS = { "profile", "stats", "notes", "manage", "history" };
+    private static final String[] TAB_COLORS = { "§e", "§a", "§b", "§c", "§d" };
 
     private static final String[] MANAGE_SECTION_KEYS = {
             "access", "discipline", "teleport", "send", "permissions", "vanish",
             "inventory", "identity", "absence", "reset" };
     private static final ManageService.Action[][] MANAGE_ACTIONS = {
             { ManageService.Action.WHITELIST_ADD, ManageService.Action.WHITELIST_REMOVE },
-            { ManageService.Action.KICK, ManageService.Action.BAN, ManageService.Action.PARDON },
+            { ManageService.Action.KICK, ManageService.Action.BAN, ManageService.Action.TEMPBAN, ManageService.Action.PARDON },
             { ManageService.Action.TP_TO_PLAYER, ManageService.Action.TP_PLAYER_HERE },
             { ManageService.Action.TP_PLAYER_PLATFORM, ManageService.Action.TP_PLAYER_AFK },
             { ManageService.Action.OP, ManageService.Action.DEOP },
@@ -99,6 +115,31 @@ public class PlayerProfileScreen extends Screen {
     private boolean selectedIsSelf() {
         var p = Minecraft.getInstance().player;
         return p != null && !players.isEmpty() && p.getUUID().equals(selectedData().uuid());
+    }
+
+    /** Rows of the player list that fit between the top arrow and the "add player" field. */
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        
+        
+        
+        return super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        
+        
+        
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        
+        
+        
+        return super.mouseReleased(mx, my, button);
     }
 
     private int defaultManageNumber(ManageService.Action a) {
@@ -167,7 +208,9 @@ public class PlayerProfileScreen extends Screen {
     @Override
     protected void init() {
         int formX = LIST_W + MARGIN * 3;
-        int formW = this.width - formX - MARGIN;
+        int formW = this.width - formX - MARGIN * 2;
+        addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
+        
 
         // ── Bouton de tri : cycle En ligne -> Hors ligne -> Prévu -> Tous ───
         sortButtonX = MARGIN + LIST_W - 20;
@@ -175,37 +218,27 @@ public class PlayerProfileScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("§f⇅"),
                         btn -> {
                             filterMode = (filterMode + 1) % FILTER_KEYS.length;
-                            playerListScroll = 0;
+                            if (playerList != null) playerList.setScrollAmount(0);
                             rebuild();
                         })
                 .pos(sortButtonX, sortButtonY).size(18, 12)
                 .tooltip(Tooltip.create(Component.translatable(
                         "rpessentials.gui.player_profile.filter." + FILTER_KEYS[filterMode])))
-                .build());
+                .build(SkinnedButton::new));
 
         addRenderableWidget(Button.builder(Component.literal("§7↻"),
                         btn -> PacketDistributor.sendToServer(new net.rp.rpessentials.network.RequestOpenGuiPacket(
                                 net.rp.rpessentials.network.RequestOpenGuiPacket.GuiType.PLAYER_PROFILE)))
                 .pos(sortButtonX - 20, sortButtonY).size(18, 12)
                 .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
-                .build());
+                .build(SkinnedButton::new));
 
-        // ── Liste joueurs (gauche) ─────────────────────────────────────────
-        List<Integer> visible = getVisibleIndices();
-
-        boolean canScrollUp   = playerListScroll > 0;
-        boolean canScrollDown = playerListScroll + LIST_VISIBLE < visible.size();
-
-        addRenderableWidget(Button.builder(Component.literal(canScrollUp ? "▲" : "§8▲"),
-                        btn -> { if (canScrollUp) { playerListScroll--; rebuild(); } })
-                .pos(MARGIN, PANEL_TOP + 14).size(LIST_W, 13).build());
-
-        int listStart = playerListScroll;
-        int listEnd   = Math.min(visible.size(), listStart + LIST_VISIBLE);
-        int listOffY  = 15;
-
-        for (int i = listStart; i < listEnd; i++) {
-            final int idx = visible.get(i);
+        // ── Liste joueurs (gauche) : widget de liste Minecraft ─────────────
+        if (playerList == null) playerList = new ButtonRowList(Minecraft.getInstance(), ROW_H);
+        playerList.layout(MARGIN - 2, PANEL_TOP + 14, LIST_W + 4, this.height - 39 - (PANEL_TOP + 14));
+        int rw = playerList.rowWidth();
+        List<ButtonRowList.Row> playerRows = new ArrayList<>();
+        for (int idx : getVisibleIndices()) {
             OpenPlayerProfileGuiPacket.PlayerData p = players.get(idx);
 
             String statusSymbol = p.isPrepared() ? "§b# " : (p.isOnline() ? "§a● " : "§7○ ");
@@ -214,44 +247,36 @@ public class PlayerProfileScreen extends Screen {
             if (p.activeWarnCount() > 0)    label += " §c[" + p.activeWarnCount() + "W]";
             if (p.isMuted())                label += " §6[M]";
 
-            int rowWidth = p.isPrepared() ? LIST_W - 18 : LIST_W;
-            addRenderableWidget(Button.builder(Component.literal(label),
-                            btn -> { loadPlayerState(idx); rebuild(); })
-                    .pos(MARGIN, PANEL_TOP + 14 + (i - listStart) * ROW_H + listOffY)
-                    .size(rowWidth, ROW_H - 2).build());
+            ButtonRowList.Row row = new ButtonRowList.Row();
+            row.add(Button.builder(Component.literal(label), btn -> { loadPlayerState(idx); rebuild(); })
+                    .size(p.isPrepared() ? rw - 18 : rw, ROW_H - 2)
+                    .build(SkinnedButton.row(idx == stateSelectedPlayer)), 0);
 
             if (p.isPrepared()) {
                 String uuidStr = p.uuid().toString();
-                if (uuidStr.equals(pendingDeletePlayerUuid)) {
-                    addRenderableWidget(Button.builder(Component.literal("§c!"),
-                                    btn -> PacketDistributor.sendToServer(
-                                            new net.rp.rpessentials.network.DeletePendingProfilePacket(p.uuid())))
-                            .pos(MARGIN + LIST_W - 16, PANEL_TOP + 14 + (i - listStart) * ROW_H + listOffY)
-                            .size(16, ROW_H - 2)
-                            .tooltip(Tooltip.create(Component.translatable(
-                                    "rpessentials.gui.player_profile.confirm_delete_prepared")))
-                            .build());
-                } else {
-                    addRenderableWidget(Button.builder(Component.literal("§c✕"),
-                                    btn -> { pendingDeletePlayerUuid = uuidStr; rebuild(); })
-                            .pos(MARGIN + LIST_W - 16, PANEL_TOP + 14 + (i - listStart) * ROW_H + listOffY)
-                            .size(16, ROW_H - 2)
-                            .tooltip(Tooltip.create(Component.translatable(
-                                    "rpessentials.gui.player_profile.delete_prepared_tooltip")))
-                            .build());
-                }
+                Button side = uuidStr.equals(pendingDeletePlayerUuid)
+                        ? Button.builder(Component.literal("§c!"),
+                                        btn -> PacketDistributor.sendToServer(
+                                                new net.rp.rpessentials.network.DeletePendingProfilePacket(p.uuid())))
+                                .size(16, ROW_H - 2)
+                                .tooltip(Tooltip.create(Component.translatable(
+                                        "rpessentials.gui.player_profile.confirm_delete_prepared")))
+                                .build(SkinnedButton::new)
+                        : Button.builder(Component.literal("§c✕"),
+                                        btn -> { pendingDeletePlayerUuid = uuidStr; rebuild(); })
+                                .size(16, ROW_H - 2)
+                                .tooltip(Tooltip.create(Component.translatable(
+                                        "rpessentials.gui.player_profile.delete_prepared_tooltip")))
+                                .build(SkinnedButton::new);
+                row.add(side, rw - 16);
             }
+            playerRows.add(row);
         }
-
-        addRenderableWidget(Button.builder(Component.literal(canScrollDown
-                                ? "▼ " + I18n.get("rpessentials.gui.btn_more", Math.max(0, visible.size() - listEnd))
-                                : "§8▼"),
-                        btn -> { if (canScrollDown) { playerListScroll++; rebuild(); } })
-                .pos(MARGIN, PANEL_TOP + 14 + LIST_VISIBLE * ROW_H + listOffY)
-                .size(LIST_W, 13).build());
+        playerList.setRows(playerRows);
+        addRenderableWidget(playerList);
 
         // ── Ajout d'un joueur jamais connecté ───────────────────────────────
-        EditBox addPlayerBox = new EditBox(this.font, MARGIN, this.height - 30, LIST_W - 40, 18,
+        EditBox addPlayerBox = new SkinnedEditBox(this.font, MARGIN, this.height - 35, LIST_W - 40, 20,
                 Component.translatable("rpessentials.gui.player_profile.add_label"));
         addPlayerBox.setHint(Component.translatable("rpessentials.gui.player_profile.add_label")
                 .copy().withStyle(ChatFormatting.GRAY));
@@ -264,15 +289,15 @@ public class PlayerProfileScreen extends Screen {
 
         addRenderableWidget(Button.builder(Component.literal("§a+"),
                         btn -> sendAddPlayerRequest())
-                .pos(MARGIN + LIST_W - 38, this.height - 30).size(38, 18)
+                .pos(MARGIN + LIST_W - 38, this.height - 35).size(38, 20)
                 .tooltip(Tooltip.create(
                         Component.translatable("rpessentials.gui.player_profile.add_tooltip")))
-                .build());
+                .build(SkinnedButton::new));
 
         if (players.isEmpty()) return;
 
         // ── Onglets ────────────────────────────────────────────────────────
-        int tabW = (formW - 4) / TAB_KEYS.length;
+        int tabW = UiLayout.cellW(formW, TAB_KEYS.length, UiLayout.TAB_GAP);
         for (int i = 0; i < TAB_KEYS.length; i++) {
             final int ti = i;
             String label = i == activeTab
@@ -280,17 +305,18 @@ public class PlayerProfileScreen extends Screen {
                     : "§7" + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i]);
             addRenderableWidget(Button.builder(Component.literal(label),
                             btn -> { activeTab = ti; pendingDeleteNoteId = -1; rebuild(); })
-                    .pos(formX - 2 + i * (tabW + 2), PANEL_TOP + 14)
-                    .size(tabW, 16).build());
+                    .pos(UiLayout.cellX(formX, formW, TAB_KEYS.length, UiLayout.TAB_GAP, i), PANEL_TOP + 14)
+                    .size(tabW, 16).build(SkinnedButton.tab(ti == activeTab)));
         }
 
         int contentY = PANEL_TOP + 36;
 
         switch (activeTab) {
             case 0 -> buildProfileTab(formX, formW, contentY);
-            case 1 -> {} // Stats : render only
+            case 1 -> { requestStats(); buildStatsList(formX, formW, contentY); }
             case 2 -> buildNotesTab(formX, formW, contentY);
             case 3 -> buildManageTab(formX, formW, contentY);
+            case 4 -> { requestHistory(); buildHistoryList(formX, formW, contentY); }
         }
 
         // ── Bouton Appliquer (onglet profil seulement) ─────────────────────
@@ -298,13 +324,13 @@ public class PlayerProfileScreen extends Screen {
             addRenderableWidget(Button.builder(
                             Component.translatable("rpessentials.gui.player_profile.btn_apply"),
                             btn -> applyProfile())
-                    .pos(formX, this.height - 35).size(150, 20).build());
+                    .pos(formX, this.height - 35).size(150, 20).build(SkinnedButton::new));
         }
 
         addRenderableWidget(Button.builder(
                         Component.translatable("rpessentials.gui.player_profile.btn_close"),
                         btn -> onClose())
-                .pos(this.width - MARGIN - 65, this.height - 35).size(60, 20).build());
+                .pos(this.width - MARGIN - 65, this.height - 35).size(60, 20).build(SkinnedButton::new));
     }
 
     private void sendAddPlayerRequest() {
@@ -323,7 +349,7 @@ public class PlayerProfileScreen extends Screen {
         // --- Nickname ---
         int nickBoxY = y + 16;
         int nickBoxW = Math.min(formW - 4, 200);
-        EditBox nickBox = new EditBox(this.font, formX, nickBoxY, nickBoxW, 18,
+        EditBox nickBox = new SkinnedEditBox(this.font, formX, nickBoxY, nickBoxW, 18,
                 Component.translatable("rpessentials.gui.player_profile.nick_label"));
         nickBox.setHint(Component.translatable("rpessentials.gui.player_profile.nick_hint"));
         nickBox.setMaxLength(64);
@@ -357,24 +383,20 @@ public class PlayerProfileScreen extends Screen {
                 .tooltip(Tooltip.create(Component.translatable(pendingNickReset
                         ? "rpessentials.gui.player_profile.nick_reset_confirm"
                         : "rpessentials.gui.player_profile.nick_reset_tooltip")))
-                .build());
+                .build(SkinnedButton::new));
         y += 44;
 
         // --- Palette de couleurs ---
-        int colBtnW = 56, colBtnH = 15;
-        int colCols = Math.max(1, Math.min(5, (this.width - LIST_W - MARGIN * 4) / (colBtnW + 2)));
-        for (int i = 0; i < COLOR_CHARS.length; i++) {
+        ColorPalette.Dims pal = ColorPalette.dims(formW, this.height);
+        for (int i = 0; i < ColorPalette.CHARS.length; i++) {
             final int ci = i;
-            String btnLabel = ci == 0
-                    ? (ci == stateNickColorIndex ? "§l" : "") + "§7" + I18n.get("rpessentials.gui.color." + COLOR_KEYS[ci])
-                    : (ci == stateNickColorIndex ? "§l" : "") + "§" + COLOR_CHARS[ci] + I18n.get("rpessentials.gui.color." + COLOR_KEYS[ci]);
-            addRenderableWidget(Button.builder(Component.literal(btnLabel),
+            Button.Builder cb = Button.builder(Component.literal(ColorPalette.label(ci, ci == stateNickColorIndex, pal)),
                             btn -> { stateNickColorIndex = ci; rebuild(); })
-                    .pos(formX + (i % colCols) * (colBtnW + 2), y + (i / colCols) * (colBtnH + 2))
-                    .size(colBtnW, colBtnH).build());
+                    .pos(pal.x(formX, i), pal.y(y, i)).size(pal.btnW(), pal.btnH());
+            if (pal.swatches()) cb.tooltip(Tooltip.create(Component.literal(ColorPalette.name(ci))));
+            addRenderableWidget(cb.build(SkinnedButton::new));
         }
-        int colRows = (COLOR_CHARS.length + colCols - 1) / colCols;
-        y += colRows * (colBtnH + 2) + 8;
+        y += pal.height() + 8;
 
         // --- Role ---
         y += 12;
@@ -382,8 +404,8 @@ public class PlayerProfileScreen extends Screen {
         if (!availableRoles.isEmpty()) {
             int maxBtnW = 80;
             int minBtnW = 40;
-            int gap     = 2;
-            int availW  = formW - 4;
+            int gap     = UiLayout.GAP;
+            int availW  = formW;
             int cols    = Math.max(1, availW / (minBtnW + gap));
             int btnW    = Math.min(maxBtnW, (availW - gap * (cols - 1)) / cols);
             int rows    = (int) Math.ceil((double) availableRoles.size() / cols);
@@ -397,7 +419,7 @@ public class PlayerProfileScreen extends Screen {
                                 Component.literal(sel ? "§e§l" + role : "§7" + role),
                                 btn -> { stateRole = role; rebuild(); })
                         .pos(formX + col * (btnW + gap), y + row * 16)
-                        .size(btnW, 14).build();
+                        .size(btnW, 14).build(SkinnedButton::new);
                 roleBtn.active = Minecraft.getInstance().player != null
                         && RpEssentialsPermissions.hasSensitiveLevel(Minecraft.getInstance().player);
                 addRenderableWidget(roleBtn);
@@ -408,43 +430,43 @@ public class PlayerProfileScreen extends Screen {
         // --- Licences ---
         if (!availableProfessionIds.isEmpty()) {
             int longestW = availableProfessionIds.stream()
-                    .mapToInt(id -> this.font.width("License: " + id + " (" + availableProfessionIds.size() + "/" + availableProfessionIds.size() + ")"))
+                    .mapToInt(id -> this.font.width(I18n.get("rpessentials.gui.player_profile.license_label") + id + " (" + availableProfessionIds.size() + "/" + availableProfessionIds.size() + ")"))
                     .max().orElse(0);
             int fixedGap = 90;
             int navX = formX + Math.max(longestW + 12, fixedGap);
 
-            boolean fitsInline = navX + 140 < formX + formW;
+            boolean fitsInline = navX + 153 <= formX + formW;
             int navY = fitsInline ? y : y + 12;
             if (!fitsInline) navX = formX;
 
             addRenderableWidget(Button.builder(Component.literal("§7<"),
                             btn -> { stateSelectedProf = Math.floorMod(stateSelectedProf - 1,
                                     availableProfessionIds.size()); rebuild(); })
-                    .pos(navX, navY).size(18, 18).build());
+                    .pos(navX, navY).size(18, 18).build(SkinnedButton::new));
 
             addRenderableWidget(Button.builder(Component.literal("§7>"),
                             btn -> { stateSelectedProf = (stateSelectedProf + 1)
                                     % availableProfessionIds.size(); rebuild(); })
-                    .pos(navX + 20, navY).size(18, 18).build());
+                    .pos(navX + 22, navY).size(18, 18).build(SkinnedButton::new));
 
             String profId = selectedProfId();
             boolean owned = selectedPlayerOwns(profId);
             Button addBtn = Button.builder(
                             Component.translatable("rpessentials.gui.player_profile.btn_add_license"),
                             btn -> grantSelectedLicense())
-                    .pos(navX + 40, navY).size(50, 18).build();
+                    .pos(navX + 44, navY).size(50, 18).build(SkinnedButton::new);
             addBtn.active = !owned;
             addRenderableWidget(addBtn);
 
             Button revokeBtn = Button.builder(
                             Component.translatable("rpessentials.gui.player_profile.btn_revoke_license"),
                             btn -> revokeSelectedLicense())
-                    .pos(navX + 93, navY).size(55, 18).build();
+                    .pos(navX + 98, navY).size(55, 18).build(SkinnedButton::new);
             revokeBtn.active = owned;
             addRenderableWidget(revokeBtn);
 
             int tempY = navY + 22;
-            EditBox daysBox = new EditBox(this.font, navX, tempY, 40, 18, Component.literal("Days"));
+            EditBox daysBox = new SkinnedEditBox(this.font, navX, tempY, 40, 18, Component.translatable("rpessentials.gui.field.days"));
             daysBox.setHint(Component.translatable("rpessentials.gui.player_profile.temp_days_hint"));
             daysBox.setMaxLength(3);
             daysBox.setValue(String.valueOf(stateTempDays));
@@ -458,7 +480,7 @@ public class PlayerProfileScreen extends Screen {
             Button tempBtn = Button.builder(
                             Component.translatable("rpessentials.gui.player_profile.btn_temp_license"),
                             btn -> grantTempLicense())
-                    .pos(navX + 44, tempY).size(60, 18).build();
+                    .pos(navX + 44, tempY).size(60, 18).build(SkinnedButton::new);
             tempBtn.active = tempAllowed;
             addRenderableWidget(tempBtn);
         }
@@ -473,42 +495,30 @@ public class PlayerProfileScreen extends Screen {
         OpenPlayerProfileGuiPacket.PlayerData sel = selectedData();
         List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> notes = sel.notes();
 
-        int listAreaBottom = this.height - 58;
-        int listAreaHeight = listAreaBottom - contentY;
-        int maxTextW       = noteTextW();
-        int maxScroll      = Math.max(0, notes.size() - 1);
-        if (stateNotesScroll > maxScroll) stateNotesScroll = maxScroll;
-
-        int first  = stateNotesScroll;
-        int last   = first - 1;
-        int totalH = 0;
-        for (int i = first; i < notes.size(); i++) {
-            int rh = noteRowH(notes.get(i), maxTextW);
-            if (totalH + rh > listAreaHeight && last >= first) break;
-            totalH += rh;
-            last = i;
+        // One block per note: a first row with the delete / edit buttons and the author line,
+        // then one row per line of text. Rows are 12 px high.
+        if (notesList == null) notesList = new ButtonRowList(Minecraft.getInstance(), 12);
+        notesList.layout(formX - 6, contentY, formW + 12, this.height - 58 - contentY);
+        int rw = notesList.rowWidth();
+        int textX = 32;
+        List<ButtonRowList.Row> rows = new ArrayList<>();
+        if (notes.isEmpty()) {
+            rows.add(new ButtonRowList.Row().text("§8" + I18n.get("rpessentials.gui.player_profile.notes.none"), textX, 2));
         }
+        for (int ni = 0; ni < notes.size(); ni++) {
+            final OpenPlayerProfileGuiPacket.PlayerData.NoteEntry note = notes.get(ni);
+            boolean isEd = stateEditingNoteId == note.id();
+            boolean isPending = note.id() < 0;
+            int color = isEd ? 0x33FFFF00 : isPending ? 0x1100FFFF : (ni % 2 == 0 ? 0x22FFFFFF : 0x14FFFFFF);
+            List<FormattedCharSequence> wrapped = this.font.split(Component.literal("§f" + note.text()), Math.max(40, rw - textX - 4));
+            int size = 1 + Math.max(1, wrapped.size());
 
-        if (stateNotesScroll > 0) {
-            addRenderableWidget(Button.builder(Component.literal("▲"),
-                            btn -> { stateNotesScroll = Math.max(0, stateNotesScroll - 1); rebuild(); })
-                    .pos(this.width - MARGIN - 20, contentY).size(16, 12).build());
-        }
-        if (stateNotesScroll < maxScroll) {
-            addRenderableWidget(Button.builder(Component.literal("▼"),
-                            btn -> { stateNotesScroll = Math.min(maxScroll, stateNotesScroll + 1); rebuild(); })
-                    .pos(this.width - MARGIN - 20, listAreaBottom - 12).size(16, 12).build());
-        }
-
-        int rowY = contentY;
-        for (int i = first; i <= last; i++) {
-            final OpenPlayerProfileGuiPacket.PlayerData.NoteEntry note = notes.get(i);
-            int rh   = noteRowH(note, maxTextW);
-            int btnY = rowY + rh / 2 - 8;
-
-            if (note.id() >= 0) {
+            String by = I18n.get("rpessentials.gui.player_profile.notes.by");
+            String meta = (isPending ? "" : "§e#" + note.id() + " ") + "§8[" + note.timestamp() + "] §7" + by + " §f" + note.authorName();
+            ButtonRowList.Row first = new ButtonRowList.Row().block(GuiSkin.NOTE_ROW, color, 0, size).text(meta, textX, 2);
+            if (!isPending) {
                 boolean confirmDelete = pendingDeleteNoteId == note.id();
-                addRenderableWidget(Button.builder(Component.literal(confirmDelete ? "§c!" : "§c✗"),
+                first.add(Button.builder(Component.literal(confirmDelete ? "§c!" : "§c✗"),
                                 btn -> {
                                     if (pendingDeleteNoteId == note.id()) {
                                         pendingDeleteNoteId = -1;
@@ -518,15 +528,12 @@ public class PlayerProfileScreen extends Screen {
                                         rebuild();
                                     }
                                 })
-                        .pos(formX, btnY).size(14, 16)
+                        .size(14, 12)
                         .tooltip(Tooltip.create(Component.translatable(confirmDelete
                                 ? "rpessentials.gui.player_profile.notes.confirm_delete"
                                 : "rpessentials.gui.player_profile.notes.delete_tooltip")))
-                        .build());
-
-                boolean isEditing = stateEditingNoteId == note.id();
-                addRenderableWidget(Button.builder(
-                                Component.literal(isEditing ? "§e§l✎" : "§e✎"),
+                        .build(SkinnedButton::new), 1, 0);
+                first.add(Button.builder(Component.literal(isEd ? "§e§l✎" : "§e✎"),
                                 btn -> {
                                     if (stateEditingNoteId == note.id()) {
                                         stateEditingNoteId = -1;
@@ -537,16 +544,22 @@ public class PlayerProfileScreen extends Screen {
                                     }
                                     rebuild();
                                 })
-                        .pos(formX + 16, btnY).size(14, 16).build());
+                        .size(14, 12).build(SkinnedButton::new), 16, 0);
             }
-            rowY += rh;
+            rows.add(first);
+            for (int li = 0; li < wrapped.size(); li++) {
+                rows.add(new ButtonRowList.Row().block(GuiSkin.NOTE_ROW, color, li + 1, size).text(wrapped.get(li), textX, 1));
+            }
+            if (wrapped.isEmpty()) rows.add(new ButtonRowList.Row().block(GuiSkin.NOTE_ROW, color, 1, size));
         }
+        notesList.setRows(rows);
+        addRenderableWidget(notesList);
 
         int addBoxY = this.height - 50;
-        int addBoxW = Math.min(formW - 70, 280);
+        int addBoxW = Math.max(60, Math.min(formW - 44 - 46 - UiLayout.GAP * 2, 280));
 
-        EditBox noteBox = new EditBox(this.font, formX, addBoxY, addBoxW, 18,
-                Component.literal("Note"));
+        EditBox noteBox = new SkinnedEditBox(this.font, formX, addBoxY, addBoxW, 18,
+                Component.translatable("rpessentials.gui.field.note"));
         noteBox.setHint(Component.literal(stateEditingNoteId != -1
                 ? I18n.get("rpessentials.gui.player_profile.notes.edit_hint")
                 : I18n.get("rpessentials.gui.player_profile.notes.new_hint")));
@@ -560,16 +573,16 @@ public class PlayerProfileScreen extends Screen {
                 : I18n.get("rpessentials.gui.player_profile.notes.btn_add");
         addRenderableWidget(Button.builder(Component.literal(addLabel),
                         btn -> addNote())
-                .pos(formX + addBoxW + 4, addBoxY).size(44, 18).build());
+                .pos(formX + addBoxW + 4, addBoxY).size(44, 18).build(SkinnedButton::new));
 
         if (stateEditingNoteId != -1) {
             addRenderableWidget(Button.builder(Component.literal(I18n.get("rpessentials.gui.player_profile.notes.btn_cancel")),
                             btn -> { stateEditingNoteId = -1; stateNoteInput = ""; rebuild(); })
-                    .pos(formX + addBoxW + 50, addBoxY).size(46, 18).build());
+                    .pos(formX + addBoxW + 4 + 44 + UiLayout.GAP, addBoxY).size(46, 18).build(SkinnedButton::new));
         }
     }
 
-    private void rebuild() { clearWidgets(); init(); }
+    private void rebuild() { if (this.minecraft == null) return; /* not shown yet: init() will run when it opens */ clearWidgets(); init(); }
 
 
     private void buildManageTab(int formX, int formW, int y) {
@@ -579,15 +592,18 @@ public class PlayerProfileScreen extends Screen {
                 && RpEssentialsPermissions.hasSensitiveLevel(Minecraft.getInstance().player);
         boolean online = selectedData().isOnline();
         boolean self = selectedIsSelf();
-        int gap = 6;
-        int w = (formW - 28 - gap * 2) / 3;
-        int visible = manageVisibleSections();
-        int maxScroll = MANAGE_ACTIONS.length - visible;
-        manageScroll = Math.max(0, Math.min(manageScroll, maxScroll));
+        int gap = UiLayout.GAP;
+        if (manageList == null) manageList = new ButtonRowList(Minecraft.getInstance(), MANAGE_ROW_H);
+        manageList.layout(formX - 6, y, formW + 12, this.height - 16 - y);
+        int rowW = manageList.rowWidth();
+        List<ButtonRowList.Row> rows = new ArrayList<>();
 
-        for (int s = manageScroll; s < manageScroll + visible; s++) {
-            int rowY = y + (s - manageScroll) * MANAGE_ROW_H;
-            for (int c = 0; c < MANAGE_ACTIONS[s].length; c++) {
+        for (int s = 0; s < MANAGE_ACTIONS.length; s++) {
+            String sectionColor = MANAGE_SECTION_KEYS[s].equals("reset") ? "§c" : "§e";
+            ButtonRowList.Row row = new ButtonRowList.Row()
+                    .text(sectionColor + I18n.get("rpessentials.gui.player_profile.manage.section." + MANAGE_SECTION_KEYS[s]), 0, 0);
+            int n = MANAGE_ACTIONS[s].length;
+            for (int c = 0; c < n; c++) {
                 final ManageService.Action a = MANAGE_ACTIONS[s][c];
                 boolean reset = a == ManageService.Action.RESET_ALL;
                 String label = I18n.get("rpessentials.gui.player_profile.manage.action." + a.name().toLowerCase());
@@ -598,8 +614,7 @@ public class PlayerProfileScreen extends Screen {
                                     manageNumber = defaultManageNumber(a);
                                     rebuild();
                                 })
-                        .pos(formX + c * (w + gap), rowY + 11)
-                        .size(reset ? w * 3 + gap * 2 : w, 16).build();
+                        .size(UiLayout.cellW(rowW, n, gap), 16).build(SkinnedButton::new);
                 if (a.sensitive() && !sensitive) {
                     b.active = false;
                     b.setTooltip(Tooltip.create(Component.translatable(
@@ -616,21 +631,12 @@ public class PlayerProfileScreen extends Screen {
                     b.setTooltip(Tooltip.create(Component.translatable(
                             "rpessentials.gui.player_profile.manage.queued_tooltip")));
                 }
-                addRenderableWidget(b);
+                row.add(b, UiLayout.cellX(0, rowW, n, gap, c), 11);
             }
+            rows.add(row);
         }
-
-        if (maxScroll > 0) {
-            boolean up = manageScroll > 0;
-            boolean down = manageScroll < maxScroll;
-            int ax = formX + formW - 20;
-            addRenderableWidget(Button.builder(Component.literal(up ? "▲" : "§8▲"),
-                            btn -> { if (up) { manageScroll--; rebuild(); } })
-                    .pos(ax, y).size(18, 14).build());
-            addRenderableWidget(Button.builder(Component.literal(down ? "▼" : "§8▼"),
-                            btn -> { if (down) { manageScroll++; rebuild(); } })
-                    .pos(ax, y + visible * MANAGE_ROW_H - 18).size(18, 14).build());
-        }
+        manageList.setRows(rows);
+        addRenderableWidget(manageList);
     }
 
     // =========================================================================
@@ -660,7 +666,7 @@ public class PlayerProfileScreen extends Screen {
                                 ? "rpessentials.gui.player_profile.manage.btn_confirm_reset"
                                 : "rpessentials.gui.player_profile.manage.btn_confirm"),
                         btn -> sendManage())
-                .pos(formX, btnY).size(confirmW, 20).build();
+                .pos(formX, btnY).size(confirmW, 20).build(SkinnedButton::new);
         confirmBtn.active = canConfirmManage();
 
         if (a == ManageService.Action.OP || a == ManageService.Action.VANISH) {
@@ -671,7 +677,7 @@ public class PlayerProfileScreen extends Screen {
                 final int l = lvl;
                 Button lb = Button.builder(Component.literal(manageNumber == l ? "§e§l" + l : "§7" + l),
                                 btn -> { manageNumber = l; rebuild(); })
-                        .pos(formX + (lvl - from) * 24, cy).size(22, 18).build();
+                        .pos(formX + (lvl - from) * 24, cy).size(22, 18).build(SkinnedButton::new);
                 if (l > own) {
                     lb.active = false;
                     lb.setTooltip(Tooltip.create(Component.translatable(
@@ -685,8 +691,8 @@ public class PlayerProfileScreen extends Screen {
             }
         }
 
-        if (a == ManageService.Action.ABSENCE_ADD) {
-            EditBox days = new EditBox(this.font, formX, cy, 80, 18, Component.literal("Days"));
+        if (a == ManageService.Action.ABSENCE_ADD || a == ManageService.Action.TEMPBAN) {
+            EditBox days = new SkinnedEditBox(this.font, formX, cy, 80, 18, Component.translatable("rpessentials.gui.field.days"));
             days.setHint(Component.translatable("rpessentials.gui.player_profile.manage.days_hint"));
             days.setMaxLength(3);
             days.setValue(String.valueOf(manageNumber));
@@ -698,8 +704,8 @@ public class PlayerProfileScreen extends Screen {
             cy += 24;
         }
 
-        if (a == ManageService.Action.KICK || a == ManageService.Action.BAN || a == ManageService.Action.ABSENCE_ADD) {
-            EditBox reason = new EditBox(this.font, formX, cy, boxW, 18, Component.literal("Reason"));
+        if (a == ManageService.Action.KICK || a == ManageService.Action.BAN || a == ManageService.Action.TEMPBAN || a == ManageService.Action.ABSENCE_ADD) {
+            EditBox reason = new SkinnedEditBox(this.font, formX, cy, boxW, 18, Component.translatable("rpessentials.gui.field.reason"));
             reason.setHint(Component.translatable("rpessentials.gui.player_profile.manage.reason_hint"));
             reason.setMaxLength(200);
             reason.setValue(manageText);
@@ -708,7 +714,7 @@ public class PlayerProfileScreen extends Screen {
         }
 
         if (resetAll) {
-            EditBox nameBox = new EditBox(this.font, formX, cy + 14, boxW, 18, Component.literal("Name"));
+            EditBox nameBox = new SkinnedEditBox(this.font, formX, cy + 14, boxW, 18, Component.translatable("rpessentials.gui.field.name"));
             nameBox.setHint(Component.translatable("rpessentials.gui.player_profile.manage.type_name_hint"));
             nameBox.setMaxLength(32);
             nameBox.setValue(manageText);
@@ -720,13 +726,14 @@ public class PlayerProfileScreen extends Screen {
         }
 
         if (a == ManageService.Action.TP_PLAYER_PLATFORM) {
-            int shown = Math.min(availablePlatforms.size(), 6);
+            int cols = Math.max(1, Math.min(3, (formW + UiLayout.GAP) / (80 + UiLayout.GAP)));
+            int shown = Math.min(availablePlatforms.size(), cols * 2);
             for (int i = 0; i < shown; i++) {
                 final String id = availablePlatforms.get(i);
                 boolean sel = id.equals(manageText);
                 addRenderableWidget(Button.builder(Component.literal(sel ? "§e§l" + id : "§7" + id),
                                 btn -> { manageText = id; rebuild(); })
-                        .pos(formX + (i % 3) * 84, cy + (i / 3) * 20).size(80, 16).build());
+                        .pos(formX + (i % cols) * (80 + UiLayout.GAP), cy + (i / cols) * 20).size(80, 16).build(SkinnedButton::new));
             }
         }
 
@@ -734,31 +741,25 @@ public class PlayerProfileScreen extends Screen {
         addRenderableWidget(Button.builder(
                         Component.translatable("rpessentials.gui.player_profile.manage.btn_cancel"),
                         btn -> { manageAction = null; manageText = ""; rebuild(); })
-                .pos(formX + confirmW + 4, btnY).size(80, 20).build());
+                .pos(formX + confirmW + 4, btnY).size(80, 20).build(SkinnedButton::new));
     }
 
     private void sendManage() {
         if (players.isEmpty() || manageAction == null) return;
-        if (manageAction == ManageService.Action.ABSENCE_ADD && (manageNumber < 1 || manageNumber > 365)) return;
+        if ((manageAction == ManageService.Action.ABSENCE_ADD || manageAction == ManageService.Action.TEMPBAN)
+                && (manageNumber < 1 || manageNumber > 365)) return;
         String text = manageAction == ManageService.Action.RESET_ALL ? "" : manageText.trim();
+        // Tempban: the GUI asks for days, the server expects minutes.
+        int number = manageAction == ManageService.Action.TEMPBAN ? manageNumber * 1440 : manageNumber;
         PacketDistributor.sendToServer(new ManagePlayerPacket(
-                selectedData().uuid(), manageAction, text, manageNumber));
+                selectedData().uuid(), manageAction, text, number));
         manageAction = null;
         manageText = "";
         rebuild();
     }
 
     private void renderManageTab(GuiGraphics g, int formX, int y, OpenPlayerProfileGuiPacket.PlayerData sel) {
-        if (manageAction == null) {
-            int visible = manageVisibleSections();
-            for (int s = manageScroll; s < manageScroll + visible && s < MANAGE_SECTION_KEYS.length; s++) {
-                String color = MANAGE_SECTION_KEYS[s].equals("reset") ? "§c" : "§e";
-                g.drawString(this.font,
-                        color + I18n.get("rpessentials.gui.player_profile.manage.section." + MANAGE_SECTION_KEYS[s]),
-                        formX, y + (s - manageScroll) * MANAGE_ROW_H, 0xFFFFFF, false);
-            }
-            return;
-        }
+        if (manageAction == null) return; // sections are rows of the manage list widget
         String label = I18n.get("rpessentials.gui.player_profile.manage.action." + manageAction.name().toLowerCase());
         g.drawString(this.font, "§c§l" + label, formX, y, 0xFFFFFF, false);
         g.drawString(this.font,
@@ -784,10 +785,6 @@ public class PlayerProfileScreen extends Screen {
         }
     }
 
-    private int manageVisibleSections() {
-        int avail = this.height - 16 - (PANEL_TOP + 36);
-        return Math.max(1, Math.min(MANAGE_ACTIONS.length, avail / MANAGE_ROW_H));
-    }
 
     // =========================================================================
     // RENDU
@@ -797,20 +794,21 @@ public class PlayerProfileScreen extends Screen {
             case 1 -> 0xFF55FF55; // Stats
             case 2 -> 0xFF55FFFF; // Notes
             case 3 -> 0xFFFF5555; // Manage
+            case 4 -> 0xFFFF55FF; // History
             default -> 0xFFFFFF55; // Profil
         };
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        g.fill(0, 0, this.width, this.height, 0x99000000);
+        GuiSkin.background(g, this.width, this.height, 0x99000000);
         int formX = LIST_W + MARGIN * 3;
 
         List<Integer> visible = getVisibleIndices();
 
         // Panneau liste
-        g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
-        g.fill(MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, PANEL_TOP + 2, tabLineColor());
+        GuiSkin.panel(g, MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
+        GuiSkin.accent(g, MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, PANEL_TOP + 2, tabLineColor());
 
         g.drawString(this.font,
                 I18n.get("rpessentials.gui.player_profile.players_header", visible.size()),
@@ -822,8 +820,8 @@ public class PlayerProfileScreen extends Screen {
         }
 
         // Panneau formulaire
-        g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, this.height - 10, 0xBB111111);
-        g.fill(LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, PANEL_TOP + 2, tabLineColor());
+        GuiSkin.panel(g, LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, this.height - 10, 0xBB111111);
+        GuiSkin.accent(g, LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, PANEL_TOP + 2, tabLineColor());
 
         if (players.isEmpty()) {
             g.drawCenteredString(this.font, "§7" + I18n.get("rpessentials.gui.player_profile.no_players"),
@@ -841,38 +839,27 @@ public class PlayerProfileScreen extends Screen {
         int formRight = this.width - MARGIN;
 
         switch (activeTab) {
-            case 0 -> renderProfileTab(g, formX, formRight - formX, contentY, sel);
+            case 0 -> renderProfileTab(g, formX, formRight - formX - MARGIN, contentY, sel);
             case 1 -> renderStatsTab(g, formX, formRight, contentY, sel);
             case 2 -> renderNotesTab(g, formX, formRight, contentY, sel);
             case 3 -> renderManageTab(g, formX, contentY, sel);
+            case 4 -> {} // History: list widget, drawn with the other widgets
         }
 
         super.render(g, mouseX, mouseY, delta);
+        
     }
 
     private void renderProfileTab(GuiGraphics g, int formX, int formW, int y,
                                   OpenPlayerProfileGuiPacket.PlayerData sel) {
-        g.drawString(this.font,
-                I18n.get("rpessentials.gui.player_profile.nick_label_draw"),
-                formX, y + 6, 0x888888, false);
-
-        if (!stateNick.isEmpty()) {
-            String preview = stateNickColorIndex == 0
-                    ? "-> " + stateNick
-                    : "-> §" + COLOR_CHARS[stateNickColorIndex] + stateNick;
-            g.drawString(this.font, Component.literal(preview), formX + 110, y + 6, 0xFFFFFF, false);
-        }
+        String nickLabel = I18n.get("rpessentials.gui.player_profile.nick_label_draw");
+        g.drawString(this.font, nickLabel, formX, y + 6, 0x888888, false);
+        ColorPalette.drawPreview(g, this.font, nickLabel, stateNick, stateNickColorIndex, formX, y + 6);
         y += 44;
 
-        int colBtnW = 56, colBtnH = 15;
-        int colCols = Math.max(1, Math.min(5, (this.width - LIST_W - MARGIN * 4) / (colBtnW + 2)));
-        int sc = stateNickColorIndex % colCols, sr = stateNickColorIndex / colCols;
-        g.fill(formX + sc * (colBtnW + 2) - 1, y + sr * (colBtnH + 2) - 1,
-                formX + sc * (colBtnW + 2) + colBtnW + 1, y + sr * (colBtnH + 2) + colBtnH + 1,
-                0xFF_FFD700);
-
-        int colRows = (COLOR_CHARS.length + colCols - 1) / colCols;
-        y += colRows * (colBtnH + 2) + 8;
+        ColorPalette.Dims pal = ColorPalette.dims(this.width - formX - MARGIN * 2, this.height);
+        ColorPalette.drawSelection(g, pal, formX, y, stateNickColorIndex);
+        y += pal.height() + 8;
 
         g.drawString(this.font,
                 I18n.get("rpessentials.gui.player_profile.role_label_draw"),
@@ -882,8 +869,8 @@ public class PlayerProfileScreen extends Screen {
         if (!availableRoles.isEmpty()) {
             int maxBtnW = 80;
             int minBtnW = 40;
-            int gap     = 2;
-            int availW  = formW - 4;
+            int gap     = UiLayout.GAP;
+            int availW  = formW;
             int cols    = Math.max(1, availW / (minBtnW + gap));
             int rows    = (int) Math.ceil((double) availableRoles.size() / cols);
             y += rows * 16 + 4;
@@ -891,18 +878,18 @@ public class PlayerProfileScreen extends Screen {
 
         if (!availableProfessionIds.isEmpty()) {
             int longestW = availableProfessionIds.stream()
-                    .mapToInt(id -> this.font.width("License: " + id + " (" + availableProfessionIds.size() + "/" + availableProfessionIds.size() + ")"))
+                    .mapToInt(id -> this.font.width(I18n.get("rpessentials.gui.player_profile.license_label") + id + " (" + availableProfessionIds.size() + "/" + availableProfessionIds.size() + ")"))
                     .max().orElse(0);
             int fixedGap = 90;
             int navX = formX + Math.max(longestW + 12, fixedGap);
-            boolean fitsInline = navX + 140 < formX + formW;
+            boolean fitsInline = navX + 153 <= formX + formW;
             int navY = fitsInline ? y : y + 12;
 
             String profId  = selectedProfId();
             boolean owned  = selectedPlayerOwns(profId);
             String color   = owned ? "§a" : "§7";
             g.drawString(this.font,
-                    "§8License: " + color + profId
+                    "§8" + I18n.get("rpessentials.gui.player_profile.license_label") + color + profId
                             + " §8(" + (stateSelectedProf + 1) + "/" + availableProfessionIds.size() + ")",
                     formX, navY + 5, 0xAAAAAA, false);
         }
@@ -911,135 +898,130 @@ public class PlayerProfileScreen extends Screen {
         if (!lics.isEmpty()) {
             int textY = this.height - 50;
             g.drawString(this.font,
-                    "§8Owned: §7" + String.join("§8, §7", lics),
+                    I18n.get("rpessentials.gui.player_profile.owned") + String.join("§8, §7", lics),
                     formX, textY, 0x777777, false);
         }
     }
 
+    /** Playtime in the client's language ("3d 4h 12min"). */
+    private static String formatPlaytime(long ms) {
+        if (ms < 60_000L) return I18n.get("rpessentials.time.less_minute");
+        long totalMin = ms / 60_000L;
+        long days = totalMin / 1440L;
+        long hours = (totalMin % 1440L) / 60L;
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) sb.append(I18n.get("rpessentials.time.days", days)).append(' ');
+        if (hours > 0) sb.append(I18n.get("rpessentials.time.hours", hours)).append(' ');
+        sb.append(I18n.get("rpessentials.time.minutes", totalMin % 60L));
+        return sb.toString();
+    }
+
+    /** Asks the server for the selected player's extra stats, once per player while the screen is open. */
+    private void requestStats() {
+        if (players.isEmpty()) return;
+        java.util.UUID id = selectedData().uuid();
+        if (statsRequested.add(id)) {
+            PacketDistributor.sendToServer(new net.rp.rpessentials.network.RequestPlayerStatsPacket(id));
+        }
+    }
+
+    /** Called when the server answers a stats request. */
+    public void setStats(java.util.UUID uuid, List<String> lines) {
+        statsCache.put(uuid, lines);
+        if (statsList != null && activeTab == 1 && !players.isEmpty() && selectedData().uuid().equals(uuid)) {
+            statsList.setLines(uuid, statsLines(selectedData()));
+        }
+    }
+
+    private void buildStatsList(int formX, int formW, int contentY) {
+        if (players.isEmpty()) return;
+        if (statsList == null) {
+            statsList = new TextLinesList(Minecraft.getInstance());
+            statsList.setStriped(false);
+        }
+        statsList.layout(formX, contentY + 16, formW, this.height - 56 - (contentY + 16));
+        OpenPlayerProfileGuiPacket.PlayerData sel = selectedData();
+        statsList.setLines(sel.uuid(), statsLines(sel));
+        addRenderableWidget(statsList);
+    }
+
+    /** Base stats (from the profile data) followed by the extra stats sent by the server. */
+    private List<String> statsLines(OpenPlayerProfileGuiPacket.PlayerData sel) {
+        List<String> lines = new ArrayList<>();
+        String warnColor = sel.activeWarnCount() == 0 ? "§a" : sel.activeWarnCount() >= 3 ? "§c" : "§e";
+        lines.add("§7" + I18n.get("rpessentials.gui.player_profile.stats.warns") + warnColor + sel.activeWarnCount());
+        lines.add("§7" + I18n.get("rpessentials.gui.player_profile.stats.muted") + (sel.isMuted()
+                ? I18n.get("rpessentials.gui.player_profile.stats.muted_yes") + " §8(" + sel.muteExpiry() + ")"
+                : I18n.get("rpessentials.gui.player_profile.stats.muted_no")));
+        lines.add("§7" + I18n.get("rpessentials.gui.player_profile.stats.playtime") + "§f" + formatPlaytime(sel.playtimeMs()));
+        if (sel.isOnline() && sel.sessionMs() > 60_000L)
+            lines.add("§7" + I18n.get("rpessentials.gui.player_profile.stats.session") + "§b" + formatPlaytime(sel.sessionMs()));
+        lines.add("§7" + I18n.get("rpessentials.gui.player_profile.stats.notes") + (sel.noteCount() == 0
+                ? I18n.get("rpessentials.gui.player_profile.stats.notes_none")
+                : "§e" + I18n.get("rpessentials.gui.player_profile.stats.notes_count", sel.noteCount())));
+        List<String> lics = sel.currentLicenses();
+        lines.add("§7" + I18n.get("rpessentials.gui.player_profile.stats.licenses") + (lics.isEmpty()
+                ? "§8" + I18n.get("rpessentials.gui.player_profile.stats.licenses_none")
+                : "§f" + String.join("§7, §f", lics)));
+        lines.add("");
+        List<String> extra = statsCache.get(sel.uuid());
+        if (extra == null) lines.add("§8" + I18n.get("rpessentials.gui.player_profile.history.loading"));
+        else lines.addAll(extra);
+        return lines;
+    }
+
+    /** Asks the server for the selected player's history, once per player while the screen is open. */
+    private void requestHistory() {
+        if (players.isEmpty()) return;
+        java.util.UUID id = selectedData().uuid();
+        if (historyRequested.add(id)) {
+            PacketDistributor.sendToServer(new net.rp.rpessentials.network.RequestPlayerHistoryPacket(id));
+        }
+    }
+
+    /** Called when the server answers a history request. */
+    public void setHistory(java.util.UUID uuid, boolean enabled, List<String> lines) {
+        historyEnabled = enabled;
+        historyCache.put(uuid, lines);
+        if (historyList != null && activeTab == 4 && !players.isEmpty() && selectedData().uuid().equals(uuid)) {
+            historyList.setLines(uuid, historyLines(uuid));
+        }
+    }
+
+    /** Lines shown in the History tab, or one status line (disabled / loading / empty). */
+    private List<String> historyLines(java.util.UUID uuid) {
+        if (!historyEnabled) return List.of("§8" + I18n.get("rpessentials.gui.player_profile.history.disabled"));
+        List<String> lines = historyCache.get(uuid);
+        if (lines == null) return List.of("§8" + I18n.get("rpessentials.gui.player_profile.history.loading"));
+        if (lines.isEmpty()) return List.of("§8" + I18n.get("rpessentials.gui.player_profile.history.none"));
+        return lines;
+    }
+
+    private void buildHistoryList(int formX, int formW, int contentY) {
+        if (players.isEmpty()) return;
+        if (historyList == null) historyList = new TextLinesList(Minecraft.getInstance());
+        historyList.layout(formX, contentY, formW, this.height - 40 - contentY);
+        java.util.UUID id = selectedData().uuid();
+        historyList.setLines(id, historyLines(id));
+        addRenderableWidget(historyList);
+    }
+
+
     private void renderStatsTab(GuiGraphics g, int formX, int formRight, int y,
                                 OpenPlayerProfileGuiPacket.PlayerData sel) {
-        int lineH = 14;
-
+        // The lines are a list widget (buildStatsList); only the title and the footer are drawn here.
         g.drawString(this.font, "§l" + I18n.get("rpessentials.gui.player_profile.stats.header"),
                 formX, y, tabLineColor(), false);
-        y += lineH + 4;
-
-        String warnColor = sel.activeWarnCount() == 0 ? "§a"
-                : sel.activeWarnCount() >= 3 ? "§c" : "§e";
-        g.drawString(this.font,
-                I18n.get("rpessentials.gui.player_profile.stats.warns") + warnColor + sel.activeWarnCount(),
-                formX, y, 0xAAAAAA, false);
-        y += lineH;
-
-        String muteStr = sel.isMuted()
-                ? I18n.get("rpessentials.gui.player_profile.stats.muted_yes")
-                + " §8(" + sel.muteExpiry() + ")"
-                : I18n.get("rpessentials.gui.player_profile.stats.muted_no");
-        g.drawString(this.font,
-                I18n.get("rpessentials.gui.player_profile.stats.muted") + muteStr,
-                formX, y, 0xAAAAAA, false);
-        y += lineH;
-
-        g.drawString(this.font,
-                I18n.get("rpessentials.gui.player_profile.stats.playtime")
-                        + "§f" + PlaytimeManager.format(sel.playtimeMs()),
-                formX, y, 0xAAAAAA, false);
-        y += lineH;
-
-        if (sel.isOnline() && sel.sessionMs() > 60_000L) {
-            g.drawString(this.font,
-                    I18n.get("rpessentials.gui.player_profile.stats.session")
-                            + "§b" + PlaytimeManager.format(sel.sessionMs()),
-                    formX, y, 0xAAAAAA, false);
-            y += lineH;
-        }
-
-        String notesStr = sel.noteCount() == 0
-                ? I18n.get("rpessentials.gui.player_profile.stats.notes_none")
-                : "§e" + sel.noteCount() + " note(s)";
-        g.drawString(this.font,
-                I18n.get("rpessentials.gui.player_profile.stats.notes") + notesStr,
-                formX, y, 0xAAAAAA, false);
-        y += lineH;
-
-        List<String> lics = sel.currentLicenses();
-        String licsText = lics.isEmpty()
-                ? "§8" + I18n.get("rpessentials.gui.player_profile.stats.licenses_none")
-                : "§f" + String.join("§7, §f", lics);
-
-        List<FormattedCharSequence> wrapped = this.font.split(
-                Component.literal(I18n.get("rpessentials.gui.player_profile.stats.licenses") + licsText),
-                formRight - MARGIN - formX);
-        for (FormattedCharSequence line : wrapped) {
-            g.drawString(this.font, line, formX, y, 0xAAAAAA, false);
-            y += 10;
-        }
-        y += 6;
-
-        g.fill(formX, y, formRight - MARGIN, y + 1, 0xFF444444);
-        y += 6;
+        int footerY = this.height - 52;
+        GuiSkin.separator(g, formX, footerY, formRight - MARGIN, footerY + 1, 0xFF444444);
         g.drawString(this.font, I18n.get("rpessentials.gui.player_profile.stats.footer"),
-                formX, y, 0x555555, false);
+                formX, footerY + 6, 0x555555, false);
     }
 
     private void renderNotesTab(GuiGraphics g, int formX, int formRight, int contentY,
                                 OpenPlayerProfileGuiPacket.PlayerData sel) {
-        List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> notes = sel.notes();
-
-        int listAreaBottom = this.height - 58;
-        int listAreaHeight = listAreaBottom - contentY;
-        int maxTextW       = noteTextW();
-        int textX          = formX + 32;
-
-        int first  = stateNotesScroll;
-        int last   = first - 1;
-        int totalH = 0;
-        for (int i = first; i < notes.size(); i++) {
-            int rh = noteRowH(notes.get(i), maxTextW);
-            if (totalH + rh > listAreaHeight && last >= first) break;
-            totalH += rh;
-            last = i;
-        }
-
-        if (notes.isEmpty()) {
-            g.drawString(this.font,
-                    "§8" + I18n.get("rpessentials.gui.player_profile.notes.none"),
-                    textX, contentY + 6, 0x555555, false);
-        } else {
-            int rowY = contentY;
-            for (int i = first; i <= last; i++) {
-                OpenPlayerProfileGuiPacket.PlayerData.NoteEntry n = notes.get(i);
-                int rh       = noteRowH(n, maxTextW);
-                boolean isEd = stateEditingNoteId == n.id();
-                boolean isPending = n.id() < 0;
-
-                g.fill(formX, rowY, formRight - MARGIN - 24, rowY + rh - 2,
-                        isEd ? 0x33FFFF00 : isPending ? 0x1100FFFF : 0x22FFFFFF);
-
-                String meta = isPending
-                        ? "§8[" + n.timestamp() + "] §7by §f" + n.authorName()
-                        : "§e#" + n.id() + " §8[" + n.timestamp() + "] §7by §f" + n.authorName();
-                g.drawString(this.font, meta, textX, rowY + 3, 0xAAAAAA, false);
-
-                List<FormattedCharSequence> wrapped = this.font.split(
-                        Component.literal("§f" + n.text()), maxTextW);
-                int textLineY = rowY + 14;
-                for (int li = 0; li < wrapped.size(); li++) {
-                    g.drawString(this.font, wrapped.get(li), textX, textLineY + li * 10, 0xFFFFFF, false);
-                }
-                rowY += rh;
-            }
-
-            if (stateNotesScroll > 0)
-                g.drawString(this.font, "§8▲ " + stateNotesScroll + " more",
-                        textX, contentY - 1, 0x444444, false);
-            int below = notes.size() - 1 - last;
-            if (below > 0)
-                g.drawString(this.font, "§8▼ " + below + " more",
-                        textX, listAreaBottom - 9, 0x444444, false);
-        }
-
-        g.fill(formX, this.height - 56, formRight - MARGIN, this.height - 55, 0xFF333333);
+        // The notes are a list widget (buildNotesTab); only the footer is drawn here.
+        GuiSkin.separator(g, formX, this.height - 56, formRight - MARGIN, this.height - 55, 0xFF333333);
         String footerLabel = stateEditingNoteId != -1
                 ? String.format(I18n.get("rpessentials.gui.player_profile.notes.footer_edit"), stateEditingNoteId)
                 : I18n.get("rpessentials.gui.player_profile.notes.footer_new");
@@ -1053,40 +1035,14 @@ public class PlayerProfileScreen extends Screen {
     // SCROLL MOLETTE
     // =========================================================================
 
-    @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-        int formX = LIST_W + MARGIN * 3;
-
-        if (mx < LIST_W + MARGIN * 2) {
-            int max = Math.max(0, getVisibleIndices().size() - LIST_VISIBLE);
-            playerListScroll = (int) Math.max(0, Math.min(max, playerListScroll - sy));
-            rebuild();
-            return true;
-        }
-
-        if (activeTab == 3 && manageAction == null && mx >= formX) {
-            int max = Math.max(0, MANAGE_ACTIONS.length - manageVisibleSections());
-            manageScroll = (int) Math.max(0, Math.min(max, manageScroll - sy));
-            rebuild();
-            return true;
-        }
-
-        if (activeTab == 2 && mx >= formX) {
-            int maxScroll = Math.max(0, selectedData().notes().size() - 1);
-            stateNotesScroll = (int) Math.max(0, Math.min(maxScroll, stateNotesScroll - sy));
-            rebuild();
-            return true;
-        }
-
-        return super.mouseScrolled(mx, my, sx, sy);
-    }
+    // Mouse wheel: handled by the list widgets of each tab.
 
     // =========================================================================
     // LOGIQUE
     // =========================================================================
     private void loadPlayerState(int idx) {
         stateSelectedPlayer = idx;
-        stateNotesScroll    = 0;
+        if (notesList != null) notesList.setScrollAmount(0);
         stateEditingNoteId  = -1;
         pendingDeletePlayerUuid = null;
         pendingNickReset = false;
@@ -1100,13 +1056,13 @@ public class PlayerProfileScreen extends Screen {
                 if (COLOR_CHARS[i] == c) { stateNickColorIndex = i; rawNick = rawNick.substring(2); break; }
             }
         }
-        stateNick  = rawNick;
+        stateNick = rawNick.replace('§', '&');
         stateRole  = p.currentRole();
         stateSelectedProf = 0;
         stateNoteInput    = "";
 
         manageAction = null;
-        manageScroll = 0;
+        if (manageList != null) manageList.setScrollAmount(0);
     }
 
     private void applyProfile() {
@@ -1224,7 +1180,7 @@ public class PlayerProfileScreen extends Screen {
                     target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
                     target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
                     target.noteCount() + 1, target.isOnline(), updated, target.isPrepared()));
-            stateNotesScroll = updated.size() - 1;
+            if (notesList != null) notesList.scrollToEndOnce();
         }
 
         stateNoteInput = "";
@@ -1246,27 +1202,14 @@ public class PlayerProfileScreen extends Screen {
                 target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
                 target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
                 Math.max(0, target.noteCount() - 1), target.isOnline(), updated, target.isPrepared()));
-        stateNotesScroll = Math.max(0, stateNotesScroll - 1);
         rebuild();
     }
 
     private String stripColor(String s) {
-        if (s.startsWith("§") && s.length() > 2) return s.substring(2);
-        return s;
+        return ColorHelper.stripAll(s);
     }
 
-    private int noteTextW() {
-        int formX = LIST_W + MARGIN * 3;
-        // textX = formX + 32 (2 boutons), 24 = marge scroll
-        return (this.width - MARGIN) - MARGIN - (formX + 32) - 24;
-    }
 
-    private int noteRowH(OpenPlayerProfileGuiPacket.PlayerData.NoteEntry n, int maxTextW) {
-        List<FormattedCharSequence> wrapped = this.font.split(
-                Component.literal("§f" + n.text()), maxTextW);
-        // 14 = meta, 10px/ligne, 6 = padding bas
-        return 14 + Math.max(1, wrapped.size()) * 10 + 6;
-    }
 
     @Override public boolean isPauseScreen() { return false; }
 }

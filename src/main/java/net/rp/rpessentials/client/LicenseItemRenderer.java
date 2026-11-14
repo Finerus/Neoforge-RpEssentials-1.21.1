@@ -1,5 +1,6 @@
 package net.rp.rpessentials.client;
 
+import net.minecraft.client.resources.language.I18n;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
@@ -114,26 +115,26 @@ public class LicenseItemRenderer extends BlockEntityWithoutLevelRenderer {
         float y = -CARD_H / 2f + 8f;
 
         drawCentered(font, buffer, ps,
-                revoked ? "§c§l[ REVOKED ]" : "§6§l✦  LICENSE  ✦", 0f, y);
+                revoked ? "§c§l" + I18n.get("rpessentials.license.card.revoked") : "§6§l" + I18n.get("rpessentials.license.card.title"), 0f, y);
         y += 22f;
 
-        drawLabel(font, buffer, ps, "§8Profession", textX, y); y += 7f;
+        drawLabel(font, buffer, ps, "§8" + I18n.get("rpessentials.license.card.profession"), textX, y); y += 7f;
         drawLabel(font, buffer, ps, "§f" + profId, textX + 6f, y); y += 10f;
 
-        drawLabel(font, buffer, ps, "§8Holder", textX, y); y += 7f;
+        drawLabel(font, buffer, ps, "§8" + I18n.get("rpessentials.license.card.holder"), textX, y); y += 7f;
         drawLabel(font, buffer, ps, "§f" + holder, textX + 6f, y); y += 10f;
 
-        drawLabel(font, buffer, ps, "§8Issue Date", textX, y); y += 7f;
+        drawLabel(font, buffer, ps, "§8" + I18n.get("rpessentials.license.card.issued"), textX, y); y += 7f;
         drawLabel(font, buffer, ps, "§f" + issueDate, textX + 6f, y);
 
         if (expiryDate != null) {
             y += 10f;
-            drawLabel(font, buffer, ps, "§8Valid Until", textX, y); y += 7f;
+            drawLabel(font, buffer, ps, "§8" + I18n.get("rpessentials.license.card.until"), textX, y); y += 7f;
             drawLabel(font, buffer, ps, "§f" + expiryDate, textX + 6f, y);
         }
 
         drawCentered(font, buffer, ps,
-                revoked ? "§c✗ This license is no longer valid" : "§a✓ This license is valid",
+                revoked ? "§c" + I18n.get("rpessentials.license.card.invalid") : "§a" + I18n.get("rpessentials.license.card.valid"),
                 0f, CARD_H / 2f - 14f);
 
         ps.popPose();

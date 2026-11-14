@@ -7,6 +7,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.RpEssentialsRoleManager;
+import net.rp.rpessentials.ServerLang;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.identity.RpEssentialsChatFormatter;
@@ -47,8 +48,8 @@ public abstract class MixinServerGamePacketListenerImpl {
             MuteManager.MuteEntry entry = MuteManager.getEntry(player.getUUID());
             if (entry != null) {
                 player.sendSystemMessage(ColorHelper.parseColors(
-                        MessagesConfig.get(MessagesConfig.MUTE_BLOCKED_MESSAGE,
-                                "expiry", entry.isPermanent() ? "Permanent" : entry.getFormattedExpiry())));
+                        ServerLang.get(player, MessagesConfig.MUTE_BLOCKED_MESSAGE,
+                                "expiry", entry.getFormattedExpiry(player))));
             }
             return;
         }
@@ -91,24 +92,19 @@ public abstract class MixinServerGamePacketListenerImpl {
                 }
             }
 
-            String nickForSpy = NicknameManager.getNickname(player.getUUID());
             try {
                 if (!ChatConfig.ENABLE_PROXIMITY_SPY.get()) return;
             } catch (IllegalStateException ignored) {
                 return;
             }
 
-            String rawSpy = MessagesConfig.get(MessagesConfig.PROXIMITY_CHAT_SPY_FORMAT,
-                    "msg", actualMessage,
-                    "distance", String.valueOf(distance));
-            rawSpy = RpEssentialsChatFormatter.resolveRpPlaceholders(rawSpy, player);
-            Component spyComp = ColorHelper.parseColors(rawSpy);
-
             for (ServerPlayer p : player.getServer().getPlayerList().getPlayers()) {
                 if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
                 if (p.getUUID().equals(player.getUUID())) continue;
                 if (p.level() == player.level() && p.distanceToSqr(player) <= distSq) continue;
-                p.sendSystemMessage(spyComp);
+                p.sendSystemMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
+                        ServerLang.get(p, MessagesConfig.PROXIMITY_CHAT_SPY_FORMAT,
+                                "msg", actualMessage, "distance", String.valueOf(distance)), player)));
             }
         }
     }

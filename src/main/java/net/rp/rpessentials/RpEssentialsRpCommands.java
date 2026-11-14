@@ -49,6 +49,11 @@ public class RpEssentialsRpCommands {
         // ── /rp ────────────────────────────────────────────────────────────
         var rpRoot = Commands.literal("rp");
 
+        // /rp spawn
+        rpRoot.then(Commands.literal("spawn")
+                .requires(src -> spawnEnabled())
+                .executes(RpEssentialsRpCommands::executeSpawn));
+
         // /rp afk
         rpRoot.then(Commands.literal("afk")
                 .executes(RpEssentialsRpCommands::executeAfk));
@@ -106,21 +111,21 @@ public class RpEssentialsRpCommands {
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                     try {
                         if (!RpConfig.ENABLE_DICE_SYSTEM.get()) {
-                            ctx.getSource().sendFailure(Component.literal("§c[DICE] Dice system is disabled."));
+                            ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_DISABLED)));
                             return 0;
                         }
                     } catch (IllegalStateException ignored) { return 0; }
                     List<DiceManager.DiceType> dice = DiceManager.getAvailableDice();
                     if (dice.isEmpty()) {
-                        ctx.getSource().sendFailure(Component.literal("§c[DICE] No dice configured."));
+                        ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_NONE)));
                         return 0;
                     }
-                    DiceManager.roll(player, dice.get(0).name());
-                    return 1;
+                    return diceError(player, DiceManager.rollInput(player, dice.get(0).name(), false), dice.get(0).name());
                 })
-                .then(Commands.argument("dice", StringArgumentType.word())
+                .then(Commands.argument("dice", StringArgumentType.greedyString())
                         .suggests((ctx, builder) -> {
                             DiceManager.getAvailableDice().forEach(d -> builder.suggest(d.name()));
+                            builder.suggest("2d6").suggest("d20+2").suggest("adv d20").suggest("dis d20").suggest("secret d20");
                             return builder.buildFuture();
                         })
                         .executes(ctx -> {
@@ -128,29 +133,57 @@ public class RpEssentialsRpCommands {
                             String diceName = StringArgumentType.getString(ctx, "dice");
                             try {
                                 if (!RpConfig.ENABLE_DICE_SYSTEM.get()) {
-                                    ctx.getSource().sendFailure(Component.literal("§c[DICE] Dice system is disabled."));
+                                    ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_DISABLED)));
                                     return 0;
                                 }
                             } catch (IllegalStateException ignored) { return 0; }
-                            boolean success = DiceManager.roll(player, diceName);
-                            if (!success) {
-                                ctx.getSource().sendFailure(Component.literal("§c[DICE] Unknown dice type: §f" + diceName));
-                                return 0;
-                            }
-                            return 1;
+                            return diceError(player, DiceManager.rollInput(player, diceName, false), diceName);
                         })));
 
         dispatcher.register(rpRoot);
     }
 
+    /** Sends the error of a refused /roll to the player. */
+    private static int diceError(ServerPlayer player, DiceManager.Status s, String input) {
+        switch (s) {
+            case OK, COOLDOWN, CANCELLED -> { return s == DiceManager.Status.OK ? 1 : 0; }
+            case SECRET_DISABLED -> player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_SECRET_DISABLED)));
+            case EXPRESSIONS_DISABLED -> player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_EXPRESSIONS_DISABLED)));
+            case TOO_MANY -> {
+                int count = 20, sides = 1000;
+                try { count = RpConfig.DICE_MAX_COUNT.get(); sides = RpConfig.DICE_MAX_SIDES.get(); } catch (IllegalStateException ignored) {}
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_TOO_MANY,
+                        "count", String.valueOf(count), "sides", String.valueOf(sides))));
+            }
+            default -> player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_UNKNOWN, "dice", input)));
+        }
+        return 0;
+    }
+
     // =========================================================================
     // /rp afk
     // =========================================================================
-
     private static int executeAfk(CommandContext<CommandSourceStack> ctx)
             throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         MinecraftServer server = ctx.getSource().getServer();
+
+        try {
+            int combat = RpConfig.AFK_COMBAT_BLOCK_SECONDS.get();
+            int hurt = player.getLastHurtByMobTimestamp();
+            if (combat > 0 && hurt > 0 && player.tickCount - hurt < combat * 20) {
+                player.displayClientMessage(Component.literal(ServerLang.get(player, MessagesConfig.AFK_COMBAT)), true);
+                return 0;
+            }
+        } catch (IllegalStateException ignored) {}
+
+        if (RpCooldownManager.isOnCooldown(player.getUUID(), "afk")) {
+            long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "afk");
+            player.displayClientMessage(ColorHelper.parseColors(
+                    ServerLang.get(player, MessagesConfig.RP_COOLDOWN_MESSAGE,
+                            "command", "rp afk", "seconds", String.valueOf(remaining))), true);
+            return 0;
+        }
 
         String dimId = "minecraft:overworld";
         double x = 0, y = 64, z = 0;
@@ -165,19 +198,94 @@ public class RpEssentialsRpCommands {
             pitch = RpConfig.AFK_PITCH.get().floatValue();
         } catch (IllegalStateException ignored) {}
 
-        ResourceKey<Level> dimKey = ResourceKey.create(
-                Registries.DIMENSION, ResourceLocation.parse(dimId));
-        ServerLevel level = server.getLevel(dimKey);
+        ResourceLocation dimRl = ResourceLocation.tryParse(dimId);
+        ServerLevel level = dimRl == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, dimRl));
 
         if (level == null) {
             RpEssentials.LOGGER.warn("[RP-AFK] Dimension '{}' not found.", dimId);
-            ctx.getSource().sendFailure(Component.literal("§c[ERROR] AFK dimension not found: " + dimId));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_RP_AFK_DIM, "dim", dimId));
             return 0;
         }
 
-        player.teleportTo(level, x, y, z, java.util.Set.of(), yaw, pitch);
-        player.displayClientMessage(
-                ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.RP_AFK_TELEPORT)), false);
+        TeleportWarmupManager.start(player, "afk", level, x, y, z, yaw, pitch,
+                TeleportWarmupManager.configuredSeconds("afk"), p -> {
+                    p.displayClientMessage(ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.RP_AFK_TELEPORT)), false);
+                    RpCooldownManager.setCooldown(p.getUUID(), "afk");
+                    PlayerCommands.runAs(p, PlayerCommands.get(RpConfig.AFK_COMMANDS));
+                });
+        return 1;
+    }
+
+    // =========================================================================
+    // /rp spawn
+    // =========================================================================
+    private static boolean spawnEnabled() {
+        try { return RpConfig.ENABLE_SPAWN_COMMAND.get(); }
+        catch (IllegalStateException e) { return false; }
+    }
+
+    private static int executeSpawn(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        MinecraftServer server = ctx.getSource().getServer();
+        if (!spawnEnabled()) return 0;
+
+        try {
+            int combat = RpConfig.SPAWN_COMBAT_BLOCK_SECONDS.get();
+            int hurt = player.getLastHurtByMobTimestamp();
+            if (combat > 0 && hurt > 0 && player.tickCount - hurt < combat * 20) {
+                player.displayClientMessage(ColorHelper.parseColors(ServerLang.get(player, MessagesConfig.AFK_COMBAT)), true);
+                return 0;
+            }
+        } catch (IllegalStateException ignored) {}
+
+        if (RpCooldownManager.isOnCooldown(player.getUUID(), "spawn")) {
+            long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "spawn");
+            player.displayClientMessage(ColorHelper.parseColors(
+                    ServerLang.get(player, MessagesConfig.RP_COOLDOWN_MESSAGE,
+                            "command", "rp spawn", "seconds", String.valueOf(remaining))), true);
+            return 0;
+        }
+
+        ServerLevel level;
+        double x, y, z;
+        float yaw, pitch;
+        boolean worldSpawn = true;
+        try { worldSpawn = RpConfig.SPAWN_USE_WORLD_SPAWN.get(); } catch (IllegalStateException ignored) {}
+
+        if (worldSpawn) {
+            level = server.overworld();
+            net.minecraft.core.BlockPos pos = level.getSharedSpawnPos();
+            x = pos.getX() + 0.5;
+            y = pos.getY();
+            z = pos.getZ() + 0.5;
+            yaw = level.getSharedSpawnAngle();
+            pitch = 0;
+        } else {
+            String dimId = "minecraft:overworld";
+            x = 0; y = 64; z = 0; yaw = 0; pitch = 0;
+            try {
+                dimId = RpConfig.SPAWN_DIMENSION.get();
+                x     = RpConfig.SPAWN_X.get();
+                y     = RpConfig.SPAWN_Y.get();
+                z     = RpConfig.SPAWN_Z.get();
+                yaw   = RpConfig.SPAWN_YAW.get().floatValue();
+                pitch = RpConfig.SPAWN_PITCH.get().floatValue();
+            } catch (IllegalStateException ignored) {}
+            ResourceLocation dim = ResourceLocation.tryParse(dimId);
+            level = dim == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, dim));
+            if (level == null) {
+                RpEssentials.LOGGER.warn("[RP-SPAWN] Dimension '{}' not found.", dimId);
+                ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_RP_SPAWN_DIM, "dim", dimId));
+                return 0;
+            }
+        }
+
+        TeleportWarmupManager.start(player, "spawn", level, x, y, z, yaw, pitch,
+                TeleportWarmupManager.configuredSeconds("spawn"), p -> {
+                    p.displayClientMessage(ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.RP_SPAWN_TELEPORT)), false);
+                    RpCooldownManager.setCooldown(p.getUUID(), "spawn");
+                    PlayerCommands.runAs(p, PlayerCommands.get(RpConfig.SPAWN_COMMANDS));
+                });
         return 1;
     }
 
@@ -192,7 +300,7 @@ public class RpEssentialsRpCommands {
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "commerce")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "commerce");
             player.displayClientMessage(ColorHelper.parseColors(
-                    MessagesConfig.get(MessagesConfig.RP_COOLDOWN_MESSAGE,
+                    ServerLang.get(player, MessagesConfig.RP_COOLDOWN_MESSAGE,
                             "command", "rp commerce", "seconds", String.valueOf(remaining))), true);
             return 0;
         }
@@ -200,11 +308,9 @@ public class RpEssentialsRpCommands {
 
         MinecraftServer server = ctx.getSource().getServer();
 
-        String rawFormat = MessagesConfig.get(MessagesConfig.RP_COMMERCE_FORMAT, "message", message);
-        Component component = ColorHelper.parseColors(
-                RpEssentialsChatFormatter.resolveRpPlaceholders(rawFormat, player));
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            p.displayClientMessage(component, false);
+            p.displayClientMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
+                    Msg.get(p, MessagesConfig.RP_COMMERCE_FORMAT, "message", message), player)), false);
         }
 
         RpEssentials.LOGGER.info("[COMMERCE] {} ({}): {}",
@@ -225,7 +331,7 @@ public class RpEssentialsRpCommands {
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "incognito")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "incognito");
             player.displayClientMessage(ColorHelper.parseColors(
-                    MessagesConfig.get(MessagesConfig.RP_COOLDOWN_MESSAGE,
+                    ServerLang.get(player, MessagesConfig.RP_COOLDOWN_MESSAGE,
                             "command", "rp incognito", "seconds", String.valueOf(remaining))), true);
             return 0;
         }
@@ -233,19 +339,15 @@ public class RpEssentialsRpCommands {
 
         MinecraftServer server = ctx.getSource().getServer();
 
-        String rawPublic = MessagesConfig.get(MessagesConfig.RP_INCOGNITO_FORMAT, "message", message);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            p.displayClientMessage(ColorHelper.parseColors(rawPublic), false);
+            p.displayClientMessage(ColorHelper.parseColors(
+                    Msg.get(p, MessagesConfig.RP_INCOGNITO_FORMAT, "message", message)), false);
         }
 
-        String rawLog = MessagesConfig.get(MessagesConfig.RP_INCOGNITO_LOG, "message", message);
-        rawLog = RpEssentialsChatFormatter.resolveRpPlaceholders(rawLog, player);
-        String finalLogResolved = RpEssentialsChatFormatter.resolveRpPlaceholders(
-                MessagesConfig.get(MessagesConfig.RP_INCOGNITO_LOG, "message", message), player);
-        Component spyComponent = ColorHelper.parseColors(finalLogResolved);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
-            p.displayClientMessage(spyComponent, false);
+            p.displayClientMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
+                    Msg.get(p, MessagesConfig.RP_INCOGNITO_LOG, "message", message), player)), false);
         }
 
         RpEssentials.LOGGER.info("[INCOGNITO] {} ({}): {}",
@@ -266,7 +368,7 @@ public class RpEssentialsRpCommands {
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "action")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "action");
             player.displayClientMessage(ColorHelper.parseColors(
-                    MessagesConfig.get(MessagesConfig.RP_COOLDOWN_MESSAGE,
+                    ServerLang.get(player, MessagesConfig.RP_COOLDOWN_MESSAGE,
                             "command", "rp action", "seconds", String.valueOf(remaining))), true);
             return 0;
         }
@@ -278,14 +380,6 @@ public class RpEssentialsRpCommands {
         try { distance = RpConfig.ACTION_DISTANCE.get(); }
         catch (IllegalStateException ignored) {}
 
-        String rawAction = MessagesConfig.get(MessagesConfig.RP_ACTION_FORMAT, "action", action);
-        rawAction = RpEssentialsChatFormatter.resolveRpPlaceholders(rawAction, player);
-
-        String rawSpy = MessagesConfig.get(MessagesConfig.RP_ACTION_SPY, "action", action);
-        rawSpy = RpEssentialsChatFormatter.resolveRpPlaceholders(rawSpy, player);
-
-        final String actionMsg = rawAction;
-        final String spyMsg    = rawSpy;
         final int    finalDist = distance;
 
         java.util.List<ServerPlayer> inRange = new java.util.ArrayList<>();
@@ -293,13 +387,15 @@ public class RpEssentialsRpCommands {
             if (p.level() != player.level()) continue;
             if (p.getUUID().equals(player.getUUID()) || p.distanceTo(player) <= finalDist) {
                 inRange.add(p);
-                p.displayClientMessage(ColorHelper.parseColors(actionMsg), false);
+                p.displayClientMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
+                        Msg.get(p, MessagesConfig.RP_ACTION_FORMAT, "action", action), player)), false);
             }
         }
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
             if (inRange.stream().anyMatch(r -> r.getUUID().equals(p.getUUID()))) continue;
-            p.displayClientMessage(ColorHelper.parseColors(spyMsg), false);
+            p.displayClientMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
+                    Msg.get(p, MessagesConfig.RP_ACTION_SPY, "action", action), player)), false);
         }
 
         RpEssentials.LOGGER.info("[ACTION-RP] {} ({}): {}",
@@ -316,7 +412,7 @@ public class RpEssentialsRpCommands {
         try {
             if (!RpConfig.ENABLE_SELF_NICK.get()) {
                 player.displayClientMessage(
-                        ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.RP_SELFNICK_DISABLED)), false);
+                        ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_SELFNICK_DISABLED)), false);
                 return 0;
             }
         } catch (IllegalStateException ignored) { return 0; }
@@ -324,7 +420,7 @@ public class RpEssentialsRpCommands {
         if (RpCooldownManager.isOnCooldown(player.getUUID(), "selfnick")) {
             long remaining = RpCooldownManager.getRemainingSeconds(player.getUUID(), "selfnick");
             player.displayClientMessage(ColorHelper.parseColors(
-                    MessagesConfig.get(MessagesConfig.RP_COOLDOWN_MESSAGE,
+                    ServerLang.get(player, MessagesConfig.RP_COOLDOWN_MESSAGE,
                             "command", "rp selfnick", "seconds", String.valueOf(remaining))), true);
             return 0;
         }
@@ -332,7 +428,7 @@ public class RpEssentialsRpCommands {
         if (nickname.isBlank()) {
             NicknameManager.removeNickname(player.getUUID());
             player.displayClientMessage(
-                    ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.RP_SELFNICK_RESET)), false);
+                    ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_SELFNICK_RESET)), false);
             RpCooldownManager.setCooldown(player.getUUID(), "selfnick");
             return 1;
         }
@@ -342,7 +438,7 @@ public class RpEssentialsRpCommands {
 
         if (!allowColors && (nickname.contains("§") || nickname.contains("&"))) {
             player.displayClientMessage(
-                    ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.RP_SELFNICK_COLORS_DISABLED)), false);
+                    ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_SELFNICK_COLORS_DISABLED)), false);
             return 0;
         }
 
@@ -350,13 +446,19 @@ public class RpEssentialsRpCommands {
 
         int maxLen = 24;
         try { maxLen = RpConfig.SELF_NICK_MAX_LENGTH.get(); } catch (IllegalStateException ignored) {}
-        String stripped = finalNick.replaceAll("§[0-9a-fk-orA-FK-OR]", "").trim();
+        String stripped = ColorHelper.stripAll(ColorHelper.translateAlternateColorCodes(finalNick)).trim();
         if (stripped.isEmpty()) return 0;
         if (stripped.length() > maxLen) {
             final int max = maxLen;
             player.displayClientMessage(
-                    ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.RP_SELFNICK_TOO_LONG,
+                    ColorHelper.parseColors(ServerLang.get(player, MessagesConfig.RP_SELFNICK_TOO_LONG,
                             "max", String.valueOf(max))), false);
+            return 0;
+        }
+
+        String err = NicknameManager.rejection(player.getUUID(), finalNick, false, player);
+        if (err != null) {
+            player.displayClientMessage(ColorHelper.parseColors(err), false);
             return 0;
         }
 
@@ -365,7 +467,7 @@ public class RpEssentialsRpCommands {
 
         String displayNick = finalNick;
         player.displayClientMessage(
-                ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.RP_SELFNICK_SET,
+                ColorHelper.parseColors(ServerLang.get(player, MessagesConfig.RP_SELFNICK_SET,
                         "nick", displayNick)), false);
         RpEssentials.LOGGER.info("[SELFNICK] {} set nickname to '{}'",
                 player.getName().getString(), finalNick);
@@ -384,7 +486,7 @@ public class RpEssentialsRpCommands {
 
         if (!RpEssentialsPermissions.isStaff(player)) {
             player.displayClientMessage(
-                    ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.RP_PERMISSION_DENIED)), false);
+                    ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_PERMISSION_DENIED)), false);
             return 0;
         }
 
@@ -402,14 +504,10 @@ public class RpEssentialsRpCommands {
             case "title" -> {
                 // Le titre lui-même n'affiche pas de nom de joueur,
                 // mais le sous-titre peut contenir {player} etc.
-                Component title    = ColorHelper.parseColors(
-                        MessagesConfig.get(MessagesConfig.RP_ANNONCE_TITLE));
-                String rawSubtitle = MessagesConfig.get(MessagesConfig.RP_ANNONCE_SUBTITLE,
-                        "message", message);
-                rawSubtitle = RpEssentialsChatFormatter.resolveRpPlaceholders(rawSubtitle, player);
-                Component subtitle = ColorHelper.parseColors(rawSubtitle);
-
                 for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                    Component title = ColorHelper.parseColors(Msg.get(p, MessagesConfig.RP_ANNONCE_TITLE));
+                    Component subtitle = ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
+                            Msg.get(p, MessagesConfig.RP_ANNONCE_SUBTITLE, "message", message), player));
                     p.connection.send(new ClientboundSetTitleTextPacket(title));
                     p.connection.send(new ClientboundSetSubtitleTextPacket(subtitle));
                     p.connection.send(new ClientboundSetTitlesAnimationPacket(10, 60, 20));
@@ -417,24 +515,20 @@ public class RpEssentialsRpCommands {
                 }
             }
             case "chat" -> {
-                String rawChat = MessagesConfig.get(MessagesConfig.RP_ANNONCE_CHAT_FORMAT,
-                        "message", message);
-                rawChat = RpEssentialsChatFormatter.resolveRpPlaceholders(rawChat, player);
-                String finalChat = rawChat;
                 for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                    p.displayClientMessage(ColorHelper.parseColors(finalChat), false);
+                    p.displayClientMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
+                            Msg.get(p, MessagesConfig.RP_ANNONCE_CHAT_FORMAT, "message", message), player)), false);
                     if (finalPlaySnd) playAnnonceSound(p, finalSoundId);
                 }
             }
             default -> {
-                ctx.getSource().sendFailure(Component.literal(
-                        "§c[ERROR] Unknown type: " + type + ". Use 'title' or 'chat'."));
+                ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_RP_ANNONCE_TYPE, "type", type));
                 return 0;
             }
         }
 
         player.displayClientMessage(
-                ColorHelper.parseColors(MessagesConfig.get(MessagesConfig.RP_ANNONCE_SENT)), false);
+                ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_ANNONCE_SENT)), false);
         RpEssentials.LOGGER.info("[ANNONCE][{}] {} ({}): {}",
                 type.toUpperCase(),
                 NicknameManager.getDisplayName(player),

@@ -1,5 +1,6 @@
 package net.rp.rpessentials.identity;
 
+import java.util.Objects;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -14,10 +15,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.chat.Component;
-import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsIO;
-import net.rp.rpessentials.SyncNametagDataPacket;
+import net.rp.rpessentials.*;
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.config.RpConfig;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
 /**
@@ -32,15 +32,20 @@ public class NicknameManager {
      * Définit le fichier de sauvegarde et charge les nicknames
      * synchronized : empêche deux threads d'initialiser en même temps
      */
-    private static synchronized void ensureInitialized() {
-        if (nicknameFile != null) return;
+    private static volatile boolean ready = false;
+
+    private static void ensureInitialized() {
+        if (!ready) init();
+    }
+
+    private static synchronized void init() {
+        if (ready) return;
         try {
             File dataFolder = RpEssentialsDataPaths.getDataFolder();
             if (!dataFolder.exists()) dataFolder.mkdirs();
-
             nicknameFile = new File(dataFolder, "nicknames.json");
             if (nicknameFile.exists()) loadFromFile();
-
+            ready = true;
         } catch (Exception e) {
             RpEssentials.LOGGER.error("[NicknameManager] Failed to initialize", e);
         }
@@ -91,16 +96,7 @@ public class NicknameManager {
         Map<String, String> data = new java.util.LinkedHashMap<>();
         for (Map.Entry<UUID, String> entry : snapshot.entrySet()) {
             UUID uuid = entry.getKey();
-            String mcName = "Unknown";
-            if (server != null) {
-                ServerPlayer online = server.getPlayerList().getPlayer(uuid);
-                if (online != null) {
-                    mcName = online.getName().getString();
-                } else if (server.getProfileCache() != null) {
-                    mcName = server.getProfileCache().get(uuid)
-                            .map(p -> p.getName()).orElse("Unknown");
-                }
-            }
+            String mcName = net.rp.rpessentials.NameCache.getOrUnknown(uuid);
             data.put(uuid.toString() + " (" + mcName + ")", entry.getValue());
         }
 
@@ -111,8 +107,19 @@ public class NicknameManager {
     /**
      * Définit un nickname pour un joueur
      */
+    /** Adds the nickname change to the player history (only when it really changes). */
+    private static void recordChange(UUID playerUUID, String newNick) {
+        String old = nicknames.get(playerUUID);
+        String n = newNick == null || newNick.isEmpty() ? null : newNick;
+        if (Objects.equals(old, n)) return;
+        net.rp.rpessentials.moderation.HistoryManager.record(playerUUID, null,
+                net.rp.rpessentials.moderation.HistoryManager.NICK, "-",
+                (old == null ? "-" : old) + " §7→ §f" + (n == null ? "-" : n));
+    }
+
     public static void setNickname(UUID playerUUID, String nickname) {
         ensureInitialized();
+        recordChange(playerUUID, nickname);
 
         if (nickname == null || nickname.isEmpty()) {
             nicknames.remove(playerUUID);
@@ -150,24 +157,15 @@ public class NicknameManager {
      */
     public static Component getNametagDisplay(ServerPlayer player) {
         String nickname = getNickname(player.getUUID());
-
-        if (nickname == null) {
-            return null;
-        }
-
+        if (nickname == null) return null;
         try {
-            if (RpEssentialsConfig.SHOW_NAMETAG_PREFIX_SUFFIX != null &&
-                    RpEssentialsConfig.SHOW_NAMETAG_PREFIX_SUFFIX.get()) {
-                String prefix = RpEssentials.getPlayerPrefix(player);
-                String suffix = RpEssentials.getPlayerSuffix(player);
-                String fullDisplay = prefix + nickname + suffix;
-                return Component.literal(fullDisplay.replace("&", "§"));
-            } else {
-                return Component.literal(nickname.replace("&", "§"));
+            if (RpEssentialsConfig.SHOW_NAMETAG_PREFIX_SUFFIX != null
+                    && RpEssentialsConfig.SHOW_NAMETAG_PREFIX_SUFFIX.get()) {
+                return ColorHelper.parseColors(RpEssentials.getPlayerPrefix(player) + nickname
+                        + RpEssentials.getPlayerSuffix(player));
             }
-        } catch (Exception e) {
-            return Component.literal(nickname.replace("&", "§"));
-        }
+        } catch (Exception ignored) {}
+        return ColorHelper.parseColors(nickname);
     }
 
     /**
@@ -175,6 +173,7 @@ public class NicknameManager {
      */
     public static void removeNickname(UUID playerUUID) {
         ensureInitialized();
+        recordChange(playerUUID, null);
         nicknames.remove(playerUUID);
         saveToFile();
 
@@ -191,6 +190,33 @@ public class NicknameManager {
     public static boolean hasNickname(UUID playerUUID) {
         ensureInitialized();
         return nicknames.containsKey(playerUUID);
+    }
+
+    /**
+     * Unicité du nickname et blacklist
+     */
+    public static String plain(String nick) {
+        return ColorHelper.stripAll(ColorHelper.translateAlternateColorCodes(nick)).trim();
+    }
+
+    public static String rejection(UUID self, String nick, boolean staff, ServerPlayer viewer) {
+        ensureInitialized();
+        String n = plain(nick);
+        try {
+            if (RpConfig.NICK_UNIQUE.get()) {
+                for (Map.Entry<UUID, String> e : nicknames.entrySet()) {
+                    if (!e.getKey().equals(self) && plain(e.getValue()).equalsIgnoreCase(n))
+                        return ServerLang.get(viewer, MessagesConfig.NICK_USED);
+                }
+            }
+            if (!staff) {
+                for (String w : RpConfig.NICK_BLACKLIST.get()) {
+                    if (!w.isBlank() && n.toLowerCase().contains(w.trim().toLowerCase()))
+                        return ServerLang.get(viewer, MessagesConfig.NICK_FORBIDDEN);
+                }
+            }
+        } catch (IllegalStateException ignored) {}
+        return null;
     }
 
     /**
@@ -218,9 +244,10 @@ public class NicknameManager {
     /**
      * Recharge les nicknames depuis le fichier
      */
-    public static void reload() {
+    public static synchronized void reload() {
+        ready = false;
         nicknameFile = null;
         nicknames.clear();
-        ensureInitialized();
+        init();
     }
 }

@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsDataPaths;
 import net.rp.rpessentials.RpEssentialsIO;
+import net.rp.rpessentials.TimeHelper;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -67,7 +68,7 @@ public class WarnManager {
         }
 
         public String getFormattedDate() {
-            return new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date(issuedAt));
+            return TimeHelper.format("dd/MM/yyyy HH:mm", issuedAt);
         }
 
         /**
@@ -75,17 +76,11 @@ public class WarnManager {
          * Exemples : "Permanent", "Expiré", "2h 30min restantes", "3j 4h restants"
          */
         public String getFormattedExpiry() {
-            if (expiresAt == null) return "Permanent";
-            if (isExpired()) return "§cExpired";
-            long remaining = expiresAt - System.currentTimeMillis();
-            long totalMinutes = remaining / 60_000;
-            long days = totalMinutes / 1440;
-            long hours = (totalMinutes % 1440) / 60;
-            long minutes = totalMinutes % 60;
+            return getFormattedExpiry(null);
+        }
 
-            if (days > 0) return days + "d " + hours + "h remaining";
-            if (hours > 0) return hours + "h " + minutes + "min remaining";
-            return minutes + "min remaining";
+        public String getFormattedExpiry(net.minecraft.server.level.ServerPlayer viewer) {
+            return net.rp.rpessentials.config.MessagesConfig.formatExpiry(viewer, expiresAt);
         }
     }
 
@@ -131,6 +126,7 @@ public class WarnManager {
             if (data != null) {
                 warns.clear();
                 warns.addAll(data);
+                byTarget = null;
                 // Repositionner le compteur après le max existant
                 int maxId = data.stream()
                         .mapToInt(w -> {
@@ -150,6 +146,7 @@ public class WarnManager {
     // SAVE (async)
     // =========================================================================
     private static void saveToFile() {
+        byTarget = null;
         ensureInitialized();
         if (dataFile == null) return;
 
@@ -190,6 +187,9 @@ public class WarnManager {
         );
         warns.add(entry);
         saveToFile();
+        HistoryManager.record(targetUUID, targetName, HistoryManager.WARN, issuerName,
+                "#" + id + " " + reason + (expiresAt != null
+                        ? " (" + net.rp.rpessentials.TimeHelper.format("dd/MM/yyyy HH:mm", expiresAt) + ")" : ""));
         RpEssentials.LOGGER.info("[WarnManager] Warn #{} added for {} by {} — reason: {}", id, targetName, issuerName, reason);
         return id;
     }
@@ -261,17 +261,40 @@ public class WarnManager {
         return removed;
     }
 
+    /** Removes the expired warns of one player only (used at login). */
+    public static int purgeExpiredWarns(UUID playerUUID) {
+        ensureInitialized();
+        String uuidStr = playerUUID.toString();
+        int before = warns.size();
+        warns.removeIf(w -> w.targetUUID.equals(uuidStr) && w.isExpired());
+        int removed = before - warns.size();
+        if (removed > 0) {
+            recalculateCounter();
+            saveToFile();
+        }
+        return removed;
+    }
+
     // =========================================================================
     // PUBLIC API — READ
     // =========================================================================
-
     /** Retourne tous les warns d'un joueur (y compris expirés). */
+    private static volatile Map<String, List<WarnEntry>> byTarget = null;
+
+    private static Map<String, List<WarnEntry>> index() {
+        Map<String, List<WarnEntry>> m = byTarget;
+        if (m == null) {
+            synchronized (warns) {
+                m = warns.stream().collect(Collectors.groupingBy(w -> w.targetUUID));
+            }
+            byTarget = m;
+        }
+        return m;
+    }
+
     public static List<WarnEntry> getWarns(UUID playerUUID) {
         ensureInitialized();
-        String uuidStr = playerUUID.toString();
-        return warns.stream()
-                .filter(w -> w.targetUUID.equals(uuidStr))
-                .collect(Collectors.toList());
+        return new ArrayList<>(index().getOrDefault(playerUUID.toString(), List.of()));
     }
 
     /** Retourne uniquement les warns actifs (non expirés) d'un joueur. */
@@ -302,6 +325,7 @@ public class WarnManager {
     public static void reload() {
         dataFile = null;
         warns.clear();
+        byTarget = null;
         warnCounter.set(1);
         ensureInitialized();
     }

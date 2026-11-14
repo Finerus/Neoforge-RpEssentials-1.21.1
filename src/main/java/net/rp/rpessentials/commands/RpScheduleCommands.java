@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -102,17 +103,17 @@ public class RpScheduleCommands {
                         .then(Commands.literal("enabled").then(Commands.argument("value", BoolArgumentType.bool()).executes(RpScheduleCommands::setDayEnabled)))));
 
         set.then(Commands.literal("deathHoursEnabled").then(Commands.argument("value", BoolArgumentType.bool())
-                .executes(ctx -> RpConfigCommands.updateConfigBool(ctx, ScheduleConfig.DEATH_HOURS_ENABLED, "Death Hours"))));
+                .executes(ctx -> RpConfigCommands.updateConfigBool(ctx, ScheduleConfig.DEATH_HOURS_ENABLED))));
         set.then(Commands.literal("enableHrpHours").then(Commands.argument("value", BoolArgumentType.bool())
-                .executes(ctx -> RpConfigCommands.updateConfigBool(ctx, ScheduleConfig.ENABLE_HRP_HOURS, "HRP Hours"))));
+                .executes(ctx -> RpConfigCommands.updateConfigBool(ctx, ScheduleConfig.ENABLE_HRP_HOURS))));
         set.then(Commands.literal("hrpToleratedMessage").then(Commands.argument("value", StringArgumentType.greedyString())
-                .executes(ctx -> RpConfigCommands.updateConfigString(ctx, ScheduleConfig.HRP_TOLERATED_MESSAGE, "HRP Tolerated Message"))));
+                .executes(ctx -> RpConfigCommands.updateConfigString(ctx, ScheduleConfig.HRP_TOLERATED_MESSAGE))));
         set.then(Commands.literal("hrpAllowedMessage").then(Commands.argument("value", StringArgumentType.greedyString())
-                .executes(ctx -> RpConfigCommands.updateConfigString(ctx, ScheduleConfig.HRP_ALLOWED_MESSAGE, "HRP Allowed Message"))));
+                .executes(ctx -> RpConfigCommands.updateConfigString(ctx, ScheduleConfig.HRP_ALLOWED_MESSAGE))));
         set.then(Commands.literal("hrpMessageMode")
                 .then(Commands.argument("value", StringArgumentType.word())
                         .suggests((ctx, b) -> { b.suggest("CHAT").suggest("ACTION_BAR").suggest("TITLE").suggest("IMMERSIVE").suggest("IMMERSIVE:hrp"); return b.buildFuture(); })
-                        .executes(ctx -> RpConfigCommands.updateConfigString(ctx, ScheduleConfig.HRP_MESSAGE_MODE, "HRP Message Mode"))));
+                        .executes(ctx -> RpConfigCommands.updateConfigString(ctx, ScheduleConfig.HRP_MESSAGE_MODE))));
         set.then(Commands.literal("deathHoursSlots").then(Commands.argument("slots", StringArgumentType.greedyString()).executes(RpScheduleCommands::setDeathHoursSlots)));
         set.then(Commands.literal("hrpToleratedSlots").then(Commands.argument("slots", StringArgumentType.greedyString()).executes(RpScheduleCommands::setHrpToleratedSlots)));
         set.then(Commands.literal("hrpAllowedSlots").then(Commands.argument("slots", StringArgumentType.greedyString()).executes(RpScheduleCommands::setHrpAllowedSlots)));
@@ -123,7 +124,7 @@ public class RpScheduleCommands {
     // =========================================================================
     static int showSchedule(CommandContext<CommandSourceStack> ctx) {
         java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
-        java.time.DayOfWeek today = java.time.LocalDate.now().getDayOfWeek();
+        java.time.DayOfWeek today = RpEssentialsScheduleManager.today().getDayOfWeek();
 
         boolean schedEnabled;
         try { schedEnabled = ScheduleConfig.ENABLE_SCHEDULE.get(); } catch (IllegalStateException e) { schedEnabled = false; }
@@ -136,61 +137,78 @@ public class RpScheduleCommands {
         } catch (IllegalStateException ignored) {}
 
         String status;
-        if (forceClosed) status = "§c§lFORCIBLY CLOSED";
-        else if (forceOpen) status = "§a§lFORCIBLY OPEN";
+        if (forceClosed) status = Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_FORCED_CLOSED);
+        else if (forceOpen) status = Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_FORCED_OPEN);
         else status = RpEssentialsScheduleManager.isServerOpen()
-                    ? MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_OPEN)
-                    : MessagesConfig.get(MessagesConfig.SCHEDULE_STATUS_CLOSED);
+                    ? Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_STATUS_OPEN)
+                    : Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_STATUS_CLOSED);
 
         StringBuilder sb = new StringBuilder();
-        sb.append(RpChatUi.header("Server Schedule"));
-        sb.append(RpChatUi.kv("Status", status)).append("\n");
+        sb.append(RpChatUi.header(Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_TITLE)));
+        sb.append(RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_LABEL_STATUS), status)).append("\n");
 
         if (schedEnabled) {
-            sb.append(RpChatUi.kv("Next", "§f" + RpEssentialsScheduleManager.getTimeUntilNextEvent())).append("\n");
-            sb.append(RpChatUi.section("Opening hours"));
+            sb.append(RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_LABEL_NEXT), "§f" + RpEssentialsScheduleManager.getTimeUntilNextEvent(ctx.getSource().getPlayer()))).append("\n");
+            sb.append(RpChatUi.section(Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_SECTION_OPENING)));
             for (java.time.DayOfWeek day : java.time.DayOfWeek.values()) {
                 RpEssentialsScheduleManager.DaySchedule s = RpEssentialsScheduleManager.getSchedules().get(day);
                 String prefix = day == today
-                        ? MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_TODAY_PREFIX)
-                        : MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_OTHER_PREFIX);
-                String dayName = RpEssentialsScheduleManager.getDayName(day);
+                        ? Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DAY_TODAY_PREFIX)
+                        : Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DAY_OTHER_PREFIX);
+                String dayName = RpEssentialsScheduleManager.getDayName(ctx.getSource().getPlayer(), day);
                 sb.append(prefix);
-                if (s == null) sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_CLOSED_FORMAT, "day", dayName));
-                else sb.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_OPEN_FORMAT,
+                if (s == null) sb.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DAY_CLOSED_FORMAT, "day", dayName));
+                else sb.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DAY_OPEN_FORMAT,
                         "day", dayName, "open", s.open().format(fmt), "close", s.close().format(fmt)));
                 sb.append("\n");
             }
+        var upcoming = RpEssentialsScheduleManager.getUpcomingExceptions();
+            if (!upcoming.isEmpty()) {
+                sb.append(RpChatUi.section(Msg.get(ctx.getSource(), MessagesConfig.SCHED_SECTION_EXCEPTIONS)));
+                java.time.format.DateTimeFormatter df = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                int shown = 0;
+                for (var e : upcoming.entrySet()) {
+                    if (shown++ >= 5) break;
+                    String date = e.getKey().format(df);
+                    String dayName = RpEssentialsScheduleManager.getDayName(ctx.getSource().getPlayer(), e.getKey().getDayOfWeek());
+                    var s = e.getValue();
+                    sb.append(s == null
+                            ? Msg.get(ctx.getSource(), MessagesConfig.SCHED_EXCEPTION_CLOSED, "day", dayName, "date", date)
+                            : Msg.get(ctx.getSource(), MessagesConfig.SCHED_EXCEPTION_OPEN, "day", dayName, "date", date,
+                                    "open", s.open().format(fmt), "close", s.close().format(fmt))).append("\n");
+                }
+            }
         } else {
-            sb.append("§7Schedule disabled, the server is always open.\n");
+            sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_DISABLED)).append("\n");
         }
 
         StringBuilder special = new StringBuilder();
         try {
             if (ScheduleConfig.DEATH_HOURS_ENABLED.get()) {
-                special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_LABEL)).append("§7: ");
+                special.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DEATH_HOURS_LABEL)).append("§7: ");
                 if (RpEssentialsScheduleManager.isDeathHour())
-                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_ACTIVE));
+                    special.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DEATH_HOURS_ACTIVE));
                 else
-                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_DEATH_HOURS_INACTIVE,
+                    special.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DEATH_HOURS_INACTIVE,
                             "slots", String.join(", ", ScheduleConfig.DEATH_HOURS_SLOTS.get())));
                 special.append("\n");
             }
         } catch (IllegalStateException ignored) {}
         try {
             if (ScheduleConfig.ENABLE_HRP_HOURS.get()) {
-                special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_LABEL)).append("§7: ");
+                special.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_HRP_LABEL)).append("§7: ");
                 if (RpEssentialsScheduleManager.isHrpAllowed())
-                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_ALLOWED));
+                    special.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_HRP_ALLOWED));
                 else if (RpEssentialsScheduleManager.isHrpTolerated())
-                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_TOLERATED));
+                    special.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_HRP_TOLERATED));
                 else
-                    special.append(MessagesConfig.get(MessagesConfig.SCHEDULE_HRP_INACTIVE,
-                            "slots", "Tolerated: " + String.join(", ", ScheduleConfig.HRP_TOLERATED_SLOTS.get())));
+                    special.append(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_HRP_INACTIVE,
+                            "slots", Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_TOLERATED,
+                                    "slots", String.join(", ", ScheduleConfig.HRP_TOLERATED_SLOTS.get()))));
                 special.append("\n");
             }
         } catch (IllegalStateException ignored) {}
-        if (special.length() > 0) sb.append(RpChatUi.section("Special hours")).append(special);
+        if (special.length() > 0) sb.append(RpChatUi.section(Msg.get(ctx.getSource(), MessagesConfig.STAFF_SCHED_SECTION_SPECIAL))).append(special);
 
         sb.append(RpChatUi.LINE);
         RpChatUi.sendFormatted(ctx, sb.toString());
@@ -205,12 +223,12 @@ public class RpScheduleCommands {
         String roleId = StringArgumentType.getString(ctx, "role").toLowerCase();
         MinecraftServer server = ctx.getSource().getServer();
         ServerPlayer staffPlayer = ctx.getSource().getPlayer();
-        String staffName = staffPlayer != null ? staffPlayer.getName().getString() : "Console";
+        String staffName = staffPlayer != null ? staffPlayer.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
 
         List<? extends String> rolesConfig;
         try { rolesConfig = RpEssentialsConfig.ROLES.get(); }
         catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }
 
@@ -223,7 +241,7 @@ public class RpScheduleCommands {
             }
         }
         if (lpGroup == null) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SETROLE_UNKNOWN, "role", roleId.toUpperCase())));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SETROLE_UNKNOWN, "role", roleId.toUpperCase())));
             return 0;
         }
 
@@ -245,17 +263,16 @@ public class RpScheduleCommands {
         SyncNametagDataPacket.broadcastDelayed(target);
         RpEssentialsScheduleManager.enforceOnlineDelayed(server);
 
-        String staffMsg = "§6[SETROLE] §e" + staffName + " §7→ §e" + name + " §7: §f" + roleDisplay + " §8(LP: " + finalLpGroup + ")";
-        Component staffComp = Component.literal(staffMsg);
         for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
             if (RpEssentialsPermissions.isStaff(sp) && !sp.getUUID().equals(target.getUUID())) {
-                sp.sendSystemMessage(staffComp);
+                sp.sendSystemMessage(Msg.c(sp, MessagesConfig.STAFF_SCHED_SETROLE_ALERT,
+                        "staff", staffName, "player", name, "role", roleDisplay, "group", String.valueOf(finalLpGroup)));
             }
         }
         RpEssentials.LOGGER.info("[SETROLE] {} assigned role '{}' (LP: {}) to {}", staffName, roleDisplay, finalLpGroup, name);
 
-        ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.SETROLE_SUCCESS_STAFF, "role", roleDisplay, "player", name)), true);
-        target.sendSystemMessage(Component.literal(MessagesConfig.get(MessagesConfig.SETROLE_SUCCESS_PLAYER, "role", roleDisplay)));
+        ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SETROLE_SUCCESS_STAFF, "role", roleDisplay, "player", name)), true);
+        target.sendSystemMessage(Component.literal(ServerLang.get(target, MessagesConfig.SETROLE_SUCCESS_PLAYER, "role", roleDisplay)));
         return 1;
     }
 
@@ -267,7 +284,7 @@ public class RpScheduleCommands {
         String day  = StringArgumentType.getString(ctx, "day").toUpperCase();
         String time = StringArgumentType.getString(ctx, "time");
         if (!time.matches("^([01]\\d|2[0-3]):[0-5]\\d$")) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_TIME_INVALID)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_TIME_INVALID)));
             return 0;
         }
         try {
@@ -288,12 +305,12 @@ public class RpScheduleCommands {
                 case "SUNDAY_CLOSE"    -> ScheduleConfig.SUNDAY_CLOSE;
                 default -> null;
             };
-            if (cfg == null) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_INVALID, "day", day))); return 0; }
+            if (cfg == null) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DAY_INVALID, "day", day))); return 0; }
             cfg.set(time); ScheduleConfig.SPEC.save(); RpEssentialsScheduleManager.reload();
             RpEssentialsScheduleManager.enforceOnline(ctx.getSource().getServer());
-            ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_UPDATED, "day", day, "type", type, "value", time)), true);
+            ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DAY_UPDATED, "day", day, "type", type, "value", time)), true);
             return 1;
-        } catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED))); return 0; }
+        } catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED))); return 0; }
     }
 
     private static int setDayEnabled(CommandContext<CommandSourceStack> ctx) {
@@ -310,29 +327,29 @@ public class RpScheduleCommands {
                 case "SUNDAY"    -> ScheduleConfig.SUNDAY_ENABLED;
                 default -> null;
             };
-            if (cfg == null) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_INVALID, "day", day))); return 0; }
+            if (cfg == null) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DAY_INVALID, "day", day))); return 0; }
             cfg.set(val); ScheduleConfig.SPEC.save(); RpEssentialsScheduleManager.reload();
             RpEssentialsScheduleManager.enforceOnline(ctx.getSource().getServer());
-            String state = val ? "enabled" : "disabled";
-            ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.SCHEDULE_DAY_ENABLED, "day", day, "state", state)), true);
+            String state = Msg.get(ctx.getSource(), val ? MessagesConfig.STAFF_SCHED_STATE_ENABLED : MessagesConfig.STAFF_SCHED_STATE_DISABLED);
+            ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SCHEDULE_DAY_ENABLED, "day", day, "state", state)), true);
             return 1;
-        } catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED))); return 0; }
+        } catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED))); return 0; }
     }
 
-    private static int setDeathHoursSlots(CommandContext<CommandSourceStack> ctx) { return setSlotsConfig(ctx, ScheduleConfig.DEATH_HOURS_SLOTS, "Death Hours Slots"); }
-    private static int setHrpToleratedSlots(CommandContext<CommandSourceStack> ctx) { return setSlotsConfig(ctx, ScheduleConfig.HRP_TOLERATED_SLOTS, "HRP Tolerated Slots"); }
-    private static int setHrpAllowedSlots(CommandContext<CommandSourceStack> ctx) { return setSlotsConfig(ctx, ScheduleConfig.HRP_ALLOWED_SLOTS, "HRP Allowed Slots"); }
+    private static int setDeathHoursSlots(CommandContext<CommandSourceStack> ctx) { return setSlotsConfig(ctx, ScheduleConfig.DEATH_HOURS_SLOTS); }
+    private static int setHrpToleratedSlots(CommandContext<CommandSourceStack> ctx) { return setSlotsConfig(ctx, ScheduleConfig.HRP_TOLERATED_SLOTS); }
+    private static int setHrpAllowedSlots(CommandContext<CommandSourceStack> ctx) { return setSlotsConfig(ctx, ScheduleConfig.HRP_ALLOWED_SLOTS); }
 
     private static int setSlotsConfig(CommandContext<CommandSourceStack> ctx,
-                                      net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<java.util.List<? extends String>> config,
-                                      String label) {
+                                      net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<java.util.List<? extends String>> config) {
+        String label = RpConfigCommands.optName(config);
         String raw = StringArgumentType.getString(ctx, "slots");
         java.util.List<String> slots = java.util.Arrays.stream(raw.split(",")).map(String::trim).collect(java.util.stream.Collectors.toList());
         try {
             config.set(slots); ScheduleConfig.SPEC.save(); RpEssentialsScheduleManager.reload();
-            ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_UPDATED, "label", label, "value", String.join(", ", slots))), true);
+            ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UPDATED, "label", label, "value", String.join(", ", slots))), true);
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
         }
         return 1;
     }
@@ -346,12 +363,10 @@ public class RpScheduleCommands {
 
         RpEssentialsScheduleManager.resetDailyFlags();
 
-        Component staffMsg = Component.literal("§e[Schedule] Forced state cleared by §f"
-                + ctx.getSource().getTextName()
-                + "§e. Schedule resumes normally.");
+        String staffName = ctx.getSource().getTextName();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (RpEssentialsPermissions.isStaff(p))
-                p.sendSystemMessage(staffMsg);
+                p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_SCHED_FORCE_RESET, "staff", staffName));
         }
 
         return 1;
@@ -371,7 +386,7 @@ public class RpScheduleCommands {
             String msg = ScheduleConfig.MSG_SERVER_OPENED.get()
                     .replace("{open}",  "now")
                     .replace("{close}", "—")
-                    .replace("{day}",   java.time.LocalDate.now()
+                    .replace("{day}",   RpEssentialsScheduleManager.today()
                             .getDayOfWeek()
                             .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH));
             server.getPlayerList().broadcastSystemMessage(
@@ -379,11 +394,10 @@ public class RpScheduleCommands {
         } catch (IllegalStateException ignored) {}
 
         // Notification staff
-        Component staffMsg = Component.literal("§a[Schedule] Server forcibly opened by §e"
-                + ctx.getSource().getTextName() + "§a.");
+        String staffName = ctx.getSource().getTextName();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (net.rp.rpessentials.RpEssentialsPermissions.isStaff(p))
-                p.sendSystemMessage(staffMsg);
+                p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_SCHED_FORCE_OPEN, "staff", staffName));
         }
 
         return 1;
@@ -402,7 +416,7 @@ public class RpScheduleCommands {
         try {
             kickMsg = ScheduleConfig.FORCE_CLOSED_MESSAGE.get();
         } catch (IllegalStateException e) {
-            kickMsg = "§cThe server is exceptionally closed.";
+            kickMsg = ScheduleConfig.FORCE_CLOSED_MESSAGE.getDefault();
         }
         String finalKickMsg = kickMsg;
 
@@ -416,12 +430,11 @@ public class RpScheduleCommands {
         }
 
         // Notification staff
-        Component staffMsg = Component.literal("§c[Schedule] Server forcibly closed by §e"
-                + ctx.getSource().getTextName()
-                + "§c. §8(" + toKick.size() + " player(s) kicked)");
+        String staffName = ctx.getSource().getTextName();
+        String kicked = String.valueOf(toKick.size());
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (RpEssentialsPermissions.isStaff(p))
-                p.sendSystemMessage(staffMsg);
+                p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_SCHED_FORCE_CLOSE, "staff", staffName, "count", kicked));
         }
 
         return 1;
@@ -432,18 +445,16 @@ public class RpScheduleCommands {
         try {
             java.util.List<String> list = new java.util.ArrayList<>(ScheduleConfig.SCHEDULE_WHITELIST.get());
             if (list.contains(name)) {
-                ctx.getSource().sendFailure(Component.literal(
-                        "§c[Schedule] §f" + name + " §cis already in the schedule whitelist."));
+                ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_WL_ALREADY, "player", name));
                 return 0;
             }
             list.add(name);
             ScheduleConfig.SCHEDULE_WHITELIST.set(list);
             ScheduleConfig.SPEC.save();
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    "§a[Schedule] §f" + name + " §aadded to the schedule whitelist."), true);
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_WL_ADDED, "player", name), true);
             return 1;
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Schedule] Config not loaded."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_CONFIG));
             return 0;
         }
     }
@@ -453,17 +464,15 @@ public class RpScheduleCommands {
         try {
             java.util.List<String> list = new java.util.ArrayList<>(ScheduleConfig.SCHEDULE_WHITELIST.get());
             if (!list.remove(name)) {
-                ctx.getSource().sendFailure(Component.literal(
-                        "§c[Schedule] §f" + name + " §cis not in the schedule whitelist."));
+                ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_WL_NOT_IN, "player", name));
                 return 0;
             }
             ScheduleConfig.SCHEDULE_WHITELIST.set(list);
             ScheduleConfig.SPEC.save();
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    "§a[Schedule] §f" + name + " §aremoved from the schedule whitelist."), true);
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_WL_REMOVED, "player", name), true);
             return 1;
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Schedule] Config not loaded."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_CONFIG));
             return 0;
         }
     }
@@ -472,16 +481,14 @@ public class RpScheduleCommands {
         try {
             java.util.List<? extends String> list = ScheduleConfig.SCHEDULE_WHITELIST.get();
             if (list.isEmpty()) {
-                ctx.getSource().sendSuccess(() -> Component.literal(
-                        "§e[Schedule] Schedule whitelist is empty."), false);
+                ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_WL_EMPTY), false);
                 return 1;
             }
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    "§e[Schedule] Whitelist §8(" + list.size() + ")§e: §f"
-                            + String.join("§7, §f", list)), false);
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_WL_LIST,
+                    "count", String.valueOf(list.size()), "list", String.join("§7, §f", list)), false);
             return 1;
         } catch (IllegalStateException e) {
-            ctx.getSource().sendFailure(Component.literal("§c[Schedule] Config not loaded."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_SCHED_CONFIG));
             return 0;
         }
     }

@@ -12,6 +12,7 @@ import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.VanishManager;
 import net.rp.rpessentials.profession.LicenseManager;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -120,7 +121,24 @@ public record SyncNametagDataPacket(
         MinecraftServer server = target.getServer();
         if (server == null) return;
         CompletableFuture.runAsync(() -> server.execute(() -> {
-            if (server.getPlayerList().getPlayer(target.getUUID()) != null) refreshNow(target);
+            if (server.getPlayerList().getPlayer(target.getUUID()) != null) {
+                RpEssentials.invalidateMeta(target.getUUID());
+                refreshNow(target);
+            }
         }), CompletableFuture.delayedExecutor(500, TimeUnit.MILLISECONDS));
+    }
+
+    public static void sendAllTo(ServerPlayer viewer) {
+        MinecraftServer server = viewer.getServer();
+        if (server == null) return;
+        List<SyncNametagDataPacket> list = new ArrayList<>();
+        for (ServerPlayer online : server.getPlayerList().getPlayers()) {
+            if (online.getUUID().equals(viewer.getUUID())) continue;
+            if (VanishManager.canHide(VanishManager.Aspect.NAMETAG, viewer, online.getUUID())) continue;
+            list.add(from(online));
+        }
+        if (!list.isEmpty()) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(viewer, new SyncNametagBatchPacket(list));
+        }
     }
 }

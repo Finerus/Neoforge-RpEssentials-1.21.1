@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -13,6 +14,7 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.config.MessagesConfig;
@@ -48,7 +50,7 @@ public class RpNicknameCommands {
                         .suggests((ctx, builder) -> {
                             NicknameManager.getAllNicknames().values().stream()
                                     .filter(Objects::nonNull)
-                                    .map(n -> n.replaceAll("§[0-9a-fk-orA-FK-OR]", "").trim())
+                                    .map(NicknameManager::plain)
                                     .filter(n -> !n.isEmpty())
                                     .forEach(builder::suggest);
                             return builder.buildFuture();
@@ -64,7 +66,7 @@ public class RpNicknameCommands {
                         .suggests((ctx, builder) -> {
                             NicknameManager.getAllNicknames().values().stream()
                                     .filter(Objects::nonNull)
-                                    .map(n -> n.replaceAll("§[0-9a-fk-orA-FK-OR]", "").trim())
+                                    .map(NicknameManager::plain)
                                     .filter(n -> !n.isEmpty())
                                     .forEach(builder::suggest);
                             return builder.buildFuture();
@@ -77,7 +79,7 @@ public class RpNicknameCommands {
         dispatcher.register(Commands.literal("colors")
                 .executes(ctx -> {
                     if (ChatConfig.ENABLE_COLORS_COMMAND != null && !ChatConfig.ENABLE_COLORS_COMMAND.get()) {
-                        ctx.getSource().sendFailure(Component.literal("§cColors command is disabled."));
+                        ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_NICK_COLORS_OFF));
                         return 0;
                     }
                     return showColors(ctx);
@@ -101,6 +103,11 @@ public class RpNicknameCommands {
             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
             String nickname = StringArgumentType.getString(ctx, "nickname");
             String formattedNickname = nickname.replace("&", "§");
+            String err = NicknameManager.rejection(target.getUUID(), formattedNickname, true, ctx.getSource().getPlayer());
+            if (err != null) {
+                ctx.getSource().sendFailure(ColorHelper.parseColors(err));
+                return 0;
+            }
 
             NicknameManager.setNickname(target.getUUID(), formattedNickname);
             target.getServer().getPlayerList().broadcastAll(
@@ -108,12 +115,12 @@ public class RpNicknameCommands {
                             EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),
                             List.of(target)));
 
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    "§a[RpEssentials] Nickname for §f" + target.getName().getString() + "§a set to: " + formattedNickname), true);
-            target.sendSystemMessage(Component.literal("§aYour nickname has been changed to: " + formattedNickname));
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_NICK_SET,
+                    "player", target.getName().getString(), "nick", formattedNickname), true);
+            target.sendSystemMessage(Msg.c(target, MessagesConfig.STAFF_NICK_SET_TARGET, "nick", formattedNickname));
             return 1;
         } catch (Exception e) {
-            ctx.getSource().sendFailure(Component.literal("§cError while setting nickname."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_NICK_SET_ERROR));
             return 0;
         }
     }
@@ -127,12 +134,12 @@ public class RpNicknameCommands {
                             EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),
                             List.of(target)));
 
-            ctx.getSource().sendSuccess(() -> Component.literal(
-                    "§a[RpEssentials] Nickname for §f" + target.getName().getString() + "§a reset."), true);
-            target.sendSystemMessage(Component.literal("§aYour nickname has been reset."));
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_NICK_RESET,
+                    "player", target.getName().getString()), true);
+            target.sendSystemMessage(Msg.c(target, MessagesConfig.STAFF_NICK_RESET_TARGET));
             return 1;
         } catch (Exception e) {
-            ctx.getSource().sendFailure(Component.literal("§cError while resetting nickname."));
+            ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_NICK_RESET_ERROR));
             return 0;
         }
     }
@@ -142,7 +149,7 @@ public class RpNicknameCommands {
     private static int listNicknames(CommandContext<CommandSourceStack> ctx, int page) {
         Map<UUID, String> all = NicknameManager.getAllNicknames();
         if (all.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal("§e[RpEssentials] No active nicknames."), false);
+            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_NICK_LIST_EMPTY), false);
             return 1;
         }
 
@@ -160,8 +167,8 @@ public class RpNicknameCommands {
         int to = Math.min(rows.size(), from + RpChatUi.PAGE_SIZE);
 
         StringBuilder sb = new StringBuilder();
-        sb.append("§6§lNicknames §8- §7page ").append(current).append("/").append(pages)
-                .append(" §8(").append(rows.size()).append(")\n").append(RpChatUi.LINE).append("\n");
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_NICK_LIST_HEADER, "page", String.valueOf(current),
+                        "pages", String.valueOf(pages), "total", String.valueOf(rows.size()))).append("\n").append(RpChatUi.LINE).append("\n");
         for (int i = from; i < to; i++) {
             NickRow r = rows.get(i);
             sb.append(r.online() ? "§a● " : "§7○ ").append("§f").append(r.realName())
@@ -169,9 +176,9 @@ public class RpNicknameCommands {
         }
         sb.append(RpChatUi.LINE);
 
-        MutableComponent out = Component.literal(sb.toString());
+        MutableComponent out = ColorHelper.parseSection(sb.toString()).copy();
         if (pages > 1) {
-            out.append(Component.literal("\n")).append(RpChatUi.pager(current, pages, "/rpessentials nick list"));
+            out.append(Component.literal("\n")).append(RpChatUi.pager(ctx.getSource(), current, pages, "/rpessentials nick list"));
         }
         ctx.getSource().sendSuccess(() -> out, false);
         return 1;
@@ -179,64 +186,34 @@ public class RpNicknameCommands {
 
     static int whoisCommand(CommandContext<CommandSourceStack> ctx) {
         String searchNick = StringArgumentType.getString(ctx, "nickname");
+        String searchPlain = NicknameManager.plain(searchNick);
         var server = ctx.getSource().getServer();
         Map<UUID, String> allNicknames = NicknameManager.getAllNicknames();
         List<MutableComponent> results = new ArrayList<>();
 
         for (Map.Entry<UUID, String> entry : allNicknames.entrySet()) {
             if (entry.getValue() == null) continue;
-            String cleanNick = entry.getValue()
-                    .replaceAll("§[0-9a-fk-orA-FK-OR]", "")
-                    .replaceAll("&[0-9a-fk-orA-FK-OR]", "");
-            if (!cleanNick.equalsIgnoreCase(searchNick)) continue;
+            if (!NicknameManager.plain(entry.getValue()).equalsIgnoreCase(searchPlain)) continue;
 
-            UUID uuid = entry.getKey();
-            String mcName = "Offline";
-            try {
-                ServerPlayer online = server.getPlayerList().getPlayer(uuid);
-                if (online != null) {
-                    mcName = online.getName().getString();
-                } else {
-                    try {
-                        var cache = server.getProfileCache();
-                        if (cache != null) {
-                            var profile = cache.get(uuid);
-                            if (profile != null && profile.isPresent()) mcName = profile.get().getName();
-                        }
-                    } catch (Exception ignored) {}
-                }
-            } catch (Exception ignored) {}
-
-            final String finalMcName = mcName;
+            final UUID finalUuid = entry.getKey();
             final String finalNick = entry.getValue();
-            final UUID finalUuid = uuid;
+            final String finalMcName = LastConnectionManager.resolveName(server, finalUuid);
 
             MutableComponent uuidComponent = Component.literal("§8" + finalUuid)
                     .withStyle(style -> style
-                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("§7Click to open NameMC")))
+                            .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.STAFF_NICK_WHOIS_HOVER))))
                             .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://namemc.com/profile/" + finalUuid)));
 
-            results.add(Component.literal("§7MC: §f" + finalMcName + " §8| §7UUID: ")
+            results.add(ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.STAFF_NICK_WHOIS_MC, "player", finalMcName)).copy()
                     .append(uuidComponent)
-                    .append(Component.literal(" §8| §7Nick: §r" + finalNick)));
-        }
-
-        if (!results.isEmpty()) {
-            for (Map.Entry<UUID, String> entry : allNicknames.entrySet()) {
-                if (entry.getValue() == null) continue;
-                String cleanNick = entry.getValue()
-                        .replaceAll("§[0-9a-fk-orA-FK-OR]", "")
-                        .replaceAll("&[0-9a-fk-orA-FK-OR]", "");
-                if (!cleanNick.equalsIgnoreCase(searchNick)) continue;
-                break;
-            }
+                    .append(ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.STAFF_NICK_WHOIS_NICK, "nick", finalNick))));
         }
 
         if (results.isEmpty()) {
-            ctx.getSource().sendFailure(Component.literal(MessagesConfig.get(MessagesConfig.WHOIS_NOT_FOUND, "nick", searchNick)));
+            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WHOIS_NOT_FOUND, "nick", searchNick)));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal(MessagesConfig.get(MessagesConfig.WHOIS_RESULTS_HEADER, "nick", searchNick)), false);
+        ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WHOIS_RESULTS_HEADER, "nick", searchNick)), false);
         for (MutableComponent r : results) ctx.getSource().sendSuccess(() -> r, false);
         return 1;
     }
@@ -248,11 +225,18 @@ public class RpNicknameCommands {
                         net.rp.rpessentials.moderation.VanishManager.Aspect.LIST, src, p.getUUID()))
                 .toList();
         StringBuilder sb = new StringBuilder();
-        sb.append(MessagesConfig.get(MessagesConfig.PLAYERLIST_HEADER, "count", String.valueOf(players.size())));
+        boolean hideReal = false;
+        try { hideReal = ChatConfig.HIDE_REAL_NAMES.get() && !RpEssentialsPermissions.isStaffSource(src); }
+        catch (IllegalStateException ignored) {}
+        sb.append(Msg.get(ctx.getSource(), MessagesConfig.PLAYERLIST_HEADER, "count", String.valueOf(players.size())));
         for (int i = 0; i < players.size(); i++) {
             ServerPlayer p = players.get(i);
             String nick = NicknameManager.getNickname(p.getUUID());
-            if (nick != null) sb.append(nick).append(" §8(").append(p.getName().getString()).append(")§r");
+            if (nick != null) {
+                sb.append(nick);
+                if (!hideReal) sb.append(" §8(").append(p.getName().getString()).append(")");
+                sb.append("§r");
+            }
             else sb.append("§f").append(p.getName().getString());
             if (i < players.size() - 1) sb.append("§7, ");
         }
@@ -262,35 +246,20 @@ public class RpNicknameCommands {
     }
 
     private static int showColors(CommandContext<CommandSourceStack> ctx) {
-        ctx.getSource().sendSuccess(() -> RpEssentialsChatFormatter.getColorsHelp(), false);
+        ctx.getSource().sendSuccess(() -> RpEssentialsChatFormatter.getColorsHelp(ctx.getSource().getPlayer()), false);
         return 1;
     }
 
     public static int showHelpPublic(CommandContext<CommandSourceStack> ctx, boolean isStaff) {
         StringBuilder sb = new StringBuilder();
-        sb.append("§6§lRpEssentials §8— §7Commands\n");
+        CommandSourceStack src = ctx.getSource();
+        sb.append(Msg.get(src, MessagesConfig.STAFF_HELP_TITLE)).append("\n");
         sb.append("§6§m                              §r\n");
-        sb.append("§e/list: §7Online players with nicknames\n");
-        sb.append("§e/schedule: §7Server schedule & status\n");
-        sb.append("§e/msg §8<player> <msg>: §7Private message\n");
-        sb.append("§e/r §8<msg>: §7Reply to last message\n");
-        sb.append("§e/roll §8[dice]: §7Roll a dice\n");
-        sb.append("§e/rp action §8<action>: §7RP action (/me)\n");
-        sb.append("§e/rp commerce §8<msg>: §7Commerce broadcast\n");
-        sb.append("§e/rp selfnick §8[nick]: §7Set your own nickname\n");
+        sb.append(Msg.get(src, MessagesConfig.STAFF_HELP_PUBLIC)).append("\n");
         if (isStaff) {
             sb.append("§6§m                              §r\n");
-            sb.append("§c§lStaff\n");
-            sb.append("§e/rpessentials nick §8<player> [nick]: §7Set nickname\n");
-            sb.append("§e/rpessentials license §8give/revoke/list: §7Licenses (jobs)\n");
-            sb.append("§e/rpessentials warn §8add/temp/remove: §7Warns\n");
-            sb.append("§e/rpessentials deathrp §8enable/player: §7Death RP\n");
-            sb.append("§e/rpessentials config §8reload/status/set: §7Config\n");
-            sb.append("§e/whois §8<nick>: §7Find player behind a nickname\n");
-            sb.append("§e/setrole §8<player> <role>: §7Assign a role\n");
-            sb.append("§e/rpessentials inspect §8<player>: §7Full player info\n");
-            sb.append("§c For further information, check the mod page or the config!\n");
-            sb.append("§e/vanish §8[player] [level]: §7Hide from the server\n");
+            sb.append(Msg.get(src, MessagesConfig.STAFF_HELP_STAFF_TITLE)).append("\n");
+            sb.append(Msg.get(src, MessagesConfig.STAFF_HELP_STAFF)).append("\n");
         }
         sb.append("§6§m                              §r");
         String msg = sb.toString();

@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsDataPaths;
 import net.rp.rpessentials.RpEssentialsIO;
+import net.rp.rpessentials.TimeHelper;
 
 import java.io.File;
 import java.io.FileReader;
@@ -32,7 +33,7 @@ public class AutoUnwhitelistHistory {
 
         public Entry(String playerName, String playerUUID, String lastConnection,
                      long totalPlaytimeMs, List<String> licenses, long inactiveDays) {
-            this.timestamp      = LocalDateTime.now()
+            this.timestamp      = TimeHelper.now()
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
             this.playerName     = playerName;
             this.playerUUID     = playerUUID;

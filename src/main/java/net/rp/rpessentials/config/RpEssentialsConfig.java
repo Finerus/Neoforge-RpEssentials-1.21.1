@@ -19,12 +19,20 @@ public class RpEssentialsConfig {
     public static final ModConfigSpec.BooleanValue WHITELIST_EXEMPT_PROFESSIONS;
     public static final ModConfigSpec.IntValue OBFUSCATED_NAME_LENGTH;
     public static final ModConfigSpec.BooleanValue OBFUSCATE_PREFIX;
+    public static final ModConfigSpec.ConfigValue<String> BLUR_STYLE;
+    public static final ModConfigSpec.ConfigValue<String> BLUR_CODES;
+    public static final ModConfigSpec.ConfigValue<String> NAMETAG_BLUR_MODE;
     public static final ModConfigSpec.BooleanValue ENABLE_SNEAK_STEALTH;
     public static final ModConfigSpec.IntValue SNEAK_PROXIMITY_DISTANCE;
     public static final ModConfigSpec.BooleanValue OPS_SEE_ALL;
     public static final ModConfigSpec.BooleanValue DEBUG_SELF_BLUR;
     public static final ModConfigSpec.BooleanValue HIDE_NAMETAGS;
     public static final ModConfigSpec.BooleanValue SHOW_NAMETAG_PREFIX_SUFFIX;
+
+    // === ROLES ===
+    public static ModConfigSpec.ConfigValue<List<? extends String>> ROLES;
+    public static final ModConfigSpec.BooleanValue LP_SYNC_ENABLED;
+    public static final ModConfigSpec.BooleanValue LP_SYNC_IMPORT_ALL_GROUPS;
 
     // === PERMISSIONS ===
     public static final ModConfigSpec.ConfigValue<List<? extends String>> STAFF_TAGS;
@@ -35,6 +43,7 @@ public class RpEssentialsConfig {
     // === WORLD BORDER & ZONES ===
     public static final ModConfigSpec.BooleanValue ENABLE_WORLD_BORDER_WARNING;
     public static final ModConfigSpec.IntValue WORLD_BORDER_DISTANCE;
+    public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_SHAPE;
     public static final ModConfigSpec.BooleanValue WORLD_BORDER_TELEPORT_ENABLED;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> WORLD_BORDER_DIMENSION_OVERRIDES;
     public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_PREWARN_MESSAGE;
@@ -42,6 +51,7 @@ public class RpEssentialsConfig {
     public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_MESSAGE;
     public static final ModConfigSpec.IntValue WORLD_BORDER_CHECK_INTERVAL;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> NAMED_ZONES;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> ZONE_ACTIONS;
     public static final ModConfigSpec.ConfigValue<String> ZONE_MESSAGE_MODE;
 
     // === DEATH RP ===
@@ -58,6 +68,9 @@ public class RpEssentialsConfig {
     public static ModConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_TOGGLE_SOUND;
     public static ModConfigSpec.DoubleValue         DEATH_RP_PLAYER_TOGGLE_SOUND_VOLUME;
     public static ModConfigSpec.DoubleValue         DEATH_RP_PLAYER_TOGGLE_SOUND_PITCH;
+    public static ModConfigSpec.BooleanValue        DEATH_RP_RESET_NICKNAME;
+    public static ModConfigSpec.BooleanValue        DEATH_RP_RESET_ROLE;
+    public static ModConfigSpec.BooleanValue        DEATH_RP_RESET_PROFESSIONS;
     public static ModConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_ENABLE_MSG;
     public static ModConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_ENABLE_MODE;
     public static ModConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_DISABLE_MSG;
@@ -66,10 +79,14 @@ public class RpEssentialsConfig {
     public static ModConfigSpec.DoubleValue         DEATH_RP_GLOBAL_TOGGLE_SOUND_VOLUME;
     public static ModConfigSpec.DoubleValue         DEATH_RP_GLOBAL_TOGGLE_SOUND_PITCH;
 
-    // === ROLES ===
-    public static ModConfigSpec.ConfigValue<List<? extends String>> ROLES;
-    public static final ModConfigSpec.BooleanValue LP_SYNC_ENABLED;
-    public static final ModConfigSpec.BooleanValue LP_SYNC_IMPORT_ALL_GROUPS;
+    // === BACKUP ===
+    public static final ModConfigSpec.BooleanValue BACKUP_ENABLED;
+    public static final ModConfigSpec.IntValue BACKUP_INTERVAL_HOURS;
+    public static final ModConfigSpec.IntValue BACKUP_KEEP;
+
+    // === COMMANDS ===
+    public static final ModConfigSpec.BooleanValue UNPREFIXED_STAFF_COMMANDS;
+    public static final ModConfigSpec.BooleanValue UNPREFIXED_RP_COMMANDS;
 
     static {
         // =========================================================================
@@ -93,6 +110,21 @@ public class RpEssentialsConfig {
         OBFUSCATE_PREFIX = BUILDER
                 .comment("If true, prefixes (ranks, titles) are also hidden in the TabList.")
                 .define("obfuscatePrefix", true);
+
+        BLUR_STYLE = BUILDER
+                .comment("Look of a hidden name: OBFUSCATED (default, animated), DASHES, HASHES or STARS.")
+                .defineInList("blurStyle", "OBFUSCATED", Arrays.asList("OBFUSCATED", "DASHES", "HASHES", "STARS"));
+
+        BLUR_CODES = BUILDER
+                .comment("Color and format codes applied to a hidden name, for example &7 or &8&o. Empty = none.")
+                .define("blurCodes", "§o§8");
+
+        NAMETAG_BLUR_MODE = BUILDER
+                .comment("What happens to the nametag above the head of a player whose name is hidden in the tab list.",
+                        "OFF  : nametag unchanged (default)",
+                        "BLUR : the nametag shows the hidden name",
+                        "HIDE : the nametag is not displayed")
+                .defineInList("nametagBlurMode", "OFF", Arrays.asList("OFF", "BLUR", "HIDE"));
 
         ENABLE_SNEAK_STEALTH = BUILDER
                 .comment("If true, sneaking players are only visible at a much closer distance.")
@@ -183,6 +215,12 @@ public class RpEssentialsConfig {
                 .comment("Distance from spawn (blocks) before warning is triggered.")
                 .defineInRange("worldBorderDistance", 5000, 100, 100000);
 
+        WORLD_BORDER_SHAPE = BUILDER
+                .comment("Shape of the world border around the spawn point.",
+                        "SQUARE : the limit is a square, worldBorderDistance is half of its side (default).",
+                        "CIRCLE : the limit is a circle, worldBorderDistance is its radius.")
+                .defineInList("worldBorderShape", "SQUARE", Arrays.asList("SQUARE", "CIRCLE"));
+
         WORLD_BORDER_TELEPORT_ENABLED = BUILDER
                 .comment("If true, players reaching the world border are teleported to the opposite side.")
                 .define("worldBorderTeleportEnabled", false);
@@ -229,11 +267,25 @@ public class RpEssentialsConfig {
                 .comment("Named zones with entry/exit messages.",
                         "Format without dimension: name;centerX;centerZ;radius;messageEnter;messageExit",
                         "Format with dimension:    name;centerX;centerZ;radius;dimension;messageEnter;messageExit",
-                        "Example: spawn;0;0;50;minecraft:overworld;Welcome to spawn!;You left spawn.")
+                        "Example: spawn;0;0;50;minecraft:overworld;Welcome to spawn!;You left spawn.",
+                        "The radius field accepts: 50 (circle), square:50, rect:50x30, ellipse:50x30 (half sizes, X then Z).")
                 .defineList("namedZones", Arrays.asList(), obj -> obj instanceof String);
 
+        ZONE_ACTIONS = BUILDER
+                .comment("Commands run when a player enters or leaves a named zone.",
+                        "Format: zoneName;enter|exit;command",
+                        "Placeholder: {player}",
+                        "Example: spawn;enter;effect give {player} minecraft:regeneration 10 0 true")
+                .defineList("zoneActions", List.of(),
+                        obj -> obj instanceof String && ((String) obj).split(";", 3).length == 3);
+
         ZONE_MESSAGE_MODE = BUILDER
-                .comment("Display mode for zone/border messages: IMMERSIVE, CHAT, ACTION_BAR.")
+                .comment("Display mode for zone and world border messages:",
+                        "  CHAT       : chat message",
+                        "  ACTION_BAR : above the hotbar",
+                        "  TITLE      : big title in the middle of the screen",
+                        "  IMMERSIVE  : animated text with the 'default' preset",
+                        "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
                 .define("zoneMessageMode", "ACTION_BAR");
 
         BUILDER.pop(); // World Border Warning
@@ -272,6 +324,18 @@ public class RpEssentialsConfig {
                 .comment("Pitch of the death sound (0.5 - 2.0).")
                 .defineInRange("deathSoundPitch", 1.0, 0.5, 2.0);
 
+        DEATH_RP_RESET_NICKNAME = BUILDER
+                .comment("Clear the nickname of the player on RP death (new character flow).")
+                .define("resetNickname", false);
+
+        DEATH_RP_RESET_ROLE = BUILDER
+                .comment("Clear the role of the player on RP death.")
+                .define("resetRole", false);
+
+        DEATH_RP_RESET_PROFESSIONS = BUILDER
+                .comment("Revoke every profession license of the player on RP death.")
+                .define("resetProfessions", false);
+
         BUILDER.pop(); // deathEvent
 
         BUILDER.push("playerToggle");
@@ -283,7 +347,12 @@ public class RpEssentialsConfig {
                         "&6[Death RP] &fYour RP death has been &aenabled&f. Your next death will be permanent.");
 
         DEATH_RP_PLAYER_ENABLE_MODE = BUILDER
-                .comment("Display mode for individual enable message: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
+                .comment("Display mode for the individual enable message:",
+                        "  CHAT       : chat message",
+                        "  ACTION_BAR : above the hotbar",
+                        "  TITLE      : big title in the middle of the screen",
+                        "  IMMERSIVE  : animated text with the 'default' preset",
+                        "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
                 .define("enableMessageMode", "CHAT");
 
         DEATH_RP_PLAYER_DISABLE_MSG = BUILDER
@@ -293,7 +362,12 @@ public class RpEssentialsConfig {
                         "&6[Death RP] &fYour RP death has been &cdisabled&f.");
 
         DEATH_RP_PLAYER_DISABLE_MODE = BUILDER
-                .comment("Display mode for individual disable message: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
+                .comment("Display mode for the individual disable message:",
+                        "  CHAT       : chat message",
+                        "  ACTION_BAR : above the hotbar",
+                        "  TITLE      : big title in the middle of the screen",
+                        "  IMMERSIVE  : animated text with the 'default' preset",
+                        "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
                 .define("disableMessageMode", "CHAT");
 
         DEATH_RP_PLAYER_TOGGLE_SOUND = BUILDER
@@ -319,7 +393,12 @@ public class RpEssentialsConfig {
                         "&6[Death RP] &fThe Death RP system has been &aenabled &fby {staff}.");
 
         DEATH_RP_GLOBAL_ENABLE_MODE = BUILDER
-                .comment("Display mode for global enable message: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
+                .comment("Display mode for the global enable message:",
+                        "  CHAT       : chat message",
+                        "  ACTION_BAR : above the hotbar",
+                        "  TITLE      : big title in the middle of the screen",
+                        "  IMMERSIVE  : animated text with the 'default' preset",
+                        "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
                 .define("enableMessageMode", "CHAT");
 
         DEATH_RP_GLOBAL_DISABLE_MSG = BUILDER
@@ -329,7 +408,12 @@ public class RpEssentialsConfig {
                         "&6[Death RP] &fThe Death RP system has been &cdisabled &fby {staff}.");
 
         DEATH_RP_GLOBAL_DISABLE_MODE = BUILDER
-                .comment("Display mode for global disable message: CHAT, ACTION_BAR, TITLE, IMMERSIVE.")
+                .comment("Display mode for the global disable message:",
+                        "  CHAT       : chat message",
+                        "  ACTION_BAR : above the hotbar",
+                        "  TITLE      : big title in the middle of the screen",
+                        "  IMMERSIVE  : animated text with the 'default' preset",
+                        "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
                 .define("disableMessageMode", "CHAT");
 
         DEATH_RP_GLOBAL_TOGGLE_SOUND = BUILDER
@@ -392,6 +476,40 @@ public class RpEssentialsConfig {
                 .define("luckPermsImportAllGroups", false);
 
         BUILDER.pop(); // Roles
+
+        BUILDER.push("Backups");
+
+        BACKUP_ENABLED = BUILDER
+                .comment("Zip the data folder (world/data/rpessentials) into world/data/rpessentials-backups.")
+                .define("enableBackups", true);
+
+        BACKUP_INTERVAL_HOURS = BUILDER
+                .comment("Hours between two automatic backups.")
+                .defineInRange("backupIntervalHours", 24, 1, 720);
+
+        BACKUP_KEEP = BUILDER
+                .comment("Number of backups kept, the oldest are deleted.")
+                .defineInRange("backupKeep", 7, 1, 100);
+
+        BUILDER.pop();
+
+        BUILDER.push("Commands");
+
+        UNPREFIXED_STAFF_COMMANDS = BUILDER
+                .comment("If true, every /rpessentials subcommand can also be typed without the prefix",
+                        "(/warn, /mute, /nick, /license, /staff, /config...). /rpessentials ... keeps working.",
+                        "A name already used by Minecraft or another mod (/help, /list...) is skipped:",
+                        "see the server log or /rpessentials config validate.",
+                        "Takes effect on config reload, no restart needed.")
+                .define("unprefixedStaffCommands", false);
+
+        UNPREFIXED_RP_COMMANDS = BUILDER
+                .comment("If true, every /rp subcommand can also be typed without the prefix",
+                        "(/afk, /spawn, /commerce, /incognito, /action, /selfnick, /annonce). /rp ... keeps working.",
+                        "Same conflict rule as unprefixedStaffCommands.")
+                .define("unprefixedRpCommands", false);
+
+        BUILDER.pop();
 
         SPEC = BUILDER.build();
     }

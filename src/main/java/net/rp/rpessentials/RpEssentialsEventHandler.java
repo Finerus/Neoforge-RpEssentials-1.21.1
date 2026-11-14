@@ -11,21 +11,13 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.rp.rpessentials.api.IRpPlayerList;
 import net.rp.rpessentials.compat.LuckPermsSync;
-import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.config.ModerationConfig;
-import net.rp.rpessentials.config.RpEssentialsConfig;
-import net.rp.rpessentials.config.ScheduleConfig;
+import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.identity.RpEssentialsMessagingManager;
 import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.network.HideNametagsPacket;
 import net.rp.rpessentials.network.SetPlayerProfilePacket;
-import net.rp.rpessentials.profession.LicenseHelper;
-import net.rp.rpessentials.profession.LicenseManager;
-import net.rp.rpessentials.profession.PendingProfileManager;
-import net.rp.rpessentials.profession.ProfessionRestrictionManager;
-import net.rp.rpessentials.profession.ProfessionSyncHelper;
-import net.rp.rpessentials.profession.TempLicenseExpirationManager;
+import net.rp.rpessentials.profession.*;
 
 @EventBusSubscriber(modid = RpEssentials.MODID)
 public class RpEssentialsEventHandler {
@@ -38,16 +30,16 @@ public class RpEssentialsEventHandler {
         MinecraftServer server = player.getServer();
         if (server == null) return;
         player.setCustomName(null);
+        NameCache.put(player.getUUID(), player.getGameProfile().getName());
 
         Component canJoin = RpEssentialsScheduleManager.canPlayerJoin(player);
         if (canJoin != null) {
             refusedJoins.add(player.getUUID());
             try {
                 if (ScheduleConfig.NOTIFY_REFUSED_JOIN.get()) {
-                    Component notice = Component.literal("§6[Schedule] §e" + player.getName().getString()
-                            + " §7tried to join while the server is closed.");
                     for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                        if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(notice);
+                        if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(Component.literal(ServerLang.get(p,
+                                MessagesConfig.LOGIN_REFUSED_NOTICE, "player", player.getName().getString())));
                     }
                 }
             } catch (IllegalStateException ignored) {}
@@ -61,8 +53,8 @@ public class RpEssentialsEventHandler {
         ProfessionSyncHelper.syncToPlayer(player);
 
         if (VanishManager.isVanished(player.getUUID()) && VanishManager.reminderEnabled()) {
-            player.sendSystemMessage(Component.literal("§7[Vanish] You are still vanished (level "
-                    + VanishManager.getLevel(player.getUUID()) + ")."));
+            player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.LOGIN_VANISH_REMINDER,
+                    "level", String.valueOf(VanishManager.getLevel(player.getUUID())))));
         }
 
         PendingActionManager.applyOnLogin(server, player);
@@ -122,8 +114,7 @@ public class RpEssentialsEventHandler {
             if (logSummary.length() > 0) {
                 RpEssentials.LOGGER.info("[RPEssentials] Applied prepared profile for {}: {}",
                         player.getName().getString(), logSummary);
-                player.sendSystemMessage(Component.literal(
-                        "§a[RPEssentials] Your profile was prepared in advance by staff."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.PROFILE_PREPARED)));
             }
         }
 
@@ -132,13 +123,11 @@ public class RpEssentialsEventHandler {
         if (RpEssentialsPermissions.isStaff(player)) {
             try {
                 if ("FORCE_CLOSED".equals(ScheduleConfig.FORCE_STATE.get())) {
-                    player.sendSystemMessage(Component.literal(
-                            "§c§l[Schedule] ⚠ The server is currently FORCIBLY CLOSED. "
-                                    + "Use §f/calendar opennow §c§lto reopen it. Or §f/calendar resetforcestate §c§lto reset the state of the schedule."));
+                    player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.LOGIN_FORCE_CLOSED)));
                 }
             } catch (IllegalStateException ignored) {}
-            for (String w : RpEssentialsScheduleManager.getConfigWarnings()) {
-                player.sendSystemMessage(Component.literal("§c[Schedule] " + w));
+            for (String w : RpEssentialsScheduleManager.getConfigWarnings(player)) {
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.SCHED_SYS_CONFIG_WARNING, "warning", w)));
             }
         }
 
@@ -147,9 +136,9 @@ public class RpEssentialsEventHandler {
                 MuteManager.MuteEntry entry = MuteManager.getEntry(player.getUUID());
                 if (entry != null) {
                     player.sendSystemMessage(ColorHelper.parseColors(
-                            MessagesConfig.get(MessagesConfig.MUTE_NOTIFY_ON_JOIN,
+                            ServerLang.get(player, MessagesConfig.MUTE_NOTIFY_ON_JOIN,
                                     "reason", entry.reason,
-                                    "expiry", entry.isPermanent() ? "Permanent" : entry.getFormattedExpiry())));
+                                    "expiry", entry.getFormattedExpiry(player))));
                 }
             }
         } catch (IllegalStateException ignored) {}
@@ -157,11 +146,7 @@ public class RpEssentialsEventHandler {
         java.util.concurrent.CompletableFuture.runAsync(
                 () -> server.execute(() -> {
                     SyncNametagDataPacket.broadcastForPlayer(player);
-                    for (ServerPlayer online : server.getPlayerList().getPlayers()) {
-                        if (online.getUUID().equals(player.getUUID())) continue;
-                        if (VanishManager.canHide(VanishManager.Aspect.NAMETAG, player, online.getUUID())) continue;
-                        PacketDistributor.sendToPlayer(player, SyncNametagDataPacket.from(online));
-                    }
+                    SyncNametagDataPacket.sendAllTo(player);
                 }),
                 java.util.concurrent.CompletableFuture.delayedExecutor(
                         500, java.util.concurrent.TimeUnit.MILLISECONDS));
@@ -178,10 +163,17 @@ public class RpEssentialsEventHandler {
             }
         } catch (IllegalStateException ignored) {}
 
+        try {
+            if (ChatConfig.ENABLE_PM_SPY.get()) {
+                String notice = ServerLang.get(player, MessagesConfig.MP_SPY_NOTICE);
+                if (!notice.isBlank()) player.sendSystemMessage(ColorHelper.parseColors(notice));
+            }
+        } catch (IllegalStateException ignored) {}
+
         TempLicenseExpirationManager.checkOnLogin(player, server);
         TempLicenseExpirationManager.markRevokedLicenseItems(player);
 
-        try { if (ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get()) WarnManager.purgeExpiredWarns(); }
+        try { if (ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get()) WarnManager.purgeExpiredWarns(player.getUUID()); }
         catch (IllegalStateException ignored) {}
 
         try {
@@ -218,17 +210,23 @@ public class RpEssentialsEventHandler {
     @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        java.util.UUID id = player.getUUID();
 
-        RpEssentialsRoleManager.invalidate(player.getUUID());
-        RpEssentialsPermissions.invalidateCache(player.getUUID());
-        RpEssentialsMessagingManager.clearCache(player.getUUID());
-        RpCooldownManager.clearAll(player.getUUID());
-        ProximityChatSpyManager.onLogout(player.getUUID());
+        RpEssentialsRoleManager.invalidate(id);
+        RpEssentialsPermissions.invalidateCache(id);
+        RpEssentialsMessagingManager.clearCache(id);
+        RpCooldownManager.clearExpired(id);
+        ProximityChatSpyManager.onLogout(id);
+        ProfessionRestrictionManager.invalidatePlayerCache(id);
+        ProfessionRestrictionEventHandler.onLogout(id);
+        WorldBorderManager.clearCache(id);
+        TabBlur.onLogout(id);
+        RpEssentials.invalidateMeta(id);
 
-        if (refusedJoins.remove(player.getUUID())) return;
+        if (refusedJoins.remove(id)) return;
 
-        if (!flushedAtStop.remove(player.getUUID())) {
-            PlaytimeManager.onLogout(player.getUUID());
+        if (!flushedAtStop.remove(id)) {
+            PlaytimeManager.onLogout(id);
             LastConnectionManager.recordLogout(player);
         }
         MinecraftServer server = player.getServer();
@@ -260,14 +258,13 @@ public class RpEssentialsEventHandler {
         AbsenceManager.reload();
         PendingActionManager.reload();
         VanishManager.reload();
+        net.rp.rpessentials.moderation.HistoryManager.reload();
 
         try {
             String dimId = net.rp.rpessentials.config.RpConfig.AFK_DIMENSION.get();
-            net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dimKey =
-                    net.minecraft.resources.ResourceKey.create(
-                            net.minecraft.core.registries.Registries.DIMENSION,
-                            net.minecraft.resources.ResourceLocation.parse(dimId));
-            if (event.getServer().getLevel(dimKey) == null)
+            net.minecraft.resources.ResourceLocation dimRl = net.minecraft.resources.ResourceLocation.tryParse(dimId);
+            if (dimRl == null || event.getServer().getLevel(net.minecraft.resources.ResourceKey.create(
+                    net.minecraft.core.registries.Registries.DIMENSION, dimRl)) == null)
                 RpEssentials.LOGGER.warn("[RpEssentials] AFK dimension '{}' does not exist.", dimId);
         } catch (IllegalStateException ignored) {}
 
@@ -280,12 +277,19 @@ public class RpEssentialsEventHandler {
                 dataFolder);
         AfkPlatformInitializer.tryPlace(event.getServer());
         LuckPermsSync.start(event.getServer());
+
+        for (String problem : net.rp.rpessentials.config.ConfigValidator.validate()) {
+            RpEssentials.LOGGER.warn("[Config] {}", problem);
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onPlayerDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (!DeathRPManager.isDeathRPEnabled(player.getUUID())) return;
+        net.rp.rpessentials.api.event.DeathRpEvent ev = new net.rp.rpessentials.api.event.DeathRpEvent(player, event.getSource());
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(ev);
+        if (ev.isCanceled()) return;
         DeathRPManager.onPlayerDeathRP(player, event.getSource());
     }
 

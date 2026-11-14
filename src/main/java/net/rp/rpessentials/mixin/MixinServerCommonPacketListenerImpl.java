@@ -8,6 +8,7 @@ import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsRoleManager;
+import net.rp.rpessentials.TabBlur;
 import net.rp.rpessentials.TabListCache;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.identity.NicknameManager;
@@ -47,104 +48,56 @@ public abstract class MixinServerCommonPacketListenerImpl {
 
     @Unique
     private Packet rpessentials$blur(ServerPlayer receiver, ClientboundPlayerInfoUpdatePacket infoPacket) {
-        try {
-            if (!RpEssentialsConfig.ENABLE_BLUR.get()) return infoPacket;
-        } catch (IllegalStateException e) {
-            return infoPacket;
-        }
+        TabBlur.Settings s = TabBlur.settings();
+        if (s == null || !s.enabled()) return infoPacket;
 
         EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions = infoPacket.actions();
         if (!actions.contains(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME)
                 && !actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER)) return infoPacket;
 
-        boolean opsSeeAll = false;
-        boolean debugMode = false;
-        boolean blurSpectators = false;
-        boolean sneakStealth = false;
-        boolean obfPrefix = true;
-        double maxDistSq = 0;
-        double sneakDistSq = 0;
-        int obfLen = 5;
-        List<? extends String> whitelist = List.of();
-        try {
-            opsSeeAll = RpEssentialsConfig.OPS_SEE_ALL.get();
-            debugMode = RpEssentialsConfig.DEBUG_SELF_BLUR.get();
-            blurSpectators = RpEssentialsConfig.BLUR_SPECTATORS.get();
-            sneakStealth = RpEssentialsConfig.ENABLE_SNEAK_STEALTH.get();
-            maxDistSq = Math.pow(RpEssentialsConfig.PROXIMITY_DISTANCE.get(), 2);
-            sneakDistSq = Math.pow(RpEssentialsConfig.SNEAK_PROXIMITY_DISTANCE.get(), 2);
-            obfLen = RpEssentialsConfig.OBFUSCATED_NAME_LENGTH.get();
-            whitelist = RpEssentialsConfig.WHITELIST.get();
-            obfPrefix = RpEssentialsConfig.OBFUSCATE_PREFIX.get();
-        } catch (IllegalStateException ignored) {}
-
-        boolean isVanillaOp = receiver.hasPermissions(2);
-        boolean seesAll = !debugMode
-                && (RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_ALL)
-                || whitelist.contains(receiver.getGameProfile().getName())
-                || (opsSeeAll && isVanillaOp));
+        boolean seesAll = TabBlur.seesAll(receiver, s);
         boolean showRealNames = RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_NICKNAMES);
 
         List<ClientboundPlayerInfoUpdatePacket.Entry> originalEntries =
                 ((ClientboundPlayerInfoUpdatePacketAccessor) infoPacket).getEntries();
-        List<ClientboundPlayerInfoUpdatePacket.Entry> newEntries = new ArrayList<>();
+        List<ClientboundPlayerInfoUpdatePacket.Entry> newEntries = new ArrayList<>(originalEntries.size());
+        boolean changed = false;
 
         for (ClientboundPlayerInfoUpdatePacket.Entry entry : originalEntries) {
             if (VanishManager.isHiddenFrom(receiver, entry.profileId())) {
                 newEntries.add(entry);
                 continue;
             }
-
             ServerPlayer target = receiver.server.getPlayerList().getPlayer(entry.profileId());
+            if (target == null) {
+                newEntries.add(entry);
+                continue;
+            }
+
+            String realName = target.getGameProfile().getName();
+            String nickname = NicknameManager.getNickname(target.getUUID());
+            String displayed = nickname != null ? nickname : realName;
+            String coloredPrefix = net.rp.rpessentials.ColorHelper
+                    .translateAlternateColorCodes(RpEssentials.getPlayerPrefix(target));
             Component displayName;
 
-            if (target == null) {
-                displayName = entry.displayName();
-            } else {
-                String realName = target.getGameProfile().getName();
-                String prefix = RpEssentials.getPlayerPrefix(target);
-                String nickname = NicknameManager.getNickname(target.getUUID());
-                String displayed = nickname != null ? nickname : realName;
+            if (TabBlur.isClear(receiver, seesAll, target, s)) {
                 String shown = (nickname != null && showRealNames)
                         ? nickname + " §7§o(" + realName + ")"
                         : displayed;
-
-                boolean blacklisted = TabListCache.isBlacklisted(realName);
-                boolean alwaysVisible = TabListCache.isAlwaysVisible(realName)
-                        || RpEssentialsRoleManager.has(target, RpEssentialsRoleManager.Permission.TAB_WHITELIST);
-
-                boolean clear;
-                if (blacklisted) {
-                    clear = false;
-                } else if (alwaysVisible || seesAll) {
-                    clear = true;
-                } else {
-                    double effectiveMaxDistSq = (sneakStealth && target.isCrouching()) ? sneakDistSq : maxDistSq;
-                    boolean blur = debugMode
-                            || receiver.level() != target.level()
-                            || receiver.distanceToSqr(target) > effectiveMaxDistSq
-                            || (target.isSpectator() && blurSpectators);
-                    clear = !blur;
-                }
-
-                String coloredPrefix = net.rp.rpessentials.ColorHelper.translateAlternateColorCodes(prefix);
-                if (clear) {
-                    displayName = Component.literal(coloredPrefix + shown);
-                } else {
-                    String cleanName = displayed.replaceAll("§.", "");
-                    int len = Math.min(cleanName.length(), obfLen);
-                    String hidden = "§k" + "?".repeat(len);
-                    displayName = Component.literal(obfPrefix ? hidden : coloredPrefix + "§r" + hidden);
-                }
+                displayName = net.rp.rpessentials.ColorHelper.parseColors(coloredPrefix + shown);
+            } else {
+                displayName = TabBlur.hidden(displayed, coloredPrefix, s);
             }
 
             newEntries.add(new ClientboundPlayerInfoUpdatePacket.Entry(
                     entry.profileId(), entry.profile(), entry.listed(),
                     entry.latency(), entry.gameMode(), displayName, entry.chatSession()));
+            changed = true;
         }
 
-        ClientboundPlayerInfoUpdatePacket newPacket =
-                new ClientboundPlayerInfoUpdatePacket(actions, List.of());
+        if (!changed) return infoPacket;
+        ClientboundPlayerInfoUpdatePacket newPacket = new ClientboundPlayerInfoUpdatePacket(actions, List.of());
         ((ClientboundPlayerInfoUpdatePacketAccessor) newPacket).setEntries(newEntries);
         return newPacket;
     }

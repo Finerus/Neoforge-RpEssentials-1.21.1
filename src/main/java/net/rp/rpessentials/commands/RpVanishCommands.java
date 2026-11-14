@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.Msg;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -47,7 +50,7 @@ public class RpVanishCommands {
     private static int run(CommandContext<CommandSourceStack> ctx, ServerPlayer target, int requested) {
         CommandSourceStack src = ctx.getSource();
         if (!VanishManager.enabled()) {
-            src.sendFailure(Component.literal("§c[Vanish] Vanish is disabled in the config."));
+            src.sendFailure(Msg.c(src, MessagesConfig.STAFF_VANISH_OFF));
             return 0;
         }
         int own = src.getEntity() instanceof ServerPlayer p ? VanishManager.levelOf(p) : 4;
@@ -56,37 +59,38 @@ public class RpVanishCommands {
         boolean on = VanishManager.isVanished(id);
 
         if (on && VanishManager.getLevel(id) > own) {
-            src.sendFailure(Component.literal("§c[Vanish] " + name + " is hidden above your OP level."));
+            src.sendFailure(Msg.c(src, MessagesConfig.STAFF_VANISH_ABOVE, "player", name));
             return 0;
         }
         if (on && requested < 0) {
             VanishManager.clear(src.getServer(), target);
-            feedback(src, target, "§a[Vanish] §f" + name + " §7is now visible.");
+            feedback(src, target, MessagesConfig.STAFF_VANISH_VISIBLE, "player", name);
             return 1;
         }
         int level = Math.min(requested >= 0 ? requested : VanishManager.defaultLevel(), own);
         VanishManager.set(src.getServer(), target, level);
-        feedback(src, target, "§a[Vanish] §f" + name + " §7is now vanished, hidden from OP level §e"
-                + level + " §7and below.");
+        feedback(src, target, MessagesConfig.STAFF_VANISH_VANISHED, "player", name, "level", String.valueOf(level));
         return 1;
     }
 
-    private static void feedback(CommandSourceStack src, ServerPlayer target, String msg) {
-        src.sendSuccess(() -> Component.literal(msg), false);
-        if (src.getEntity() != target) target.sendSystemMessage(Component.literal(msg));
+    private static void feedback(CommandSourceStack src, ServerPlayer target,
+                                 ModConfigSpec.ConfigValue<String> msg, String... args) {
+        src.sendSuccess(() -> Msg.c(src, msg, args), false);
+        if (src.getEntity() != target) target.sendSystemMessage(Msg.c(target, msg, args));
     }
 
     private static int list(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        StringBuilder sb = new StringBuilder("§6Vanished players\n" + RpChatUi.LINE + "\n");
+        StringBuilder sb = new StringBuilder(Msg.get(src, MessagesConfig.STAFF_VANISH_LIST_HEADER) + "\n" + RpChatUi.LINE + "\n");
         int count = 0;
         for (Map.Entry<UUID, Integer> e : VanishManager.getAll().entrySet()) {
             if (src.getEntity() instanceof ServerPlayer v && VanishManager.isHiddenFrom(v, e.getKey())) continue;
-            sb.append("§f").append(LastConnectionManager.resolveName(src.getServer(), e.getKey()))
-                    .append(" §8| §7level §e").append(e.getValue()).append("\n");
+            sb.append(Msg.get(src, MessagesConfig.STAFF_VANISH_LIST_ENTRY,
+                    "player", LastConnectionManager.resolveName(src.getServer(), e.getKey()),
+                    "level", String.valueOf(e.getValue()))).append("\n");
             count++;
         }
-        if (count == 0) sb.append("§8None\n");
+        if (count == 0) sb.append(Msg.get(src, MessagesConfig.STAFF_VANISH_LIST_NONE)).append("\n");
         sb.append(RpChatUi.LINE);
         RpChatUi.sendFormatted(ctx, sb.toString());
         return 1;

@@ -1,5 +1,7 @@
 package net.rp.rpessentials.moderation;
 
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.rp.rpessentials.config.MessagesConfig;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -26,14 +28,14 @@ import java.util.UUID;
 public final class ManageService {
 
     public enum Action {
-        WHITELIST_ADD, WHITELIST_REMOVE, KICK, BAN, PARDON, OP, DEOP,
+        WHITELIST_ADD, WHITELIST_REMOVE, KICK, BAN, TEMPBAN, PARDON, OP, DEOP,
         CLEAR_INVENTORY, CLEAR_ENDER, ABSENCE_ADD, ABSENCE_REMOVE,
         CLEAR_NICKNAME, CLEAR_ROLE, CLEAR_PROFESSION, RESET_ALL,
         TP_TO_PLAYER, TP_PLAYER_HERE, TP_PLAYER_PLATFORM, TP_PLAYER_AFK,
         VANISH, UNVANISH;
 
         public boolean sensitive() {
-            return this == BAN || this == PARDON || this == OP || this == DEOP
+            return this == BAN || this == TEMPBAN || this == PARDON || this == OP || this == DEOP
                     || this == CLEAR_ROLE || this == RESET_ALL;
         }
 
@@ -48,7 +50,7 @@ public final class ManageService {
         }
 
         public boolean selfBlocked() {
-            return this == KICK || this == BAN || this == DEOP || this == RESET_ALL
+            return this == KICK || this == BAN || this == TEMPBAN || this == DEOP || this == RESET_ALL
                     || this == TP_TO_PLAYER || this == TP_PLAYER_HERE;
         }
     }
@@ -64,8 +66,42 @@ public final class ManageService {
 
     private ManageService() {}
 
-    private static Result ok(String msg) { return new Result(true, "§a[Manage] " + msg); }
-    private static Result fail(String msg) { return new Result(false, "§c[Manage] " + msg); }
+    private static Result ok(ServerPlayer v, ModConfigSpec.ConfigValue<String> cv, String... a) {
+        return new Result(true, ServerLang.get(v, cv, a));
+    }
+
+    private static Result fail(ServerPlayer v, ModConfigSpec.ConfigValue<String> cv, String... a) {
+        return new Result(false, ServerLang.get(v, cv, a));
+    }
+
+    /**
+     * Parses a duration such as "3d", "12h", "30m", "2w" or "1d12h" into minutes.
+     * A plain number is read as days. Returns -1 when the text is not a duration.
+     */
+    public static int parseDurationMinutes(String s) {
+        if (s == null || s.isBlank()) return -1;
+        s = s.trim().toLowerCase();
+        if (s.matches("\\d+")) {
+            long d = Long.parseLong(s) * 1440L;
+            return d > 0 && d <= Integer.MAX_VALUE ? (int) d : -1;
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)([wdhm])").matcher(s);
+        long total = 0;
+        int end = 0;
+        while (m.find()) {
+            if (m.start() != end) return -1;
+            long n = Long.parseLong(m.group(1));
+            total += switch (m.group(2)) {
+                case "w" -> n * 10080L;
+                case "d" -> n * 1440L;
+                case "h" -> n * 60L;
+                default -> n;
+            };
+            end = m.end();
+        }
+        if (end != s.length() || total <= 0 || total > Integer.MAX_VALUE) return -1;
+        return (int) total;
+    }
 
     public static GameProfile resolveProfile(MinecraftServer server, UUID uuid) {
         ServerPlayer online = server.getPlayerList().getPlayer(uuid);
@@ -90,9 +126,9 @@ public final class ManageService {
 
     public static Result execute(MinecraftServer server, ServerPlayer admin, UUID uuid,
                                  Action action, String text, int number) {
-        String adminName = admin != null ? admin.getName().getString() : "Console";
+        String adminName = admin != null ? admin.getName().getString() : ServerLang.get(null, MessagesConfig.UI_CONSOLE);
         if (action.sensitive() && admin != null && !RpEssentialsPermissions.hasSensitiveLevel(admin)) {
-            return fail("This action requires the OP level set in opLevelBypass.");
+            return fail(admin, MessagesConfig.MANAGE_NEED_SENSITIVE);
         }
 
         PlayerList pl = server.getPlayerList();
@@ -104,11 +140,12 @@ public final class ManageService {
         boolean self = admin != null && admin.getUUID().equals(uuid);
         int adminLevel = admin != null ? server.getProfilePermissions(admin.getGameProfile()) : 4;
         final String finalReason = reason;
+        int vanishBefore = VanishManager.isVanished(uuid) ? VanishManager.getLevel(uuid) : 0;
 
         Result result = switch (action) {
             case WHITELIST_ADD -> {
                 pl.getWhiteList().add(new UserWhiteListEntry(profile));
-                yield ok(name + " added to the whitelist.");
+                yield ok(admin, MessagesConfig.MANAGE_WL_ADDED, "player", name);
             }
             case WHITELIST_REMOVE -> {
                 pl.getWhiteList().remove(new UserWhiteListEntry(profile));
@@ -116,64 +153,78 @@ public final class ManageService {
                     online.connection.disconnect(Component.translatable("multiplayer.disconnect.not_whitelisted"));
                 }
                 suggest(server, uuid, name, ManageSuggestions.Kind.UNWHITELISTED);
-                yield ok(name + " removed from the whitelist.");
+                yield ok(admin, MessagesConfig.MANAGE_WL_REMOVED, "player", name);
             }
             case KICK -> {
-                if (self) yield fail("You cannot kick yourself.");
-                if (online == null) yield fail(name + " is not online.");
+                if (self) yield fail(admin, MessagesConfig.MANAGE_KICK_SELF);
+                if (online == null) yield fail(admin, MessagesConfig.MANAGE_NOT_ONLINE, "player", name);
                 online.connection.disconnect(finalReason.isEmpty()
                         ? Component.translatable("multiplayer.disconnect.kicked")
                         : Component.literal(finalReason));
-                yield ok(name + " kicked.");
+                yield ok(admin, MessagesConfig.MANAGE_KICKED, "player", name);
             }
             case BAN -> {
-                if (self) yield fail("You cannot ban yourself.");
-                if (pl.getBans().isBanned(profile)) yield fail(name + " is already banned.");
+                if (self) yield fail(admin, MessagesConfig.MANAGE_BAN_SELF);
+                if (pl.getBans().isBanned(profile)) yield fail(admin, MessagesConfig.MANAGE_ALREADY_BANNED, "player", name);
                 pl.getBans().add(new UserBanListEntry(profile, null, adminName, null,
                         finalReason.isEmpty() ? null : finalReason));
                 if (online != null) online.connection.disconnect(Component.translatable("multiplayer.disconnect.banned"));
                 suggest(server, uuid, name, ManageSuggestions.Kind.BANNED);
-                yield ok(name + " banned.");
+                yield ok(admin, MessagesConfig.MANAGE_BANNED, "player", name);
+            }
+            case TEMPBAN -> {
+                // number = duration in minutes. Vanilla removes the entry by itself when it expires
+                // and shows the end date to the player on the login screen.
+                if (self) yield fail(admin, MessagesConfig.MANAGE_BAN_SELF);
+                if (number <= 0) yield fail(admin, MessagesConfig.MANAGE_DURATION_EXPECTED);
+                if (pl.getBans().isBanned(profile)) yield fail(admin, MessagesConfig.MANAGE_ALREADY_BANNED, "player", name);
+                java.util.Date until = new java.util.Date(System.currentTimeMillis() + number * 60_000L);
+                pl.getBans().add(new UserBanListEntry(profile, null, adminName, until,
+                        finalReason.isEmpty() ? null : finalReason));
+                if (online != null) online.connection.disconnect(Component.translatable("multiplayer.disconnect.banned"));
+                suggest(server, uuid, name, ManageSuggestions.Kind.BANNED);
+                yield ok(admin, MessagesConfig.MANAGE_TEMPBANNED, "player", name,
+                        "date", net.rp.rpessentials.TimeHelper.format("dd/MM/yyyy HH:mm", until.getTime()));
             }
             case PARDON -> {
-                if (!pl.getBans().isBanned(profile)) yield fail(name + " is not banned.");
+                if (!pl.getBans().isBanned(profile)) yield fail(admin, MessagesConfig.MANAGE_NOT_BANNED, "player", name);
                 pl.getBans().remove(profile);
-                yield ok(name + " pardoned.");
+                yield ok(admin, MessagesConfig.MANAGE_PARDONED, "player", name);
             }
             case OP -> {
                 int level = Math.max(1, Math.min(4, number));
-                if (level > adminLevel) yield fail("You cannot grant a level higher than your own.");
-                if (self && level < adminLevel) yield fail("You cannot lower your own OP level.");
+                if (level > adminLevel) yield fail(admin, MessagesConfig.MANAGE_OP_TOO_HIGH);
+                if (self && level < adminLevel) yield fail(admin, MessagesConfig.MANAGE_OP_LOWER_SELF);
                 setOp(server, profile, level);
-                yield ok(name + " is now OP level " + level + ".");
+                yield ok(admin, MessagesConfig.MANAGE_OP_SET, "player", name, "level", String.valueOf(level));
             }
             case DEOP -> {
-                if (self) yield fail("You cannot deop yourself.");
-                if (!pl.isOp(profile)) yield fail(name + " is not an operator.");
-                if (server.getProfilePermissions(profile) > adminLevel) yield fail("You cannot deop a higher level operator.");
+                if (self) yield fail(admin, MessagesConfig.MANAGE_DEOP_SELF);
+                if (!pl.isOp(profile)) yield fail(admin, MessagesConfig.MANAGE_NOT_OP, "player", name);
+                if (server.getProfilePermissions(profile) > adminLevel) yield fail(admin, MessagesConfig.MANAGE_DEOP_HIGHER);
                 pl.deop(profile);
                 suggest(server, uuid, name, ManageSuggestions.Kind.DEOPPED);
-                yield ok(name + " is no longer an operator.");
+                yield ok(admin, MessagesConfig.MANAGE_DEOPPED, "player", name);
             }
             case CLEAR_INVENTORY -> {
-                if (online == null) yield queue(uuid, name, action, adminName);
+                if (online == null) yield queue(admin, uuid, name, action, adminName);
                 online.getInventory().clearContent();
                 online.containerMenu.broadcastChanges();
-                yield ok("Inventory of " + name + " cleared.");
+                yield ok(admin, MessagesConfig.MANAGE_INV_CLEARED, "player", name);
             }
             case CLEAR_ENDER -> {
-                if (online == null) yield queue(uuid, name, action, adminName);
+                if (online == null) yield queue(admin, uuid, name, action, adminName);
                 online.getEnderChestInventory().clearContent();
-                yield ok("Ender chest of " + name + " cleared.");
+                yield ok(admin, MessagesConfig.MANAGE_ENDER_CLEARED, "player", name);
             }
             case ABSENCE_ADD -> {
                 int days = Math.max(1, Math.min(365, number));
                 AbsenceManager.add(uuid, name, days, finalReason, adminName);
-                yield ok("Absence set for " + name + " (" + days + " days).");
+                yield ok(admin, MessagesConfig.MANAGE_ABSENCE_SET, "player", name, "days", String.valueOf(days));
             }
             case ABSENCE_REMOVE -> AbsenceManager.remove(uuid)
-                    ? ok("Absence of " + name + " removed.")
-                    : fail(name + " has no absence.");
+                    ? ok(admin, MessagesConfig.MANAGE_ABSENCE_REMOVED, "player", name)
+                    : fail(admin, MessagesConfig.MANAGE_NO_ABSENCE, "player", name);
             case CLEAR_NICKNAME -> {
                 boolean had = NicknameManager.hasNickname(uuid);
                 if (had) NicknameManager.removeNickname(uuid);
@@ -181,26 +232,30 @@ public final class ManageService {
                     PendingProfileManager.setNickname(uuid, "");
                     had = true;
                 }
-                yield had ? ok("Nickname of " + name + " cleared.") : fail(name + " has no nickname.");
+                yield had ? ok(admin, MessagesConfig.MANAGE_NICK_CLEARED, "player", name)
+                        : fail(admin, MessagesConfig.MANAGE_NO_NICK, "player", name);
             }
             case CLEAR_ROLE -> {
                 if (online == null) {
                     if (PendingProfileManager.hasPending(uuid)) {
                         PendingProfileManager.setRole(uuid, "");
-                        yield ok("Prepared role of " + name + " cleared.");
+                        yield ok(admin, MessagesConfig.MANAGE_PREP_ROLE_CLEARED, "player", name);
                     }
-                    yield queue(uuid, name, action, adminName);
+                    yield queue(admin, uuid, name, action, adminName);
                 }
-                yield clearRole(server, online) ? ok("Role of " + name + " cleared.") : fail("Roles config unavailable.");
+                yield clearRole(server, online)
+                        ? ok(admin, MessagesConfig.MANAGE_ROLE_CLEARED, "player", name)
+                        : fail(admin, MessagesConfig.MANAGE_ROLES_UNAVAILABLE);
             }
             case CLEAR_PROFESSION -> {
                 int n = clearProfessions(server, uuid, online, name, adminName);
-                yield n > 0 ? ok(n + " profession(s) cleared for " + name + ".") : fail(name + " has no profession.");
+                yield n > 0 ? ok(admin, MessagesConfig.MANAGE_PROF_CLEARED, "count", String.valueOf(n), "player", name)
+                        : fail(admin, MessagesConfig.MANAGE_NO_PROF, "player", name);
             }
             case RESET_ALL -> {
-                if (self) yield fail("You cannot reset yourself.");
+                if (self) yield fail(admin, MessagesConfig.MANAGE_RESET_SELF);
                 if (pl.isOp(profile) && server.getProfilePermissions(profile) > adminLevel) {
-                    yield fail("You cannot reset a higher level operator.");
+                    yield fail(admin, MessagesConfig.MANAGE_RESET_HIGHER);
                 }
                 int done = 0;
                 bulk = true;
@@ -211,71 +266,77 @@ public final class ManageService {
                 } finally {
                     bulk = false;
                 }
-                yield ok("Full reset of " + name + ": " + done + " step(s) applied or queued.");
+                yield ok(admin, MessagesConfig.MANAGE_RESET_DONE, "player", name, "count", String.valueOf(done));
             }
             case TP_TO_PLAYER -> {
-                if (admin == null) yield fail("Only a player can teleport.");
-                if (self) yield fail("You cannot teleport to yourself.");
-                if (online == null) yield fail(name + " is not online.");
+                if (admin == null) yield fail(null, MessagesConfig.MANAGE_TP_ONLY_PLAYER);
+                if (self) yield fail(admin, MessagesConfig.MANAGE_TP_SELF);
+                if (online == null) yield fail(admin, MessagesConfig.MANAGE_NOT_ONLINE, "player", name);
                 admin.teleportTo(online.serverLevel(), online.getX(), online.getY(), online.getZ(),
                         online.getYRot(), online.getXRot());
-                yield ok("Teleported to " + name + ".");
+                yield ok(admin, MessagesConfig.MANAGE_TP_DONE, "player", name);
             }
             case TP_PLAYER_HERE -> {
-                if (admin == null) yield fail("Only a player can use this action.");
-                if (self) yield fail("You cannot teleport yourself to yourself.");
-                if (online == null) yield fail(name + " is not online.");
+                if (admin == null) yield fail(null, MessagesConfig.MANAGE_BRING_ONLY_PLAYER);
+                if (self) yield fail(admin, MessagesConfig.MANAGE_BRING_SELF);
+                if (online == null) yield fail(admin, MessagesConfig.MANAGE_NOT_ONLINE, "player", name);
                 online.teleportTo(admin.serverLevel(), admin.getX(), admin.getY(), admin.getZ(),
                         admin.getYRot(), admin.getXRot());
-                yield ok(name + " teleported to you.");
+                yield ok(admin, MessagesConfig.MANAGE_BRING_DONE, "player", name);
             }
             case TP_PLAYER_PLATFORM -> {
-                if (online == null) yield fail(name + " is not online.");
+                if (online == null) yield fail(admin, MessagesConfig.MANAGE_NOT_ONLINE, "player", name);
                 Spot spot = platformSpot(server, finalReason);
-                if (spot == null) yield fail("Unknown platform: " + finalReason);
+                if (spot == null) yield fail(admin, MessagesConfig.MANAGE_PLATFORM_UNKNOWN, "platform", finalReason);
                 online.teleportTo(spot.level(), spot.x(), spot.y(), spot.z(), spot.yaw(), spot.pitch());
-                yield ok(name + " sent to " + spot.name() + ".");
+                yield ok(admin, MessagesConfig.MANAGE_PLATFORM_SENT, "player", name, "platform", spot.name());
             }
             case TP_PLAYER_AFK -> {
-                if (online == null) yield fail(name + " is not online.");
+                if (online == null) yield fail(admin, MessagesConfig.MANAGE_NOT_ONLINE, "player", name);
                 Spot spot = afkSpot(server);
-                if (spot == null) yield fail("AFK dimension not found.");
+                if (spot == null) yield fail(admin, MessagesConfig.MANAGE_AFK_MISSING);
                 online.teleportTo(spot.level(), spot.x(), spot.y(), spot.z(), spot.yaw(), spot.pitch());
-                yield ok(name + " sent to the AFK zone.");
+                yield ok(admin, MessagesConfig.MANAGE_AFK_SENT, "player", name);
             }
             case VANISH -> {
-                if (!VanishManager.enabled()) yield fail("Vanish is disabled in the config.");
-                if (online == null) yield fail(name + " is not online.");
+                if (!VanishManager.enabled()) yield fail(admin, MessagesConfig.MANAGE_VANISH_OFF);
+                if (online == null) yield fail(admin, MessagesConfig.MANAGE_NOT_ONLINE, "player", name);
                 int own = admin != null ? VanishManager.levelOf(admin) : 4;
                 int level = Math.max(0, Math.min(4, number));
-                if (level > own) yield fail("You cannot vanish above your own OP level.");
+                if (level > own) yield fail(admin, MessagesConfig.MANAGE_VANISH_ABOVE_OWN);
                 if (VanishManager.isVanished(uuid) && VanishManager.getLevel(uuid) > own) {
-                    yield fail(name + " is hidden above your OP level.");
+                    yield fail(admin, MessagesConfig.MANAGE_HIDDEN_ABOVE, "player", name);
                 }
                 VanishManager.set(server, online, level);
-                yield ok(name + " is now vanished (level " + level + ").");
+                yield ok(admin, MessagesConfig.MANAGE_VANISHED, "player", name, "level", String.valueOf(level));
             }
             case UNVANISH -> {
-                if (online == null) yield fail(name + " is not online.");
-                if (!VanishManager.isVanished(uuid)) yield fail(name + " is not vanished.");
+                if (online == null) yield fail(admin, MessagesConfig.MANAGE_NOT_ONLINE, "player", name);
+                if (!VanishManager.isVanished(uuid)) yield fail(admin, MessagesConfig.MANAGE_NOT_VANISHED, "player", name);
                 int own = admin != null ? VanishManager.levelOf(admin) : 4;
-                if (VanishManager.getLevel(uuid) > own) yield fail(name + " is hidden above your OP level.");
+                if (VanishManager.getLevel(uuid) > own) yield fail(admin, MessagesConfig.MANAGE_HIDDEN_ABOVE, "player", name);
                 VanishManager.clear(server, online);
-                yield ok(name + " is now visible.");
+                yield ok(admin, MessagesConfig.MANAGE_VISIBLE, "player", name);
             }
         };
 
+        if (result.ok() && action != Action.TP_TO_PLAYER) {
+            // A vanish action is only visible to staff who can see that vanish level.
+            int hiddenLevel = action == Action.VANISH ? Math.max(1, Math.min(4, number))
+                    : action == Action.UNVANISH ? vanishBefore : 0;
+            HistoryManager.record(uuid, name, HistoryManager.MANAGE, adminName,
+                    action.name() + (finalReason.isEmpty() ? "" : " - " + finalReason), hiddenLevel);
+        }
         boolean silent = action == Action.TP_TO_PLAYER || action == Action.VANISH || action == Action.UNVANISH;
-        if (result.ok() && !bulk && !silent) alertStaff(server, admin, adminName, action.name() + " on " + name
-                + (finalReason.isEmpty() ? "" : " (" + finalReason + ")"));
+        if (result.ok() && !bulk && !silent) alertStaff(server, admin, adminName, action.name(), name, finalReason);
         return result;
     }
 
     private record Spot(ServerLevel level, double x, double y, double z, float yaw, float pitch, String name) {}
 
-    private static Result queue(UUID uuid, String name, Action action, String issuer) {
+    private static Result queue(ServerPlayer v, UUID uuid, String name, Action action, String issuer) {
         PendingActionManager.add(uuid, name, action, issuer);
-        return ok(name + " is offline: " + action.name() + " queued until the next login.");
+        return ok(v, MessagesConfig.MANAGE_QUEUED, "player", name, "action", action.name());
     }
 
     private static Spot platformSpot(MinecraftServer server, String id) {
@@ -335,7 +396,7 @@ public final class ManageService {
         List<String> licenses = LicenseManager.getLicenses(uuid);
         for (String prof : licenses) {
             LicenseManager.removeLicense(uuid, prof);
-            LicenseManager.logActionSystem("REVOKE", name, uuid.toString(), prof, "via manage by " + adminName);
+            LicenseManager.logActionSystem("REVOKE", name, uuid.toString(), prof, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_MANAGE, "staff", adminName));
             if (online != null && !ProfessionRestrictionManager.isReservedTag(prof)) {
                 server.getCommands().performPrefixedCommand(silent, "tag " + name + " remove " + prof);
             }
@@ -360,13 +421,16 @@ public final class ManageService {
         return count;
     }
 
-    private static void alertStaff(MinecraftServer server, ServerPlayer admin, String adminName, String msg) {
-        Component c = Component.literal("§6[Manage] §e" + adminName + " §7: " + msg);
+    private static void alertStaff(MinecraftServer server, ServerPlayer admin, String adminName,
+                                   String actionName, String targetName, String reason) {
+        String suffix = reason.isEmpty() ? "" : " (" + reason + ")";
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (RpEssentialsPermissions.isStaff(p) && (admin == null || !p.getUUID().equals(admin.getUUID()))) {
-                p.sendSystemMessage(c);
+                p.sendSystemMessage(ColorHelper.parseSection(ServerLang.get(p, MessagesConfig.MANAGE_ALERT,
+                        "admin", adminName, "action", actionName, "player", targetName, "reason", suffix)));
             }
         }
-        RpEssentials.LOGGER.info("[Manage] {} : {}", adminName, msg);
+        RpEssentials.LOGGER.info("[Manage] {}", ColorHelper.stripAll(ServerLang.get(null, MessagesConfig.MANAGE_ALERT,
+                "admin", adminName, "action", actionName, "player", targetName, "reason", suffix)));
     }
 }

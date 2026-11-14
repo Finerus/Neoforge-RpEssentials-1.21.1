@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -36,7 +38,7 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
             if (!RpEssentialsPermissions.isStaff(player)) return;
 
             if (!RpEssentialsPermissions.canManageRoles(player)) {
-                player.sendSystemMessage(Component.literal("§c[RpEssentials] Managing roles requires the OP level set in opLevelBypass."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
                 return;
             }
 
@@ -63,16 +65,19 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
                             o.length > 1 && !o[1].isBlank() ? o[1].trim() : o[0].trim(), List.of());
                 }
 
-                List<String> details = new ArrayList<>();
-                if (removed != null) {
-                    String[] o = removed.split(";", 3);
-                    details.add("§7LuckPerms group: §f" + (o.length > 1 ? o[1].trim() : ""));
-                    if (o.length > 2 && !o[2].isBlank()) details.add("§7Permissions: §f" + o[2].replace(",", "§7, §f"));
-                }
-                net.rp.rpessentials.GuiFeedback.report(player, "Role §e" + cleanId + " §fdeleted", details, true);
+                final String removedLine = removed;
+                net.rp.rpessentials.GuiFeedback.report(player, MessagesConfig.GUI_ROLE_DELETED, new String[]{"id", cleanId}, v -> {
+                    List<String> details = new ArrayList<>();
+                    if (removedLine != null) {
+                        String[] o = removedLine.split(";", 3);
+                        details.add(ServerLang.get(v, MessagesConfig.GUI_LP_GROUP, "group", o.length > 1 ? o[1].trim() : ""));
+                        if (o.length > 2 && !o[2].isBlank()) details.add(ServerLang.get(v, MessagesConfig.GUI_PERMISSIONS,
+                                "permissions", o[2].replace(",", "§7, §f")));
+                    }
+                    return details;
+                }, true);
             } catch (IllegalStateException e) {
-                player.sendSystemMessage(Component.literal(
-                        "§c[RpEssentials] Config not loaded, please try again."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });
     }

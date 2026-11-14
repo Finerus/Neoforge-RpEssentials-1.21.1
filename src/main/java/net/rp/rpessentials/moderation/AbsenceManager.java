@@ -30,7 +30,7 @@ public class AbsenceManager {
         }
 
         public String formatEnd() {
-            return java.time.LocalDate.ofInstant(java.time.Instant.ofEpochMilli(endsAt), java.time.ZoneId.systemDefault())
+            return java.time.LocalDate.ofInstant(java.time.Instant.ofEpochMilli(endsAt), net.rp.rpessentials.TimeHelper.zone())
                     .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         }
     }

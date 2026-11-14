@@ -26,14 +26,15 @@ public record ConfigGuiFilesPacket(List<FileEntry> files) implements CustomPacke
     // =========================================================================
 
     /** Lightweight descriptor for one config file shown in the file panel. */
-    public record FileEntry(String id, String displayName, int color) {
+    public record FileEntry(String id, String displayName, int color, String mod, int modColor,
+                            int accent, int section, int title) {
+        public FileEntry(String id, String displayName, int color) { this(id, displayName, color, "", 0, 0, 0, 0); }
         public FileEntry(String id, String displayName) { this(id, displayName, 0); }
     }
 
     // =========================================================================
     // PACKET INFRA
     // =========================================================================
-
     public static final Type<ConfigGuiFilesPacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "config_gui_files"));
 
@@ -44,7 +45,8 @@ public record ConfigGuiFilesPacket(List<FileEntry> files) implements CustomPacke
                     int count = buf.readVarInt();
                     List<FileEntry> files = new ArrayList<>(count);
                     for (int i = 0; i < count; i++) {
-                        files.add(new FileEntry(buf.readUtf(), buf.readUtf(), buf.readInt()));
+                        files.add(new FileEntry(buf.readUtf(), buf.readUtf(), buf.readInt(), buf.readUtf(),
+                                buf.readInt(), buf.readInt(), buf.readInt(), buf.readInt()));
                     }
                     return new ConfigGuiFilesPacket(files);
                 }
@@ -56,6 +58,11 @@ public record ConfigGuiFilesPacket(List<FileEntry> files) implements CustomPacke
                         buf.writeUtf(f.id());
                         buf.writeUtf(f.displayName());
                         buf.writeInt(f.color());
+                        buf.writeUtf(f.mod());
+                        buf.writeInt(f.modColor());
+                        buf.writeInt(f.accent());
+                        buf.writeInt(f.section());
+                        buf.writeInt(f.title());
                     }
                 }
             };

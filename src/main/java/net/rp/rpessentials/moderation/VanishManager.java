@@ -1,9 +1,12 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.mojang.authlib.GameProfile;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket;
@@ -20,7 +23,9 @@ import net.rp.rpessentials.RpEssentialsIO;
 import net.rp.rpessentials.RpEssentialsPermissions;
 import net.rp.rpessentials.SyncNametagDataPacket;
 import net.rp.rpessentials.api.VanishTrackable;
+import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.config.ModerationConfig;
+import net.rp.rpessentials.identity.RpEssentialsChatFormatter;
 import net.rp.rpessentials.mixin.ChunkMapAccessor;
 import net.rp.rpessentials.mixin.ClientboundPlayerInfoUpdatePacketAccessor;
 
@@ -42,6 +47,7 @@ public final class VanishManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static volatile boolean ready = false;
     private static File dataFile = null;
+    public static UUID awardingId() { return awarding.get(); }
 
     private VanishManager() {}
 
@@ -158,12 +164,12 @@ public final class VanishManager {
 
     public static boolean anyVanished() {
         init();
-        return enabled() && !vanished.isEmpty();
+        return !vanished.isEmpty() && enabled();
     }
 
     public static boolean isVanished(UUID id) {
         init();
-        return enabled() && vanished.containsKey(id);
+        return vanished.containsKey(id) && enabled();
     }
 
     public static int getLevel(UUID id) {
@@ -210,14 +216,21 @@ public final class VanishManager {
     // =========================================================================
     public static void set(MinecraftServer server, ServerPlayer target, int level) {
         init();
+        boolean was = vanished.containsKey(target.getUUID());
         vanished.put(target.getUUID(), level);
         save();
+        if (!was) fakeMessage(server, target, blind(server, target), false);
         refresh(server, target);
     }
 
     public static void clear(MinecraftServer server, ServerPlayer target) {
         init();
-        if (vanished.remove(target.getUUID()) != null) save();
+        List<ServerPlayer> hidden = blind(server, target);
+        boolean was = vanished.remove(target.getUUID()) != null;
+        if (was) {
+            save();
+            fakeMessage(server, target, hidden, true);
+        }
         refresh(server, target);
     }
 
@@ -284,7 +297,7 @@ public final class VanishManager {
             if (vanished.containsKey(e.profileId()) && !isHiddenFrom(receiver, e.profileId())) {
                 Component base = e.displayName() != null ? e.displayName() : Component.literal(e.profile().getName());
                 out.add(new ClientboundPlayerInfoUpdatePacket.Entry(e.profileId(), e.profile(), e.listed(),
-                        e.latency(), e.gameMode(), Component.literal(mark).append(base), e.chatSession()));
+                        e.latency(), e.gameMode(), Component.literal(mark.replace("{level}", String.valueOf(vanished.getOrDefault(e.profileId(), 0)))).append(base), e.chatSession()));
                 changed = true;
             } else {
                 out.add(e);
@@ -336,11 +349,45 @@ public final class VanishManager {
 
     public static void notifySilent(MinecraftServer server, ServerPlayer player, boolean joined) {
         if (!notifyStaff()) return;
-        Component msg = Component.literal("§7[Vanish] §f" + player.getName().getString()
-                + " §7" + (joined ? "joined" : "left") + " silently.");
+        var key = joined ? MessagesConfig.VANISH_MSG_SILENT_JOIN : MessagesConfig.VANISH_MSG_SILENT_LEAVE;
+        String name = player.getName().getString();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (p.getUUID().equals(player.getUUID())) continue;
-            if (RpEssentialsPermissions.isStaff(p) && !isHiddenFrom(p, player.getUUID())) p.sendSystemMessage(msg);
+            if (RpEssentialsPermissions.isStaff(p) && !isHiddenFrom(p, player.getUUID())) {
+                p.sendSystemMessage(Component.literal(ServerLang.get(p, key, "player", name)));
+            }
+        }
+    }
+
+    private static List<ServerPlayer> blind(MinecraftServer server, ServerPlayer target) {
+        List<ServerPlayer> out = new ArrayList<>();
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (p != target && isHiddenFrom(p, target.getUUID())) out.add(p);
+        }
+        return out;
+    }
+
+    private static void fakeMessage(MinecraftServer server, ServerPlayer target, List<ServerPlayer> hidden, boolean join) {
+        if (!opt(ModerationConfig.VANISH_FAKE_MESSAGES)) return;
+        Component c;
+        String mark;
+        try {
+            if (ChatConfig.ENABLE_CUSTOM_JOIN_LEAVE.get()) {
+                String raw = join ? ChatConfig.JOIN_MESSAGE.get() : ChatConfig.LEAVE_MESSAGE.get();
+                if (raw == null || raw.isBlank() || "none".equalsIgnoreCase(raw)) return;
+                c = ColorHelper.parseColors(ColorHelper.translateAlternateColorCodes(
+                        RpEssentialsChatFormatter.resolveJoinLeavePlaceholders(raw, target)));
+            } else {
+                c = Component.translatable(join ? "multiplayer.player.joined" : "multiplayer.player.left",
+                        target.getDisplayName()).withStyle(ChatFormatting.YELLOW);
+            }
+            mark = ModerationConfig.VANISH_FAKE_MARK.get();
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Component marked = c.copy().append(ColorHelper.parseColors(mark));
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            p.sendSystemMessage(hidden.contains(p) ? c : marked);
         }
     }
 }

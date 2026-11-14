@@ -9,7 +9,7 @@ public class ChatConfig {
     // === CHAT SYSTEM ===
     public static final ModConfigSpec.BooleanValue ENABLE_CHAT_FORMAT;
     public static final ModConfigSpec.ConfigValue<String> PLAYER_NAME_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> CHAT_MESSAGE_FORMAT;
+    public static final ModConfigSpec.ConfigValue<String> GLOBAL_CHAT_FORMAT;
     public static final ModConfigSpec.ConfigValue<String> CHAT_MESSAGE_COLOR;
     public static final ModConfigSpec.BooleanValue ENABLE_TIMESTAMP;
     public static final ModConfigSpec.ConfigValue<String> TIMESTAMP_FORMAT;
@@ -17,11 +17,7 @@ public class ChatConfig {
     public static final ModConfigSpec.BooleanValue ENABLE_COLORS_COMMAND;
     public static final ModConfigSpec.BooleanValue LOG_PRIVATE_MESSAGES;
     public static final ModConfigSpec.BooleanValue SHOW_REAL_NAME_IN_CHAT;
-
-    // === JOIN/LEAVE MESSAGES ===
-    public static final ModConfigSpec.BooleanValue ENABLE_CUSTOM_JOIN_LEAVE;
-    public static final ModConfigSpec.ConfigValue<String> JOIN_MESSAGE;
-    public static final ModConfigSpec.ConfigValue<String> LEAVE_MESSAGE;
+    public static final ModConfigSpec.BooleanValue HIDE_REAL_NAMES;
 
     // === PROXIMITY CHAT ===
     public static final ModConfigSpec.BooleanValue ENABLE_PROXIMITY_CHAT;
@@ -29,7 +25,16 @@ public class ChatConfig {
     public static final ModConfigSpec.IntValue PROXIMITY_CHAT_DISTANCE;
     public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_BYPASS_PREFIX;
     public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> GLOBAL_CHAT_FORMAT;
+    public static final ModConfigSpec.ConfigValue<String> CHAT_MESSAGE_FORMAT;
+
+    // === CHAT SYSTEM 2 ===
+    public static final ModConfigSpec.ConfigValue<String> PLAYER_CHAT_CODES;
+    public static final ModConfigSpec.BooleanValue ENABLE_PM_SPY;
+
+    // === JOIN/LEAVE MESSAGES ===
+    public static final ModConfigSpec.BooleanValue ENABLE_CUSTOM_JOIN_LEAVE;
+    public static final ModConfigSpec.ConfigValue<String> JOIN_MESSAGE;
+    public static final ModConfigSpec.ConfigValue<String> LEAVE_MESSAGE;
 
     static {
         BUILDER.push("Chat System");
@@ -40,7 +45,7 @@ public class ChatConfig {
 
         PLAYER_NAME_FORMAT = BUILDER
                 .comment(
-                        "Player name format in chat.",
+                        "Format of the $name variable used in the chat formats below (not a chat format itself).",
                         "",
                         "BACKWARD-COMPATIBLE variables (unchanged behaviour):",
                         "  $name    — nickname if set, otherwise MC username  (same as $nick)",
@@ -60,11 +65,8 @@ public class ChatConfig {
                 .define("playerNameFormat", "$prefix $name $suffix");
 
         CHAT_MESSAGE_FORMAT = BUILDER
-                .comment(
-                        "Chat message format.",
-                        "Variables: $time, $name (or $nick / $nick_real / $real), $msg",
-                        "See playerNameFormat comment for the full variable list."
-                )
+                .comment("Fallback chat format, used when globalChatFormat or proximityChatFormat is empty.",
+                        "Variables: $time, $name (or $nick / $nick_real / $real), $msg")
                 .define("chatMessageFormat", "§7[$time] §r$name: $msg");
 
         CHAT_MESSAGE_COLOR = BUILDER
@@ -121,12 +123,13 @@ public class ChatConfig {
                 .define("proximityChatBypassPrefix", "!");
 
         PROXIMITY_CHAT_FORMAT = BUILDER
-                .comment("Format for proximity chat.",
-                        "Variables: $time, $name (or $nick / $nick_real / $real), $msg")
+                .comment("Format of messages heard only by nearby players (proximity chat enabled, no bypass prefix).",
+                        "Empty = use chatMessageFormat. Variables: $time, $name (or $nick / $nick_real / $real), $msg")
                 .define("proximityChatFormat", "[$time] $name: $msg");
 
         GLOBAL_CHAT_FORMAT = BUILDER
-                .comment("Format for global chat (bypass prefix or proximity disabled).",
+                .comment("Format of every message when proximity chat is disabled, and of messages sent with the",
+                        "bypass prefix when it is enabled. Empty = use chatMessageFormat.",
                         "Variables: $time, $name (or $nick / $nick_real / $real), $msg")
                 .define("globalChatFormat", "§7[$time] §f$name§r: $msg");
 
@@ -137,6 +140,25 @@ public class ChatConfig {
         LOG_PRIVATE_MESSAGES = BUILDER
                 .comment("Log private messages (/msg) to console.")
                 .define("logPrivateMessages", false);
+
+        PLAYER_CHAT_CODES = BUILDER
+                .comment("Which formatting codes non-staff players may type in chat.",
+                        "ALL           : everything (default, previous behaviour)",
+                        "NO_OBFUSCATED : everything except the obfuscated code (&k)",
+                        "NONE          : no color or format codes at all",
+                        "Staff members always keep every code.")
+                .defineInList("playerChatCodes", "ALL", java.util.Arrays.asList("ALL", "NO_OBFUSCATED", "NONE"));
+
+        ENABLE_PM_SPY = BUILDER
+                .comment("If true, players with the spyMessages role permission can read private messages (/msg).",
+                        "Players should be told: a notice is sent to everyone at login (see pmSpyNotice in the messages file).",
+                        "Default: false.")
+                .define("enablePrivateMessageSpy", false);
+
+        HIDE_REAL_NAMES = BUILDER
+                .comment("If true, non-staff players do not see the real name of nicknamed players in /list",
+                        "and in command name suggestions. Default: false.")
+                .define("hideRealNames", false);
 
         BUILDER.pop();
 

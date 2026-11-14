@@ -97,16 +97,17 @@ public record SetPlayerProfilePacket(
     // ── Offline path (joueur préparé mais jamais connecté) ─────────────────────
     private static void handleOffline(SetPlayerProfilePacket packet, ServerPlayer admin) {
         if (!net.rp.rpessentials.profession.PendingProfileManager.hasPending(packet.targetUuid())) {
-            admin.sendSystemMessage(Component.literal(
-                    "§c[RpEssentials] Player is no longer connected."));
+            admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_PROFILE_OFFLINE)));
             return;
         }
 
         if (packet.resetNickname()) {
             net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(), "");
         } else if (!packet.nickname().trim().isEmpty()) {
-            net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(),
-                    packet.nickname().trim().replace("&", "§"));
+            String nick = packet.nickname().trim().replace("&", "§");
+            String err = NicknameManager.rejection(packet.targetUuid(), nick, true, admin);
+            if (err != null) admin.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(err));
+            else net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(), nick);
         }
 
         if (!packet.role().trim().isEmpty() && RpEssentialsPermissions.canManageRoles(admin)) {
@@ -116,12 +117,14 @@ public record SetPlayerProfilePacket(
         String licenseId = packet.licenseId().trim();
         if (!licenseId.isEmpty()) {
             if (packet.revokeMode()) net.rp.rpessentials.profession.PendingProfileManager.removeLicense(packet.targetUuid(), licenseId);
+            else if (ProfessionRestrictionManager.getProfessionData(licenseId) == null)
+                admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_PROFESSION,
+                        "profession", licenseId)));
             else net.rp.rpessentials.profession.PendingProfileManager.addLicense(packet.targetUuid(), licenseId);
         }
 
         String name = net.rp.rpessentials.profession.PendingProfileManager.getMcName(packet.targetUuid());
-        admin.sendSystemMessage(Component.literal(
-                "§a[RpEssentials] Prepared profile updated for §e" + name));
+        admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_PREPARED_UPDATED, "player", name)));
     }
 
     // ── Revoke path ────────────────────────────────────────────────────────────
@@ -135,15 +138,15 @@ public record SetPlayerProfilePacket(
         // Verify the player actually has this license
         List<String> existing = LicenseManager.getLicenses(target.getUUID());
         if (!existing.contains(licenseId)) {
-            admin.sendSystemMessage(Component.literal(
-                    "§e[RpEssentials] §f" + targetName + " §edoes not have the §f" + licenseId + " §elicense."));
+            admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_NO_LICENSE,
+                    "player", targetName, "license", licenseId)));
             return;
         }
 
         LicenseManager.removeLicense(target.getUUID(), licenseId);
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
-        LicenseManager.logAction("REVOKE", admin, target, licenseId, "via GUI");
+        LicenseManager.logAction("REVOKE", admin, target, licenseId, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_GUI));
         TempLicenseExpirationManager.markRevokedLicenseItems(target);
 
         // Remove vanilla tag
@@ -158,10 +161,10 @@ public record SetPlayerProfilePacket(
         String profDisplay = profData != null ? profData.getFormattedName() : licenseId;
 
         admin.sendSystemMessage(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_REVOKE_STAFF,
+                ServerLang.get(admin, MessagesConfig.LICENSE_REVOKE_STAFF,
                         "profession", profDisplay, "player", targetName)));
         target.sendSystemMessage(Component.literal(
-                MessagesConfig.get(MessagesConfig.LICENSE_REVOKE_PLAYER,
+                ServerLang.get(target, MessagesConfig.LICENSE_REVOKE_PLAYER,
                         "profession", profDisplay)));
 
         RpEssentials.LOGGER.info("[GUI] License '{}' revoked for {} by {}",
@@ -174,17 +177,23 @@ public record SetPlayerProfilePacket(
                                    ServerPlayer admin, MinecraftServer server,
                                    ServerPlayer target, String targetName) {
         StringBuilder report = new StringBuilder(
-                "§a[RpEssentials] Profile of §e" + targetName + " §aupdated:");
+                ServerLang.get(admin, MessagesConfig.GUI_PROFILE_UPDATED, "player", targetName));
 
         // ── 1. Nickname ───────────────────────────────────────────────────────
         if (packet.resetNickname()) {
             NicknameManager.removeNickname(target.getUUID());
-            report.append(" §fnick=§8(reset)");
+            report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_NICK_RESET));
         } else {
             String nick = packet.nickname().trim().replace("&", "§");
             if (!nick.isEmpty()) {
-                NicknameManager.setNickname(target.getUUID(), nick);
-                report.append(" §fnick=").append(nick);
+                // Same checks as /nick (unique nickname...).
+                String err = NicknameManager.rejection(target.getUUID(), nick, true, admin);
+                if (err != null) {
+                    admin.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(err));
+                } else {
+                    NicknameManager.setNickname(target.getUUID(), nick);
+                    report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_NICK, "nick", nick));
+                }
             }
         }
 
@@ -192,11 +201,11 @@ public record SetPlayerProfilePacket(
         String role = packet.role().trim();
         if (!role.isEmpty()) {
             if (!RpEssentialsPermissions.canManageRoles(admin)) {
-                admin.sendSystemMessage(Component.literal("§c[RpEssentials] Managing roles requires the OP level set in opLevelBypass."));
+                admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
             } else if (applyRole(server, target, role)) {
-                report.append(" §frole=").append(role);
+                report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_ROLE, "role", role));
             } else {
-                admin.sendSystemMessage(Component.literal("§c[RpEssentials] Unknown role: §f" + role));
+                admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_ROLE, "role", role)));
             }
         }
 
@@ -206,43 +215,42 @@ public record SetPlayerProfilePacket(
             List<String> existing = LicenseManager.getLicenses(target.getUUID());
 
             if (existing.contains(licenseId)) {
-                admin.sendSystemMessage(Component.literal(
-                        "§e[RpEssentials] §f" + targetName + " §ealready has the §f" + licenseId
-                                + " §elicense. Use §f/rpessentials license reissue §eto give a replacement item."));
+                admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ALREADY_LICENSE,
+                        "player", targetName, "license", licenseId)));
             } else {
                 ProfessionRestrictionManager.ProfessionData profData =
                         ProfessionRestrictionManager.getProfessionData(licenseId);
                 if (profData == null) {
-                    admin.sendSystemMessage(Component.literal(
-                            "§c[RpEssentials] Unknown profession: §f" + licenseId));
+                    admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_PROFESSION,
+                            "profession", licenseId)));
                 } else {
                     int days = Math.max(0, Math.min(365, packet.tempDays()));
                     String expires = null;
                     if (days > 0) {
                         java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
-                        String issued = java.time.LocalDate.now().format(fmt);
-                        expires = java.time.LocalDate.now().plusDays(days).format(fmt);
+                        String issued = TimeHelper.today().format(fmt);
+                        expires = TimeHelper.today().plusDays(days).format(fmt);
                         LicenseManager.addLicense(target.getUUID(), licenseId);
                         LicenseManager.addTempLicense(admin, target, licenseId, days, issued, expires);
                         LicenseManager.logAction("TEMPGIVE", admin, target, licenseId,
-                                days + " days, expires " + expires + " (via GUI)");
+                                net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_TEMP_GUI, "days", String.valueOf(days), "date", String.valueOf(expires)));
                     } else {
                         LicenseManager.addLicense(target.getUUID(), licenseId);
-                        LicenseManager.logAction("GIVE", admin, target, licenseId, "via GUI");
+                        LicenseManager.logAction("GIVE", admin, target, licenseId, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_GUI));
                     }
                     LicenseHelper.giveLicenseItem(server, admin, target, licenseId, expires);
 
                     target.sendSystemMessage(Component.literal(days > 0
-                            ? MessagesConfig.get(MessagesConfig.LICENSE_GIVE_RP_PLAYER,
+                            ? ServerLang.get(target, MessagesConfig.LICENSE_GIVE_RP_PLAYER,
                             "profession", profData.getFormattedName(), "date", expires)
-                            : MessagesConfig.get(MessagesConfig.LICENSE_GIVE_PLAYER,
+                            : ServerLang.get(target, MessagesConfig.LICENSE_GIVE_PLAYER,
                             "profession", profData.getFormattedName())));
-                    report.append(" §flicense=").append(licenseId).append(days > 0 ? " (" + days + "d)" : "");
+                    report.append(days > 0 ? ServerLang.get(admin, MessagesConfig.GUI_REPORT_LICENSE_DAYS, "license", licenseId, "days", String.valueOf(days)) : ServerLang.get(admin, MessagesConfig.GUI_REPORT_LICENSE, "license", licenseId));
                 }
             }
         }
 
-        admin.sendSystemMessage(Component.literal(report.toString()));
+        admin.sendSystemMessage(ColorHelper.parseSection(report.toString()));
         RpEssentials.LOGGER.info("[GUI] Profile applied for {} by {}: nick='{}', role='{}', license='{}'",
                 targetName, admin.getGameProfile().getName(),
                 packet.nickname(), packet.role(), packet.licenseId());

@@ -4,6 +4,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.TimeHelper;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.items.LicenseItem;
 
@@ -22,7 +24,7 @@ public class TempLicenseExpirationManager {
     public static void checkOnLogin(ServerPlayer player, MinecraftServer server) {
         if (server == null) return;
         UUID uuid = player.getUUID();
-        LocalDate today = LocalDate.now();
+        LocalDate today = TimeHelper.today();
         List<LicenseManager.TempLicenseEntry> toExpire = new ArrayList<>();
         for (LicenseManager.TempLicenseEntry e : LicenseManager.getAllTempLicenses()) {
             if (!e.targetUUID.equals(uuid.toString())) continue;
@@ -97,17 +99,20 @@ public class TempLicenseExpirationManager {
     }
 
     public static void tickMidnightSweep(MinecraftServer server) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = TimeHelper.today();
         if (today.equals(lastSweepDate)) return;
         lastSweepDate = today;
         RpEssentials.LOGGER.info("[TempLicenseExpiration] Running daily sweep...");
-        LocalDate now = LocalDate.now();
+        LocalDate now = TimeHelper.today();
         for (LicenseManager.TempLicenseEntry e : new ArrayList<>(LicenseManager.getAllTempLicenses())) {
             LocalDate exp = parse(e.expiresAt);
             if (exp == null || now.isBefore(exp)) continue;
             try {
                 UUID uuid = UUID.fromString(e.targetUUID);
-                revoke(server, uuid, e, server.getPlayerList().getPlayer(uuid));
+                ServerPlayer online = server.getPlayerList().getPlayer(uuid);
+                // Offline players are handled by checkOnLogin, where their tag can be removed too.
+                if (online == null) continue;
+                revoke(server, uuid, e, online);
             } catch (IllegalArgumentException ex) {
                 RpEssentials.LOGGER.warn("[TempLicenseExpiration] Invalid UUID: {}", e.targetUUID);
             }
@@ -124,14 +129,15 @@ public class TempLicenseExpirationManager {
         LicenseManager.removeLicense(uuid, e.profession);
         ProfessionRestrictionManager.invalidatePlayerCache(uuid);
         if (online != null) {
+            if (!ProfessionRestrictionManager.isReservedTag(e.profession)) online.removeTag(e.profession);
             ProfessionSyncHelper.syncToPlayer(online);
             ProfessionRestrictionManager.ProfessionData d =
                     ProfessionRestrictionManager.getProfessionData(e.profession);
             String name = d != null ? d.getFormattedName() : e.profession;
             online.sendSystemMessage(Component.literal(
-                    MessagesConfig.get(MessagesConfig.LICENSE_EXPIRED_RP_PLAYER, "profession", name)));
+                    ServerLang.get(online, MessagesConfig.LICENSE_EXPIRED_RP_PLAYER, "profession", name)));
         }
-        LicenseManager.logActionSystem("TEMPEXPIRE", e.targetName, e.targetUUID, e.profession, "Expire le " + e.expiresAt);
+        LicenseManager.logActionSystem("TEMPEXPIRE", e.targetName, e.targetUUID, e.profession, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_EXPIRED_ON, "date", String.valueOf(e.expiresAt)));
         RpEssentials.LOGGER.info("[TempLicenseExpiration] Expired '{}' for {}", e.profession, e.targetName);
     }
 

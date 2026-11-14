@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import com.mojang.authlib.GameProfile;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
@@ -48,24 +50,23 @@ public record RequestAddPlayerPacket(String playerName) implements CustomPacketP
 
                 server.execute(() -> {
                     if (result.isEmpty()) {
-                        admin.sendSystemMessage(Component.literal("§c[RpEssentials] Player not found: §f" + name));
+                        admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ADD_NOT_FOUND, "player", name)));
                         return;
                     }
                     GameProfile profile = result.get();
 
                     if (server.getPlayerList().getPlayer(profile.getId()) != null
                             || PendingProfileManager.hasPending(profile.getId())) {
-                        admin.sendSystemMessage(Component.literal("§e[RpEssentials] " + profile.getName() + " is already known."));
+                        admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ADD_KNOWN, "player", profile.getName())));
                         return;
                     }
                     if (net.rp.rpessentials.moderation.LastConnectionManager.getEntry(profile.getId()) != null) {
-                        admin.sendSystemMessage(Component.literal(
-                                "§e[RpEssentials] " + profile.getName() + " has already connected to this server before. No need to prepare a profile, edit them directly from the offline list."));
+                        admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ADD_CONNECTED, "player", profile.getName())));
                         return;
                     }
 
                     PendingProfileManager.addPending(profile.getId(), profile.getName());
-                    admin.sendSystemMessage(Component.literal("§a[RpEssentials] " + profile.getName() + " added to prepared profiles."));
+                    admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ADD_DONE, "player", profile.getName())));
                     RequestOpenGuiPacket.handlePlayerProfileGui(admin);
                 });
             });

@@ -77,7 +77,11 @@ public class PendingProfileManager {
 
         Map<String, PendingEntry> data = new LinkedHashMap<>();
         for (PendingEntry e : snapshot.values()) {
-            data.put(e.uuid + " (" + e.mcName + ")", e);
+            PendingEntry copy = new PendingEntry(e.uuid, e.mcName);
+            copy.nickname = e.nickname;
+            copy.role = e.role;
+            copy.licenses = new ArrayList<>(e.licenses);
+            data.put(e.uuid + " (" + e.mcName + ")", copy);
         }
 
         RpEssentialsIO.saveJson(targetFile, data, GSON);

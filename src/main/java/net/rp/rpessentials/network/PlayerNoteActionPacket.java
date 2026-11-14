@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -67,12 +69,17 @@ public record PlayerNoteActionPacket(
 
             if (packet.isDelete()) {
                 if (old == null || !NoteManager.removeNote(packet.targetUuid(), packet.noteId())) {
-                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                            "§c[NOTE] Note #" + packet.noteId() + " not found for " + target + "."));
+                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(ServerLang.get(staff,
+                            MessagesConfig.GUI_NOTE_NOT_FOUND, "id", String.valueOf(packet.noteId()), "player", target)));
                     return;
                 }
-                GuiFeedback.report(staff, "Note #" + packet.noteId() + " deleted for §e" + target,
-                        List.of("§c- §7" + old.text, "§8Original author: " + old.displayAuthor()), false);
+                net.rp.rpessentials.moderation.HistoryManager.record(packet.targetUuid(), target,
+                        net.rp.rpessentials.moderation.HistoryManager.NOTE_REMOVE, staff.getName().getString(), "#" + packet.noteId());
+                final NoteManager.NoteEntry deleted = old;
+                GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_DELETED,
+                        new String[]{"id", String.valueOf(packet.noteId()), "player", target},
+                        v -> List.of("§c- §7" + deleted.text,
+                                ServerLang.get(v, MessagesConfig.GUI_NOTE_AUTHOR, "author", deleted.displayAuthor())), false);
                 return;
             }
 
@@ -82,24 +89,30 @@ public record PlayerNoteActionPacket(
 
             if (packet.noteId() > 0) {
                 if (old == null || !NoteManager.editNote(packet.targetUuid(), packet.noteId(), text, staff.getName().getString())) {
-                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                            "§c[NOTE] Note #" + packet.noteId() + " not found for " + target + "."));
+                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(ServerLang.get(staff,
+                            MessagesConfig.GUI_NOTE_NOT_FOUND, "id", String.valueOf(packet.noteId()), "player", target)));
                     return;
                 }
-                GuiFeedback.report(staff, "Note #" + packet.noteId() + " edited for §e" + target,
-                        List.of("§c- §7" + old.text, "§a+ §7" + text, "§8Original author: " + old.authorName), false);
+                final NoteManager.NoteEntry edited = old;
+                final String newText = text;
+                GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_EDITED,
+                        new String[]{"id", String.valueOf(packet.noteId()), "player", target},
+                        v -> List.of("§c- §7" + edited.text, "§a+ §7" + newText,
+                                ServerLang.get(v, MessagesConfig.GUI_NOTE_AUTHOR, "author", edited.authorName)), false);
                 return;
             }
 
             int newId = NoteManager.addNote(packet.targetUuid(), target,
                     staff.getName().getString(), staff.getUUID().toString(), text);
             if (newId < 0) {
-                staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(
-                        "§c[NOTE] Note limit reached for " + target + "."));
+                staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(ServerLang.get(staff,
+                        MessagesConfig.GUI_NOTE_LIMIT, "player", target)));
                 return;
             }
-            GuiFeedback.report(staff, "Note #" + newId + " added for §e" + target,
-                    List.of("§a+ §7" + text), false);
+            final String addedText = text;
+            GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_ADDED,
+                    new String[]{"id", String.valueOf(newId), "player", target},
+                    v -> List.of("§a+ §7" + addedText), false);
         });
     }
 }

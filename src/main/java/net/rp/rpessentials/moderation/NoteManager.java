@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsDataPaths;
 import net.rp.rpessentials.RpEssentialsIO;
+import net.rp.rpessentials.TimeHelper;
 
 import java.io.File;
 import java.io.FileReader;
@@ -35,7 +36,7 @@ public class NoteManager {
             this.text       = text;
             this.authorName = authorName;
             this.authorUUID = authorUUID;
-            this.timestamp  = LocalDateTime.now()
+            this.timestamp  = TimeHelper.now()
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         }
 
@@ -53,7 +54,7 @@ public class NoteManager {
             if (e.id != noteId) continue;
             e.text = text;
             if (e.editors == null) e.editors = new ArrayList<>();
-            e.editors.add(editorName + " " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM HH:mm")));
+            e.editors.add(editorName + " " + TimeHelper.now().format(DateTimeFormatter.ofPattern("dd/MM HH:mm")));
             saveForPlayer(targetUUID);
             return true;
         }
@@ -158,6 +159,7 @@ public class NoteManager {
         list.add(new NoteEntry(id, text, authorName, authorUUID));
         list.sort(Comparator.comparingInt(e -> e.id));
         saveForPlayer(targetUUID);
+        HistoryManager.record(targetUUID, targetName, HistoryManager.NOTE, authorName, "#" + id + " " + text);
         return id;
     }
 

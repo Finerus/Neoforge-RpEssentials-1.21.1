@@ -63,16 +63,8 @@ public class MixinResultSlot {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(result.getItem());
 
         if (!ProfessionRestrictionManager.canCraft(serverPlayer, itemId)) {
-            long now = System.currentTimeMillis();
-            UUID uuid = serverPlayer.getUUID();
-            Long last = lastCraftMessage.get(uuid);
-            if (last == null || now - last > COOLDOWN_MS) {
-                lastCraftMessage.put(uuid, now);
-                serverPlayer.displayClientMessage(
-                        Component.literal(ProfessionRestrictionManager.getCraftBlockedMessage(itemId)),
-                        true
-                );
-            }
+            ProfessionRestrictionManager.notifyBlocked(serverPlayer, "craft",
+                    () -> ProfessionRestrictionManager.getCraftBlockedMessage(serverPlayer, itemId));
             cir.setReturnValue(false);
         }
     }

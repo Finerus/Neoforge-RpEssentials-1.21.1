@@ -1,5 +1,7 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.Msg;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -7,6 +9,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.commands.CommandSourceStack;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.ColorHelper;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -39,22 +42,23 @@ public final class RpChatUi {
         return MINI_LINE + "\n§e§l" + label + "\n";
     }
 
-    public static String flag(BooleanSupplier supplier) {
-        try { return supplier.getAsBoolean() ? "§aON" : "§cOFF"; }
-        catch (Exception e) { return "§8N/A"; }
+    public static String flag(CommandSourceStack src, BooleanSupplier supplier) {
+        try { return Msg.get(src, supplier.getAsBoolean() ? MessagesConfig.UI_ON : MessagesConfig.UI_OFF); }
+        catch (Exception e) { return Msg.get(src, MessagesConfig.UI_NA); }
     }
 
-    public static String value(Supplier<?> supplier) {
+    public static String value(CommandSourceStack src, Supplier<?> supplier) {
         try {
             Object v = supplier.get();
-            return v != null ? "§f" + v : "§8N/A";
-        } catch (Exception e) { return "§8N/A"; }
+            return v != null ? "§f" + v : Msg.get(src, MessagesConfig.UI_NA);
+        } catch (Exception e) { return Msg.get(src, MessagesConfig.UI_NA); }
     }
 
-    public static MutableComponent pager(int page, int pages, String baseCommand) {
+    public static MutableComponent pager(CommandSourceStack src, int page, int pages, String baseCommand) {
         MutableComponent out = Component.empty();
         out.append(button("<<", page > 1, baseCommand + " " + (page - 1)));
-        out.append(Component.literal(" §7Page §f" + page + "§7/§f" + pages + " "));
+        out.append(Component.literal(Msg.get(src, MessagesConfig.UI_PAGE,
+                "page", String.valueOf(page), "pages", String.valueOf(pages))));
         out.append(button(">>", page < pages, baseCommand + " " + (page + 1)));
         return out;
     }
@@ -71,9 +75,9 @@ public final class RpChatUi {
         for (String line : formatted.split("\n")) {
             if (line.isBlank()) continue;
             if (isPlayer) {
-                ((ServerPlayer) ctx.getSource().getEntity()).sendSystemMessage(Component.literal(line));
+                ((ServerPlayer) ctx.getSource().getEntity()).sendSystemMessage(ColorHelper.parseSection(line));
             } else {
-                String plain = line.replaceAll("§[0-9a-fk-orA-FK-OR]", "");
+                String plain = ColorHelper.stripAll(line);
                 ctx.getSource().sendSuccess(() -> Component.literal(plain), false);
             }
         }

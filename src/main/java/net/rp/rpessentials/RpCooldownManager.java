@@ -62,6 +62,15 @@ public class RpCooldownManager {
         cooldowns.remove(playerUUID);
     }
 
+    /** Drops only the finished cooldowns, so a relog does not reset a running one. */
+    public static void clearExpired(UUID playerUUID) {
+        Map<String, Long> playerCooldowns = cooldowns.get(playerUUID);
+        if (playerCooldowns == null) return;
+        long now = System.currentTimeMillis();
+        playerCooldowns.entrySet().removeIf(e -> now - e.getValue() >= getCooldownMs(e.getKey()));
+        if (playerCooldowns.isEmpty()) cooldowns.remove(playerUUID);
+    }
+
     // =========================================================================
     // INTERNAL
     // =========================================================================
@@ -74,6 +83,8 @@ public class RpCooldownManager {
                 case "incognito" -> net.rp.rpessentials.config.RpConfig.INCOGNITO_COOLDOWN_SECONDS.get() * 1000;
                 case "selfnick"  -> net.rp.rpessentials.config.RpConfig.SELF_NICK_COOLDOWN_SECONDS.get() * 1000;
                 case "dice" -> net.rp.rpessentials.config.RpConfig.DICE_COOLDOWN_SECONDS.get() * 1000;
+                case "afk" -> net.rp.rpessentials.config.RpConfig.AFK_COOLDOWN_SECONDS.get() * 1000;
+                case "spawn" -> net.rp.rpessentials.config.RpConfig.SPAWN_COOLDOWN_SECONDS.get() * 1000;
                 default          -> 0;
             };
         } catch (IllegalStateException e) {

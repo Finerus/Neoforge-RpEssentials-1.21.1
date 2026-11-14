@@ -37,8 +37,12 @@ public class RpEssentials {
 
     public static final String MODID = "rpessentials";
     public static final Logger LOGGER = LogUtils.getLogger();
-    private int tickCounter = 0;
-    private final Map<UUID, Vec3> lastBlurPositions = new java.util.concurrent.ConcurrentHashMap<>();
+    private long tickCounter = 0;
+    private final java.util.Set<Object> pendingSpecs = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static volatile Boolean lpPresent = null;
+    private static final long LP_META_TTL_MS = 30000L;
+    private record LpMeta(String prefix, String suffix, long expiry) {}
+    private static final Map<UUID, LpMeta> lpMetaCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.atomic.AtomicBoolean refreshPending = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public RpEssentials(IEventBus modEventBus, ModContainer modContainer) {
@@ -50,6 +54,7 @@ public class RpEssentials {
         modContainer.registerConfig(ModConfig.Type.SERVER, ProfessionConfig.SPEC,   "rpessentials/rpessentials-professions.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, MessagesConfig.SPEC,     "rpessentials/rpessentials-messages.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, RpConfig.SPEC,           "rpessentials/rpessentials-rp.toml");
+        modContainer.registerConfig(ModConfig.Type.CLIENT, net.rp.rpessentials.config.ClientConfig.SPEC, "rpessentials/rpessentials-client.toml");
 
         modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings);
         RpEssentialsItems.ITEMS.register(modEventBus);
@@ -72,96 +77,95 @@ public class RpEssentials {
         modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getType() != ModConfig.Type.SERVER) return;
             MinecraftServer srv = ServerLifecycleHooks.getCurrentServer();
-            if (srv == null || !refreshPending.compareAndSet(false, true)) return;
+            if (srv == null) return;
+            pendingSpecs.add(event.getConfig().getSpec());
+            if (!refreshPending.compareAndSet(false, true)) return;
             java.util.concurrent.CompletableFuture.runAsync(() -> srv.execute(() -> {
                 refreshPending.set(false);
-                ConfigRefresh.refresh(srv);
+                java.util.List<Object> specs = new java.util.ArrayList<>(pendingSpecs);
+                pendingSpecs.clear();
+                for (Object s : specs) ConfigRefresh.refresh(srv, s);
             }), java.util.concurrent.CompletableFuture.delayedExecutor(1500, java.util.concurrent.TimeUnit.MILLISECONDS));
         });
+        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading e) ->
+                ProfessionRestrictionEventHandler.clearTooltipCache());
+        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Reloading e) ->
+                ProfessionRestrictionEventHandler.clearTooltipCache());
     }
 
     // =========================================================================
     // LUCKPERMS
     // =========================================================================
-    public static String getPlayerPrefix(ServerPlayer player) {
-        try {
-            LuckPerms lp = LuckPermsProvider.get();
-            User user = lp.getUserManager().getUser(player.getUUID());
-            if (user != null) {
-                String prefix = user.getCachedData().getMetaData().getPrefix();
-                return prefix != null ? prefix : "";
+    private static boolean luckPermsPresent() {
+        Boolean p = lpPresent;
+        if (p == null) {
+            try {
+                Class.forName("net.luckperms.api.LuckPermsProvider", false, RpEssentials.class.getClassLoader());
+                p = true;
+            } catch (ClassNotFoundException | LinkageError e) {
+                p = false;
             }
-        } catch (IllegalStateException | NoClassDefFoundError ignored) {}
-        return "";
+            lpPresent = p;
+        }
+        return p;
     }
 
-    public static String getPlayerSuffix(ServerPlayer player) {
-        try {
-            LuckPerms lp = LuckPermsProvider.get();
-            User user = lp.getUserManager().getUser(player.getUUID());
-            if (user != null) {
-                String suffix = user.getCachedData().getMetaData().getSuffix();
-                return suffix != null ? suffix : "";
-            }
-        } catch (IllegalStateException | NoClassDefFoundError ignored) {}
-        return "";
+    private static LpMeta lpMeta(ServerPlayer player) {
+        long now = System.currentTimeMillis();
+        UUID id = player.getUUID();
+        LpMeta cached = lpMetaCache.get(id);
+        if (cached != null && cached.expiry() > now) return cached;
+
+        String prefix = "";
+        String suffix = "";
+        if (luckPermsPresent()) {
+            try {
+                User user = LuckPermsProvider.get().getUserManager().getUser(id);
+                if (user == null) return new LpMeta("", "", 0L);
+                String p = user.getCachedData().getMetaData().getPrefix();
+                String s = user.getCachedData().getMetaData().getSuffix();
+                prefix = p != null ? p : "";
+                suffix = s != null ? s : "";
+            } catch (IllegalStateException | NoClassDefFoundError ignored) {}
+        }
+        LpMeta meta = new LpMeta(prefix, suffix, now + LP_META_TTL_MS);
+        lpMetaCache.put(id, meta);
+        return meta;
     }
+
+    public static String getPlayerPrefix(ServerPlayer player) { return lpMeta(player).prefix(); }
+
+    public static String getPlayerSuffix(ServerPlayer player) { return lpMeta(player).suffix(); }
+
+    public static void invalidateMeta(UUID id) { lpMetaCache.remove(id); }
+
+    public static void clearMetaCache() { lpMetaCache.clear(); }
 
     // =========================================================================
     // SERVER TICK
     // =========================================================================
-
-    private boolean blurNeedsUpdate(java.util.List<ServerPlayer> players) {
-        // Déclenche une mise à jour si un joueur a bougé de plus de 2 blocs
-        // ou si la liste des connectés a changé.
-        boolean needsUpdate = false;
-        for (ServerPlayer p : players) {
-            net.minecraft.world.phys.Vec3 last = lastBlurPositions.get(p.getUUID());
-            net.minecraft.world.phys.Vec3 pos  = p.position();
-            if (last == null || pos.distanceToSqr(last) > 4.0) {
-                lastBlurPositions.put(p.getUUID(), pos);
-                needsUpdate = true;
-            }
-        }
-        java.util.Set<UUID> online = players.stream()
-                .map(ServerPlayer::getUUID)
-                .collect(java.util.stream.Collectors.toSet());
-        if (lastBlurPositions.keySet().removeIf(id -> !online.contains(id)))
-            needsUpdate = true;
-        return needsUpdate;
-    }
-
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
-        RpEssentialsRoleManager.clearExpired();
+        long t = tickCounter++;
 
-        // Toutes les 40 ticks (2s) : mise à jour TabList blur
-        if (tickCounter % 40 == 0) {
-            try {
-                if (RpEssentialsConfig.ENABLE_BLUR.get() && blurNeedsUpdate(server.getPlayerList().getPlayers())) {
-                    ClientboundPlayerInfoUpdatePacket packet = new ClientboundPlayerInfoUpdatePacket(
-                            EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),
-                            server.getPlayerList().getPlayers());
-                    server.getPlayerList().broadcastAll(packet);
-                }
-            } catch (IllegalStateException ignored) {}
-        }
+        if (t % 40 == 0) TabBlur.tick(server);
+        if (t % 72000 == 36000) net.rp.rpessentials.moderation.HistoryManager.tick();
+        if (t % 20 == 0) WorldBorderManager.tickZoneViews(server);
 
-        // World border check (interval configurable, offset +13 pour éviter le burst tick-0)
         int wbInterval = 40;
         try { wbInterval = RpEssentialsConfig.WORLD_BORDER_CHECK_INTERVAL.get(); }
         catch (IllegalStateException ignored) {}
-        if ((tickCounter + 13) % wbInterval == 0) {
+        if ((t + 13) % wbInterval == 0) {
             WorldBorderManager.tick(server);
         }
 
-        // Toutes les 400 ticks (20s) : caches, schedule, warnings
-        if ((tickCounter + 37) % 400 == 0) {
+        if ((t + 37) % 400 == 0) {
+            RpEssentialsRoleManager.clearExpired();
             ProfessionRestrictionEventHandler.cleanupCaches();
             RpEssentialsPermissions.clearExpiredCache();
 
-            LocalTime now = LocalTime.now();
+            LocalTime now = RpEssentialsScheduleManager.nowTime();
 
             try {
                 if (ScheduleConfig.ENABLE_SCHEDULE.get()
@@ -171,7 +175,7 @@ public class RpEssentials {
 
                     if (!RpEssentialsScheduleManager.hasOpenedToday()
                             && todayS != null
-                            && todayS.equals(active)) {
+                            && todayS == active) {
                         RpEssentialsScheduleManager.markOpenedToday();
                         RpEssentialsScheduleManager.sendOpeningMessage(server, todayS);
                     }
@@ -195,20 +199,18 @@ public class RpEssentials {
             RpEssentialsScheduleManager.tickHrpNotifications(server, now);
         }
 
-        // Toutes les 1200 ticks (1min) : midnight sweeps
-        if ((tickCounter + 97) % 1200 == 0) {
-            LocalTime now = LocalTime.now();
+        if ((t + 97) % 1200 == 0) {
+            LocalTime now = RpEssentialsScheduleManager.nowTime();
             RpEssentialsScheduleManager.tickMidnightSweep(server);
-            PlaytimeManager.flush();
             TempLicenseExpirationManager.tickMidnightSweep(server);
             LastConnectionManager.tickAutoUnwhitelist(server);
+            BackupManager.tick();
             if (now.getHour() == 3 && now.getMinute() == 0) {
                 net.rp.rpessentials.moderation.DeathRPManager.purgeOldHistory();
             }
         }
 
-        tickCounter++;
-        if (tickCounter >= 1200) tickCounter = 0;
+        if ((t + 97) % 1200 == 0) PlaytimeManager.flush();
     }
 
     // =========================================================================
@@ -227,7 +229,13 @@ public class RpEssentials {
         RpEssentialsScheduleManager.reload();
         ImmersivePresetHelper.clearCache();
         PlaytimeManager.clearAll();
-        lastBlurPositions.clear();
+        TabBlur.clearAll();
+        clearMetaCache();
+        try {
+            if (net.rp.rpessentials.config.ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get())
+                net.rp.rpessentials.moderation.WarnManager.purgeExpiredWarns();
+        } catch (IllegalStateException ignored) {}
+        NameCache.clear();
         RpEssentialsIO.shutdown();
         LuckPermsSync.stop();
         LOGGER.info("[RpEssentials] Static caches cleared on server stop. Bye! - Finerus");

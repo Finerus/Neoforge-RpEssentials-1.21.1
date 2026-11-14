@@ -1,5 +1,10 @@
 package net.rp.rpessentials;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -19,7 +24,8 @@ public class RpEssentialsPatternUtils {
      */
     public static boolean matchesPattern(String resourceId, String pattern) {
         pattern = pattern.trim();
-
+        if (pattern.indexOf('|') >= 0) return false;
+        if (pattern.startsWith("#")) return inTag(resourceId, pattern.substring(1));
         if (resourceId.equals(pattern)) {
             return true;
         }
@@ -33,6 +39,14 @@ public class RpEssentialsPatternUtils {
         }
 
         return false;
+    }
+
+    public static boolean inTag(String resourceId, String tag) {
+        ResourceLocation id = ResourceLocation.tryParse(resourceId);
+        ResourceLocation t = ResourceLocation.tryParse(tag);
+        if (id == null || t == null) return false;
+        return BuiltInRegistries.ITEM.getHolder(id).map(h -> h.is(TagKey.create(Registries.ITEM, t))).orElse(false)
+                || BuiltInRegistries.BLOCK.getHolder(id).map(h -> h.is(TagKey.create(Registries.BLOCK, t))).orElse(false);
     }
 
     /**

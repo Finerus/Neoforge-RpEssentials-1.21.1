@@ -54,14 +54,9 @@ public class MixinArmorItemUse {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
 
         if (!ProfessionRestrictionManager.canEquip(serverPlayer, itemId)) {
-            long now = System.currentTimeMillis();
-            UUID uuid = serverPlayer.getUUID();
-            Long last = lastEquipMessage.get(uuid);
-            if (last == null || now - last > COOLDOWN_MS) {
-                lastEquipMessage.put(uuid, now);
-                String msg = ProfessionRestrictionManager.getEquipmentBlockedMessage(itemId);
-                serverPlayer.displayClientMessage(Component.literal(msg), true);
-            }
+            ProfessionRestrictionManager.notifyBlocked(serverPlayer, "equip",
+                    () -> ProfessionRestrictionManager.getEquipmentBlockedMessage(itemId));
+            serverPlayer.containerMenu.sendAllDataToRemote();
             cir.setReturnValue(InteractionResultHolder.fail(stack));
         }
     }

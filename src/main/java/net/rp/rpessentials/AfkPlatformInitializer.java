@@ -19,29 +19,32 @@ public class AfkPlatformInitializer {
     // =========================================================================
     // SavedData interne
     // =========================================================================
-
     public static class ModState extends SavedData {
 
         private boolean afkPlatformPlaced = false;
+        private String platformKey = "";
 
         public ModState() {}
 
         public static ModState load(CompoundTag tag, HolderLookup.Provider provider) {
             ModState state = new ModState();
             state.afkPlatformPlaced = tag.getBoolean("afkPlatformPlaced");
+            state.platformKey = tag.getString("platformKey");
             return state;
         }
 
         @Override
         public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
             tag.putBoolean("afkPlatformPlaced", afkPlatformPlaced);
+            tag.putString("platformKey", platformKey);
             return tag;
         }
 
-        public boolean isAfkPlatformPlaced() { return afkPlatformPlaced; }
+        public String platformKey() { return platformKey; }
 
-        public void markAfkPlatformPlaced() {
+        public void markPlaced(String key) {
             afkPlatformPlaced = true;
+            platformKey = key;
             setDirty();
         }
     }
@@ -53,8 +56,6 @@ public class AfkPlatformInitializer {
         ModState state = overworld.getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(ModState::new, ModState::load),
                 SAVED_DATA_ID);
-
-        if (state.isAfkPlatformPlaced()) return;
 
         String dimId;
         double x, y, z;
@@ -68,10 +69,8 @@ public class AfkPlatformInitializer {
             return;
         }
 
-        ResourceKey<Level> dimKey = ResourceKey.create(
-                Registries.DIMENSION,
-                ResourceLocation.parse(dimId));
-        ServerLevel level = server.getLevel(dimKey);
+        ResourceLocation dimRl = ResourceLocation.tryParse(dimId);
+        ServerLevel level = dimRl == null ? null : server.getLevel(ResourceKey.create(Registries.DIMENSION, dimRl));
 
         if (level == null) {
             RpEssentials.LOGGER.warn("[AfkPlatform] Dimension '{}' not found, skipping.", dimId);
@@ -82,6 +81,9 @@ public class AfkPlatformInitializer {
         int by = (int) Math.floor(y) - 1;
         int bz = (int) Math.floor(z);
 
+        String key = dimId + "," + bx + "," + by + "," + bz;
+        if (key.equals(state.platformKey())) return;
+
         for (int dx = -1; dx <= 2; dx++) {
             for (int dz = -1; dz <= 2; dz++) {
                 level.setBlock(new BlockPos(bx + dx, by, bz + dz),
@@ -90,6 +92,6 @@ public class AfkPlatformInitializer {
         }
 
         RpEssentials.LOGGER.info("[AfkPlatform] Platform placed at {},{},{} in {}.", bx, by, bz, dimId);
-        state.markAfkPlatformPlaced();
+        state.markPlaced(key);
     }
 }

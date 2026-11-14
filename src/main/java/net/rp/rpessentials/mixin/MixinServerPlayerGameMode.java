@@ -43,15 +43,8 @@ public class MixinServerPlayerGameMode {
                 level.getBlockState(pos).getBlock());
 
         if (!ProfessionRestrictionManager.canOpenContainer(player, blockId)) {
-            long now = System.currentTimeMillis();
-            UUID uuid = player.getUUID();
-            Long last = lastContainerMessage.get(uuid);
-            if (last == null || now - last > COOLDOWN_MS) {
-                lastContainerMessage.put(uuid, now);
-                player.displayClientMessage(
-                        Component.literal(ProfessionRestrictionManager.getContainerOpenBlockedMessage(blockId)),
-                        true);
-            }
+            ProfessionRestrictionManager.notifyBlocked(player, "container",
+                    () -> ProfessionRestrictionManager.getContainerOpenBlockedMessage(player, blockId));
             cir.setReturnValue(InteractionResult.FAIL);
         }
     }

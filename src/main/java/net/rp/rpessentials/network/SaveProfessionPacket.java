@@ -1,5 +1,7 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.codec.StreamCodec;
@@ -74,11 +76,11 @@ public record SaveProfessionPacket(
 
             String cleanId = packet.id().toLowerCase().trim().replaceAll("[^a-z0-9_]", "_");
             if (cleanId.isEmpty() || packet.displayName().trim().isEmpty()) {
-                player.sendSystemMessage(Component.literal("§c[RpEssentials] Invalid ID or name."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_PROF_INVALID)));
                 return;
             }
             if (packet.isNew() && ProfessionRestrictionManager.isReservedTag(cleanId)) {
-                player.sendSystemMessage(Component.literal("§c[RpEssentials] This ID is reserved (role or staff tag)."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_PROF_RESERVED)));
                 return;
             }
             String cleanName = packet.displayName().trim().replace("&", "§").replace(";", "");
@@ -123,15 +125,14 @@ public record SaveProfessionPacket(
                 // ── 4. Message de confirmation avec résumé ────────────────────────
                 String actionVerb = found ? "updated" : "created";
 
-                player.sendSystemMessage(buildConfirmation(cleanId, cleanName, cleanColor, crafts,
-                        blocks, items, equipment, actionVerb));
+                player.sendSystemMessage(buildConfirmation(player, cleanId, cleanName, cleanColor, crafts,
+                        blocks, items, equipment, found));
 
                 RpEssentials.LOGGER.info("[GUI] Profession '{}' {} by {}",
                         cleanId, actionVerb, player.getGameProfile().getName());
 
             } catch (IllegalStateException e) {
-                player.sendSystemMessage(Component.literal(
-                        "§c[RpEssentials] Config not loaded, please try again."));
+                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
                 RpEssentials.LOGGER.error("[GUI] Config not loaded when saving profession", e);
             }
         });
@@ -141,53 +142,34 @@ public record SaveProfessionPacket(
      * Builds the confirmation message sent to the admin after saving.
      * Shows how many entries each restriction category has.
      */
-    private static Component buildConfirmation(String id, String name, String color,
+    private static Component buildConfirmation(ServerPlayer v, String id, String name, String color,
                                                List<String> crafts, List<String> blocks,
-                                               List<String> items, List<String> equipment, String verb) {
-        MutableComponent out = Component.literal("§a[RpEssentials] Profession §e" + id + " §a" + verb + ".\n"
-                + "§7  §6Name: §f" + name + "  §6Color: §" + color.replace("&", "").replace("§", "") + "■§r");
-        out.append(restrictionLine("Crafts", crafts));
-        out.append(restrictionLine("Blocks", blocks));
-        out.append(restrictionLine("Items", items));
-        out.append(restrictionLine("Equipment", equipment));
+                                               List<String> items, List<String> equipment, boolean updated) {
+        MutableComponent out = Component.literal(
+                ServerLang.get(v, updated ? MessagesConfig.GUI_PROF_UPDATED : MessagesConfig.GUI_PROF_CREATED, "id", id) + "\n"
+                + ServerLang.get(v, MessagesConfig.GUI_PROF_SUMMARY, "name", name,
+                        "color", "§" + color.replace("&", "").replace("§", "")));
+        out.append(restrictionLine(v, ServerLang.get(v, MessagesConfig.GUI_LABEL_CRAFTS), crafts));
+        out.append(restrictionLine(v, ServerLang.get(v, MessagesConfig.GUI_LABEL_BLOCKS), blocks));
+        out.append(restrictionLine(v, ServerLang.get(v, MessagesConfig.GUI_LABEL_ITEMS), items));
+        out.append(restrictionLine(v, ServerLang.get(v, MessagesConfig.GUI_LABEL_EQUIPMENT), equipment));
         return out;
     }
 
-    private static MutableComponent restrictionLine(String label, List<String> items) {
-        if (items.isEmpty()) return Component.literal("\n§7  " + label + ": §8none");
+    private static MutableComponent restrictionLine(ServerPlayer v, String label, List<String> items) {
+        if (items.isEmpty()) return Component.literal("\n" + ServerLang.get(v, MessagesConfig.GUI_PROF_LINE_NONE, "label", label));
         int max = 3;
-        String text = "\n§7  " + label + ": §f"
-                + String.join("§7, §f", items.subList(0, Math.min(items.size(), max)));
-        if (items.size() <= max) return Component.literal(text + " §8(" + items.size() + ")");
+        String text = "\n" + ServerLang.get(v, MessagesConfig.GUI_PROF_LINE, "label", label,
+                "items", String.join("§7, §f", items.subList(0, Math.min(items.size(), max))));
+        if (items.size() <= max) return Component.literal(text
+                + ServerLang.get(v, MessagesConfig.GUI_PROF_COUNT, "count", String.valueOf(items.size())));
         List<String> tip = items.stream().map(s -> "§f" + s).toList();
-        return GuiFeedback.withTooltip(
-                Component.literal(text + " §8(+" + (items.size() - max) + " more)"), tip);
+        return GuiFeedback.withTooltip(v,
+                Component.literal(text + ServerLang.get(v, MessagesConfig.GUI_PROF_MORE,
+                        "count", String.valueOf(items.size() - max))), tip);
     }
 
-    /**
-     * Formats one restriction category line.
-     * Examples:
-     *   §7  Crafts:    §8none
-     *   §7  Equipment: §fminecraft:diamond_sword, minecraft:iron_sword §8(2)
-     */
-    private static String formatRestrictionLine(String label, List<String> items) {
-        if (items.isEmpty()) {
-            return "§7  " + label + ": §8none\n";
-        }
-        int max = 3;
-        StringBuilder line = new StringBuilder("§7  ").append(label).append(": §f");
 
-        List<String> shown = items.subList(0, Math.min(items.size(), max));
-        line.append(String.join("§7, §f", shown));
-
-        if (items.size() > max) {
-            line.append(" §8(+").append(items.size() - max).append(" more)");
-        } else {
-            line.append(" §8(").append(items.size()).append(")");
-        }
-        line.append("\n");
-        return line.toString();
-    }
 
     private static void setOnly(
             ModConfigSpec.ConfigValue<List<? extends String>> configValue,

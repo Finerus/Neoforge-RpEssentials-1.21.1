@@ -6,10 +6,10 @@ import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPatternUtils;
 import net.rp.rpessentials.network.SyncProfessionRestrictionsPacket;
 import net.rp.rpessentials.config.ProfessionConfig;
+import net.rp.rpessentials.network.SyncTooltipPacket;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Utilitaire pour synchroniser les restrictions de métiers avec le client
@@ -19,6 +19,55 @@ public class ProfessionSyncHelper {
     /**
      * Envoie les restrictions au joueur lors de sa connexion
      */
+    private record Computed(Set<String> crafts, Set<String> equipment) {}
+    private static final Map<String, Computed> computed = new ConcurrentHashMap<>();
+
+    public static void clearCache() {
+        computed.clear();
+    }
+
+    private static String key(List<String> licenses) {
+        List<String> l = new ArrayList<>(licenses);
+        l.sort(String.CASE_INSENSITIVE_ORDER);
+        return String.join(",", l).toLowerCase();
+    }
+
+    private static List<String> copy(List<? extends String> l) {
+        return new ArrayList<>(l);
+    }
+
+    private static void sendTooltip(ServerPlayer player, boolean exempt) {
+        List<List<String>> blocked = new ArrayList<>();
+        List<List<String>> allowed = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        try {
+            blocked.add(copy(ProfessionConfig.GLOBAL_BLOCKED_CRAFTS.get()));
+            blocked.add(copy(ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS.get()));
+            blocked.add(copy(ProfessionConfig.GLOBAL_BLOCKED_ITEMS.get()));
+            blocked.add(copy(ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT.get()));
+            blocked.add(copy(ProfessionConfig.CONTAINER_OPEN_RESTRICTIONS.get()));
+            allowed.add(copy(ProfessionConfig.PROFESSION_ALLOWED_CRAFTS.get()));
+            allowed.add(copy(ProfessionConfig.PROFESSION_ALLOWED_BLOCKS.get()));
+            allowed.add(copy(ProfessionConfig.PROFESSION_ALLOWED_ITEMS.get()));
+            allowed.add(copy(ProfessionConfig.PROFESSION_ALLOWED_EQUIPMENT.get()));
+            for (ProfessionRestrictionManager.ProfessionData d : ProfessionRestrictionManager.getAllProfessions()) {
+                names.add(d.id + ";" + d.getFormattedName());
+            }
+        } catch (IllegalStateException e) {
+            blocked.clear();
+            allowed.clear();
+            names.clear();
+        }
+        PacketDistributor.sendToPlayer(player, new SyncTooltipPacket(blocked, allowed, names,
+                exempt ? List.of("@exempt") : LicenseManager.getLicenses(player.getUUID()),
+                net.rp.rpessentials.WorldBorderManager.zoneDefs(), licenseIdMode()));
+    }
+
+    private static String licenseIdMode() {
+        try { return ProfessionConfig.LICENSE_ID_DISPLAY.get(); }
+        catch (IllegalStateException e) { return "NAME_AND_ID"; }
+    }
+
     public static void syncToPlayer(ServerPlayer player) {
         ProfessionRestrictionManager.invalidatePlayerCache(player.getUUID());
         ProfessionRestrictionManager.enforceEquipment(player);
@@ -26,18 +75,22 @@ public class ProfessionSyncHelper {
         if (ProfessionRestrictionManager.isExemptFromProfessionRestrictions(player)) {
             PacketDistributor.sendToPlayer(player,
                     new SyncProfessionRestrictionsPacket(new HashSet<>(), new HashSet<>()));
+            sendTooltip(player, true);
             return;
         }
 
         List<String> playerLicenses = LicenseManager.getLicenses(player.getUUID());
-        Set<String> blockedCrafts = calculateBlockedCrafts(playerLicenses);
-        Set<String> blockedEquipment = calculateBlockedEquipment(playerLicenses);
-        PacketDistributor.sendToPlayer(player, new SyncProfessionRestrictionsPacket(blockedCrafts, blockedEquipment));
+        Computed c = computed.computeIfAbsent(key(playerLicenses), k -> new Computed(
+                Set.copyOf(calculateBlockedCrafts(playerLicenses)),
+                Set.copyOf(calculateBlockedEquipment(playerLicenses))));
+        PacketDistributor.sendToPlayer(player, new SyncProfessionRestrictionsPacket(c.crafts(), c.equipment()));
+        sendTooltip(player, false);
     }
 
     private static Set<String> calculateBlockedCrafts(List<String> playerLicenses) {
         Set<String> blocked = new HashSet<>();
         for (String itemPattern : ProfessionConfig.GLOBAL_BLOCKED_CRAFTS.get()) {
+            if (itemPattern.indexOf('|') >= 0) continue;
             if (!hasPermissionForPattern(playerLicenses, itemPattern, ProfessionConfig.PROFESSION_ALLOWED_CRAFTS.get())) {
                 blocked.add(itemPattern);
             }
@@ -48,6 +101,7 @@ public class ProfessionSyncHelper {
     private static Set<String> calculateBlockedEquipment(List<String> playerLicenses) {
         Set<String> blocked = new HashSet<>();
         for (String itemPattern : ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT.get()) {
+            if (itemPattern.indexOf('|') >= 0) continue;
             if (!hasPermissionForPattern(playerLicenses, itemPattern, ProfessionConfig.PROFESSION_ALLOWED_EQUIPMENT.get())) {
                 blocked.add(itemPattern);
             }

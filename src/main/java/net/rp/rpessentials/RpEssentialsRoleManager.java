@@ -27,17 +27,21 @@ public class RpEssentialsRoleManager {
     }
 
     private static final Map<String, Set<Permission>> rolePermissions = new ConcurrentHashMap<>();
-    private static final Map<UUID, Set<Permission>> playerPermissionCache = new ConcurrentHashMap<>();
+    private record Cached(long expiry, int mask) {}
+    private static final Map<UUID, Cached> cache = new ConcurrentHashMap<>();
+    private static final String[] NODES = new String[Permission.values().length];
+    static {
+        for (Permission p : Permission.values())
+            NODES[p.ordinal()] = "rpessentials." + p.name().replace("_", "").toLowerCase();
+    }
     private static final long CACHE_DURATION = 30_000L;
-    private static final Map<UUID, Long> cacheTimestamps = new ConcurrentHashMap<>();
 
     // =========================================================================
     // CHARGEMENT
     // =========================================================================
     public static void reload() {
         rolePermissions.clear();
-        playerPermissionCache.clear();
-        cacheTimestamps.clear();
+        cache.clear();
 
         try {
             for (String entry : RpEssentialsConfig.ROLES.get()) {
@@ -81,14 +85,30 @@ public class RpEssentialsRoleManager {
     // =========================================================================
     // RÉSOLUTION DES PERMISSIONS D'UN JOUEUR
     // =========================================================================
-    public static Set<Permission> getPermissions(ServerPlayer player) {
+    private static int maskOf(ServerPlayer player) {
         UUID uuid = player.getUUID();
-        Long ts = cacheTimestamps.get(uuid);
-        if (ts != null && System.currentTimeMillis() - ts < CACHE_DURATION) {
-            Set<Permission> cached = playerPermissionCache.get(uuid);
-            if (cached != null) return cached;
-        }
+        long now = System.currentTimeMillis();
+        Cached c = cache.get(uuid);
+        if (c != null && c.expiry() > now) return c.mask();
+        int m = 0;
+        for (Permission p : resolve(player)) m |= 1 << p.ordinal();
+        cache.put(uuid, new Cached(now + CACHE_DURATION, m));
+        return m;
+    }
 
+    public static Set<Permission> getPermissions(ServerPlayer player) {
+        int m = maskOf(player);
+        Set<Permission> out = EnumSet.noneOf(Permission.class);
+        for (Permission p : Permission.values()) if ((m & (1 << p.ordinal())) != 0) out.add(p);
+        return out;
+    }
+
+    public static boolean has(ServerPlayer player, Permission permission) {
+        return (maskOf(player) & (1 << permission.ordinal())) != 0;
+    }
+
+    private static Set<Permission> resolve(ServerPlayer player) {
+        UUID uuid = player.getUUID();
         if (rolePermissions.isEmpty()) reload();
 
         Set<Permission> result = EnumSet.noneOf(Permission.class);
@@ -108,11 +128,7 @@ public class RpEssentialsRoleManager {
         } catch (IllegalStateException ignored) {}
 
         try {
-            if (!RpEssentialsConfig.USE_LUCKPERMS_GROUPS.get()) {
-                playerPermissionCache.put(uuid, result);
-                cacheTimestamps.put(uuid, System.currentTimeMillis());
-                return result;
-            }
+            if (!RpEssentialsConfig.USE_LUCKPERMS_GROUPS.get()) return result;
         } catch (IllegalStateException ignored) {}
 
         try {
@@ -123,30 +139,25 @@ public class RpEssentialsRoleManager {
                 Set<Permission> primaryPerms = rolePermissions.get(primary);
                 if (primaryPerms != null) result.addAll(primaryPerms);
 
+                List<? extends String> staffGroups = List.of();
+                try { staffGroups = RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS.get(); }
+                catch (IllegalStateException ignored) {}
+                if (staffGroups.contains(primary)) result.add(Permission.IS_STAFF);
+
                 for (net.luckperms.api.model.group.Group group :
                         user.getInheritedGroups(user.getQueryOptions())) {
-                    Set<Permission> groupPerms = rolePermissions.get(group.getName().toLowerCase());
+                    String name = group.getName().toLowerCase();
+                    Set<Permission> groupPerms = rolePermissions.get(name);
                     if (groupPerms != null) result.addAll(groupPerms);
+                    if (staffGroups.contains(name)) result.add(Permission.IS_STAFF);
                 }
-
-                try {
-                    List<? extends String> staffGroups = RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS.get();
-                    if (staffGroups.contains(primary)) result.add(Permission.IS_STAFF);
-                    for (net.luckperms.api.model.group.Group group :
-                            user.getInheritedGroups(user.getQueryOptions())) {
-                        if (staffGroups.contains(group.getName().toLowerCase())) {
-                            result.add(Permission.IS_STAFF);
-                            break;
-                        }
-                    }
-                } catch (IllegalStateException ignored) {}
 
                 boolean nodes = true;
                 try { nodes = RpEssentialsConfig.LP_SYNC_ENABLED.get(); } catch (IllegalStateException ignored) {}
                 if (nodes) {
                     for (Permission perm : Permission.values()) {
-                        String node = "rpessentials." + perm.name().replace("_", "").toLowerCase();
-                        if (user.getCachedData().getPermissionData().checkPermission(node).asBoolean()) result.add(perm);
+                        if (user.getCachedData().getPermissionData()
+                                .checkPermission(NODES[perm.ordinal()]).asBoolean()) result.add(perm);
                     }
                 }
             }
@@ -154,39 +165,24 @@ public class RpEssentialsRoleManager {
         } catch (Exception e) {
             RpEssentials.LOGGER.debug("[RoleManager] LuckPerms check failed: {}", e.getMessage());
         }
-
-        playerPermissionCache.put(uuid, result);
-        cacheTimestamps.put(uuid, System.currentTimeMillis());
         return result;
-    }
-
-    public static boolean has(ServerPlayer player, Permission permission) {
-        return getPermissions(player).contains(permission);
     }
 
     // =========================================================================
     // CACHE
     // =========================================================================
     public static void invalidate(UUID uuid) {
-        playerPermissionCache.remove(uuid);
-        cacheTimestamps.remove(uuid);
+        cache.remove(uuid);
     }
 
     public static void clearExpired() {
         long now = System.currentTimeMillis();
-        cacheTimestamps.entrySet().removeIf(e -> {
-            if (now - e.getValue() >= CACHE_DURATION) {
-                playerPermissionCache.remove(e.getKey());
-                return true;
-            }
-            return false;
-        });
+        cache.entrySet().removeIf(e -> e.getValue().expiry() <= now);
     }
 
     public static void clearAll() {
         rolePermissions.clear();
-        playerPermissionCache.clear();
-        cacheTimestamps.clear();
+        cache.clear();
     }
 
     // =========================================================================

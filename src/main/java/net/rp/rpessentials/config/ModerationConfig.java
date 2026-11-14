@@ -38,6 +38,9 @@ public class ModerationConfig {
     public static final ModConfigSpec.ConfigValue<String> WARN_JOIN_MESSAGE;
     public static final ModConfigSpec.IntValue WARN_MAX_TEMP_DAYS;
     public static final ModConfigSpec.BooleanValue WARN_AUTO_PURGE_EXPIRED;
+    public static final ModConfigSpec.BooleanValue HISTORY_ENABLED;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> HISTORY_RETENTION;
+    public static final ModConfigSpec.IntValue HISTORY_MAX_PER_PLAYER;
     public static final ModConfigSpec.ConfigValue<String> WARN_ADDED_BROADCAST_FORMAT;
     public static final ModConfigSpec.ConfigValue<String> WARN_REMOVED_BROADCAST_FORMAT;
 
@@ -71,6 +74,8 @@ public class ModerationConfig {
     public static final ModConfigSpec.BooleanValue VANISH_NOTIFY_STAFF;
     public static final ModConfigSpec.BooleanValue VANISH_LOGIN_REMINDER;
     public static final ModConfigSpec.BooleanValue VANISH_INVULNERABLE;
+    public static final ModConfigSpec.BooleanValue VANISH_FAKE_MESSAGES;
+    public static final ModConfigSpec.ConfigValue<String> VANISH_FAKE_MARK;
     public static final ModConfigSpec.ConfigValue<String> VANISH_TAB_MODE;
     public static final ModConfigSpec.BooleanValue VANISH_TAB_MARKER_ENABLED;
     public static final ModConfigSpec.ConfigValue<String> VANISH_TAB_MARKER;
@@ -189,7 +194,7 @@ public class ModerationConfig {
         WARN_AUTO_PURGE_EXPIRED = BUILDER
                 .comment(
                         "If true, expired temp-warns are automatically removed from the file",
-                        "on each server startup and on every player login."
+                        "on each server startup, at server stop, and for the player who logs in."
                 )
                 .define("autoPurgeExpired", true);
 
@@ -304,6 +309,16 @@ public class ModerationConfig {
                 .comment("If true, vanished players cannot take damage.")
                 .define("invulnerable", true);
 
+        VANISH_FAKE_MESSAGES = BUILDER
+                .comment("If true, players who cannot see a vanished player get a fake leave message when they vanish",
+                        "and a fake join message when they reappear.")
+                .define("fakeJoinLeaveMessages", false);
+
+        VANISH_FAKE_MARK = BUILDER
+                .comment("Suffix added to the fake message for the vanished player and for the players who can see",
+                        "them, so they know it is fake. Supports & and § color codes.")
+                .define("fakeMessageMark", " &8[fake, vanish]");
+
         BUILDER.push("Tab List");
 
         VANISH_TAB_MODE = BUILDER
@@ -319,7 +334,8 @@ public class ModerationConfig {
                 .define("markerEnabled", true);
 
         VANISH_TAB_MARKER = BUILDER
-                .comment("Marker placed before the name of a vanished player in the tab list. Supports & and § color codes.")
+                .comment("Marker placed before the name of a vanished player in the tab list. Supports & and § color codes.",
+                        "Placeholder: {level} = vanish level of the player (0 to 4). Example: '&7[V{level}] '")
                 .define("marker", "&7[V] ");
 
         BUILDER.pop();
@@ -346,6 +362,21 @@ public class ModerationConfig {
         VH_TRIGGERS = vh("ignorePhysicalTriggers", "The player does not trigger pressure plates and tripwires.");
 
         BUILDER.pop();
+        BUILDER.pop();
+
+        BUILDER.push("Player History");
+        HISTORY_ENABLED = BUILDER
+                .comment("One timeline per player (history.json): warns, mutes, notes, manage actions,",
+                        "licenses given/revoked and RP deaths. See /rpessentials history <player> and the History tab of the profile GUI.")
+                .define("historyEnabled", true);
+        HISTORY_RETENTION = BUILDER
+                .comment("How many days each kind of line is kept, as TYPE=days. -1 = forever.",
+                        "Types: WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE, NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK (nickname changes).",
+                        "'*' applies to every type without its own line. Old lines are removed at startup and every hour.")
+                .defineList("historyRetention", Arrays.asList("*=365", "NOTE=-1", "DEATH_RP=-1"), obj -> obj instanceof String);
+        HISTORY_MAX_PER_PLAYER = BUILDER
+                .comment("Maximum lines kept per player, the oldest are removed first. 0 = no limit.")
+                .defineInRange("historyMaxPerPlayer", 200, 0, 100000);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

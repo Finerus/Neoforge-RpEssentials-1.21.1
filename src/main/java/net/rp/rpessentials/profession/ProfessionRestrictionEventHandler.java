@@ -21,9 +21,11 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.RpEssentialsPatternUtils;
+import net.rp.rpessentials.client.ClientTooltipRestrictions;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ProfessionConfig;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -85,7 +87,7 @@ public class ProfessionRestrictionEventHandler {
 
         if (!ProfessionRestrictionManager.canBreakBlock(player, blockId)) {
             event.setCanceled(true);
-            sendBlocked(player, ProfessionRestrictionManager.getBlockBreakBlockedMessage(blockId));
+            sendBlocked(player, ProfessionRestrictionManager.getBlockBreakBlockedMessage(player, blockId));
         }
     }
 
@@ -105,7 +107,7 @@ public class ProfessionRestrictionEventHandler {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(event.getPlacedBlock().getBlock().asItem());
         if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
             event.setCanceled(true);
-            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(itemId));
+            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(player, itemId));
         }
     }
 
@@ -129,7 +131,7 @@ public class ProfessionRestrictionEventHandler {
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
             event.setUseItem(net.neoforged.neoforge.common.util.TriState.FALSE);
-            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(itemId));
+            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(player, itemId));
         }
     }
 
@@ -143,7 +145,7 @@ public class ProfessionRestrictionEventHandler {
 
         if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
             event.setCanceled(true);
-            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(itemId));
+            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(player, itemId));
         }
     }
 
@@ -163,7 +165,7 @@ public class ProfessionRestrictionEventHandler {
 
         if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
             event.setCanceled(true);
-            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(itemId));
+            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(player, itemId));
         }
     }
 
@@ -187,7 +189,7 @@ public class ProfessionRestrictionEventHandler {
         // Vérification usage item
         if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
             event.setCanceled(true);
-            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(itemId));
+            sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(player, itemId));
             return;
         }
 
@@ -223,7 +225,7 @@ public class ProfessionRestrictionEventHandler {
             event.setCanceled(true);
             if (canSendMessage(player.getUUID(), lastAttackWarning, ATTACK_WARNING_COOLDOWN)) {
                 player.displayClientMessage(
-                        Component.literal(ProfessionRestrictionManager.getEquipmentBlockedMessage(weaponId)), true);
+                        Component.literal(ProfessionRestrictionManager.getEquipmentBlockedMessage(player, weaponId)), true);
             }
         }
     }
@@ -235,80 +237,15 @@ public class ProfessionRestrictionEventHandler {
     /**
      * Affiche les restrictions dans le tooltip des items.
      */
+    public static void clearTooltipCache() {
+        if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) ClientTooltipRestrictions.clearCache();
+    }
+
     @SubscribeEvent
     public static void onItemTooltip(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
         if (stack.isEmpty()) return;
-
-        Item item = stack.getItem();
-        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
-
-        // ── Résolution du block ID (fix) ──────────────────────────────────────
-        // Pour un BlockItem, le block ID est souvent identique à l'item ID,
-        // mais pas toujours (ex: grass_block, redstone, etc.).
-        ResourceLocation blockId = itemId; // défaut : même ID
-        if (item instanceof BlockItem bi) {
-            Block block = bi.getBlock();
-            ResourceLocation resolvedBlockId = BuiltInRegistries.BLOCK.getKey(block);
-            if (resolvedBlockId != null) blockId = resolvedBlockId;
-        }
-
-        try {
-            // ── Craft restriction ─────────────────────────────────────────────
-            if (ProfessionRestrictionManager.isGloballyBlocked(itemId, ProfessionConfig.GLOBAL_BLOCKED_CRAFTS.get())) {
-                String professions = ProfessionRestrictionManager.getRequiredProfessions(
-                        itemId, ProfessionConfig.PROFESSION_ALLOWED_CRAFTS.get());
-                event.getToolTip().add(Component.literal("§7Craft: §c✘§8: §7" + professions));
-            }
-
-            // ── Block break restriction (utilise blockId résolu) ──────────────
-            if (ProfessionRestrictionManager.isGloballyBlocked(blockId, ProfessionConfig.GLOBAL_UNBREAKABLE_BLOCKS.get())) {
-                String professions = ProfessionRestrictionManager.getRequiredProfessions(
-                        blockId, ProfessionConfig.PROFESSION_ALLOWED_BLOCKS.get());
-                event.getToolTip().add(Component.literal("§7Mining: §c✘§8: §7" + professions));
-            }
-
-            // ── Item use restriction ──────────────────────────────────────────
-            if (ProfessionRestrictionManager.isGloballyBlocked(itemId, ProfessionConfig.GLOBAL_BLOCKED_ITEMS.get())) {
-                String professions = ProfessionRestrictionManager.getRequiredProfessions(
-                        itemId, ProfessionConfig.PROFESSION_ALLOWED_ITEMS.get());
-                event.getToolTip().add(Component.literal("§7Usage: §c✘§8: §7" + professions));
-            }
-
-            // ── Equipment restriction ─────────────────────────────────────────
-            if (ProfessionRestrictionManager.isGloballyBlocked(itemId, ProfessionConfig.GLOBAL_BLOCKED_EQUIPMENT.get())) {
-                String professions = ProfessionRestrictionManager.getRequiredProfessions(
-                        itemId, ProfessionConfig.PROFESSION_ALLOWED_EQUIPMENT.get());
-                event.getToolTip().add(Component.literal("§7Equip: §c✘§8: §7" + professions));
-            }
-
-            // ── Container open restriction (utilise blockId résolu) ───────────
-            List<? extends String> containerRestrictions = ProfessionConfig.CONTAINER_OPEN_RESTRICTIONS.get();
-            if (!containerRestrictions.isEmpty()) {
-                String blockIdStr = blockId.toString();
-                for (String entry : containerRestrictions) {
-                    if (!entry.contains(";")) continue;
-                    String[] parts = entry.split(";", 2);
-                    if (!RpEssentialsPatternUtils.matchesPattern(blockIdStr, parts[0].trim())) continue;
-
-                    java.util.Set<String> required = new java.util.LinkedHashSet<>();
-                    for (String prof : parts[1].split(",")) {
-                        String profId = prof.trim();
-                        ProfessionRestrictionManager.ProfessionData data =
-                                ProfessionRestrictionManager.getProfessionData(profId);
-                        required.add(data != null ? data.getFormattedName() : profId);
-                    }
-                    String professions = required.isEmpty()
-                            ? MessagesConfig.get(MessagesConfig.PROFESSION_NONE_AVAILABLE)
-                            : String.join("§7, ", required);
-                    event.getToolTip().add(Component.literal("§7Open: §c✘§8: §7" + professions));
-                    break;
-                }
-            }
-
-        } catch (IllegalStateException ignored) {
-            // Config pas encore chargée — on ne plante pas
-        }
+        event.getToolTip().addAll(ClientTooltipRestrictions.lines(stack.getItem()));
     }
 
     @SubscribeEvent
@@ -328,7 +265,8 @@ public class ProfessionRestrictionEventHandler {
             if (current.isEmpty() || current.getItem() != stack.getItem()) return;
             player.setItemSlot(slot, ItemStack.EMPTY);
             if (!player.getInventory().add(current)) player.drop(current, false);
-            sendBlocked(player, ProfessionRestrictionManager.getEquipmentBlockedMessage(id));
+            player.containerMenu.sendAllDataToRemote();
+            sendBlocked(player, ProfessionRestrictionManager.getEquipmentBlockedMessage(player, id));
         });
     }
 
@@ -339,5 +277,10 @@ public class ProfessionRestrictionEventHandler {
         long now = System.currentTimeMillis();
         lastMessageTime.entrySet().removeIf(e -> now - e.getValue() > 10000);
         lastAttackWarning.entrySet().removeIf(e -> now - e.getValue() > 10000);
+    }
+
+    public static void onLogout(UUID id) {
+        lastMessageTime.remove(id);
+        lastAttackWarning.remove(id);
     }
 }

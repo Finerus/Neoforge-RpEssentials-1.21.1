@@ -1,6 +1,8 @@
 package net.rp.rpessentials.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.rp.rpessentials.ColorHelper;
 import net.rp.rpessentials.SyncNametagDataPacket;
 
 import java.util.Map;
@@ -19,6 +21,7 @@ public class ClientNametagCache {
                 packet.profession(),
                 packet.isStaff()
         ));
+        rendered.remove(packet.targetUUID());
     }
 
     public static NametagData get(UUID uuid) {
@@ -38,13 +41,14 @@ public class ClientNametagCache {
         Minecraft mc = Minecraft.getInstance();
         if (mc.getConnection() == null) return;
 
-        cache.keySet().removeIf(uuid ->
-                mc.getConnection().getPlayerInfo(uuid) == null);
+        cache.keySet().removeIf(uuid -> mc.getConnection().getPlayerInfo(uuid) == null);
+        rendered.keySet().removeIf(uuid -> !cache.containsKey(uuid));
     }
 
     /** Appelé à la déconnexion du client. */
     public static void reset() {
         cache.clear();
+        rendered.clear();
     }
 
     public record NametagData(
@@ -54,4 +58,17 @@ public class ClientNametagCache {
             String profession,
             boolean isStaff
     ) {}
+
+    private static final Map<UUID, Component> rendered = new ConcurrentHashMap<>();
+
+    public static Component rendered(UUID uuid, String realName) {
+        NametagData data = cache.get(uuid);
+        if (data == null) return null;
+        return rendered.computeIfAbsent(uuid, k -> {
+            String prefix = data.prefix() != null ? data.prefix() : "";
+            String display = data.displayName() != null && !data.displayName().isEmpty()
+                    ? data.displayName() : realName;
+            return ColorHelper.parseColors(prefix + display);
+        });
+    }
 }
