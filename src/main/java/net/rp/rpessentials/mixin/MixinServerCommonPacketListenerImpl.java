@@ -6,12 +6,8 @@ import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
-import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
 import net.rp.rpessentials.gameplay.TabBlur;
-import net.rp.rpessentials.gameplay.TabListCache;
-import net.rp.rpessentials.config.RpEssentialsConfig;
-import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.VanishManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -74,21 +70,8 @@ public abstract class MixinServerCommonPacketListenerImpl {
                 continue;
             }
 
-            String realName = target.getGameProfile().getName();
-            String nickname = NicknameManager.getNickname(target.getUUID());
-            String displayed = nickname != null ? nickname : realName;
-            String coloredPrefix = net.rp.rpessentials.util.ColorHelper
-                    .translateAlternateColorCodes(RpEssentials.getPlayerPrefix(target));
-            Component displayName;
-
-            if (TabBlur.isClear(receiver, seesAll, target, s)) {
-                String shown = (nickname != null && showRealNames)
-                        ? nickname + " §7§o(" + realName + ")"
-                        : displayed;
-                displayName = net.rp.rpessentials.util.ColorHelper.parseColors(coloredPrefix + shown);
-            } else {
-                displayName = TabBlur.hidden(displayed, coloredPrefix, s);
-            }
+            Component displayName = TabBlur.displayName(
+                    target, TabBlur.isClear(receiver, seesAll, target, s), showRealNames, s);
 
             newEntries.add(new ClientboundPlayerInfoUpdatePacket.Entry(
                     entry.profileId(), entry.profile(), entry.listed(),

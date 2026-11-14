@@ -103,6 +103,9 @@ public class RpBlurTabCommands {
         config.set(list);
         config.save();
         net.rp.rpessentials.gameplay.TabListCache.reload();
+        // The whitelist is part of the cached blur settings, and viewers who see everyone
+        // skip known targets: both must be rebuilt for the change to apply right away.
+        net.rp.rpessentials.gameplay.TabBlur.reload();
         return 1;
     }
 

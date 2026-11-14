@@ -28,7 +28,6 @@ public class ProfessionRestrictionManager {
     // =========================================================================
 
     private static final Map<String, ProfessionData> professionDataCache = new ConcurrentHashMap<>();
-    private static final Map<String, Pattern> compiledPatterns = new ConcurrentHashMap<>();
 
     // Anti-spam pour les messages de craft bloqué (utilisé par les mixins)
     private static final Map<UUID, Long> craftMessageCooldown = new ConcurrentHashMap<>();
@@ -206,7 +205,7 @@ public class ProfessionRestrictionManager {
         ProfessionSyncHelper.clearCache();
         ProfessionRestrictionEventHandler.clearTooltipCache();
         professionDataCache.clear();
-        compiledPatterns.clear();
+        RpEssentialsPatternUtils.clearCache();
         craftMessageCooldown.clear();
         isInitialized = false;
 
@@ -511,16 +510,7 @@ public class ProfessionRestrictionManager {
     }
 
     private static boolean matchesPattern(String resourceId, String pattern) {
-        pattern = pattern.trim();
-        if (pattern.indexOf('|') >= 0) return false;
-        if (pattern.startsWith("#")) return RpEssentialsPatternUtils.inTag(resourceId, pattern.substring(1));
-        if (resourceId.equals(pattern)) return true;
-        if (pattern.contains("*")) {
-            Pattern compiled = compiledPatterns.computeIfAbsent(pattern, p ->
-                    Pattern.compile(p.replace(".", "\\.").replace("*", ".*")));
-            return compiled.matcher(resourceId).matches();
-        }
-        return false;
+        return RpEssentialsPatternUtils.matchesPattern(resourceId, pattern);
     }
 
     public static String getRequiredProfessions(ResourceLocation resourceId, List<? extends String> allowedList) {
@@ -573,7 +563,7 @@ public class ProfessionRestrictionManager {
 
     public static void clearCache() {
         professionDataCache.clear();
-        compiledPatterns.clear();
+        RpEssentialsPatternUtils.clearCache();
         craftMessageCooldown.clear();
         blockedCooldowns.clear();
         decisions.clear();

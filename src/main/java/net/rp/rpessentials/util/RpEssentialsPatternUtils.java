@@ -31,9 +31,16 @@ public class RpEssentialsPatternUtils {
         }
 
         if (pattern.contains("*")) {
+            // Everything except * is matched literally: ids may contain characters that mean
+            // something in a regex ('.', '$', '+', '(' ...).
             Pattern compiled = compiledPatterns.computeIfAbsent(pattern, p -> {
-                String regex = p.replace(".", "\\.").replace("*", ".*");
-                return Pattern.compile(regex);
+                String[] parts = p.split("\\*", -1);
+                StringBuilder regex = new StringBuilder();
+                for (int i = 0; i < parts.length; i++) {
+                    if (i > 0) regex.append(".*");
+                    if (!parts[i].isEmpty()) regex.append(Pattern.quote(parts[i]));
+                }
+                return Pattern.compile(regex.toString());
             });
             return compiled.matcher(resourceId).matches();
         }

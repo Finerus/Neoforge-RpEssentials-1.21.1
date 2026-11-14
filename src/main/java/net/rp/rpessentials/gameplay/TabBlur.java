@@ -12,9 +12,12 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
 import net.rp.rpessentials.util.ColorHelper;
 
@@ -24,24 +27,61 @@ public final class TabBlur {
                            boolean sneakStealth, boolean obfPrefix, double maxDistSq, double sneakDistSq,
                            int obfLen, Set<String> whitelist, String style, String codes, String nametagMode) {}
 
+    /**
+     * Tab-list names of one player, parsed once and shared by every viewer.
+     * Rebuilt when the prefix, nickname or Minecraft name it was built from changes.
+     */
+    private record Names(String prefix, String nickname, String realName,
+                         Component clear, Component clearWithReal, Component hidden) {}
+
     private static volatile Settings current;
     private static final Map<UUID, Map<UUID, Boolean>> states = new ConcurrentHashMap<>();
+    private static final Map<UUID, Names> names = new ConcurrentHashMap<>();
+    /** Viewers that saw every name clearly on the previous tick. */
+    private static final Set<UUID> seeAllLastTick = ConcurrentHashMap.newKeySet();
 
     private TabBlur() {}
 
     public static void reload() {
-        current = null;
-        states.clear();
+        clearAll();
     }
 
     public static void clearAll() {
         current = null;
         states.clear();
+        names.clear();
+        seeAllLastTick.clear();
     }
 
     public static void onLogout(UUID id) {
         states.remove(id);
+        names.remove(id);
+        seeAllLastTick.remove(id);
         for (Map<UUID, Boolean> m : states.values()) m.remove(id);
+    }
+
+    /**
+     * The tab-list name of {@code target}: clear, clear with the real name in brackets
+     * (nickname + viewer allowed to see real names), or blurred.
+     */
+    public static Component displayName(ServerPlayer target, boolean clear, boolean showRealNames, Settings s) {
+        String realName = target.getGameProfile().getName();
+        String nickname = NicknameManager.getNickname(target.getUUID());
+        String prefix = ColorHelper.translateAlternateColorCodes(RpEssentials.getPlayerPrefix(target));
+
+        Names n = names.get(target.getUUID());
+        if (n == null || !n.prefix().equals(prefix) || !Objects.equals(n.nickname(), nickname)
+                || !n.realName().equals(realName)) {
+            String displayed = nickname != null ? nickname : realName;
+            Component plain = ColorHelper.parseColors(prefix + displayed);
+            Component withReal = nickname != null
+                    ? ColorHelper.parseColors(prefix + nickname + " §7§o(" + realName + ")")
+                    : plain;
+            n = new Names(prefix, nickname, realName, plain, withReal, hidden(displayed, prefix, s));
+            names.put(target.getUUID(), n);
+        }
+        if (!clear) return n.hidden();
+        return showRealNames ? n.clearWithReal() : n.clear();
     }
 
     public static Settings settings() {
@@ -108,9 +148,20 @@ public final class TabBlur {
         List<ServerPlayer> players = server.getPlayerList().getPlayers();
         for (ServerPlayer receiver : players) {
             boolean seesAll = seesAll(receiver, s);
+            // A viewer who sees everyone keeps the same result for every target until the config
+            // is reloaded (which clears the states) or they lose that right: only new targets
+            // need a check.
+            boolean stable;
+            if (seesAll) {
+                stable = !seeAllLastTick.add(receiver.getUUID());
+            } else {
+                seeAllLastTick.remove(receiver.getUUID());
+                stable = false;
+            }
             Map<UUID, Boolean> known = states.computeIfAbsent(receiver.getUUID(), k -> new ConcurrentHashMap<>());
             List<ServerPlayer> changed = null;
             for (ServerPlayer target : players) {
+                if (stable && known.containsKey(target.getUUID())) continue;
                 if (VanishManager.isHiddenFrom(receiver, target.getUUID())) continue;
                 boolean clear = isClear(receiver, seesAll, target, s);
                 Boolean old = known.put(target.getUUID(), clear);
