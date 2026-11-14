@@ -1,7 +1,7 @@
 package net.rp.rpessentials.network;
 
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.codec.StreamCodec;
@@ -11,11 +11,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.rp.rpessentials.GuiFeedback;
+import net.rp.rpessentials.util.GuiFeedback;
 import net.rp.rpessentials.config.ProfessionConfig;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
 
 import java.util.ArrayList;
 import java.util.List;

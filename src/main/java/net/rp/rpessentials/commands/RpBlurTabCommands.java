@@ -1,7 +1,7 @@
 package net.rp.rpessentials.commands;
 
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -102,7 +102,7 @@ public class RpBlurTabCommands {
 
         config.set(list);
         config.save();
-        net.rp.rpessentials.TabListCache.reload();
+        net.rp.rpessentials.gameplay.TabListCache.reload();
         return 1;
     }
 

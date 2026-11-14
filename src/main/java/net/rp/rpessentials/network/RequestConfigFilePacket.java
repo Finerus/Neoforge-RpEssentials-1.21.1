@@ -9,7 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ConfigInspector;
 
 import java.util.List;

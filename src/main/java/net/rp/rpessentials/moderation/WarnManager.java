@@ -4,9 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsIO;
-import net.rp.rpessentials.TimeHelper;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
+import net.rp.rpessentials.util.TimeHelper;
 
 import java.io.*;
 import java.lang.reflect.Type;
@@ -189,7 +189,7 @@ public class WarnManager {
         saveToFile();
         HistoryManager.record(targetUUID, targetName, HistoryManager.WARN, issuerName,
                 "#" + id + " " + reason + (expiresAt != null
-                        ? " (" + net.rp.rpessentials.TimeHelper.format("dd/MM/yyyy HH:mm", expiresAt) + ")" : ""));
+                        ? " (" + net.rp.rpessentials.util.TimeHelper.format("dd/MM/yyyy HH:mm", expiresAt) + ")" : ""));
         RpEssentials.LOGGER.info("[WarnManager] Warn #{} added for {} by {} — reason: {}", id, targetName, issuerName, reason);
         return id;
     }

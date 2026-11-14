@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.rp.rpessentials.DiceManager;
+import net.rp.rpessentials.gameplay.DiceManager;
 import net.rp.rpessentials.network.DiceRollPacket;
 
 import java.util.List;

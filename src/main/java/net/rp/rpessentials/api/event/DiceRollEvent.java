@@ -3,7 +3,7 @@ package net.rp.rpessentials.api.event;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
-import net.rp.rpessentials.DiceManager;
+import net.rp.rpessentials.gameplay.DiceManager;
 
 import java.util.List;
 

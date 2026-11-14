@@ -3,11 +3,11 @@ package net.rp.rpessentials.moderation;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import net.rp.rpessentials.NameCache;
+import net.rp.rpessentials.util.NameCache;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsIO;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
+import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
 
@@ -292,7 +292,7 @@ public final class HistoryManager {
         var key = typeKey(e.type);
         String type = key != null ? ServerLang.get(v, key) : String.valueOf(e.type);
         return ServerLang.get(v, MessagesConfig.HISTORY_LINE,
-                "date", net.rp.rpessentials.TimeHelper.format("dd/MM/yyyy HH:mm", e.time),
+                "date", net.rp.rpessentials.util.TimeHelper.format("dd/MM/yyyy HH:mm", e.time),
                 "type", type, "actor", String.valueOf(e.actor), "detail", String.valueOf(e.detail));
     }
 

@@ -4,8 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsIO;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
 
 import java.io.File;
 import java.io.FileReader;

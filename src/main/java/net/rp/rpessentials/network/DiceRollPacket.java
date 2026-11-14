@@ -7,9 +7,9 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.rp.rpessentials.DiceManager;
+import net.rp.rpessentials.gameplay.DiceManager;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpConfig;
 

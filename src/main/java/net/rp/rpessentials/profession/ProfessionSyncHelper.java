@@ -3,7 +3,7 @@ package net.rp.rpessentials.profession;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPatternUtils;
+import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 import net.rp.rpessentials.network.SyncProfessionRestrictionsPacket;
 import net.rp.rpessentials.config.ProfessionConfig;
 import net.rp.rpessentials.network.SyncTooltipPacket;
@@ -60,7 +60,7 @@ public class ProfessionSyncHelper {
         }
         PacketDistributor.sendToPlayer(player, new SyncTooltipPacket(blocked, allowed, names,
                 exempt ? List.of("@exempt") : LicenseManager.getLicenses(player.getUUID()),
-                net.rp.rpessentials.WorldBorderManager.zoneDefs(), licenseIdMode()));
+                net.rp.rpessentials.gameplay.WorldBorderManager.zoneDefs(), licenseIdMode()));
     }
 
     private static String licenseIdMode() {

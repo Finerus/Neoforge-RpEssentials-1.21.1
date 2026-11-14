@@ -2,7 +2,7 @@ package net.rp.rpessentials.compat;
 
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.rp.rpessentials.RpEssentialsItems;
+import net.rp.rpessentials.items.RpEssentialsItems;
 import top.theillusivec4.curios.api.CuriosCapability;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.capability.ICurio;

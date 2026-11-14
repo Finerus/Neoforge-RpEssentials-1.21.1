@@ -14,6 +14,11 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.util.ColorHelper;
 
 public class MuteManager {
 

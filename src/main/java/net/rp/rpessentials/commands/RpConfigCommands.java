@@ -1,6 +1,6 @@
 package net.rp.rpessentials.commands;
 
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -24,6 +24,17 @@ import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 import java.util.List;
 
 import static net.rp.rpessentials.commands.RpChatUi.*;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.core.BackupManager;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
+import net.rp.rpessentials.gameplay.TabBlur;
+import net.rp.rpessentials.gameplay.TabListCache;
+import net.rp.rpessentials.gameplay.WorldBorderManager;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
+import net.rp.rpessentials.util.ImmersivePresetHelper;
+import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 
 public class RpConfigCommands {
 

@@ -1,7 +1,7 @@
 package net.rp.rpessentials.network;
 
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -11,9 +11,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
-import net.rp.rpessentials.RpEssentialsRoleManager;
-import net.rp.rpessentials.RpEssentialsScheduleManager;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.util.ArrayList;
@@ -66,7 +66,7 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
                 }
 
                 final String removedLine = removed;
-                net.rp.rpessentials.GuiFeedback.report(player, MessagesConfig.GUI_ROLE_DELETED, new String[]{"id", cleanId}, v -> {
+                net.rp.rpessentials.util.GuiFeedback.report(player, MessagesConfig.GUI_ROLE_DELETED, new String[]{"id", cleanId}, v -> {
                     List<String> details = new ArrayList<>();
                     if (removedLine != null) {
                         String[] o = removedLine.split(";", 3);

@@ -2,7 +2,7 @@ package net.rp.rpessentials.commands;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -12,7 +12,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.moderation.LastConnectionManager;
 import net.rp.rpessentials.moderation.VanishManager;
 

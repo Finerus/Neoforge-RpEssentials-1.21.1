@@ -8,9 +8,9 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.Msg;
-import net.rp.rpessentials.RpEssentialsPermissions;
-import net.rp.rpessentials.WorldBorderManager;
+import net.rp.rpessentials.lang.Msg;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.gameplay.WorldBorderManager;
 import net.rp.rpessentials.config.MessagesConfig;
 
 import java.util.List;

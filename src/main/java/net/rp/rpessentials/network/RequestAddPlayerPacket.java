@@ -1,7 +1,7 @@
 package net.rp.rpessentials.network;
 
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import com.mojang.authlib.GameProfile;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
@@ -13,7 +13,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.profession.PendingProfileManager;
 
 /**
@@ -43,7 +43,7 @@ public record RequestAddPlayerPacket(String playerName) implements CustomPacketP
             MinecraftServer server = admin.getServer();
 
             // Résolution en tâche de fond : évite un appel réseau bloquant sur le thread serveur
-            net.rp.rpessentials.RpEssentialsIO.submit(() -> {
+            net.rp.rpessentials.core.RpEssentialsIO.submit(() -> {
                 java.util.Optional<GameProfile> result = server.getProfileCache() != null
                         ? server.getProfileCache().get(name)
                         : java.util.Optional.empty();

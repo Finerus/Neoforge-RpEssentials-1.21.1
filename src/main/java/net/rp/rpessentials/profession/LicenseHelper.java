@@ -1,6 +1,6 @@
 package net.rp.rpessentials.profession;
 
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -9,9 +9,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
-import net.rp.rpessentials.ColorHelper;
-import net.rp.rpessentials.RpEssentialsItems;
-import net.rp.rpessentials.TimeHelper;
+import net.rp.rpessentials.util.ColorHelper;
+import net.rp.rpessentials.items.RpEssentialsItems;
+import net.rp.rpessentials.util.TimeHelper;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 

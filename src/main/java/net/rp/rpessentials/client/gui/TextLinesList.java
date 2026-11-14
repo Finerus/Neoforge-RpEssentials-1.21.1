@@ -6,7 +6,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.util.ColorHelper;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -8,8 +8,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import net.rp.rpessentials.ServerLang;
-import net.rp.rpessentials.WorldBorderManager;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.gameplay.WorldBorderManager;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -36,7 +36,7 @@ public final class ConfigValidator {
     /** Problems in the viewer's language. */
     public static List<String> validate(ServerPlayer v) {
         List<String> out = new ArrayList<>();
-        for (String c : net.rp.rpessentials.CommandToggles.activeConflicts())
+        for (String c : net.rp.rpessentials.commands.CommandToggles.activeConflicts())
             add(out, v, MessagesConfig.CFG_V_CMD_CONFLICT, "command", c);
         try {
             Set<String> profs = new HashSet<>();

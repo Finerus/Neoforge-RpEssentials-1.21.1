@@ -24,6 +24,14 @@ import net.rp.rpessentials.profession.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.commands.RpEssentialsCommands;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.network.SyncNametagDataPacket;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
+import net.rp.rpessentials.util.ColorHelper;
 
 public final class ManageService {
 
@@ -184,7 +192,7 @@ public final class ManageService {
                 if (online != null) online.connection.disconnect(Component.translatable("multiplayer.disconnect.banned"));
                 suggest(server, uuid, name, ManageSuggestions.Kind.BANNED);
                 yield ok(admin, MessagesConfig.MANAGE_TEMPBANNED, "player", name,
-                        "date", net.rp.rpessentials.TimeHelper.format("dd/MM/yyyy HH:mm", until.getTime()));
+                        "date", net.rp.rpessentials.util.TimeHelper.format("dd/MM/yyyy HH:mm", until.getTime()));
             }
             case PARDON -> {
                 if (!pl.getBans().isBanned(profile)) yield fail(admin, MessagesConfig.MANAGE_NOT_BANNED, "player", name);
@@ -396,7 +404,7 @@ public final class ManageService {
         List<String> licenses = LicenseManager.getLicenses(uuid);
         for (String prof : licenses) {
             LicenseManager.removeLicense(uuid, prof);
-            LicenseManager.logActionSystem("REVOKE", name, uuid.toString(), prof, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_MANAGE, "staff", adminName));
+            LicenseManager.logActionSystem("REVOKE", name, uuid.toString(), prof, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_MANAGE, "staff", adminName));
             if (online != null && !ProfessionRestrictionManager.isReservedTag(prof)) {
                 server.getCommands().performPrefixedCommand(silent, "tag " + name + " remove " + prof);
             }

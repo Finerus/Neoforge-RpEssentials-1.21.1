@@ -1,7 +1,7 @@
 package net.rp.rpessentials.moderation;
 
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -16,12 +16,12 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.common.ModConfigSpec;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsIO;
-import net.rp.rpessentials.RpEssentialsPermissions;
-import net.rp.rpessentials.SyncNametagDataPacket;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.network.SyncNametagDataPacket;
 import net.rp.rpessentials.api.VanishTrackable;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.config.ModerationConfig;

@@ -2,7 +2,7 @@ package net.rp.rpessentials.mixin;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.players.PlayerList;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.api.IRpPlayerList;
 import net.rp.rpessentials.config.ChatConfig;
@@ -57,7 +57,7 @@ public abstract class MixinPlayerList implements IRpPlayerList {
                 java.util.UUID id = net.rp.rpessentials.moderation.VanishManager.awardingId();
                 for (net.minecraft.server.level.ServerPlayer p : ((PlayerList) (Object) this).getPlayers()) {
                     if (!net.rp.rpessentials.moderation.VanishManager.isHiddenFrom(p, id))
-                        p.sendSystemMessage(component.copy().append(Component.literal(net.rp.rpessentials.ServerLang.get(p,
+                        p.sendSystemMessage(component.copy().append(Component.literal(net.rp.rpessentials.lang.ServerLang.get(p,
                                 net.rp.rpessentials.config.MessagesConfig.VANISH_ADVANCEMENT_HIDDEN))));
                 }
             }

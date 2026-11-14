@@ -1,7 +1,7 @@
 package net.rp.rpessentials.commands;
 
 import net.rp.rpessentials.moderation.HistoryManager;
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -14,10 +14,10 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.RpEssentialsCommands;
-import net.rp.rpessentials.RpEssentialsPermissions;
-import net.rp.rpessentials.RpEssentialsScheduleManager;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.commands.RpEssentialsCommands;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
+import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.moderation.*;
 import net.rp.rpessentials.profession.LicenseManager;
@@ -153,7 +153,7 @@ public class RpModerationCommands {
                                     ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
                                     String text = StringArgumentType.getString(ctx, "text");
                                     ServerPlayer author = ctx.getSource().getPlayer();
-                                    String authorName = author != null ? author.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
+                                    String authorName = author != null ? author.getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
                                     String authorUUID = author != null ? author.getUUID().toString() : "console";
                                     int id = NoteManager.addNote(target.getUUID(), target.getName().getString(), authorName, authorUUID, text);
                                     if (id < 0) {
@@ -376,11 +376,11 @@ public class RpModerationCommands {
                     for (ServerPlayer p : server.getPlayerList().getPlayers()) {
                         if (!RpEssentialsPermissions.isStaff(p)) continue;
                         String d = duration == 0 ? ServerLang.get(p, MessagesConfig.TIME_PERMANENT) : MessagesConfig.formatDuration(p, duration);
-                        p.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.MUTE_AUTO_NOTIFY,
+                        p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.MUTE_AUTO_NOTIFY,
                                 "player", target.getName().getString(), "count", String.valueOf(count), "duration", d)));
                     }
                     String td = duration == 0 ? ServerLang.get(target, MessagesConfig.TIME_PERMANENT) : MessagesConfig.formatDuration(target, duration);
-                    target.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(
+                    target.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(
                             ServerLang.get(target, MessagesConfig.MUTE_RECEIVED, "reason", autoReason, "duration", td)));
                 }
             }
@@ -546,9 +546,9 @@ public class RpModerationCommands {
         ServerPlayer staff = ctx.getSource().getPlayer();
         int duration = minutes < 0 ? 0 : minutes;
         MuteManager.mute(target.getUUID(), target.getName().getString(),
-                staff != null ? staff.getUUID() : null, staff != null ? staff.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE), reason, duration);
+                staff != null ? staff.getUUID() : null, staff != null ? staff.getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE), reason, duration);
         String d = duration == 0 ? Msg.get(ctx.getSource(), MessagesConfig.TIME_PERMANENT) : MessagesConfig.formatDuration(ctx.getSource().getPlayer(), duration);
-        target.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(ServerLang.get(target, MessagesConfig.MUTE_RECEIVED, "reason", reason, "duration", d)));
+        target.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(ServerLang.get(target, MessagesConfig.MUTE_RECEIVED, "reason", reason, "duration", d)));
         ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.MUTE_STAFF_ADDED, "player", target.getName().getString(), "duration", d, "reason", reason)), true);
         return 1;
     }
@@ -559,7 +559,7 @@ public class RpModerationCommands {
     private static int deathRpSetGlobal(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         boolean enabled = BoolArgumentType.getBool(ctx, "value");
         String staff;
-        try { staff = ctx.getSource().getPlayerOrException().getName().getString(); } catch (CommandSyntaxException e) { staff = net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE); }
+        try { staff = ctx.getSource().getPlayerOrException().getName().getString(); } catch (CommandSyntaxException e) { staff = net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE); }
         try { if (RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED != null) { RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.set(enabled); RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLED.save(); } }
         catch (IllegalStateException e) { ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.DEATHRP_CONFIG_UNAVAILABLE))); return 0; }
         DeathRPManager.broadcastGlobalToggle(staff, enabled, ctx.getSource().getServer());
@@ -805,7 +805,7 @@ public class RpModerationCommands {
     private static int showHistory(CommandContext<CommandSourceStack> ctx, int page) {
         if (!HistoryManager.enabled()) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.HISTORY_DISABLED)); return 0; }
         String name = StringArgumentType.getString(ctx, "player");
-        UUID uuid = net.rp.rpessentials.RpEssentialsCommands.findUUIDByName(ctx.getSource().getServer(), name);
+        UUID uuid = net.rp.rpessentials.commands.RpEssentialsCommands.findUUIDByName(ctx.getSource().getServer(), name);
         if (uuid == null) uuid = HistoryManager.findByName(name);
         if (uuid == null) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.HISTORY_UNKNOWN_PLAYER, "player", name)); return 0; }
         String shown = HistoryManager.nameOf(uuid) != null ? HistoryManager.nameOf(uuid) : name;
@@ -820,7 +820,7 @@ public class RpModerationCommands {
                         + "\n" + RpChatUi.LINE);
         int from = (current - 1) * RpChatUi.PAGE_SIZE;
         for (int i = from; i < Math.min(all.size(), from + RpChatUi.PAGE_SIZE); i++) {
-            out.append(Component.literal("\n")).append(net.rp.rpessentials.ColorHelper.parseSection(HistoryManager.format(viewer, all.get(i))));
+            out.append(Component.literal("\n")).append(net.rp.rpessentials.util.ColorHelper.parseSection(HistoryManager.format(viewer, all.get(i))));
         }
         if (pages > 1) {
             out.append(Component.literal("\n")).append(RpChatUi.pager(ctx.getSource(), current, pages, "/rpessentials history " + shown));

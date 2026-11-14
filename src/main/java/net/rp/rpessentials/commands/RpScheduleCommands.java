@@ -1,6 +1,6 @@
 package net.rp.rpessentials.commands;
 
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -16,6 +16,12 @@ import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.profession.ProfessionSyncHelper;
 
 import java.util.List;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.network.SyncNametagDataPacket;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
 
 /**
  * Commandes schedule et setrole.
@@ -223,7 +229,7 @@ public class RpScheduleCommands {
         String roleId = StringArgumentType.getString(ctx, "role").toLowerCase();
         MinecraftServer server = ctx.getSource().getServer();
         ServerPlayer staffPlayer = ctx.getSource().getPlayer();
-        String staffName = staffPlayer != null ? staffPlayer.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
+        String staffName = staffPlayer != null ? staffPlayer.getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
 
         List<? extends String> rolesConfig;
         try { rolesConfig = RpEssentialsConfig.ROLES.get(); }
@@ -390,13 +396,13 @@ public class RpScheduleCommands {
                             .getDayOfWeek()
                             .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH));
             server.getPlayerList().broadcastSystemMessage(
-                    net.rp.rpessentials.ColorHelper.parseColors(msg), false);
+                    net.rp.rpessentials.util.ColorHelper.parseColors(msg), false);
         } catch (IllegalStateException ignored) {}
 
         // Notification staff
         String staffName = ctx.getSource().getTextName();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (net.rp.rpessentials.RpEssentialsPermissions.isStaff(p))
+            if (net.rp.rpessentials.permission.RpEssentialsPermissions.isStaff(p))
                 p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_SCHED_FORCE_OPEN, "staff", staffName));
         }
 
@@ -426,7 +432,7 @@ public class RpScheduleCommands {
             if (!RpEssentialsScheduleManager.isScheduleExempt(p)) toKick.add(p);
         }
         for (ServerPlayer p : toKick) {
-            p.connection.disconnect(net.rp.rpessentials.ColorHelper.parseColors(finalKickMsg));
+            p.connection.disconnect(net.rp.rpessentials.util.ColorHelper.parseColors(finalKickMsg));
         }
 
         // Notification staff

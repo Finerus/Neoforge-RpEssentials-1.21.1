@@ -1,6 +1,6 @@
 package net.rp.rpessentials.client;
 
-import net.rp.rpessentials.RpEssentialsPatternUtils;
+import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 import net.rp.rpessentials.RpEssentials;
 
 import java.util.HashSet;

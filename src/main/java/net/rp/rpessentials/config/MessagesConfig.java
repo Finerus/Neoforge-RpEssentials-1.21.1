@@ -1,7 +1,7 @@
 package net.rp.rpessentials.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 
 /**
  * Configuration file for all user-facing messages in the RpEssentials mod.

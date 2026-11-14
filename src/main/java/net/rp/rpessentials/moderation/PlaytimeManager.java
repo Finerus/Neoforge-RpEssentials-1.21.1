@@ -1,7 +1,7 @@
 package net.rp.rpessentials.moderation;
 
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.RpEssentials;
 
 import java.util.Map;

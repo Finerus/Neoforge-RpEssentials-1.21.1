@@ -1,7 +1,7 @@
 package net.rp.rpessentials.client.gui;
 
 import net.rp.rpessentials.client.skin.GuiSkin;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.util.ColorHelper;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.Minecraft;

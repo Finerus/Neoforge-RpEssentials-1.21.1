@@ -4,7 +4,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.util.ColorHelper;
 
 /**
  * Color palette shared by the Player Profile (nickname) and the Profession Editor (profession name),

@@ -20,7 +20,7 @@ import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPatternUtils;
+import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 import net.rp.rpessentials.client.ClientTooltipRestrictions;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ProfessionConfig;

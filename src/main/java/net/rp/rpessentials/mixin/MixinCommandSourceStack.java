@@ -2,7 +2,7 @@ package net.rp.rpessentials.mixin;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.VanishManager;

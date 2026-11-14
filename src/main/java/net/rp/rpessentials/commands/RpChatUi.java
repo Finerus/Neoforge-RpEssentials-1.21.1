@@ -1,7 +1,7 @@
 package net.rp.rpessentials.commands;
 
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.lang.Msg;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -9,7 +9,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.commands.CommandSourceStack;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.util.ColorHelper;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;

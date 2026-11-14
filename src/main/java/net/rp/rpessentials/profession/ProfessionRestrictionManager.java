@@ -8,9 +8,9 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPatternUtils;
-import net.rp.rpessentials.RpEssentialsRoleManager;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.util.RpEssentialsPatternUtils;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
+import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.api.event.ProfessionCheckEvent;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ProfessionConfig;
@@ -105,7 +105,7 @@ public class ProfessionRestrictionManager {
                 state = 1;
                 if (dim == null) dim = player.level().dimension().location().toString();
                 if (s.dim() != null && !s.dim().equals(dim)) continue;
-                if (s.zone() != null && !net.rp.rpessentials.WorldBorderManager.isInZone(player, s.zone())) continue;
+                if (s.zone() != null && !net.rp.rpessentials.gameplay.WorldBorderManager.isInZone(player, s.zone())) continue;
                 return 2;
             }
             return state;

@@ -18,9 +18,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
-import net.rp.rpessentials.RpEssentialsRoleManager;
-import net.rp.rpessentials.RpEssentialsScheduleManager;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 
@@ -145,7 +145,7 @@ final class LuckPermsSyncImpl {
         String roleList = String.join("§7, §f", touched);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(Component.literal(
-                    net.rp.rpessentials.ServerLang.get(p, net.rp.rpessentials.config.MessagesConfig.LP_ROLES_SYNCED, "roles", roleList)));
+                    net.rp.rpessentials.lang.ServerLang.get(p, net.rp.rpessentials.config.MessagesConfig.LP_ROLES_SYNCED, "roles", roleList)));
         }
         RpEssentials.LOGGER.info("[LuckPerms] Roles synced from LuckPerms: {}", touched);
     }

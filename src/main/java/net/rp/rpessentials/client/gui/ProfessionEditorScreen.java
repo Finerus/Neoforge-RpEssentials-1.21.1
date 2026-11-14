@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.*;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.rp.rpessentials.RpEssentialsPatternUtils;
+import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 import net.rp.rpessentials.network.*;
 import org.lwjgl.glfw.GLFW;
 
@@ -639,7 +639,7 @@ public class ProfessionEditorScreen extends Screen {
 
     private boolean canManageRoles() {
         return Minecraft.getInstance().player != null
-                && net.rp.rpessentials.RpEssentialsPermissions.hasSensitiveLevel(Minecraft.getInstance().player);
+                && net.rp.rpessentials.permission.RpEssentialsPermissions.hasSensitiveLevel(Minecraft.getInstance().player);
     }
 
     // =========================================================================

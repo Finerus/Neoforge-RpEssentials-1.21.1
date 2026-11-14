@@ -2,8 +2,8 @@ package net.rp.rpessentials.moderation;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.ServerLang;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.util.ColorHelper;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -15,7 +15,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.CommandEvent;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
 
 import java.util.Map;
 import java.util.UUID;
@@ -71,7 +71,7 @@ public class ManageSuggestions {
         Long last = recent.put(uuid + ":" + kind, now);
         if (last != null && now - last < 5000L) return;
 
-        String base = net.rp.rpessentials.CommandToggles.manage() + " " + name + " ";
+        String base = net.rp.rpessentials.commands.CommandToggles.manage() + " " + name + " ";
         ModConfigSpec.ConfigValue<String> header = switch (kind) {
             case UNWHITELISTED -> MessagesConfig.MANAGE_SUG_HEAD_WL;
             case DEOPPED -> MessagesConfig.MANAGE_SUG_HEAD_DEOP;

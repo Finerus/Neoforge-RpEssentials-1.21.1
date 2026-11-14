@@ -1,12 +1,12 @@
 package net.rp.rpessentials.identity;
 
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.TimeHelper;
+import net.rp.rpessentials.util.TimeHelper;
 import net.rp.rpessentials.commands.RpChatUi;
 import net.rp.rpessentials.config.ChatConfig;
 
@@ -290,7 +290,7 @@ public class RpEssentialsChatFormatter {
 
     private static String sanitize(ServerPlayer sender, String message) {
         String mode = safeGetString(ChatConfig.PLAYER_CHAT_CODES, "ALL");
-        if (mode.equalsIgnoreCase("ALL") || net.rp.rpessentials.RpEssentialsPermissions.isStaff(sender)) return message;
+        if (mode.equalsIgnoreCase("ALL") || net.rp.rpessentials.permission.RpEssentialsPermissions.isStaff(sender)) return message;
         String converted = ColorHelper.translateAlternateColorCodes(message);
         if (mode.equalsIgnoreCase("NONE")) return ColorHelper.stripAll(converted);
         return OBFUSCATED.matcher(converted).replaceAll("");

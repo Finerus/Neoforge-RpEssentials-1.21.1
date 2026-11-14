@@ -17,6 +17,13 @@ import net.rp.rpessentials.profession.*;
 
 import java.util.List;
 import java.util.UUID;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
+import net.rp.rpessentials.util.ColorHelper;
+import net.rp.rpessentials.util.TimeHelper;
 
 /**
  * Packet CLIENT → SERVEUR
@@ -106,7 +113,7 @@ public record SetPlayerProfilePacket(
         } else if (!packet.nickname().trim().isEmpty()) {
             String nick = packet.nickname().trim().replace("&", "§");
             String err = NicknameManager.rejection(packet.targetUuid(), nick, true, admin);
-            if (err != null) admin.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(err));
+            if (err != null) admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(err));
             else net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(), nick);
         }
 
@@ -146,7 +153,7 @@ public record SetPlayerProfilePacket(
         LicenseManager.removeLicense(target.getUUID(), licenseId);
         ProfessionRestrictionManager.invalidatePlayerCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
-        LicenseManager.logAction("REVOKE", admin, target, licenseId, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_GUI));
+        LicenseManager.logAction("REVOKE", admin, target, licenseId, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_GUI));
         TempLicenseExpirationManager.markRevokedLicenseItems(target);
 
         // Remove vanilla tag
@@ -189,7 +196,7 @@ public record SetPlayerProfilePacket(
                 // Same checks as /nick (unique nickname...).
                 String err = NicknameManager.rejection(target.getUUID(), nick, true, admin);
                 if (err != null) {
-                    admin.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(err));
+                    admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(err));
                 } else {
                     NicknameManager.setNickname(target.getUUID(), nick);
                     report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_NICK, "nick", nick));
@@ -233,10 +240,10 @@ public record SetPlayerProfilePacket(
                         LicenseManager.addLicense(target.getUUID(), licenseId);
                         LicenseManager.addTempLicense(admin, target, licenseId, days, issued, expires);
                         LicenseManager.logAction("TEMPGIVE", admin, target, licenseId,
-                                net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_TEMP_GUI, "days", String.valueOf(days), "date", String.valueOf(expires)));
+                                net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_TEMP_GUI, "days", String.valueOf(days), "date", String.valueOf(expires)));
                     } else {
                         LicenseManager.addLicense(target.getUUID(), licenseId);
-                        LicenseManager.logAction("GIVE", admin, target, licenseId, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_GUI));
+                        LicenseManager.logAction("GIVE", admin, target, licenseId, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_GUI));
                     }
                     LicenseHelper.giveLicenseItem(server, admin, target, licenseId, expires);
 

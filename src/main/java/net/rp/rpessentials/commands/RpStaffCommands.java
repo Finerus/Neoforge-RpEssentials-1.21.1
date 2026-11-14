@@ -1,6 +1,6 @@
 package net.rp.rpessentials.commands;
 
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -25,9 +25,9 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsPermissions;
-import net.rp.rpessentials.RpEssentialsScheduleManager;
-import net.rp.rpessentials.TimeHelper;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
+import net.rp.rpessentials.util.TimeHelper;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.*;
@@ -183,7 +183,7 @@ public class RpStaffCommands {
             return 0;
         }
         target.setGameMode(type);
-        String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
+        String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
         logToStaff(ctx.getSource(), sourceName + " set " + target.getName().getString() + " to " + modeName);
         if (ModerationConfig.NOTIFY_TARGET.get() && target != ctx.getSource().getEntity()) {
             target.sendSystemMessage(Msg.c(target, MessagesConfig.STAFF_TOOLS_GAMEMODE_SET, "mode", modeName));
@@ -216,7 +216,7 @@ public class RpStaffCommands {
                 BuiltInRegistries.MOB_EFFECT.getHolder(ResourceKey.create(BuiltInRegistries.MOB_EFFECT.key(), effectId));
         if (effect.isPresent()) {
             target.addEffect(new MobEffectInstance(effect.get(), duration * 20, amplifier, false, false));
-            String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
+            String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
             logToStaff(ctx.getSource(), sourceName + " gave effect " + effectId + " to " + target.getName().getString());
             if (ModerationConfig.NOTIFY_TARGET.get()) {
                 target.sendSystemMessage(Msg.c(target, MessagesConfig.STAFF_TOOLS_EFFECT_APPLIED));
@@ -311,7 +311,7 @@ public class RpStaffCommands {
         int count = 0;
         for (ServerPlayer p : ctx.getSource().getServer().getPlayerList().getPlayers()) {
             if (!RpEssentialsPermissions.isStaff(p)) continue;
-            p.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(
+            p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(
                     Msg.get(p, MessagesConfig.STAFF_TOOLS_BROADCAST_FORMAT, "staff", staffName, "message", message)));
             count++;
         }

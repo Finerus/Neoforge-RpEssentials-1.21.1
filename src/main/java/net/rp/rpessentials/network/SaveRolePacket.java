@@ -15,6 +15,12 @@ import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
+import net.rp.rpessentials.util.GuiFeedback;
 
 public record SaveRolePacket(
         String id,

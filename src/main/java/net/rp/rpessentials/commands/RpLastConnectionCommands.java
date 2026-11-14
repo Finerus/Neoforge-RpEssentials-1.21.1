@@ -1,7 +1,7 @@
 package net.rp.rpessentials.commands;
 
-import net.rp.rpessentials.ColorHelper;
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.util.ColorHelper;
+import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -14,7 +14,7 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.ModerationConfig;
 import net.rp.rpessentials.moderation.LastConnectionManager;

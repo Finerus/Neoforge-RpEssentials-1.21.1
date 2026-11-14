@@ -6,9 +6,9 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.rp.rpessentials.ColorHelper;
+import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.ServerLang;
+import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.config.ChatConfig;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.moderation.MuteManager;
@@ -79,10 +79,10 @@ public class RpEssentialsMessagingManager {
             if (ChatConfig.ENABLE_PM_SPY.get()) {
                 for (ServerPlayer p : sender.getServer().getPlayerList().getPlayers()) {
                     if (p == sender || p == target) continue;
-                    if (net.rp.rpessentials.RpEssentialsRoleManager.has(p,
-                            net.rp.rpessentials.RpEssentialsRoleManager.Permission.SPY_MESSAGES)) {
-                        p.sendSystemMessage(net.rp.rpessentials.ColorHelper.parseColors(
-                                net.rp.rpessentials.ServerLang.get(p, MessagesConfig.MP_SPY_FORMAT,
+                    if (net.rp.rpessentials.permission.RpEssentialsRoleManager.has(p,
+                            net.rp.rpessentials.permission.RpEssentialsRoleManager.Permission.SPY_MESSAGES)) {
+                        p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(
+                                net.rp.rpessentials.lang.ServerLang.get(p, MessagesConfig.MP_SPY_FORMAT,
                                         "sender", sender.getName().getString(),
                                         "target", target.getName().getString(),
                                         "msg", message)));

@@ -16,6 +16,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
+import net.rp.rpessentials.network.SyncNametagDataPacket;
+import net.rp.rpessentials.util.TimeHelper;
 
 public class LicenseManager {
 
@@ -181,7 +186,7 @@ public class LicenseManager {
         Map<String, List<String>> data = new HashMap<>();
         for (Map.Entry<UUID, List<String>> entry : snapshot.entrySet()) {
             UUID uuid = entry.getKey();
-            String mcName = net.rp.rpessentials.NameCache.getOrUnknown(uuid);
+            String mcName = net.rp.rpessentials.util.NameCache.getOrUnknown(uuid);
             data.put(uuid.toString() + " (" + mcName + ")", new ArrayList<>(entry.getValue()));
         }
 
@@ -339,7 +344,7 @@ public class LicenseManager {
                                  String profession, String extra) {
         ensureInitialized();
 
-        String staffName = staff != null ? staff.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
+        String staffName = staff != null ? staff.getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
         String staffUUID = staff != null ? staff.getUUID().toString() : "console";
 
         AuditEntry entry = new AuditEntry(
@@ -404,7 +409,7 @@ public class LicenseManager {
                                       String issuedAt, String expiresAt) {
         ensureInitialized();
 
-        String staffName = staff != null ? staff.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
+        String staffName = staff != null ? staff.getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
         String staffUUID = staff != null ? staff.getUUID().toString() : "console";
 
         TempLicenseEntry entry = new TempLicenseEntry(

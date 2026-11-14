@@ -30,6 +30,13 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
+import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
+import net.rp.rpessentials.util.ColorHelper;
+import net.rp.rpessentials.util.ImmersivePresetHelper;
+import net.rp.rpessentials.util.TimeHelper;
 
 /**
  * Manager pour le système de mort RP.
@@ -179,7 +186,7 @@ public class DeathRPManager {
 
         Map<String, Boolean> out = new HashMap<>();
         for (Map.Entry<UUID, Boolean> e : snapshot.entrySet()) {
-            String mcName = net.rp.rpessentials.NameCache.get(e.getKey());
+            String mcName = net.rp.rpessentials.util.NameCache.get(e.getKey());
             out.put(e.getKey() + (mcName == null ? "" : " (" + mcName + ")"), e.getValue());
         }
 

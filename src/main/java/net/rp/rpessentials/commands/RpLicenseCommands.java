@@ -1,6 +1,6 @@
 package net.rp.rpessentials.commands;
 
-import net.rp.rpessentials.Msg;
+import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -13,10 +13,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.rp.rpessentials.ColorHelper;
-import net.rp.rpessentials.RpEssentialsItems;
-import net.rp.rpessentials.ServerLang;
-import net.rp.rpessentials.TimeHelper;
+import net.rp.rpessentials.util.ColorHelper;
+import net.rp.rpessentials.items.RpEssentialsItems;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.util.TimeHelper;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.LastConnectionManager;
@@ -274,7 +274,7 @@ public class RpLicenseCommands {
 
         LicenseManager.addLicense(target.getUUID(), professionId);
         LicenseManager.addTempLicense(staff, target, professionId, days, issued, expires);
-        LicenseManager.logAction("TEMPGIVE", staff, target, professionId, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_TEMP, "days", String.valueOf(days), "date", String.valueOf(expires)));
+        LicenseManager.logAction("TEMPGIVE", staff, target, professionId, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_TEMP, "days", String.valueOf(days), "date", String.valueOf(expires)));
         LicenseHelper.giveLicenseItem(server, staff, target, professionId, expires);
 
         ctx.getSource().sendSuccess(() -> Component.literal(
@@ -312,7 +312,7 @@ public class RpLicenseCommands {
         }
 
         LicenseManager.logActionSystem("REISSUE", target.getName().getString(), target.getUUID().toString(),
-                professionId, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_REISSUED, "staff", staff != null ? staff.getName().getString() : net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE)));
+                professionId, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_REISSUED, "staff", staff != null ? staff.getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE)));
 
         ctx.getSource().sendSuccess(() -> Component.literal(
                 Msg.get(ctx.getSource(), MessagesConfig.LICENSE_REISSUE_STAFF, "profession", profData.getFormattedName(),

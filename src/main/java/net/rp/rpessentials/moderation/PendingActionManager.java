@@ -6,8 +6,8 @@ import com.google.gson.reflect.TypeToken;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.RpEssentialsDataPaths;
-import net.rp.rpessentials.RpEssentialsIO;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
 
 import java.io.File;
 import java.io.FileReader;
@@ -101,7 +101,7 @@ public class PendingActionManager {
         for (PendingAction a : e.actions) {
             try {
                 ManageService.Action action = ManageService.Action.valueOf(a.action);
-                ManageService.execute(server, null, player.getUUID(), action, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.MANAGE_QUEUED_REASON, "issuer", String.valueOf(a.issuer)), 0);
+                ManageService.execute(server, null, player.getUUID(), action, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.MANAGE_QUEUED_REASON, "issuer", String.valueOf(a.issuer)), 0);
             } catch (IllegalArgumentException ex) {
                 RpEssentials.LOGGER.warn("[PendingActionManager] Unknown action: {}", a.action);
             }

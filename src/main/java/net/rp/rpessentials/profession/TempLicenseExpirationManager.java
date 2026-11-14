@@ -4,8 +4,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.ServerLang;
-import net.rp.rpessentials.TimeHelper;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.util.TimeHelper;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.items.LicenseItem;
 
@@ -137,7 +137,7 @@ public class TempLicenseExpirationManager {
             online.sendSystemMessage(Component.literal(
                     ServerLang.get(online, MessagesConfig.LICENSE_EXPIRED_RP_PLAYER, "profession", name)));
         }
-        LicenseManager.logActionSystem("TEMPEXPIRE", e.targetName, e.targetUUID, e.profession, net.rp.rpessentials.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_EXPIRED_ON, "date", String.valueOf(e.expiresAt)));
+        LicenseManager.logActionSystem("TEMPEXPIRE", e.targetName, e.targetUUID, e.profession, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_EXPIRED_ON, "date", String.valueOf(e.expiresAt)));
         RpEssentials.LOGGER.info("[TempLicenseExpiration] Expired '{}' for {}", e.profession, e.targetName);
     }
 

@@ -6,7 +6,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.SyncNametagDataPacket;
+import net.rp.rpessentials.network.SyncNametagDataPacket;
 import net.rp.rpessentials.client.ClientNametagConfig;
 import net.rp.rpessentials.client.ClientProfessionRestrictions;
 
@@ -193,9 +193,9 @@ public class NetworkHandler {
                 new DirectionalPayloadHandler<>(null, ManagePlayerPacket::handleOnServer)
         );
         registrar.playToClient(
-                net.rp.rpessentials.SyncNametagBatchPacket.TYPE,
-                net.rp.rpessentials.SyncNametagBatchPacket.CODEC,
-                new DirectionalPayloadHandler<>(net.rp.rpessentials.SyncNametagBatchPacket::handle, null)
+                net.rp.rpessentials.network.SyncNametagBatchPacket.TYPE,
+                net.rp.rpessentials.network.SyncNametagBatchPacket.CODEC,
+                new DirectionalPayloadHandler<>(net.rp.rpessentials.network.SyncNametagBatchPacket::handle, null)
         );
         registrar.playToClient(
                 SyncTooltipPacket.TYPE,

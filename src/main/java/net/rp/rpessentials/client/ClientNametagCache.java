@@ -2,8 +2,8 @@ package net.rp.rpessentials.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.rp.rpessentials.ColorHelper;
-import net.rp.rpessentials.SyncNametagDataPacket;
+import net.rp.rpessentials.util.ColorHelper;
+import net.rp.rpessentials.network.SyncNametagDataPacket;
 
 import java.util.Map;
 import java.util.UUID;

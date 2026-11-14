@@ -1,11 +1,11 @@
 package net.rp.rpessentials.api;
 
-import net.rp.rpessentials.DiceManager;
+import net.rp.rpessentials.gameplay.DiceManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.common.ModConfigSpec;
-import net.rp.rpessentials.RpEssentialsPermissions;
+import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ConfigInspector;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.DeathRPManager;
@@ -100,11 +100,11 @@ public final class RpEssentialsAPI {
                                    net.minecraft.server.level.ServerLevel level, double x, double y, double z,
                                    float yaw, float pitch, int seconds,
                                    java.util.function.Consumer<net.minecraft.server.level.ServerPlayer> after) {
-        return net.rp.rpessentials.TeleportWarmupManager.start(player, kind, level, x, y, z, yaw, pitch, seconds, after);
+        return net.rp.rpessentials.gameplay.TeleportWarmupManager.start(player, kind, level, x, y, z, yaw, pitch, seconds, after);
     }
 
     /** True while a delayed teleport is running for this player. */
-    public static boolean isTeleportPending(UUID player) { return net.rp.rpessentials.TeleportWarmupManager.isPending(player); }
+    public static boolean isTeleportPending(UUID player) { return net.rp.rpessentials.gameplay.TeleportWarmupManager.isPending(player); }
 
     public static void registerConfig(String mod, int modColor, String id, String displayName, int color,
                                       ConfigInspector.Theme theme, Class<?> clazz, ModConfigSpec spec,

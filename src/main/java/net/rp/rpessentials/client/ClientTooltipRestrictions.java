@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
-import net.rp.rpessentials.RpEssentialsPatternUtils;
+import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

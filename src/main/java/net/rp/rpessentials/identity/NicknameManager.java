@@ -19,6 +19,12 @@ import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpConfig;
 import net.rp.rpessentials.config.RpEssentialsConfig;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.core.RpEssentialsDataPaths;
+import net.rp.rpessentials.core.RpEssentialsIO;
+import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.network.SyncNametagDataPacket;
+import net.rp.rpessentials.util.ColorHelper;
 
 /**
  * Gestionnaire de nicknames avec sauvegarde automatique
@@ -96,7 +102,7 @@ public class NicknameManager {
         Map<String, String> data = new java.util.LinkedHashMap<>();
         for (Map.Entry<UUID, String> entry : snapshot.entrySet()) {
             UUID uuid = entry.getKey();
-            String mcName = net.rp.rpessentials.NameCache.getOrUnknown(uuid);
+            String mcName = net.rp.rpessentials.util.NameCache.getOrUnknown(uuid);
             data.put(uuid.toString() + " (" + mcName + ")", entry.getValue());
         }
 
