@@ -16,6 +16,15 @@ public final class UiLayout {
     private UiLayout() {}
 
     /** Width of each of {@code n} equal cells filling {@code width}, with {@code gap} between them. */
+    /**
+     * The text, cut with "…" when it is wider than {@code maxWidth} (formatting codes kept and not counted).
+     */
+    public static String fit(net.minecraft.client.gui.Font font, String text, int maxWidth) {
+        if (text == null || font.width(text) <= maxWidth) return text;
+        int room = Math.max(0, maxWidth - font.width("…"));
+        return font.plainSubstrByWidth(text, room) + "…";
+    }
+
     public static int cellW(int width, int n, int gap) {
         if (n <= 0) return width;
         return Math.max(MIN_W, (width - gap * (n - 1)) / n);

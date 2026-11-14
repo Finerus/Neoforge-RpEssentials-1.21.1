@@ -432,7 +432,8 @@ public class ConfigManagerScreen extends Screen {
         int panelRight = FILE_PANEL_W + MARGIN * 2;
         GuiSkin.panel(g, MARGIN - 2, PANEL_TOP, panelRight + 2, this.height - 6, 0xBB111111);
         GuiSkin.accent(g, MARGIN - 2, PANEL_TOP, panelRight + 2, PANEL_TOP + 2, modBarColor());
-        g.drawString(this.font, I18n.get("rpessentials.gui.config.files_header"), MARGIN + 2, PANEL_TOP + 4, 0xFFD700, false);
+        g.drawString(this.font, UiLayout.fit(this.font, I18n.get("rpessentials.gui.config.files_header"), FILE_PANEL_W + 6),
+                MARGIN + 2, PANEL_TOP + 4, 0xFFD700, false);
         for (ModHeader h : modHeaders) {
             g.drawString(this.font, this.font.plainSubstrByWidth(h.name(), FILE_PANEL_W),
                     MARGIN + 2, h.y() + 2, h.color(), false);
@@ -447,7 +448,8 @@ public class ConfigManagerScreen extends Screen {
         String title = selectedFileId != null
                 ? I18n.get("rpessentials.gui.config.title_with_file", selectedFileId)
                 : I18n.get("rpessentials.gui.config.title");
-        g.drawString(this.font, title, formX, PANEL_TOP + 5, titleColor(), false);
+        int titleW = (searchBox != null ? searchBox.getX() : this.width - MARGIN) - formX - UiLayout.GAP;
+        g.drawString(this.font, UiLayout.fit(this.font, title, titleW), formX, PANEL_TOP + 5, titleColor(), false);
 
         // Pending indicator
         if (!pendingChanges.isEmpty()) {
@@ -517,7 +519,8 @@ public class ConfigManagerScreen extends Screen {
         if (searchBox == null) {
             searchBox = new net.rp.rpessentials.client.skin.SkinnedEditBox(this.font, x, PANEL_TOP + 3, searchW, 14,
                     Component.translatable("rpessentials.gui.config.search_hint"));
-            searchBox.setHint(Component.literal("§7" + I18n.get("rpessentials.gui.config.search_hint")));
+            searchBox.setHint(Component.literal(UiLayout.fit(this.font, "§7" + I18n.get("rpessentials.gui.config.search_hint"), searchW - 8)));
+            searchBox.setTooltip(Tooltip.create(Component.translatable("rpessentials.gui.config.search_tooltip")));
             searchBox.setMaxLength(64);
             searchBox.setResponder(val -> {
                 searchQuery = val;

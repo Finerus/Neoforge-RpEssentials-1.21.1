@@ -660,7 +660,8 @@ public class ProfessionEditorScreen extends Screen {
         String hint = I18n.get(globalActiveCategory == 4 ? "rpessentials.gui.profession_editor.hint_container" : "rpessentials.gui.profession_editor.hint_global_item");
 
         java.util.function.Function<String, Warning> warnings = globalWarnings(globalActiveCategory);
-        int listEnd = buildRestrictionList(formX, formW, PANEL_TOP + 18, this.height - 70, list,
+        // The list stops so that the Manage button (18 px) sits right above Save (y = height - 35).
+        int listEnd = buildRestrictionList(formX, formW, PANEL_TOP + 18, this.height - 35 - UiLayout.GAP - 18 - 2, list,
                 globalDirtyEntries, this::removeGlobalRestriction, warnings);
         if (globalActiveCategory == 4) {
             addRenderableWidget(Button.builder(
@@ -991,7 +992,8 @@ public class ProfessionEditorScreen extends Screen {
         int formW = this.width - formX - MARGIN * 2;
         ProfRows r = profRows(formX, formW);
         int y = PANEL_TOP + 14;
-        g.drawString(this.font, I18n.get("rpessentials.gui.profession_editor.id_label_draw"),
+        int idLabelW = r.nameX() > formX ? r.nameX() - formX - UiLayout.GAP : formW;
+        g.drawString(this.font, UiLayout.fit(this.font, I18n.get("rpessentials.gui.profession_editor.id_label_draw"), idLabelW),
                 formX, y + 6, 0x888888, false);
         String nameLabel = I18n.get("rpessentials.gui.profession_editor.name_label_draw");
         g.drawString(this.font, nameLabel, r.nameX(), r.nameY() + 6, 0x888888, false);
@@ -1014,7 +1016,9 @@ public class ProfessionEditorScreen extends Screen {
         int formW = this.width - formX - MARGIN * 2;
         RoleRows r = roleRows(formX, formW);
         int y = PANEL_TOP + 14;
-        g.drawString(this.font, I18n.get("rpessentials.gui.roles.id_label"), formX, y + 6, 0x888888, false);
+        int idLabelW = r.lpX() > formX ? r.lpX() - formX - UiLayout.GAP : formW;
+        g.drawString(this.font, UiLayout.fit(this.font, I18n.get("rpessentials.gui.roles.id_label"), idLabelW),
+                formX, y + 6, 0x888888, false);
         g.drawString(this.font, I18n.get("rpessentials.gui.roles.lp_label"), r.lpX(), r.lpY() + 6, 0x888888, false);
         y = r.permY();
 
