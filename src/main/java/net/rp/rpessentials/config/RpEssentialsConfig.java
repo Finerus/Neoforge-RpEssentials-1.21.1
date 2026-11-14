@@ -88,6 +88,17 @@ public class RpEssentialsConfig {
     public static final ModConfigSpec.BooleanValue UNPREFIXED_STAFF_COMMANDS;
     public static final ModConfigSpec.BooleanValue UNPREFIXED_RP_COMMANDS;
 
+    public static final ModConfigSpec.ConfigValue<String> DISCORD_WEBHOOK_URL;
+    public static final ModConfigSpec.ConfigValue<String> DISCORD_USERNAME;
+    public static final ModConfigSpec.BooleanValue DISCORD_REPORTS;
+    public static final ModConfigSpec.BooleanValue DISCORD_WARNS;
+    public static final ModConfigSpec.BooleanValue DISCORD_MUTES;
+    public static final ModConfigSpec.BooleanValue DISCORD_MANAGE;
+    public static final ModConfigSpec.BooleanValue DISCORD_DEATH_RP;
+    public static final ModConfigSpec.BooleanValue DISCORD_LICENSES;
+    public static final ModConfigSpec.BooleanValue DISCORD_NOTES;
+    public static final ModConfigSpec.BooleanValue DISCORD_SCHEDULE;
+
     static {
         // =========================================================================
         // OBFUSCATION
@@ -508,6 +519,48 @@ public class RpEssentialsConfig {
                         "(/afk, /spawn, /commerce, /incognito, /action, /selfnick, /annonce). /rp ... keeps working.",
                         "Same conflict rule as unprefixedStaffCommands.")
                 .define("unprefixedRpCommands", false);
+
+        BUILDER.pop();
+
+        BUILDER.push("Discord Webhook");
+
+        DISCORD_WEBHOOK_URL = BUILDER
+                .comment("Sends staff events to a Discord channel. Empty = off.",
+                        "In Discord: channel settings > Integrations > Webhooks > New Webhook > Copy Webhook URL,",
+                        "then paste it here. Keep it secret: anyone with this URL can post in the channel.",
+                        "Only staff who can edit sensitive options see it in the Config Manager.",
+                        "Test it with /rpessentials discord test.")
+                .define("discordWebhookUrl", "");
+
+        DISCORD_USERNAME = BUILDER
+                .comment("Name shown as the author of the messages in Discord.")
+                .define("discordUsername", "RpEssentials");
+
+        DISCORD_REPORTS = BUILDER
+                .comment("Player reports: new report, report closed.")
+                .define("discordReports", true);
+        DISCORD_WARNS = BUILDER
+                .comment("Warns given, removed and cleared.")
+                .define("discordWarns", true);
+        DISCORD_MUTES = BUILDER
+                .comment("Mutes and unmutes.")
+                .define("discordMutes", true);
+        DISCORD_MANAGE = BUILDER
+                .comment("Manage actions (kick, ban, tempban, pardon, whitelist, op, clear inventory, reset...).",
+                        "Vanish actions are never sent.")
+                .define("discordManage", true);
+        DISCORD_DEATH_RP = BUILDER
+                .comment("RP deaths.")
+                .define("discordDeathRp", true);
+        DISCORD_LICENSES = BUILDER
+                .comment("Licenses given, revoked and expired.")
+                .define("discordLicenses", false);
+        DISCORD_NOTES = BUILDER
+                .comment("Staff notes added and removed.")
+                .define("discordNotes", false);
+        DISCORD_SCHEDULE = BUILDER
+                .comment("Server opening and closing (schedule).")
+                .define("discordSchedule", true);
 
         BUILDER.pop();
 

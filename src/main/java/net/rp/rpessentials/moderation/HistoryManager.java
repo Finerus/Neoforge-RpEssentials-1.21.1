@@ -191,15 +191,18 @@ public final class HistoryManager {
      * to see the line. The level of the actor is added automatically when they are vanished.
      */
     public static void record(UUID target, String targetName, String type, String actor, String detail, int hiddenLevel) {
-        if (target == null || !enabled()) return;
+        if (target == null) return;
         int hidden = Math.max(0, hiddenLevel);
         net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null && actor != null) {
             net.minecraft.server.level.ServerPlayer a = server.getPlayerList().getPlayerByName(actor);
             if (a != null && VanishManager.isVanished(a.getUUID())) hidden = Math.max(hidden, Math.max(1, VanishManager.getLevel(a.getUUID())));
         }
-        ensureInitialized();
         String name = targetName != null ? targetName : NameCache.get(target);
+        // Sent even when the history itself is disabled.
+        net.rp.rpessentials.compat.DiscordWebhook.onHistory(name, type, actor != null ? actor : system(), detail, hidden);
+        if (!enabled()) return;
+        ensureInitialized();
         if (name != null) names.put(target, name);
         List<Entry> list = history.computeIfAbsent(target, k -> Collections.synchronizedList(new ArrayList<>()));
         list.add(new Entry(System.currentTimeMillis(), type, actor != null ? actor : system(),
@@ -283,6 +286,12 @@ public final class HistoryManager {
     }
 
     /** One history line, in the viewer's language. */
+    /** Label of a history type in the server language (Discord, console). */
+    public static String typeLabel(String type) {
+        var key = typeKey(type);
+        return key != null ? ServerLang.get(null, key) : String.valueOf(type);
+    }
+
     public static String format(net.minecraft.server.level.ServerPlayer v, Entry e) {
         var key = typeKey(e.type);
         String type = key != null ? ServerLang.get(v, key) : String.valueOf(e.type);

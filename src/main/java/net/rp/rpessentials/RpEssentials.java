@@ -200,6 +200,7 @@ public class RpEssentials {
                             && !"FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) {
                         RpEssentialsScheduleManager.markClosedToday();
                         RpEssentialsScheduleManager.closeServer(server);
+                        net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
                     }
                 }
             }
@@ -246,6 +247,7 @@ public class RpEssentials {
         }
         NameCache.clear();
         RpEssentialsIO.shutdown();
+        net.rp.rpessentials.compat.DiscordWebhook.shutdown();
         LuckPermsSync.stop();
         LOGGER.info("[RpEssentials] Static caches cleared on server stop. Bye! - Finerus");
     }

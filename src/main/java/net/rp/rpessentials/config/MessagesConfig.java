@@ -681,6 +681,10 @@ public class MessagesConfig {
             REPORT_INFO_HANDLER, REPORT_INFO_NOTE, REPORT_STATUS_OPEN, REPORT_STATUS_CLAIMED, REPORT_STATUS_CLOSED,
             REPORT_BTN_CLAIM, REPORT_BTN_CLOSE, REPORT_BTN_TP, REPORT_TP_FAILED;
 
+    public static final ModConfigSpec.ConfigValue<String> DISCORD_BY, DISCORD_SERVER_OPENED, DISCORD_SERVER_OPENED_DESC,
+            DISCORD_SERVER_CLOSED, DISCORD_TEST_TITLE, DISCORD_TEST_DESC, DISCORD_TEST_SENDING, DISCORD_TEST_OK,
+            DISCORD_TEST_FAIL, DISCORD_NOT_SET, DISCORD_BAD_URL;
+
     static {
 
         // =========================================================================
@@ -2109,6 +2113,20 @@ public class MessagesConfig {
         REPORT_BTN_CLOSE = BUILDER.define("buttonClose", "§a[Close]");
         REPORT_BTN_TP = BUILDER.define("buttonTp", "§b[TP]");
         REPORT_TP_FAILED = BUILDER.define("tpFailed", "§c[Report] This place cannot be reached.");
+        BUILDER.pop();
+
+        BUILDER.push("Discord");
+        DISCORD_BY = BUILDER.comment("Footer of the Discord messages. Placeholder: {actor}").define("by", "By {actor}");
+        DISCORD_SERVER_OPENED = BUILDER.define("serverOpened", "Server open");
+        DISCORD_SERVER_OPENED_DESC = BUILDER.comment("Placeholders: {open} {close}").define("serverOpenedDesc", "Open from {open} to {close}");
+        DISCORD_SERVER_CLOSED = BUILDER.define("serverClosed", "Server closed");
+        DISCORD_TEST_TITLE = BUILDER.define("testTitle", "RpEssentials test message");
+        DISCORD_TEST_DESC = BUILDER.define("testDesc", "The webhook works: staff events will be posted in this channel.");
+        DISCORD_TEST_SENDING = BUILDER.define("testSending", "§7[Discord] Sending a test message...");
+        DISCORD_TEST_OK = BUILDER.define("testOk", "§a[Discord] Test message sent, check the channel.");
+        DISCORD_TEST_FAIL = BUILDER.comment("Placeholder: {error}").define("testFail", "§c[Discord] Sending failed: §f{error}");
+        DISCORD_NOT_SET = BUILDER.define("notSet", "§c[Discord] No webhook URL set (discordWebhookUrl in rpessentials-core.toml).");
+        DISCORD_BAD_URL = BUILDER.define("badUrl", "§c[Discord] discordWebhookUrl is not a Discord webhook URL (https://discord.com/api/webhooks/...).");
         BUILDER.pop();
 
         SPEC = BUILDER.build();

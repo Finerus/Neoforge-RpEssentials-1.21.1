@@ -65,6 +65,7 @@ public class RpEssentialsCommands {
         root.then(RpVanishCommands.build());
         root.then(RpZoneCommands.build());
         root.then(RpReportCommands.buildReports());
+        root.then(RpDiscordCommands.build());
 
         dispatcher.register(root);
 

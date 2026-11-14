@@ -787,5 +787,17 @@
   "Reports.buttonClaim": "§6[Handle]",
   "Reports.buttonClose": "§a[Close]",
   "Reports.buttonTp": "§b[TP]",
-  "Reports.tpFailed": "§c[Report] This place cannot be reached."
+  "Reports.tpFailed": "§c[Report] This place cannot be reached.",
+
+  "Discord.by": "By {actor}",
+  "Discord.serverOpened": "Server open",
+  "Discord.serverOpenedDesc": "Open from {open} to {close}",
+  "Discord.serverClosed": "Server closed",
+  "Discord.testTitle": "RpEssentials test message",
+  "Discord.testDesc": "The webhook works: staff events will be posted in this channel.",
+  "Discord.testSending": "§7[Discord] Sending a test message...",
+  "Discord.testOk": "§a[Discord] Test message sent, check the channel.",
+  "Discord.testFail": "§c[Discord] Sending failed: §f{error}",
+  "Discord.notSet": "§c[Discord] No webhook URL set (discordWebhookUrl in rpessentials-core.toml).",
+  "Discord.badUrl": "§c[Discord] discordWebhookUrl is not a Discord webhook URL (https://discord.com/api/webhooks/...)."
 }

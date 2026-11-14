@@ -494,6 +494,7 @@ public class RpEssentialsScheduleManager {
                 if (RpEssentialsPermissions.isStaff(p))
                     p.sendSystemMessage(ColorHelper.parseColors(msg));
         }
+        net.rp.rpessentials.compat.DiscordWebhook.onServerOpened(s.open().format(FMT), s.close().format(FMT));
     }
 
 

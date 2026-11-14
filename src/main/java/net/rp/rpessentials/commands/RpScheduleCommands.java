@@ -386,6 +386,7 @@ public class RpScheduleCommands {
 
         RpEssentialsScheduleManager.resetDailyFlags();
         RpEssentialsScheduleManager.markOpenedToday();
+        net.rp.rpessentials.compat.DiscordWebhook.onServerOpened(null, null);
 
         if (Cfg.ready(ScheduleConfig.SPEC)) {
             String msg = ScheduleConfig.MSG_SERVER_OPENED.get()
@@ -416,6 +417,7 @@ public class RpScheduleCommands {
         }
 
         RpEssentialsScheduleManager.markClosedToday();
+        net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
 
         String kickMsg;
         if (Cfg.ready(ScheduleConfig.SPEC)) {
