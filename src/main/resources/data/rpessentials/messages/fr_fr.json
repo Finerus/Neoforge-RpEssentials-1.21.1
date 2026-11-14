@@ -794,5 +794,9 @@
   "Death RP History.deathHistoryEntry": "§e#{index} §7: §f{date} §7: {cause}",
   "Stats.statsHeader": "§e§lStatistiques RP Essentials",
   "Dice.diceRollFormat": "§8[🎲] §e{player} §7a lancé §6{dice} §7et a obtenu §a§l{result}§7 !",
-  "Dice.diceRollSpyFormat": "§7[DICE-SPY] §e{player} §7a lancé §6{dice}§7 : §f{result}"
+  "Dice.diceRollSpyFormat": "§7[DICE-SPY] §e{player} §7a lancé §6{dice}§7 : §f{result}",
+  "Staff Config.unknownOption": "§c[RpEssentials] Option inconnue : §f{option}§c. Utilise les suggestions, ou précise le fichier : /rpessentials config set <fichier> <option> <valeur>.",
+  "Staff Config.invalidValue": "§c[RpEssentials] §f{value} §cn'est pas une valeur valide pour §f{option}§c. Attendu : §f{expected}",
+  "Staff Config.valueChanged": "§a[RpEssentials] §e{name} §8({file}) §7: §c{old} §7-> §a{value}",
+  "Staff Config.ambiguousOption": "§c[RpEssentials] Plusieurs options s'appellent §f{option}§c, écris l'une de celles-ci : §f{choices}"
 }

@@ -427,6 +427,10 @@ public class MessagesConfig {
             STAFF_CFG_ENABLED,
             STAFF_CFG_DISABLED,
             STAFF_CFG_ZONE_MODES,
+            STAFF_CFG_UNKNOWN_OPTION,
+            STAFF_CFG_AMBIGUOUS_OPTION,
+            STAFF_CFG_INVALID_VALUE,
+            STAFF_CFG_VALUE_CHANGED,
             STAFF_CFG_RELOADED,
             STAFF_CFG_VALID,
             STAFF_CFG_PROBLEMS,
@@ -1764,6 +1768,14 @@ public class MessagesConfig {
         STAFF_CFG_ENABLED = BUILDER.comment("Value of {state}.").define("enabled", "§aENABLED");
         STAFF_CFG_DISABLED = BUILDER.comment("Value of {state}.").define("disabled", "§cDISABLED");
         STAFF_CFG_ZONE_MODES = BUILDER.comment("Invalid zone message mode.").define("zoneModesValid", "§c[RpEssentials] Valid modes: IMMERSIVE, CHAT, ACTION_BAR");
+        STAFF_CFG_UNKNOWN_OPTION = BUILDER.comment("config set: unknown or ambiguous option. Placeholder: {option}")
+                .define("unknownOption", "§c[RpEssentials] Unknown option: §f{option}§c. Use the suggestions, or add the file: /rpessentials config set <file> <option> <value>.");
+        STAFF_CFG_AMBIGUOUS_OPTION = BUILDER.comment("config set: several options have this name. Placeholders: {option} {choices}")
+                .define("ambiguousOption", "§c[RpEssentials] Several options are called §f{option}§c, write one of: §f{choices}");
+        STAFF_CFG_INVALID_VALUE = BUILDER.comment("config set: value refused. Placeholders: {option} {value} {expected}")
+                .define("invalidValue", "§c[RpEssentials] §f{value} §cis not a valid value for §f{option}§c. Expected: §f{expected}");
+        STAFF_CFG_VALUE_CHANGED = BUILDER.comment("config set: done. Placeholders: {file} {name} {old} {value}")
+                .define("valueChanged", "§a[RpEssentials] §e{name} §8({file}) §7: §c{old} §7-> §a{value}");
         STAFF_CFG_RELOADED = BUILDER.comment("config reload.").define("reloaded", "§a[RpEssentials] Configuration reloaded.");
         STAFF_CFG_VALID = BUILDER.comment("config validate.").define("valid", "§a[RpEssentials] Config valid: no problem found.");
         STAFF_CFG_PROBLEMS = BUILDER.comment("Placeholder: {count}").define("problemsHeader", "§6Config problems §8({count})");

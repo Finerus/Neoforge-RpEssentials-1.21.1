@@ -806,5 +806,9 @@
   "Discord.errorRefused": "message refused by Discord (HTTP 400)",
   "Discord.errorHttp": "HTTP error {code}",
   "Discord.errorRateLimited": "too many messages, Discord asked to slow down",
-  "Discord.errorNetwork": "network error ({type})"
+  "Discord.errorNetwork": "network error ({type})",
+  "Staff Config.unknownOption": "§c[RpEssentials] Unknown option: §f{option}§c. Use the suggestions, or add the file: /rpessentials config set <file> <option> <value>.",
+  "Staff Config.invalidValue": "§c[RpEssentials] §f{value} §cis not a valid value for §f{option}§c. Expected: §f{expected}",
+  "Staff Config.valueChanged": "§a[RpEssentials] §e{name} §8({file}) §7: §c{old} §7-> §a{value}",
+  "Staff Config.ambiguousOption": "§c[RpEssentials] Several options are called §f{option}§c, write one of: §f{choices}"
 }

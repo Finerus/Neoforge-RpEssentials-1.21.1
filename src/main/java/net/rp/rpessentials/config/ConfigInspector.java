@@ -390,6 +390,12 @@ public class ConfigInspector {
         try {
             Object parsed = parseValue(type, raw);
             if (parsed == null) return false;
+            // The option's own rules (allowed words, list element checks...), not only the range.
+            var spec = cv.getSpec();
+            if (spec != null && !spec.test(parsed)) {
+                RpEssentials.LOGGER.warn("[ConfigInspector] Value '{}' refused by the rules of '{}'", raw, String.join(".", cv.getPath()));
+                return false;
+            }
             ((ModConfigSpec.ConfigValue<Object>) cv).set(parsed);
             return true;
         } catch (Exception e) {
@@ -401,7 +407,11 @@ public class ConfigInspector {
     public static Object parseValue(ValueType type, String raw) {
         if (raw == null) return null;
         return switch (type) {
-            case BOOLEAN     -> Boolean.parseBoolean(raw.trim());
+            case BOOLEAN     -> {
+                // Only true / false: "yes" or a typo must not silently become false.
+                String b = raw.trim().toLowerCase(java.util.Locale.ROOT);
+                yield b.equals("true") ? Boolean.TRUE : b.equals("false") ? Boolean.FALSE : null;
+            }
             case INT         -> Integer.parseInt(raw.trim());
             case LONG        -> Long.parseLong(raw.trim());
             case DOUBLE      -> Double.parseDouble(raw.trim());
