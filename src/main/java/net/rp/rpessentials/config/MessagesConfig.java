@@ -683,7 +683,8 @@ public class MessagesConfig {
 
     public static final ModConfigSpec.ConfigValue<String> DISCORD_BY, DISCORD_SERVER_OPENED, DISCORD_SERVER_OPENED_DESC,
             DISCORD_SERVER_CLOSED, DISCORD_TEST_TITLE, DISCORD_TEST_DESC, DISCORD_TEST_SENDING, DISCORD_TEST_OK,
-            DISCORD_TEST_FAIL, DISCORD_NOT_SET, DISCORD_BAD_URL;
+            DISCORD_TEST_FAIL, DISCORD_NOT_SET, DISCORD_BAD_URL, DISCORD_ERR_INVALID_URL, DISCORD_ERR_QUEUE_FULL,
+            DISCORD_ERR_GONE, DISCORD_ERR_REFUSED, DISCORD_ERR_HTTP, DISCORD_ERR_RATE, DISCORD_ERR_NETWORK;
 
     static {
 
@@ -2127,6 +2128,13 @@ public class MessagesConfig {
         DISCORD_TEST_FAIL = BUILDER.comment("Placeholder: {error}").define("testFail", "§c[Discord] Sending failed: §f{error}");
         DISCORD_NOT_SET = BUILDER.define("notSet", "§c[Discord] No webhook URL set (discordWebhookUrl in rpessentials-core.toml).");
         DISCORD_BAD_URL = BUILDER.define("badUrl", "§c[Discord] discordWebhookUrl is not a Discord webhook URL (https://discord.com/api/webhooks/...).");
+        DISCORD_ERR_INVALID_URL = BUILDER.comment("Failure reasons, used in {error} of testFail and in the log.").define("errorInvalidUrl", "invalid webhook URL");
+        DISCORD_ERR_QUEUE_FULL = BUILDER.define("errorQueueFull", "too many messages waiting");
+        DISCORD_ERR_GONE = BUILDER.comment("Placeholder: {code}").define("errorWebhookGone", "webhook deleted or wrong URL (HTTP {code})");
+        DISCORD_ERR_REFUSED = BUILDER.define("errorRefused", "message refused by Discord (HTTP 400)");
+        DISCORD_ERR_HTTP = BUILDER.comment("Placeholder: {code}").define("errorHttp", "HTTP error {code}");
+        DISCORD_ERR_RATE = BUILDER.define("errorRateLimited", "too many messages, Discord asked to slow down");
+        DISCORD_ERR_NETWORK = BUILDER.comment("Placeholder: {type}").define("errorNetwork", "network error ({type})");
         BUILDER.pop();
 
         SPEC = BUILDER.build();

@@ -799,5 +799,12 @@
   "Discord.testOk": "§a[Discord] Test message sent, check the channel.",
   "Discord.testFail": "§c[Discord] Sending failed: §f{error}",
   "Discord.notSet": "§c[Discord] No webhook URL set (discordWebhookUrl in rpessentials-core.toml).",
-  "Discord.badUrl": "§c[Discord] discordWebhookUrl is not a Discord webhook URL (https://discord.com/api/webhooks/...)."
+  "Discord.badUrl": "§c[Discord] discordWebhookUrl is not a Discord webhook URL (https://discord.com/api/webhooks/...).",
+  "Discord.errorInvalidUrl": "invalid webhook URL",
+  "Discord.errorQueueFull": "too many messages waiting",
+  "Discord.errorWebhookGone": "webhook deleted or wrong URL (HTTP {code})",
+  "Discord.errorRefused": "message refused by Discord (HTTP 400)",
+  "Discord.errorHttp": "HTTP error {code}",
+  "Discord.errorRateLimited": "too many messages, Discord asked to slow down",
+  "Discord.errorNetwork": "network error ({type})"
 }

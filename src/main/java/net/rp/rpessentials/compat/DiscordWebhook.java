@@ -58,6 +58,28 @@ public final class DiscordWebhook {
 
     private DiscordWebhook() {}
 
+    /** Why a message was not sent; turned into a translated text with {@link #describe}. */
+    public enum Failure { INVALID_URL, QUEUE_FULL, WEBHOOK_GONE, REFUSED, HTTP, RATE_LIMITED, NETWORK, INTERRUPTED }
+
+    /** A failure with its detail (HTTP code, exception type), or null when the message was sent. */
+    public record Result(Failure failure, String detail) {
+        static Result of(Failure f, String detail) { return new Result(f, detail); }
+    }
+
+    /** Text of a failure in the language of {@code viewer} (null = server language). */
+    public static String describe(ServerPlayer viewer, Result r) {
+        String d = r.detail() == null ? "" : r.detail();
+        return switch (r.failure()) {
+            case INVALID_URL -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_INVALID_URL);
+            case QUEUE_FULL -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_QUEUE_FULL);
+            case WEBHOOK_GONE -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_GONE, "code", d);
+            case REFUSED -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_REFUSED);
+            case HTTP -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_HTTP, "code", d);
+            case RATE_LIMITED -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_RATE);
+            case NETWORK, INTERRUPTED -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_NETWORK, "type", d);
+        };
+    }
+
     private static ThreadPoolExecutor createExecutor() {
         ThreadPoolExecutor ex = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(MAX_QUEUE), r -> {
@@ -143,7 +165,7 @@ public final class DiscordWebhook {
                 COLOR_BLUE, null, error -> {
                     String msg = error == null
                             ? ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_OK)
-                            : ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_FAIL, "error", error);
+                            : ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_FAIL, "error", describe(viewer, error));
                     if (server != null) server.execute(() -> reply.accept(msg));
                 });
     }
@@ -152,10 +174,10 @@ public final class DiscordWebhook {
     // SENDING
     // =========================================================================
     /**
-     * Queues one embed. {@code done} (optional) receives null on success or a short error text,
+     * Queues one embed. {@code done} (optional) receives null on success or the failure,
      * on the Discord thread.
      */
-    private static void send(String title, String description, int color, String footer, Consumer<String> done) {
+    private static void send(String title, String description, int color, String footer, Consumer<Result> done) {
         String url = url();
         if (url.isEmpty()) return;
         if (!validUrl(url)) {
@@ -163,7 +185,7 @@ public final class DiscordWebhook {
                 warnedBadUrl = true;
                 RpEssentials.LOGGER.warn("[Discord] discordWebhookUrl is not a Discord webhook URL, nothing is sent.");
             }
-            if (done != null) done.accept("invalid URL");
+            if (done != null) done.accept(Result.of(Failure.INVALID_URL, null));
             return;
         }
         warnedBadUrl = false;
@@ -192,18 +214,18 @@ public final class DiscordWebhook {
         if (executor.isShutdown()) executor = createExecutor();
         int queued = executor.getQueue().size();
         if (queued >= MAX_QUEUE) {
-            if (done != null) done.accept("queue full");
+            if (done != null) done.accept(Result.of(Failure.QUEUE_FULL, null));
             return;
         }
         executor.execute(() -> {
-            String error = post(url, json);
-            if (error != null) RpEssentials.LOGGER.warn("[Discord] Message not sent: {}", error);
+            Result error = post(url, json);
+            if (error != null) RpEssentials.LOGGER.warn("[Discord] Message not sent: {}", describe(null, error));
             if (done != null) done.accept(error);
         });
     }
 
-    /** Sends the request, waiting when Discord asks to slow down. Returns null or an error text. */
-    private static String post(String url, String json) {
+    /** Sends the request, waiting when Discord asks to slow down. Returns null or the failure. */
+    private static Result post(String url, String json) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json")
@@ -220,19 +242,19 @@ public final class DiscordWebhook {
                     continue;
                 }
                 return switch (code) {
-                    case 401, 403, 404 -> "HTTP " + code + " (webhook deleted or wrong URL)";
-                    case 400 -> "HTTP 400 (message refused by Discord)";
-                    default -> "HTTP " + code;
+                    case 401, 403, 404 -> Result.of(Failure.WEBHOOK_GONE, String.valueOf(code));
+                    case 400 -> Result.of(Failure.REFUSED, "400");
+                    default -> Result.of(Failure.HTTP, String.valueOf(code));
                 };
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                return "interrupted";
+                return Result.of(Failure.INTERRUPTED, "interrupted");
             } catch (Exception e) {
                 // The message of an IOException can contain the URL: keep only the type.
-                return e.getClass().getSimpleName();
+                return Result.of(Failure.NETWORK, e.getClass().getSimpleName());
             }
         }
-        return "rate limited by Discord";
+        return Result.of(Failure.RATE_LIMITED, null);
     }
 
     private static long retryAfterMs(String body) {
