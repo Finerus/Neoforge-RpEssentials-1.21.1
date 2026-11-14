@@ -25,7 +25,9 @@ public record OpenPlayerProfileGuiPacket(
         List<PlayerData> players,
         List<String> availableProfessionIds,
         List<String> availableRoles,
-        List<String> availablePlatforms
+        List<String> availablePlatforms,
+        /** Open reports (open or in progress) against each player; players without any are left out. */
+        java.util.Map<UUID, Integer> openReports
 ) implements CustomPacketPayload {
 
     // =========================================================================
@@ -117,7 +119,11 @@ public record OpenPlayerProfileGuiPacket(
                     List<String> roles = new ArrayList<>(roleCount);
                     for (int i = 0; i < roleCount; i++) roles.add(buf.readUtf());
 
-                    return new OpenPlayerProfileGuiPacket(players, profIds, roles, plats);
+                    int reportCount = buf.readVarInt();
+                    java.util.Map<UUID, Integer> reports = new java.util.HashMap<>();
+                    for (int i = 0; i < reportCount; i++) reports.put(buf.readUUID(), buf.readVarInt());
+
+                    return new OpenPlayerProfileGuiPacket(players, profIds, roles, plats, reports);
                 }
 
                 @Override
@@ -153,6 +159,11 @@ public record OpenPlayerProfileGuiPacket(
                     for (String p : packet.availablePlatforms()) buf.writeUtf(p);
                     buf.writeVarInt(packet.availableRoles().size());
                     for (String r : packet.availableRoles()) buf.writeUtf(r);
+                    buf.writeVarInt(packet.openReports().size());
+                    for (var e : packet.openReports().entrySet()) {
+                        buf.writeUUID(e.getKey());
+                        buf.writeVarInt(e.getValue());
+                    }
                 }
             };
 
@@ -170,7 +181,8 @@ public record OpenPlayerProfileGuiPacket(
                     packet.players(),
                     packet.availableProfessionIds(),
                     packet.availableRoles(),
-                    packet.availablePlatforms()
+                    packet.availablePlatforms(),
+                    packet.openReports()
             );
         });
     }

@@ -207,7 +207,8 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         }
 
         PacketDistributor.sendToPlayer(admin,
-                new OpenPlayerProfileGuiPacket(players, professionIds, roleIds, platformIds));
+                new OpenPlayerProfileGuiPacket(players, professionIds, roleIds, platformIds,
+                        net.rp.rpessentials.moderation.ReportManager.openCountsByTarget()));
     }
 
     /**

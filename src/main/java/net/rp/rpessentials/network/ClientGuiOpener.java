@@ -62,6 +62,10 @@ public class ClientGuiOpener {
         if (Minecraft.getInstance().screen instanceof PlayerProfileScreen s) s.setStats(uuid, lines);
     }
 
+    public static void receiveReports(java.util.UUID uuid, boolean enabled, List<PlayerReportsPacket.View> reports) {
+        if (Minecraft.getInstance().screen instanceof PlayerProfileScreen s) s.setReports(uuid, enabled, reports);
+    }
+
     public static void receiveHistory(java.util.UUID uuid, boolean enabled, List<String> lines) {
         if (Minecraft.getInstance().screen instanceof PlayerProfileScreen s) s.setHistory(uuid, enabled, lines);
     }
@@ -70,8 +74,9 @@ public class ClientGuiOpener {
             List<OpenPlayerProfileGuiPacket.PlayerData> players,
             List<String> professionIds,
             List<String> roles,
-            List<String> platforms) {
-        Minecraft.getInstance().setScreen(new PlayerProfileScreen(players, professionIds, roles, platforms));
+            List<String> platforms,
+            java.util.Map<java.util.UUID, Integer> openReports) {
+        Minecraft.getInstance().setScreen(new PlayerProfileScreen(players, professionIds, roles, platforms, openReports));
     }
 
     /**

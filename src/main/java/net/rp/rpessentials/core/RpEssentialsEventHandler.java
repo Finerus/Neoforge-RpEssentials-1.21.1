@@ -185,6 +185,7 @@ public class RpEssentialsEventHandler {
 
         TempLicenseExpirationManager.checkOnLogin(player, server);
         TempLicenseExpirationManager.markRevokedLicenseItems(player);
+        net.rp.rpessentials.moderation.ReportService.onStaffLogin(player);
 
         if (Cfg.ready(ModerationConfig.SPEC)) { if (ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get()) WarnManager.purgeExpiredWarns(player.getUUID()); }
 
@@ -264,6 +265,7 @@ public class RpEssentialsEventHandler {
         MuteManager.reload();
         LastConnectionManager.reload();
         NoteManager.reload();
+        net.rp.rpessentials.moderation.ReportManager.reload();
         DeathRPManager.reload();
         AutoUnwhitelistHistory.reload();
         PendingProfileManager.reload();

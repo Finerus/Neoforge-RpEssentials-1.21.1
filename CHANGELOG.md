@@ -47,6 +47,7 @@ All notable changes to this project will be documented in this file.
 * **Schedule exceptions:** `scheduleExceptions` in `rpessentials-schedule.toml` (`2026-12-25=CLOSED`, `2026-12-31=20:00-03:00`) replace the weekly schedule on given dates, overnight sessions included. Upcoming ones are listed in `/schedule`.
 * **Variables API:** `%rpessentials:<name>%` variables (`nick`, `name`, `display`, `role`, `role_group`, `vanished`, `vanish_level`, `professions`, `professions_ids`, `profession_count`, `warns`, `muted`, `playtime`) through `RpEssentialsAPI.resolvePlaceholders`, `getPlaceholder` and `registerPlaceholder`, plus `getDisplayName`, `getRole`, `getVanishLevel` and `getProfessionNames`.
 * **`config validate`:** also reports dimensions that do not exist (AFK, spawn, platforms), unknown sounds, and licenses held for professions that were removed. Results are in the viewer's language.
+* **Reports:** players report another player with `/rp report <player> <reason>` (also `/report` when `unprefixedRpCommands` is on); the place where they stood is saved. Online staff get a clickable notice, and staff joining are told how many reports are waiting. Staff handle them with `/rpessentials reports list|info|claim|close [note]|reopen|delete|tp`, or in the new Reports tab of the Player Profile GUI (handle, close with an optional note, reopen, teleport, delete). The reporter is told when their report is closed. The player list shows `[nR]` next to reported players and has a new "Reported" filter. Reports appear in the player history (`REPORT` type). `Reports` section of `rpessentials-moderation.toml`: `enableReports`, `reportCooldownSeconds`, `reportMaxOpenPerPlayer`, `reportReasonMaxLength`, `reportNotifyStaffOnJoin`, `reportClosedRetentionDays`. Stored in `reports.json`.
 
 ### Improved
 
@@ -85,12 +86,19 @@ All notable changes to this project will be documented in this file.
 * **`/whois`** now finds hex and gradient nicknames.
 * **Silent commands** still log to the console when `logToStaff` is disabled.
 * **Hex nicknames** are displayed correctly in `/list`, success messages and the profile preview.
+* **Tab list blur:** `/blurtab whitelist|blacklist|alwaysvisible add|remove` now applies right away instead of after a config reload.
+* **Restriction patterns:** in a `*` pattern every other character is matched as written, so ids containing `$`, `+`, `(`... no longer break the pattern.
+* **Config not loaded yet:** saving a config value (commands, schedule, profession editor) before the server config was loaded threw an error that the old checks did not catch.
 
 ### Technical
 
 * **New classes:** `CommandToggles`, `ClientRestrictionHandler`, `NameCache`, `HistoryManager`, `RequestPlayerHistoryPacket`, `PlayerHistoryPacket`, `TeleportWarmupManager`, `RpTeleportEvent`, `RpPlaceholders`. `MessagesConfig.formatExpiry`, viewer-aware `formatDuration`, `PlaytimeManager.format`, `getDayName` and `getTimeUntilNextEvent`. Unused tooltip and restriction-line builders removed.
 * **Classes:** `TabBlur`, `TimeHelper`, `ServerLang`, `BackupManager`, `ConfigValidator`, `RpZoneCommands`, `RpEssentialsAPI`, `ClientTooltipRestrictions`, `SyncTooltipPacket`, `SyncNametagBatchPacket`.
 * **Removed mixins:** `MixinEntityRenderer` and `MixinPlayerListAdvancement` (merged into existing code).
+* **Packages:** the classes of the root package moved to `core`, `util`, `lang`, `permission`, `gameplay`, `commands`, `network`, `client` and `items`. The `api` package did not move, but `RpEssentialsAPI` returns `DiceManager` types, now in `gameplay`.
+* **Config access:** `Cfg.ready(spec...)` and `Cfg.get(value, fallback)` replace the `try/catch (IllegalStateException)` blocks around config reads.
+* **Tab list blur:** names are parsed once per player and shared by every viewer; viewers who see everyone only check new players.
+* **New classes:** `ReportManager`, `ReportService`, `RpReportCommands`, `RequestPlayerReportsPacket`, `PlayerReportsPacket`, `ReportActionPacket`. `OpenPlayerProfileGuiPacket` carries the number of open reports per player.
 
 ### Migration Notes
 

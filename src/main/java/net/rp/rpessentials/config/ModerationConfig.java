@@ -48,6 +48,13 @@ public class ModerationConfig {
     // NOTE LIMIT
     // =========================================================================
     public static ModConfigSpec.IntValue NOTE_MAX_PER_PLAYER;
+
+    public static ModConfigSpec.BooleanValue ENABLE_REPORTS;
+    public static ModConfigSpec.IntValue REPORT_COOLDOWN_SECONDS;
+    public static ModConfigSpec.IntValue REPORT_MAX_OPEN_PER_PLAYER;
+    public static ModConfigSpec.IntValue REPORT_REASON_MAX_LENGTH;
+    public static ModConfigSpec.BooleanValue REPORT_NOTIFY_ON_JOIN;
+    public static ModConfigSpec.IntValue REPORT_CLOSED_RETENTION_DAYS;
     public static ModConfigSpec.IntValue DEATH_HISTORY_MAX_DAYS;
 
     // =========================================================================
@@ -371,12 +378,38 @@ public class ModerationConfig {
                 .define("historyEnabled", true);
         HISTORY_RETENTION = BUILDER
                 .comment("How many days each kind of line is kept, as TYPE=days. -1 = forever.",
-                        "Types: WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE, NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK (nickname changes).",
+                        "Types: WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE, NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK (nickname changes), REPORT.",
                         "'*' applies to every type without its own line. Old lines are removed at startup and every hour.")
                 .defineList("historyRetention", Arrays.asList("*=365", "NOTE=-1", "DEATH_RP=-1"), obj -> obj instanceof String);
         HISTORY_MAX_PER_PLAYER = BUILDER
                 .comment("Maximum lines kept per player, the oldest are removed first. 0 = no limit.")
                 .defineInRange("historyMaxPerPlayer", 200, 0, 100000);
+        BUILDER.pop();
+
+        // ===============================================================================
+        // CATEGORY: REPORTS
+        // ===============================================================================
+        BUILDER.push("Reports");
+        ENABLE_REPORTS = BUILDER
+                .comment("Players can report another player with /rp report <player> <reason>.",
+                        "Online staff are notified; reports are handled with /rpessentials reports",
+                        "or in the Reports tab of the player profile GUI.")
+                .define("enableReports", true);
+        REPORT_COOLDOWN_SECONDS = BUILDER
+                .comment("Seconds a player must wait between two reports. 0 = no wait.")
+                .defineInRange("reportCooldownSeconds", 60, 0, 86400);
+        REPORT_MAX_OPEN_PER_PLAYER = BUILDER
+                .comment("Maximum reports a player can have waiting for the staff at the same time. 0 = no limit.")
+                .defineInRange("reportMaxOpenPerPlayer", 3, 0, 100);
+        REPORT_REASON_MAX_LENGTH = BUILDER
+                .comment("Maximum length of the reason, longer text is cut.")
+                .defineInRange("reportReasonMaxLength", 200, 10, 1000);
+        REPORT_NOTIFY_ON_JOIN = BUILDER
+                .comment("Tell staff members how many reports are waiting when they join.")
+                .define("reportNotifyStaffOnJoin", true);
+        REPORT_CLOSED_RETENTION_DAYS = BUILDER
+                .comment("Closed reports older than this many days are removed at startup. 0 = keep forever.")
+                .defineInRange("reportClosedRetentionDays", 90, 0, 3650);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

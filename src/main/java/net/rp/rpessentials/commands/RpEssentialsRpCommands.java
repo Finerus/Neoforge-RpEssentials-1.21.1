@@ -99,6 +99,9 @@ public class RpEssentialsRpCommands {
                         .executes(ctx -> executeSelfNick(ctx,
                                 StringArgumentType.getString(ctx, "nickname")))));
 
+        // /rp report <player> <reason>
+        rpRoot.then(RpReportCommands.buildReport());
+
         // /rp annonce <title|chat> <message>
         rpRoot.then(Commands.literal("annonce")
                 .requires(RpEssentialsPermissions::isStaffSource)

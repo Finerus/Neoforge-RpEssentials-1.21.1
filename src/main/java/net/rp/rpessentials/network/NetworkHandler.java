@@ -202,6 +202,23 @@ public class NetworkHandler {
                 SyncTooltipPacket.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(SyncTooltipPacket::handle, null)
         );
+
+        // ── Reports (profile GUI) ─────────────────────────────────────────────
+        registrar.playToServer(
+                RequestPlayerReportsPacket.TYPE,
+                RequestPlayerReportsPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, RequestPlayerReportsPacket::handleOnServer)
+        );
+        registrar.playToClient(
+                PlayerReportsPacket.TYPE,
+                PlayerReportsPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(PlayerReportsPacket::handleOnClient, null)
+        );
+        registrar.playToServer(
+                ReportActionPacket.TYPE,
+                ReportActionPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, ReportActionPacket::handleOnServer)
+        );
     }
 
     private static void handleSyncProfessionRestrictions(

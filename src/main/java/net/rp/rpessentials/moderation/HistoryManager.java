@@ -36,9 +36,10 @@ public final class HistoryManager {
     public static final String LICENSE = "LICENSE";
     public static final String DEATH_RP = "DEATH_RP";
     public static final String NICK = "NICK";
+    public static final String REPORT = "REPORT";
 
     public static final List<String> TYPES = List.of(WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE,
-            NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK);
+            NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK, REPORT);
 
     public static class Entry {
         public long time;
@@ -276,6 +277,7 @@ public final class HistoryManager {
             case LICENSE -> MessagesConfig.HISTORY_T_LICENSE;
             case DEATH_RP -> MessagesConfig.HISTORY_T_DEATH_RP;
             case NICK -> MessagesConfig.HISTORY_T_NICK;
+            case REPORT -> MessagesConfig.HISTORY_T_REPORT;
             default -> null;
         };
     }

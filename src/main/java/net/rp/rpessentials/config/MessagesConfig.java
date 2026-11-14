@@ -673,6 +673,14 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> STATS_NICKS_NONE;
     public static final ModConfigSpec.ConfigValue<String> HISTORY_T_NICK;
 
+    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_REPORT, REPORT_DISABLED, REPORT_SELF,
+            REPORT_UNKNOWN_PLAYER, REPORT_COOLDOWN, REPORT_TOO_MANY, REPORT_SENT, REPORT_STAFF_NEW, REPORT_BTN_VIEW,
+            REPORT_BTN_VIEW_HOVER, REPORT_STAFF_JOIN, REPORT_NOT_FOUND, REPORT_CLAIMED, REPORT_CLAIMED_STAFF,
+            REPORT_CLOSED, REPORT_REOPENED, REPORT_DELETED, REPORT_ALREADY_CLOSED, REPORT_NOT_CLOSED,
+            REPORT_REPORTER_CLOSED, REPORT_LIST_HEADER, REPORT_LIST_NONE, REPORT_LIST_LINE, REPORT_INFO,
+            REPORT_INFO_HANDLER, REPORT_INFO_NOTE, REPORT_STATUS_OPEN, REPORT_STATUS_CLAIMED, REPORT_STATUS_CLOSED,
+            REPORT_BTN_CLAIM, REPORT_BTN_CLOSE, REPORT_BTN_TP, REPORT_TP_FAILED;
+
     static {
 
         // =========================================================================
@@ -2061,6 +2069,46 @@ public class MessagesConfig {
         STATS_NICKS = BUILDER.comment("Latest nicknames, newest first. Placeholder: {list}").define("nicknames", "§7Nicknames: §r{list}");
         STATS_NICKS_NONE = BUILDER.define("nicknamesNone", "§7Nicknames: §8no change recorded");
         HISTORY_T_NICK = BUILDER.comment("History type label.").define("typeNick", "Nickname");
+        BUILDER.pop();
+
+        BUILDER.push("Reports");
+        HISTORY_T_REPORT = BUILDER.comment("History type label.").define("historyType", "Report");
+        REPORT_DISABLED = BUILDER.define("disabled", "§c[Report] Reports are disabled on this server.");
+        REPORT_SELF = BUILDER.define("self", "§c[Report] You cannot report yourself.");
+        REPORT_UNKNOWN_PLAYER = BUILDER.comment("Placeholder: {player}").define("unknownPlayer", "§c[Report] Unknown player: §f{player}");
+        REPORT_COOLDOWN = BUILDER.comment("Placeholder: {seconds}").define("cooldown", "§c[Report] Please wait §e{seconds}s §cbefore sending another report.");
+        REPORT_TOO_MANY = BUILDER.comment("Placeholder: {count}").define("tooMany", "§c[Report] You already have §e{count} §creports waiting for the staff.");
+        REPORT_SENT = BUILDER.comment("Placeholders: {id} {player}").define("sent", "§a[Report] Your report §e#{id} §aagainst §e{player} §awas sent to the staff.");
+        REPORT_STAFF_NEW = BUILDER.comment("Sent to online staff. Placeholders: {id} {reporter} {player} {reason}")
+                .define("staffNew", "§c[Report #{id}] §e{reporter} §7reported §e{player}§7: §f{reason}");
+        REPORT_BTN_VIEW = BUILDER.define("buttonView", "§b[View]");
+        REPORT_BTN_VIEW_HOVER = BUILDER.define("buttonViewHover", "Show this report");
+        REPORT_STAFF_JOIN = BUILDER.comment("Placeholder: {count}").define("staffJoin", "§6[Report] §e{count} §6report(s) waiting. §7/rpessentials reports list");
+        REPORT_NOT_FOUND = BUILDER.comment("Placeholder: {id}").define("notFound", "§c[Report] Report §e#{id} §cnot found.");
+        REPORT_CLAIMED = BUILDER.comment("Placeholder: {id}").define("claimed", "§a[Report] You are now handling report §e#{id}§a.");
+        REPORT_CLAIMED_STAFF = BUILDER.comment("Sent to the other staff. Placeholders: {id} {staff}").define("claimedStaff", "§7[Report] §e{staff} §7is handling report §e#{id}§7.");
+        REPORT_CLOSED = BUILDER.comment("Placeholder: {id}").define("closed", "§a[Report] Report §e#{id} §aclosed.");
+        REPORT_REOPENED = BUILDER.comment("Placeholder: {id}").define("reopened", "§a[Report] Report §e#{id} §areopened.");
+        REPORT_DELETED = BUILDER.comment("Placeholder: {id}").define("deleted", "§a[Report] Report §e#{id} §adeleted.");
+        REPORT_ALREADY_CLOSED = BUILDER.comment("Placeholder: {id}").define("alreadyClosed", "§c[Report] Report §e#{id} §cis already closed.");
+        REPORT_NOT_CLOSED = BUILDER.comment("Placeholder: {id}").define("notClosed", "§c[Report] Report §e#{id} §cis not closed.");
+        REPORT_REPORTER_CLOSED = BUILDER.comment("Sent to the reporter. Placeholders: {id} {player}")
+                .define("reporterClosed", "§a[Report] Your report §e#{id} §aagainst §e{player} §awas handled by the staff.");
+        REPORT_LIST_HEADER = BUILDER.comment("Placeholder: {count}").define("listHeader", "§6--- Reports waiting ({count}) ---");
+        REPORT_LIST_NONE = BUILDER.define("listNone", "§7No report waiting.");
+        REPORT_LIST_LINE = BUILDER.comment("Placeholders: {id} {status} {reporter} {player} {date}")
+                .define("listLine", "§e#{id} §8[{status}§8] §f{reporter} §7→ §f{player} §8({date})");
+        REPORT_INFO = BUILDER.comment("Placeholders: {id} {status} {reporter} {player} {date} {place} {reason}")
+                .define("info", "§6--- Report #{id} §8[{status}§8] §6---\n§7By: §f{reporter}\n§7Against: §f{player}\n§7Date: §f{date}\n§7Place: §f{place}\n§7Reason: §f{reason}");
+        REPORT_INFO_HANDLER = BUILDER.comment("Placeholder: {staff}").define("infoHandler", "§7Handled by: §f{staff}");
+        REPORT_INFO_NOTE = BUILDER.comment("Placeholder: {note}").define("infoNote", "§7Closing note: §f{note}");
+        REPORT_STATUS_OPEN = BUILDER.define("statusOpen", "§cOpen");
+        REPORT_STATUS_CLAIMED = BUILDER.define("statusClaimed", "§6In progress");
+        REPORT_STATUS_CLOSED = BUILDER.define("statusClosed", "§aClosed");
+        REPORT_BTN_CLAIM = BUILDER.define("buttonClaim", "§6[Handle]");
+        REPORT_BTN_CLOSE = BUILDER.define("buttonClose", "§a[Close]");
+        REPORT_BTN_TP = BUILDER.define("buttonTp", "§b[TP]");
+        REPORT_TP_FAILED = BUILDER.define("tpFailed", "§c[Report] This place cannot be reached.");
         BUILDER.pop();
 
         SPEC = BUILDER.build();

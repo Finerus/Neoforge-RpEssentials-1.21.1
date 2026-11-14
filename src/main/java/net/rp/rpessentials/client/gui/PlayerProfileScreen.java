@@ -19,6 +19,9 @@ import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.moderation.ManageService;
 import net.rp.rpessentials.network.ManagePlayerPacket;
 import net.rp.rpessentials.network.OpenPlayerProfileGuiPacket;
+import net.rp.rpessentials.network.PlayerReportsPacket;
+import net.rp.rpessentials.network.ReportActionPacket;
+import net.rp.rpessentials.network.RequestPlayerReportsPacket;
 import net.rp.rpessentials.network.PlayerNoteActionPacket;
 import net.rp.rpessentials.network.SetPlayerProfilePacket;
 import net.minecraft.client.Minecraft;
@@ -51,6 +54,15 @@ public class PlayerProfileScreen extends Screen {
     
     /** History tab: Minecraft list widget, kept between rebuilds so the scroll position stays. */
     private TextLinesList historyList;
+
+    /** Reports tab: list widget, reports received from the server per player, open count per player. */
+    private ButtonRowList reportsList;
+    private final java.util.Map<java.util.UUID, List<PlayerReportsPacket.View>> reportsCache = new java.util.HashMap<>();
+    private final java.util.Set<java.util.UUID> reportsRequested = new java.util.HashSet<>();
+    private final java.util.Map<java.util.UUID, Integer> reportCounts = new java.util.HashMap<>();
+    private boolean reportsEnabled = true;
+    private String stateReportNote = "";
+    private int pendingDeleteReportId = -1;
     
     /** Extra stats received from the server, per player. */
     private final java.util.Map<java.util.UUID, List<String>> statsCache = new java.util.HashMap<>();
@@ -71,7 +83,7 @@ public class PlayerProfileScreen extends Screen {
     private int tempNoteIdCounter  = -1;
     private static int filterMode = 0;
     private int sortButtonX, sortButtonY;
-    private static final String[] FILTER_KEYS = { "online", "offline", "prepared", "all" };
+    private static final String[] FILTER_KEYS = { "online", "offline", "prepared", "all", "reported" };
     private String pendingDeletePlayerUuid = null;
     private boolean pendingNickReset = false;
     private int pendingDeleteNoteId = -1;
@@ -86,8 +98,8 @@ public class PlayerProfileScreen extends Screen {
     private static final int MANAGE_ROW_H = 34;
     
 
-    private static final String[] TAB_KEYS = { "profile", "stats", "notes", "manage", "history" };
-    private static final String[] TAB_COLORS = { "§e", "§a", "§b", "§c", "§d" };
+    private static final String[] TAB_KEYS = { "profile", "stats", "notes", "manage", "history", "reports" };
+    private static final String[] TAB_COLORS = { "§e", "§a", "§b", "§c", "§d", "§6" };
 
     private static final String[] MANAGE_SECTION_KEYS = {
             "access", "discipline", "teleport", "send", "permissions", "vanish",
@@ -156,8 +168,10 @@ public class PlayerProfileScreen extends Screen {
     public PlayerProfileScreen(List<OpenPlayerProfileGuiPacket.PlayerData> players,
                                List<String> availableProfessionIds,
                                List<String> availableRoles,
-                               List<String> availablePlatforms) {
+                               List<String> availablePlatforms,
+                               java.util.Map<java.util.UUID, Integer> openReports) {
         super(Component.translatable("rpessentials.gui.player_profile.title"));
+        this.reportCounts.putAll(openReports);
         this.players                = players;
         this.availableProfessionIds = availableProfessionIds;
         this.availableRoles         = availableRoles;
@@ -182,6 +196,7 @@ public class PlayerProfileScreen extends Screen {
                 case 1 -> !p.isOnline() && !p.isPrepared();
                 case 2 -> p.isPrepared();
                 case 3 -> true;
+                case 4 -> reportCounts.getOrDefault(p.uuid(), 0) > 0;
                 default -> p.isOnline();
             };
             if (match) result.add(i);
@@ -246,6 +261,8 @@ public class PlayerProfileScreen extends Screen {
             if (!p.currentNick().isEmpty()) label += " §7(" + stripColor(p.currentNick()) + ")";
             if (p.activeWarnCount() > 0)    label += " §c[" + p.activeWarnCount() + "W]";
             if (p.isMuted())                label += " §6[M]";
+            int openReports = reportCounts.getOrDefault(p.uuid(), 0);
+            if (openReports > 0)            label += " §6[" + openReports + "R]";
 
             ButtonRowList.Row row = new ButtonRowList.Row();
             row.add(Button.builder(Component.literal(label), btn -> { loadPlayerState(idx); rebuild(); })
@@ -304,7 +321,7 @@ public class PlayerProfileScreen extends Screen {
                     ? TAB_COLORS[ti] + "§l" + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i])
                     : "§7" + I18n.get("rpessentials.gui.player_profile.tab." + TAB_KEYS[i]);
             addRenderableWidget(Button.builder(Component.literal(label),
-                            btn -> { activeTab = ti; pendingDeleteNoteId = -1; rebuild(); })
+                            btn -> { activeTab = ti; pendingDeleteNoteId = -1; pendingDeleteReportId = -1; rebuild(); })
                     .pos(UiLayout.cellX(formX, formW, TAB_KEYS.length, UiLayout.TAB_GAP, i), PANEL_TOP + 14)
                     .size(tabW, 16).build(SkinnedButton.tab(ti == activeTab)));
         }
@@ -317,6 +334,7 @@ public class PlayerProfileScreen extends Screen {
             case 2 -> buildNotesTab(formX, formW, contentY);
             case 3 -> buildManageTab(formX, formW, contentY);
             case 4 -> { requestHistory(); buildHistoryList(formX, formW, contentY); }
+            case 5 -> { requestReports(); buildReportsTab(formX, formW, contentY); }
         }
 
         // ── Bouton Appliquer (onglet profil seulement) ─────────────────────
@@ -582,6 +600,133 @@ public class PlayerProfileScreen extends Screen {
         }
     }
 
+    // =========================================================================
+    // ONGLET SIGNALEMENTS
+    // =========================================================================
+    /** Asks the server for the reports against the selected player, once per player while the screen is open. */
+    private void requestReports() {
+        if (players.isEmpty()) return;
+        java.util.UUID id = selectedData().uuid();
+        if (reportsRequested.add(id)) {
+            PacketDistributor.sendToServer(new RequestPlayerReportsPacket(id));
+        }
+    }
+
+    /** Called when the server sends the reports of a player (on request or after an action). */
+    public void setReports(java.util.UUID uuid, boolean enabled, List<PlayerReportsPacket.View> reports) {
+        reportsEnabled = enabled;
+        reportsCache.put(uuid, reports);
+        int open = 0;
+        for (PlayerReportsPacket.View r : reports) if (r.isOpen()) open++;
+        if (open > 0) reportCounts.put(uuid, open); else reportCounts.remove(uuid);
+        rebuild();
+    }
+
+    private void reportAction(int id, ReportActionPacket.Action action) {
+        if (players.isEmpty()) return;
+        String note = action == ReportActionPacket.Action.CLOSE ? stateReportNote.trim() : "";
+        PacketDistributor.sendToServer(new ReportActionPacket(selectedData().uuid(), id, action, note));
+        if (action == ReportActionPacket.Action.CLOSE) stateReportNote = "";
+        pendingDeleteReportId = -1;
+    }
+
+    private Button reportButton(String label, String tooltipKey, int width, Runnable onPress) {
+        return Button.builder(Component.literal(label), btn -> onPress.run())
+                .size(width, 12)
+                .tooltip(Tooltip.create(Component.translatable(tooltipKey)))
+                .build(SkinnedButton::new);
+    }
+
+    private void buildReportsTab(int formX, int formW, int contentY) {
+        if (players.isEmpty()) return;
+        java.util.UUID uuid = selectedData().uuid();
+        String k = "rpessentials.gui.player_profile.reports.";
+
+        if (reportsList == null) reportsList = new ButtonRowList(Minecraft.getInstance(), 12);
+        reportsList.layout(formX - 6, contentY, formW + 12, this.height - 58 - contentY);
+        int rw = reportsList.rowWidth();
+        List<ButtonRowList.Row> rows = new ArrayList<>();
+        List<PlayerReportsPacket.View> reports = reportsCache.get(uuid);
+
+        if (!reportsEnabled) {
+            rows.add(new ButtonRowList.Row().text("§8" + I18n.get(k + "disabled"), 4, 2));
+        } else if (reports == null) {
+            rows.add(new ButtonRowList.Row().text("§8" + I18n.get(k + "loading"), 4, 2));
+        } else if (reports.isEmpty()) {
+            rows.add(new ButtonRowList.Row().text("§8" + I18n.get(k + "none"), 4, 2));
+        }
+
+        if (reports != null && reportsEnabled) {
+            for (PlayerReportsPacket.View r : reports) {
+                boolean open = r.isOpen();
+                int color = !open ? 0x10FFFFFF : "CLAIMED".equals(r.status()) ? 0x22FFAA00 : 0x22FF5555;
+
+                // Text lines of the block: reason, place, then who handled it and the closing note.
+                List<FormattedCharSequence> lines = new ArrayList<>(
+                        this.font.split(Component.literal("§f" + r.reason()), Math.max(40, rw - 8)));
+                lines.add(Component.literal("§8" + r.place()).getVisualOrderText());
+                if (!r.handler().isEmpty()) {
+                    lines.add(Component.literal("§7" + I18n.get(k + "handled_by") + " §f" + r.handler()).getVisualOrderText());
+                }
+                if (!r.note().isEmpty()) {
+                    lines.addAll(this.font.split(Component.literal("§7" + I18n.get(k + "close_note") + " §f" + r.note()),
+                            Math.max(40, rw - 8)));
+                }
+                int size = 1 + lines.size();
+
+                // Header: action buttons, then id, date, reporter and status.
+                ButtonRowList.Row first = new ButtonRowList.Row().block(GuiSkin.NOTE_ROW, color, 0, size);
+                int bx = 1;
+                if ("OPEN".equals(r.status())) {
+                    first.add(reportButton("§6⚑", k + "claim_tooltip", 14,
+                            () -> reportAction(r.id(), ReportActionPacket.Action.CLAIM)), bx, 0);
+                    bx += 15;
+                }
+                if (open) {
+                    first.add(reportButton("§a✔", k + "close_tooltip", 14,
+                            () -> reportAction(r.id(), ReportActionPacket.Action.CLOSE)), bx, 0);
+                } else {
+                    first.add(reportButton("§e↺", k + "reopen_tooltip", 14,
+                            () -> reportAction(r.id(), ReportActionPacket.Action.REOPEN)), bx, 0);
+                }
+                bx += 15;
+                first.add(reportButton("§bTP", k + "tp_tooltip", 18,
+                        () -> reportAction(r.id(), ReportActionPacket.Action.TP)), bx, 0);
+                bx += 19;
+                boolean confirmDelete = pendingDeleteReportId == r.id();
+                first.add(reportButton(confirmDelete ? "§c!" : "§c✗",
+                        k + (confirmDelete ? "confirm_delete" : "delete_tooltip"), 14, () -> {
+                            if (pendingDeleteReportId == r.id()) {
+                                reportAction(r.id(), ReportActionPacket.Action.DELETE);
+                            } else {
+                                pendingDeleteReportId = r.id();
+                                rebuild();
+                            }
+                        }), bx, 0);
+                bx += 18;
+                String status = I18n.get(k + "status." + r.status().toLowerCase(java.util.Locale.ROOT));
+                first.text("§e#" + r.id() + " §8[" + r.date() + "] §7" + I18n.get(k + "by") + " §f" + r.reporter()
+                        + " §8- " + status, bx, 2);
+                rows.add(first);
+                for (int li = 0; li < lines.size(); li++) {
+                    rows.add(new ButtonRowList.Row().block(GuiSkin.NOTE_ROW, color, li + 1, size).text(lines.get(li), 4, 1));
+                }
+            }
+        }
+        reportsList.setRows(rows);
+        addRenderableWidget(reportsList);
+
+        // Optional closing note, used by the next close (check mark) click.
+        int boxY = this.height - 50;
+        EditBox noteBox = new SkinnedEditBox(this.font, formX, boxY, Math.max(60, Math.min(formW, 320)), 18,
+                Component.translatable(k + "note_hint"));
+        noteBox.setHint(Component.literal("§7" + I18n.get(k + "note_hint")));
+        noteBox.setMaxLength(ReportActionPacket.MAX_NOTE);
+        noteBox.setValue(stateReportNote);
+        noteBox.setResponder(val -> stateReportNote = val);
+        addRenderableWidget(noteBox);
+    }
+
     private void rebuild() { if (this.minecraft == null) return; /* not shown yet: init() will run when it opens */ clearWidgets(); init(); }
 
 
@@ -795,6 +940,7 @@ public class PlayerProfileScreen extends Screen {
             case 2 -> 0xFF55FFFF; // Notes
             case 3 -> 0xFFFF5555; // Manage
             case 4 -> 0xFFFF55FF; // History
+            case 5 -> 0xFFFFAA00; // Reports
             default -> 0xFFFFFF55; // Profil
         };
     }
@@ -843,7 +989,7 @@ public class PlayerProfileScreen extends Screen {
             case 1 -> renderStatsTab(g, formX, formRight, contentY, sel);
             case 2 -> renderNotesTab(g, formX, formRight, contentY, sel);
             case 3 -> renderManageTab(g, formX, contentY, sel);
-            case 4 -> {} // History: list widget, drawn with the other widgets
+            case 4, 5 -> {} // History / Reports: list widgets, drawn with the other widgets
         }
 
         super.render(g, mouseX, mouseY, delta);
