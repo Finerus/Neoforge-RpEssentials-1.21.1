@@ -60,10 +60,19 @@ public final class ConfigSetCommand {
             Map.entry("deathRpGlobalDisableMode", new String[]{"core", "#DEATH_RP_GLOBAL_DISABLE_MODE"}));
 
     /** Extra value suggestions for text options that only accept some words. */
+    private static final List<String> DISPLAY_MODES = List.of("CHAT", "ACTION_BAR", "TITLE", "IMMERSIVE", "IMMERSIVE:<preset>");
+
     private static final Map<String, List<String>> VALUE_HINTS = Map.of(
             "chatMessageColor", List.of("WHITE", "GRAY", "DARK_GRAY", "BLACK", "RED", "DARK_RED", "GOLD", "YELLOW",
                     "GREEN", "DARK_GREEN", "AQUA", "DARK_AQUA", "BLUE", "DARK_BLUE", "LIGHT_PURPLE", "DARK_PURPLE"),
-            "zoneMessageMode", List.of("CHAT", "ACTION_BAR", "TITLE", "IMMERSIVE"));
+            "zoneMessageMode", DISPLAY_MODES,
+            "enableMessageMode", DISPLAY_MODES,
+            "disableMessageMode", DISPLAY_MODES,
+            "hrpMessageMode", DISPLAY_MODES,
+            "scheduleDeathHoursNotifyMode", DISPLAY_MODES,
+            "forceState", List.of("NONE", "FORCE_OPEN", "FORCE_CLOSED"),
+            "nametagBlurMode", List.of("OFF", "BLUR", "HIDE"),
+            "blurStyle", List.of("OBFUSCATED", "DASHES", "HASHES", "STARS"));
 
     /** One option of one file, with the name typed to reach it. */
     private record Option(String fileId, ConfigInspector.EntryData entry, String name) {}
@@ -179,7 +188,8 @@ public final class ConfigSetCommand {
                 case BOOLEAN -> { values.add("true"); values.add("false"); }
                 default -> {
                     List<String> hint = VALUE_HINTS.get(o.entry().key());
-                    if (hint != null) values.addAll(hint);
+                    // "IMMERSIVE:<preset>" explains the format in errors; it is not a value to insert.
+                    if (hint != null) for (String h : hint) if (!h.contains("<")) values.add(h);
                 }
             }
             String current = o.entry().currentValue();

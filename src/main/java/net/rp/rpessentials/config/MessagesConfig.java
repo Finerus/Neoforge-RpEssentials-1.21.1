@@ -1105,7 +1105,7 @@ public class MessagesConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("scheduleDeathHoursNotifyMode", "CHAT");
+                .define("scheduleDeathHoursNotifyMode", "CHAT", ConfigRules::isDisplayMode);
 
         BUILDER.pop();
 

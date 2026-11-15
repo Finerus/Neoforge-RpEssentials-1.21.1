@@ -297,7 +297,7 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("zoneMessageMode", "ACTION_BAR");
+                .define("zoneMessageMode", "ACTION_BAR", ConfigRules::isDisplayMode);
 
         BUILDER.pop(); // World Border Warning
 
@@ -364,7 +364,7 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("enableMessageMode", "CHAT");
+                .define("enableMessageMode", "CHAT", ConfigRules::isDisplayMode);
 
         DEATH_RP_PLAYER_DISABLE_MSG = BUILDER
                 .comment("Message sent to the player when their RP death is individually disabled.",
@@ -379,7 +379,7 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("disableMessageMode", "CHAT");
+                .define("disableMessageMode", "CHAT", ConfigRules::isDisplayMode);
 
         DEATH_RP_PLAYER_TOGGLE_SOUND = BUILDER
                 .comment("Sound played to the player on individual toggle. 'none' to disable.")
@@ -410,7 +410,7 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("enableMessageMode", "CHAT");
+                .define("enableMessageMode", "CHAT", ConfigRules::isDisplayMode);
 
         DEATH_RP_GLOBAL_DISABLE_MSG = BUILDER
                 .comment("Message broadcast when the Death RP system is globally disabled.",
@@ -425,7 +425,7 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("disableMessageMode", "CHAT");
+                .define("disableMessageMode", "CHAT", ConfigRules::isDisplayMode);
 
         DEATH_RP_GLOBAL_TOGGLE_SOUND = BUILDER
                 .comment("Sound played to all on global toggle. 'none' to disable.")

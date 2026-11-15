@@ -103,6 +103,7 @@ All notable changes to this project will be documented in this file.
 * **Container restrictions:** only opening the container is refused; placing a block against a restricted chest works again.
 * **Death RP history purge:** it ran only when the once-a-minute check fell exactly on 3:00 and could miss a day when the server lagged; it now runs once a day as soon as it is 3 AM or later.
 * **Periodic tasks:** an error in one of them (tab blur, world border, schedule...) is logged and no longer stops the others or reaches the server tick.
+* **Display mode options** (`zoneMessageMode`, `hrpMessageMode`, the Death RP message modes, `scheduleDeathHoursNotifyMode`) and `forceState` are validated: a wrong value is refused by the Config Manager and `config set` (which list the allowed values) instead of silently falling back to the chat.
 * **Config values:** `true` / `false` options refused anything else (a typo used to become `false`), and values are checked against the rules of each option (allowed words, list checks), in the Config Manager too.
 * **`config set zoneMessageMode`** refused `TITLE` and `IMMERSIVE:<preset>`, which the option accepts.
 * **Rotating icons:** `*` patterns and `#tags` show their items in turn again in the restriction lists.
