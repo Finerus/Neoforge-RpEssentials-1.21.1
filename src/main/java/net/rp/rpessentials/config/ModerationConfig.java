@@ -378,7 +378,7 @@ public class ModerationConfig {
                 .define("historyEnabled", true);
         HISTORY_RETENTION = BUILDER
                 .comment("How many days each kind of line is kept, as TYPE=days. -1 = forever.",
-                        "Types: WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE, NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK (nickname changes), REPORT.",
+                        "Types: WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE, NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK (nickname changes), REPORT, SHEET (character sheet changes).",
                         "'*' applies to every type without its own line. Old lines are removed at startup and every hour.")
                 .defineList("historyRetention", Arrays.asList("*=365", "NOTE=-1", "DEATH_RP=-1"), obj -> obj instanceof String);
         HISTORY_MAX_PER_PLAYER = BUILDER

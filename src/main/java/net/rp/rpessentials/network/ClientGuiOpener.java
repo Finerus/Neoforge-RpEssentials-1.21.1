@@ -62,6 +62,10 @@ public class ClientGuiOpener {
         if (Minecraft.getInstance().screen instanceof PlayerProfileScreen s) s.setStats(uuid, lines);
     }
 
+    public static void receiveCharacterSheet(CharacterSheetPacket packet) {
+        if (Minecraft.getInstance().screen instanceof net.rp.rpessentials.client.gui.CharacterSheetScreen s) s.setData(packet);
+    }
+
     public static void receiveReports(java.util.UUID uuid, boolean enabled, List<PlayerReportsPacket.View> reports) {
         if (Minecraft.getInstance().screen instanceof PlayerProfileScreen s) s.setReports(uuid, enabled, reports);
     }

@@ -266,6 +266,7 @@ public class RpEssentialsEventHandler {
         LastConnectionManager.reload();
         NoteManager.reload();
         net.rp.rpessentials.moderation.ReportManager.reload();
+        net.rp.rpessentials.identity.CharacterSheetManager.reload();
         DeathRPManager.reload();
         AutoUnwhitelistHistory.reload();
         PendingProfileManager.reload();

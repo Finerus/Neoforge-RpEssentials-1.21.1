@@ -690,6 +690,10 @@ public class MessagesConfig {
             DISCORD_TEST_FAIL, DISCORD_NOT_SET, DISCORD_BAD_URL, DISCORD_ERR_INVALID_URL, DISCORD_ERR_QUEUE_FULL,
             DISCORD_ERR_GONE, DISCORD_ERR_REFUSED, DISCORD_ERR_HTTP, DISCORD_ERR_RATE, DISCORD_ERR_NETWORK;
 
+    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_SHEET, SHEET_F_NAME, SHEET_F_AGE, SHEET_F_RACE,
+            SHEET_F_LANGUAGES, SHEET_F_APPEARANCE, SHEET_F_DESCRIPTION, SHEET_F_LORE, SHEET_SAVED, SHEET_NO_CHANGE,
+            SHEET_DISABLED;
+
     static {
 
         // =========================================================================
@@ -2147,6 +2151,20 @@ public class MessagesConfig {
         DISCORD_ERR_HTTP = BUILDER.comment("Placeholder: {code}").define("errorHttp", "HTTP error {code}");
         DISCORD_ERR_RATE = BUILDER.define("errorRateLimited", "too many messages, Discord asked to slow down");
         DISCORD_ERR_NETWORK = BUILDER.comment("Placeholder: {type}").define("errorNetwork", "network error ({type})");
+        BUILDER.pop();
+
+        BUILDER.push("Character Sheet");
+        HISTORY_T_SHEET = BUILDER.comment("History type label.").define("historyType", "Character sheet");
+        SHEET_F_NAME = BUILDER.comment("Field names, used in the history.").define("fieldName", "Name");
+        SHEET_F_AGE = BUILDER.define("fieldAge", "Age");
+        SHEET_F_RACE = BUILDER.define("fieldRace", "Race");
+        SHEET_F_LANGUAGES = BUILDER.define("fieldLanguages", "Languages");
+        SHEET_F_APPEARANCE = BUILDER.define("fieldAppearance", "Appearance");
+        SHEET_F_DESCRIPTION = BUILDER.define("fieldDescription", "Description");
+        SHEET_F_LORE = BUILDER.define("fieldLore", "Lore");
+        SHEET_SAVED = BUILDER.comment("Placeholders: {player} {fields}").define("saved", "§a[RpEssentials] Character sheet of §e{player} §asaved §7({fields})");
+        SHEET_NO_CHANGE = BUILDER.comment("Placeholder: {player}").define("noChange", "§7[RpEssentials] Nothing changed in the character sheet of §e{player}§7.");
+        SHEET_DISABLED = BUILDER.define("disabled", "§c[RpEssentials] Character sheets are disabled (enableCharacterSheets in rpessentials-rp.toml).");
         BUILDER.pop();
 
         SPEC = BUILDER.build();

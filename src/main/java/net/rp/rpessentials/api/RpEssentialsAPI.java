@@ -14,6 +14,7 @@ import net.rp.rpessentials.profession.LicenseManager;
 import net.rp.rpessentials.profession.ProfessionRestrictionManager;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -105,6 +106,25 @@ public final class RpEssentialsAPI {
 
     /** True while a delayed teleport is running for this player. */
     public static boolean isTeleportPending(UUID player) { return net.rp.rpessentials.gameplay.TeleportWarmupManager.isPending(player); }
+
+    // ── Character sheets ─────────────────────────────────────────────────────
+    /** Values of a player's character sheet by field id (name, age, race, languages, appearance, description, lore, custom ids). */
+    public static Map<String, String> getCharacterSheet(UUID player) {
+        return net.rp.rpessentials.identity.CharacterSheetManager.get(player);
+    }
+
+    /** Sets one field of a character sheet (empty = cleared). Only enabled fields are stored. Returns true when it changed. */
+    public static boolean setCharacterSheetField(UUID player, String fieldId, String value, String actor) {
+        return net.rp.rpessentials.identity.CharacterSheetManager.set(player, fieldId, value, actor);
+    }
+
+    /**
+     * Adds a field to every character sheet (shown after the config fields). Call it during mod setup.
+     * {@code multiline} = several lines with the text editor.
+     */
+    public static void registerCharacterSheetField(String id, String label, boolean multiline) {
+        net.rp.rpessentials.identity.CharacterSheetManager.registerField(id, label, multiline);
+    }
 
     public static void registerConfig(String mod, int modColor, String id, String displayName, int color,
                                       ConfigInspector.Theme theme, Class<?> clazz, ModConfigSpec spec,

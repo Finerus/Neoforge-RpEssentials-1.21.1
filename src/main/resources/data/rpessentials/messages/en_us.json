@@ -810,5 +810,17 @@
   "Staff Config.unknownOption": "§c[RpEssentials] Unknown option: §f{option}§c. Use the suggestions, or add the file: /rpessentials config set <file> <option> <value>.",
   "Staff Config.invalidValue": "§c[RpEssentials] §f{value} §cis not a valid value for §f{option}§c. Expected: §f{expected}",
   "Staff Config.valueChanged": "§a[RpEssentials] §e{name} §8({file}) §7: §c{old} §7-> §a{value}",
-  "Staff Config.ambiguousOption": "§c[RpEssentials] Several options are called §f{option}§c, write one of: §f{choices}"
+  "Staff Config.ambiguousOption": "§c[RpEssentials] Several options are called §f{option}§c, write one of: §f{choices}",
+
+  "Character Sheet.historyType": "Character sheet",
+  "Character Sheet.fieldName": "Name",
+  "Character Sheet.fieldAge": "Age",
+  "Character Sheet.fieldRace": "Race",
+  "Character Sheet.fieldLanguages": "Languages",
+  "Character Sheet.fieldAppearance": "Appearance",
+  "Character Sheet.fieldDescription": "Description",
+  "Character Sheet.fieldLore": "Lore",
+  "Character Sheet.saved": "§a[RpEssentials] Character sheet of §e{player} §asaved §7({fields})",
+  "Character Sheet.noChange": "§7[RpEssentials] Nothing changed in the character sheet of §e{player}§7.",
+  "Character Sheet.disabled": "§c[RpEssentials] Character sheets are disabled (enableCharacterSheets in rpessentials-rp.toml)."
 }

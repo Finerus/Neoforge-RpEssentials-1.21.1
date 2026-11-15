@@ -14,6 +14,17 @@ public class RpConfig {
     public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
     public static final ModConfigSpec SPEC;
 
+    public static final ModConfigSpec.BooleanValue SHEET_ENABLED;
+    public static final ModConfigSpec.BooleanValue SHEET_NAME;
+    public static final ModConfigSpec.BooleanValue SHEET_AGE;
+    public static final ModConfigSpec.BooleanValue SHEET_RACE;
+    public static final ModConfigSpec.BooleanValue SHEET_LANGUAGES;
+    public static final ModConfigSpec.BooleanValue SHEET_APPEARANCE;
+    public static final ModConfigSpec.BooleanValue SHEET_DESCRIPTION;
+    public static final ModConfigSpec.BooleanValue SHEET_LORE;
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> SHEET_CUSTOM_FIELDS;
+    public static final ModConfigSpec.IntValue SHEET_MAX_TEXT_LENGTH;
+
     // =========================================================================
     // AFK
     // =========================================================================
@@ -257,6 +268,29 @@ public class RpConfig {
         TELEPORT_CANCEL_ON_DAMAGE = BUILDER
                 .comment("Cancel the teleport when the player takes damage during the delay (prevents escaping a fight).")
                 .define("cancelOnDamage", true);
+        BUILDER.pop();
+
+        BUILDER.push("Character Sheet");
+        SHEET_ENABLED = BUILDER
+                .comment("Character sheets, filled by the staff in the Profile tab of the player profile GUI",
+                        "(button \"Character sheet\"), prepared profiles included. Players cannot see them.")
+                .define("enableCharacterSheets", true);
+        SHEET_NAME = BUILDER.comment("Show the RP name field.").define("fieldName", true);
+        SHEET_AGE = BUILDER.comment("Show the age field.").define("fieldAge", true);
+        SHEET_RACE = BUILDER.comment("Show the race field.").define("fieldRace", true);
+        SHEET_LANGUAGES = BUILDER.comment("Show the languages field (free text, one or more languages).").define("fieldLanguages", true);
+        SHEET_APPEARANCE = BUILDER.comment("Show the appearance field (height, build, distinctive marks...). Several lines.").define("fieldAppearance", true);
+        SHEET_DESCRIPTION = BUILDER.comment("Show the description field. Several lines.").define("fieldDescription", true);
+        SHEET_LORE = BUILDER.comment("Show the lore / background field. Several lines.").define("fieldLore", true);
+        SHEET_CUSTOM_FIELDS = BUILDER
+                .comment("Extra fields, one per line: id;Label;LINE or id;Label;TEXT",
+                        "  LINE = one line (for example a faction or a rank), TEXT = several lines with the text editor.",
+                        "  The id is a lowercase word (letters, digits, _); changing it loses what was written in that field.",
+                        "Example: [\"faction;Faction;LINE\", \"religion;Religion;LINE\", \"secrets;Secrets;TEXT\"]")
+                .defineList("customFields", java.util.List.of(), o -> o instanceof String s && s.split(";").length >= 2);
+        SHEET_MAX_TEXT_LENGTH = BUILDER
+                .comment("Maximum length of a several-lines field. One-line fields are limited to 128 characters.")
+                .defineInRange("maxTextLength", 4000, 100, 20000);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

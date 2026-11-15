@@ -219,6 +219,23 @@ public class NetworkHandler {
                 ReportActionPacket.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(null, ReportActionPacket::handleOnServer)
         );
+
+        // ── Character sheets (profile GUI) ────────────────────────────────────
+        registrar.playToServer(
+                RequestCharacterSheetPacket.TYPE,
+                RequestCharacterSheetPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, RequestCharacterSheetPacket::handleOnServer)
+        );
+        registrar.playToClient(
+                CharacterSheetPacket.TYPE,
+                CharacterSheetPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(CharacterSheetPacket::handleOnClient, null)
+        );
+        registrar.playToServer(
+                SaveCharacterSheetPacket.TYPE,
+                SaveCharacterSheetPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(null, SaveCharacterSheetPacket::handleOnServer)
+        );
     }
 
     private static void handleSyncProfessionRestrictions(

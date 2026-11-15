@@ -798,5 +798,17 @@
   "Staff Config.unknownOption": "§c[RpEssentials] Option inconnue : §f{option}§c. Utilise les suggestions, ou précise le fichier : /rpessentials config set <fichier> <option> <valeur>.",
   "Staff Config.invalidValue": "§c[RpEssentials] §f{value} §cn'est pas une valeur valide pour §f{option}§c. Attendu : §f{expected}",
   "Staff Config.valueChanged": "§a[RpEssentials] §e{name} §8({file}) §7: §c{old} §7-> §a{value}",
-  "Staff Config.ambiguousOption": "§c[RpEssentials] Plusieurs options s'appellent §f{option}§c, écris l'une de celles-ci : §f{choices}"
+  "Staff Config.ambiguousOption": "§c[RpEssentials] Plusieurs options s'appellent §f{option}§c, écris l'une de celles-ci : §f{choices}",
+
+  "Character Sheet.historyType": "Fiche personnage",
+  "Character Sheet.fieldName": "Nom",
+  "Character Sheet.fieldAge": "Âge",
+  "Character Sheet.fieldRace": "Race",
+  "Character Sheet.fieldLanguages": "Langues",
+  "Character Sheet.fieldAppearance": "Apparence",
+  "Character Sheet.fieldDescription": "Description",
+  "Character Sheet.fieldLore": "Histoire",
+  "Character Sheet.saved": "§a[RpEssentials] Fiche personnage de §e{player} §asauvegardée §7({fields})",
+  "Character Sheet.noChange": "§7[RpEssentials] Rien n'a changé dans la fiche personnage de §e{player}§7.",
+  "Character Sheet.disabled": "§c[RpEssentials] Les fiches personnage sont désactivées (enableCharacterSheets dans rpessentials-rp.toml)."
 }

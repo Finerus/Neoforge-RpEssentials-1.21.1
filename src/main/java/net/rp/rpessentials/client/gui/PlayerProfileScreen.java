@@ -343,6 +343,20 @@ public class PlayerProfileScreen extends Screen {
                             Component.translatable("rpessentials.gui.player_profile.btn_apply"),
                             btn -> applyProfile())
                     .pos(formX, this.height - 35).size(150, 20).build(SkinnedButton::new));
+            // Character sheet (staff only, prepared profiles included): opens its own screen.
+            int sheetX = formX + 150 + UiLayout.GAP;
+            int sheetW = Math.min(130, closeButtonX() - UiLayout.GAP - sheetX);
+            if (sheetW >= 40) {
+                OpenPlayerProfileGuiPacket.PlayerData sel = selectedData();
+                addRenderableWidget(Button.builder(
+                                Component.literal(UiLayout.fit(this.font,
+                                        I18n.get("rpessentials.gui.player_profile.btn_sheet"), sheetW - 8)),
+                                btn -> Minecraft.getInstance().setScreen(
+                                        new CharacterSheetScreen(this, sel.uuid(), sel.mcName())))
+                        .pos(sheetX, this.height - 35).size(sheetW, 20)
+                        .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.player_profile.btn_sheet_tooltip")))
+                        .build(SkinnedButton::new));
+            }
         }
 
         addRenderableWidget(Button.builder(
