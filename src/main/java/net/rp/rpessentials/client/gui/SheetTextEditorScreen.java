@@ -32,6 +32,9 @@ public class SheetTextEditorScreen extends Screen {
     private final int maxLength;
     private final Consumer<String> onDone;
     private String value;
+    private final String original;
+    private Button doneButton;
+    private boolean confirmCancel = false;
 
     private MultiLineEditBox editor;
     private ButtonRowList preview;
@@ -42,6 +45,7 @@ public class SheetTextEditorScreen extends Screen {
         this.back = back;
         this.fieldName = fieldName;
         this.value = value == null ? "" : value;
+        this.original = this.value;
         this.maxLength = maxLength;
         this.onDone = onDone;
     }
@@ -98,6 +102,7 @@ public class SheetTextEditorScreen extends Screen {
         editor.setValueListener(v -> {
             value = v;
             refreshPreview();
+            SaveUi.refresh(doneButton, I18n.get(K + "done"), !value.equals(original));
         });
         addRenderableWidget(editor);
 
@@ -113,14 +118,19 @@ public class SheetTextEditorScreen extends Screen {
 
         // ── Footer ────────────────────────────────────────────────────────────
         int btnY = this.height - 28;
-        addRenderableWidget(Button.builder(Component.translatable(K + "done"), b -> {
+        doneButton = Button.builder(Component.translatable(K + "done"), b -> {
                     onDone.accept(value);
                     Minecraft.getInstance().setScreen(back);
                 })
-                .pos(this.width / 2 - 124, btnY).size(120, 20).build(SkinnedButton::new));
-        addRenderableWidget(Button.builder(Component.translatable(K + "cancel"),
-                        b -> Minecraft.getInstance().setScreen(back))
-                .pos(this.width / 2 + 4, btnY).size(120, 20).build(SkinnedButton::new));
+                .pos(this.width / 2 - 124, btnY).size(120, 20).build(SkinnedButton::new);
+        SaveUi.refresh(doneButton, I18n.get(K + "done"), !value.equals(original));
+        addRenderableWidget(doneButton);
+        addRenderableWidget(Button.builder(Component.literal(confirmCancel
+                                ? "§c" + I18n.get("rpessentials.gui.unsaved.discard") : I18n.get(K + "cancel")),
+                        b -> onClose())
+                .pos(this.width / 2 + 4, btnY).size(120, 20)
+                .tooltip(SaveUi.closeTooltip(confirmCancel))
+                .build(SkinnedButton::new));
     }
 
     private Button tool(String label, String key, int w, Runnable action, int x, int y) {
@@ -156,8 +166,16 @@ public class SheetTextEditorScreen extends Screen {
         preview.setRows(rows);
     }
 
+    /** Cancel / Escape: asks again when the text was changed. */
     @Override
-    public void onClose() { Minecraft.getInstance().setScreen(back); }
+    public void onClose() {
+        if (!value.equals(original) && !confirmCancel) {
+            confirmCancel = true;
+            rebuildWidgets();
+            return;
+        }
+        Minecraft.getInstance().setScreen(back);
+    }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
@@ -167,9 +185,7 @@ public class SheetTextEditorScreen extends Screen {
         if (preview != null) {
             g.drawString(this.font, "§8" + I18n.get(K + "preview"), preview.getX() + 6, preview.getY() - 9, 0x888888, false);
         }
-        // Character count; the codes are explained in the tooltips of the toolbar buttons.
-        String count = value.length() + " / " + maxLength;
-        g.drawString(this.font, (value.length() >= maxLength ? "§c" : "§7") + count, 12, this.height - 42, 0xAAAAAA, false);
+        // The character count is drawn by the Minecraft text area itself (under it, on the right).
     }
 
     @Override

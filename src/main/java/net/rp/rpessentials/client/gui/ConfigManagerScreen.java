@@ -86,6 +86,8 @@ public class ConfigManagerScreen extends Screen {
     private boolean pendingRebuild = false;
     private int pendingRemoveIdx = -1;
     private Button applyButton;
+    /** Close was clicked once with unapplied changes: the next click (or Escape) closes. */
+    private boolean confirmClose = false;
     private Button discardButton;
 
     private record ModHeader(int y, String name, int color) {}
@@ -184,7 +186,7 @@ public class ConfigManagerScreen extends Screen {
             Component label = dim
                     ? Component.literal((selected ? "§8▶ " : "§8  ") + file.displayName() + count)
                     : file.color() == 0
-                    ? Component.literal((selected ? "§e▶ " : "§7  ") + file.displayName() + count)
+                    ? Component.literal((selected ? "§e§l▶ " : "§7  ") + file.displayName() + count)
                     : Component.literal((selected ? "▶ " : "  ") + file.displayName()).withStyle(s -> s.withColor(file.color()).withBold(selected))
                             .append(Component.literal(count));
             rows.add(new ButtonRowList.Row().add(Button.builder(label, btn -> requestFile(fid))
@@ -407,9 +409,13 @@ public class ConfigManagerScreen extends Screen {
                 .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
                 .build(SkinnedButton::new));
 
-        // Close
-        addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.btn_close"), btn -> onClose())
-                .pos(formX + formW - closeW, y).size(closeW, 20).build(SkinnedButton::new));
+        // Close (asks again when changes are not applied)
+        String closeLabel = SaveUi.closeLabel(confirmClose, "rpessentials.gui.config.btn_close");
+        int cw = Math.max(closeW, this.font.width(closeLabel) + 10);
+        addRenderableWidget(Button.builder(Component.literal(closeLabel), btn -> onClose())
+                .pos(formX + formW - cw, y).size(cw, 20)
+                .tooltip(SaveUi.closeTooltip(confirmClose))
+                .build(SkinnedButton::new));
     }
 
     // =========================================================================
@@ -474,10 +480,13 @@ public class ConfigManagerScreen extends Screen {
                 this.height - FOOTER_H + 1, 0xFF444444);
 
         if (applyButton != null) {
-            applyButton.setMessage(Component.literal(!pendingChanges.isEmpty()
-                    ? I18n.get("rpessentials.gui.config.btn_apply", pendingChanges.size())
-                    : I18n.get("rpessentials.gui.config.btn_no_change")));
+            // Bold when there is something to apply, like every save button.
+            String applyLabel = !pendingChanges.isEmpty()
+                    ? "§l" + I18n.get("rpessentials.gui.config.btn_apply", pendingChanges.size())
+                    : I18n.get("rpessentials.gui.config.btn_no_change");
+            if (!applyButton.getMessage().getString().equals(applyLabel)) applyButton.setMessage(Component.literal(applyLabel));
         }
+        if (confirmClose && pendingChanges.isEmpty()) { confirmClose = false; rebuild(); }
 
         // Render all widgets (EditBox, Button…)
         super.render(g, mouseX, mouseY, delta);
@@ -490,6 +499,16 @@ public class ConfigManagerScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {
         // Intentionally empty — we draw our own background in render()
+    }
+
+    @Override
+    public void onClose() {
+        if (!pendingChanges.isEmpty() && !confirmClose) {
+            confirmClose = true;
+            rebuild();
+            return;
+        }
+        super.onClose();
     }
 
     // =========================================================================

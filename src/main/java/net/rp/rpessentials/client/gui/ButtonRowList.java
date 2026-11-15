@@ -58,9 +58,13 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         scrollToEnd = true;
     }
 
+    /** Space between the rows and the scroll bar. */
+    private static final int BAR_GAP = 3;
+
     @Override
     public int getRowWidth() {
-        return getWidth() - SIDE * 2;
+        // Rows stay centered (same hit area as the vanilla list) and leave BAR_GAP px before the bar.
+        return getWidth() - SIDE * 2 - BAR_GAP * 2;
     }
 
     /** Same as the hit area of the vanilla list, so what is drawn is what is clicked. */

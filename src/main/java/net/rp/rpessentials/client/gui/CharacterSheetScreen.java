@@ -150,13 +150,12 @@ public class CharacterSheetScreen extends Screen {
         int btnY = this.height - 30;
         saveButton = Button.builder(Component.translatable(K + "btn_save"), btn -> save())
                 .pos(this.width / 2 - 124, btnY).size(120, 20).build(SkinnedButton::new);
-        saveButton.active = loaded && enabled && dirty();
+        refreshSaveButton();
         addRenderableWidget(saveButton);
-        addRenderableWidget(Button.builder(Component.literal(confirmDiscard
-                                ? I18n.get(K + "btn_discard") : I18n.get(K + "btn_close")),
+        addRenderableWidget(Button.builder(Component.literal(SaveUi.closeLabel(confirmDiscard, K + "btn_close")),
                         btn -> close())
                 .pos(this.width / 2 + 4, btnY).size(120, 20)
-                .tooltip(confirmDiscard ? Tooltip.create(Component.translatable(K + "discard_tooltip")) : null)
+                .tooltip(SaveUi.closeTooltip(confirmDiscard))
                 .build(SkinnedButton::new));
     }
 
@@ -194,7 +193,7 @@ public class CharacterSheetScreen extends Screen {
 
     /** Enables Save as soon as something changed, without rebuilding (the focused field keeps its cursor). */
     private void refreshSaveButton() {
-        if (saveButton != null) saveButton.active = loaded && enabled && dirty();
+        SaveUi.refresh(saveButton, I18n.get(K + "btn_save"), loaded && enabled && dirty());
     }
 
     private void save() {

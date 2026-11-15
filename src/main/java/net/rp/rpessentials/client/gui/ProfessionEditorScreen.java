@@ -56,6 +56,13 @@ public class ProfessionEditorScreen extends Screen {
     private String profPendingDelete = null;
     private Button profInCreationButton;
     private boolean profDirty = false;
+
+    /** Save button of the visible tab, refreshed every frame (greyed / bold), and its dirty state. */
+    private Button liveSaveButton;
+    private String liveSaveKey;
+    private java.util.function.BooleanSupplier liveDirty = () -> false;
+    /** Close was clicked once with unsaved changes: the next click (or Escape) closes. */
+    private boolean confirmClose = false;
     private final Set<String> profDirtyEntries = new HashSet<>();
 
     private List<String> allowedCrafts    = new ArrayList<>();
@@ -337,11 +344,12 @@ public class ProfessionEditorScreen extends Screen {
     private void addManageButton(int formX, int formW, int y, List<String> list, Set<String> dirty,
                                  List<String> pool, String hint, Runnable onChange,
                                  Consumer<String> onRemove, Runnable onSave, String emptyKey,
-                                 java.util.function.Function<String, Warning> warnings) {
+                                 java.util.function.Function<String, Warning> warnings,
+                                 java.util.function.BooleanSupplier unsaved) {
         addRenderableWidget(Button.builder(
                         Component.literal(I18n.get("rpessentials.gui.restriction_list.manage", list.size())),
                         btn -> Minecraft.getInstance().setScreen(new RestrictionListSubScreen(
-                                this, list, dirty, pool, hint, onChange, onRemove, onSave, emptyKey, warnings)))
+                                this, list, dirty, pool, hint, onChange, onRemove, onSave, emptyKey, warnings, unsaved)))
                 .pos(formX, y).size(Math.min(formW - 4, 200), 18).build(SkinnedButton::new));
     }
 
@@ -426,17 +434,14 @@ public class ProfessionEditorScreen extends Screen {
         addManageButton(formX, formW, y, getProfActiveList(), profDirtyEntries, getPoolForCurrentTab(),
                 I18n.get("rpessentials.gui.profession_editor.hint_item"), () -> profDirty = true, v -> profDirty = true,
                 this::saveProfession, "rpessentials.gui.empty.prof." + PROF_TAB_KEYS[profActiveTab],
-                profWarnings(profActiveTab));
+                profWarnings(profActiveTab), () -> profDirty);
 
         int btnY = this.height - 35;
-        addRenderableWidget(Button.builder(
-                        Component.translatable("rpessentials.gui.profession_editor.btn_save"),
+        liveSave(Button.builder(Component.translatable("rpessentials.gui.profession_editor.btn_save"),
                         btn -> saveProfession())
-                .pos(formX, btnY).size(160, 20).build(SkinnedButton::new));
-        addRenderableWidget(Button.builder(
-                        Component.translatable("rpessentials.gui.profession_editor.btn_close"),
-                        btn -> onClose())
-                .pos(this.width - MARGIN * 2 - 55, btnY).size(55, 20).build(SkinnedButton::new));
+                .pos(formX, btnY).size(160, 20).build(SkinnedButton::new),
+                "rpessentials.gui.profession_editor.btn_save", () -> profDirty);
+        addCloseButton(btnY);
 
         buildProfessionList();
     }
@@ -478,9 +483,11 @@ public class ProfessionEditorScreen extends Screen {
             String style  = isPendingDelete ? "§c" : (isDirtySelected ? "§e§o" : "");
             String suffix = isDirtySelected ? " *" : "";
             OpenProfessionGuiPacket.ProfessionEntry pe = existingProfessions.get(i);
+            // Bold after the color code (a color code ends the previous formats).
+            String bold = i == profSelectedIndex ? "§l" : "";
             String shownName = (isPendingDelete || isDirtySelected)
-                    ? pe.displayName()
-                    : pe.color().replace("&", "§") + pe.displayName();
+                    ? bold + pe.displayName()
+                    : pe.color().replace("&", "§") + bold + pe.displayName();
             String label = prefix + style + shownName + " §8(" + id + ")" + suffix;
 
             Button main = Button.builder(Component.literal(label), btn -> loadProfEntry(idx))
@@ -592,16 +599,12 @@ public class ProfessionEditorScreen extends Screen {
         }
 
         int btnY = this.height - 35;
-        Button saveRoleBtn = Button.builder(Component.translatable("rpessentials.gui.roles.btn_save"),
-                        btn -> saveRole())
-                .pos(formX, btnY).size(120, 20).build(SkinnedButton::new);
-        saveRoleBtn.active = Minecraft.getInstance().player != null
-                && Minecraft.getInstance().player.hasPermissions(3);
-        addRenderableWidget(saveRoleBtn);
-        addRenderableWidget(Button.builder(
-                        Component.translatable("rpessentials.gui.profession_editor.btn_close"),
-                        btn -> onClose())
-                .pos(this.width - MARGIN * 2 - 55, btnY).size(55, 20).build(SkinnedButton::new));
+        liveSave(Button.builder(Component.translatable("rpessentials.gui.roles.btn_save"), btn -> saveRole())
+                .pos(formX, btnY).size(120, 20).build(SkinnedButton::new),
+                "rpessentials.gui.roles.btn_save",
+                () -> roleDirty && Minecraft.getInstance().player != null
+                        && Minecraft.getInstance().player.hasPermissions(3));
+        addCloseButton(btnY);
 
         buildRoleList();
     }
@@ -621,7 +624,8 @@ public class ProfessionEditorScreen extends Screen {
             String prefix = i == roleSelectedIndex ? "§e> " : "  ";
             String style  = isPendingDelete ? "§c" : (isDirtySelected ? "§e§o" : "");
             String suffix = isDirtySelected ? " *" : "";
-            String label = prefix + style + id + " §8(" + existingRoles.get(i).lpGroup() + ")" + suffix;
+            String label = prefix + style + (i == roleSelectedIndex ? "§l" : "") + id
+                    + " §r§8(" + existingRoles.get(i).lpGroup() + ")" + suffix;
 
             Button main = Button.builder(Component.literal(label), btn -> loadRoleEntry(idx))
                     .size(rw - 18, ROW_H - 2).build(SkinnedButton.row(i == roleSelectedIndex));
@@ -694,20 +698,55 @@ public class ProfessionEditorScreen extends Screen {
         } else {
             addManageButton(formX, formW, listEnd, list, globalDirtyEntries, pool, hint,
                     () -> {}, this::onGlobalEntryRemoved, this::saveGlobalRestrictions,
-                    "rpessentials.gui.empty.global." + GLOBAL_CATEGORY_KEYS[globalActiveCategory], warnings);
+                    "rpessentials.gui.empty.global." + GLOBAL_CATEGORY_KEYS[globalActiveCategory], warnings,
+                    this::globalDirty);
         }
 
         int btnY = this.height - 35;
-        addRenderableWidget(Button.builder(
-                        Component.translatable("rpessentials.gui.global.btn_save"),
+        liveSave(Button.builder(Component.translatable("rpessentials.gui.global.btn_save"),
                         btn -> saveGlobalRestrictions())
-                .pos(formX, btnY).size(160, 20).build(SkinnedButton::new));
-        addRenderableWidget(Button.builder(
-                        Component.translatable("rpessentials.gui.profession_editor.btn_close"),
-                        btn -> onClose())
-                .pos(this.width - MARGIN * 2 - 55, btnY).size(55, 20).build(SkinnedButton::new));
+                .pos(formX, btnY).size(160, 20).build(SkinnedButton::new),
+                "rpessentials.gui.global.btn_save", this::globalDirty);
+        addCloseButton(btnY);
 
         buildGlobalLeftPanel();
+    }
+
+    // ── Save / close ─────────────────────────────────────────────────────────
+    private void liveSave(Button button, String key, java.util.function.BooleanSupplier dirty) {
+        liveSaveButton = button;
+        liveSaveKey = key;
+        liveDirty = dirty;
+        SaveUi.refresh(button, I18n.get(key), dirty.getAsBoolean());
+        addRenderableWidget(button);
+    }
+
+    private void addCloseButton(int btnY) {
+        String label = SaveUi.closeLabel(confirmClose, "rpessentials.gui.profession_editor.btn_close");
+        int w = Math.max(55, this.font.width(label) + 10);
+        addRenderableWidget(Button.builder(Component.literal(label), btn -> onClose())
+                .pos(this.width - MARGIN * 2 - w, btnY).size(w, 20)
+                .tooltip(SaveUi.closeTooltip(confirmClose))
+                .build(SkinnedButton::new));
+    }
+
+    /** Global lists differ from what the server has. */
+    boolean globalDirty() {
+        return !globalSaved.isEmpty() && !globalWorking().equals(globalSaved);
+    }
+
+    private boolean anyDirty() {
+        return profDirty || roleDirty || globalDirty();
+    }
+
+    @Override
+    public void onClose() {
+        if (anyDirty() && !confirmClose) {
+            confirmClose = true;
+            rebuild();
+            return;
+        }
+        super.onClose();
     }
 
     private void buildGlobalLeftPanel() {
@@ -945,6 +984,8 @@ public class ProfessionEditorScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        if (liveSaveKey != null) SaveUi.refresh(liveSaveButton, I18n.get(liveSaveKey), liveDirty.getAsBoolean());
+        if (confirmClose && !anyDirty()) { confirmClose = false; rebuild(); }
         GuiSkin.background(g, this.width, this.height, 0x99000000);
 
         GuiSkin.panel(g, MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
@@ -1233,6 +1274,8 @@ public class ProfessionEditorScreen extends Screen {
         private final Consumer<String> onRemove;
         private final Runnable onSave;
         private final java.util.function.Function<String, Warning> warnings;
+        private final java.util.function.BooleanSupplier unsaved;
+        private Button saveButton;
         private final List<String> suggestions = new ArrayList<>();
 
         private ButtonRowList list;
@@ -1247,7 +1290,8 @@ public class ProfessionEditorScreen extends Screen {
 
         RestrictionListSubScreen(ProfessionEditorScreen parent, List<String> items, Set<String> dirtyEntries,
                                  List<String> pool, String hint, Runnable onChange, Consumer<String> onRemove,
-                                 Runnable onSave, String emptyKey, java.util.function.Function<String, Warning> warnings) {
+                                 Runnable onSave, String emptyKey, java.util.function.Function<String, Warning> warnings,
+                                 java.util.function.BooleanSupplier unsaved) {
             super(Component.literal(""));
             this.parent       = parent;
             this.items        = items;
@@ -1259,6 +1303,7 @@ public class ProfessionEditorScreen extends Screen {
             this.onSave       = onSave;
             this.emptyKey = emptyKey;
             this.warnings = warnings;
+            this.unsaved = unsaved;
         }
 
         @Override
@@ -1309,10 +1354,11 @@ public class ProfessionEditorScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal("§a+"), btn -> addEntry())
                     .pos(boxX + boxW + 2, boxY).size(16, 18).build(SkinnedButton::new));
 
-            addRenderableWidget(Button.builder(
-                            Component.translatable("rpessentials.gui.restriction_list.save"),
+            saveButton = Button.builder(Component.translatable("rpessentials.gui.restriction_list.save"),
                             btn -> { onSave.run(); rebuild(); })
-                    .pos(midX - 130, this.height - 30).size(120, 20).build(SkinnedButton::new));
+                    .pos(midX - 130, this.height - 30).size(120, 20).build(SkinnedButton::new);
+            SaveUi.refresh(saveButton, I18n.get("rpessentials.gui.restriction_list.save"), unsaved.getAsBoolean());
+            addRenderableWidget(saveButton);
             addRenderableWidget(Button.builder(
                             Component.translatable("rpessentials.gui.restriction_list.close"),
                             btn -> Minecraft.getInstance().setScreen(parent))
@@ -1466,6 +1512,7 @@ public class ProfessionEditorScreen extends Screen {
 
         @Override
         public void render(GuiGraphics g, int mx, int my, float delta) {
+            SaveUi.refresh(saveButton, I18n.get("rpessentials.gui.restriction_list.save"), unsaved.getAsBoolean());
             GuiSkin.background(g, this.width, this.height, 0xAA000000);
             super.render(g, mx, my, delta);
             g.drawCenteredString(this.font,
@@ -1702,6 +1749,8 @@ public class ProfessionEditorScreen extends Screen {
         private boolean applying = false;
         private EditBox blockBox;
 
+        private Button containerSave;
+
         ContainerListSubScreen(ProfessionEditorScreen parent, List<String> items, Set<String> dirty,
                                List<OpenProfessionGuiPacket.ProfessionEntry> professions,
                                Consumer<String> onRemove, Runnable onSave) {
@@ -1807,9 +1856,11 @@ public class ProfessionEditorScreen extends Screen {
                             btn -> { clearForm(); rebuild(); })
                     .pos(boxX + 134, this.height - 60).size(100, 18).build(SkinnedButton::new));
 
-            addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.container_list.save_all"),
+            containerSave = Button.builder(Component.translatable("rpessentials.gui.container_list.save_all"),
                             btn -> { onSave.run(); rebuild(); })
-                    .pos(midX - 130, this.height - 30).size(120, 20).build(SkinnedButton::new));
+                    .pos(midX - 130, this.height - 30).size(120, 20).build(SkinnedButton::new);
+            SaveUi.refresh(containerSave, I18n.get("rpessentials.gui.container_list.save_all"), parent.globalDirty());
+            addRenderableWidget(containerSave);
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.restriction_list.close"),
                             btn -> Minecraft.getInstance().setScreen(parent))
                     .pos(midX + 4, this.height - 30).size(80, 20).build(SkinnedButton::new));
@@ -1949,6 +2000,7 @@ public class ProfessionEditorScreen extends Screen {
 
         @Override
         public void render(GuiGraphics g, int mx, int my, float delta) {
+            SaveUi.refresh(containerSave, I18n.get("rpessentials.gui.container_list.save_all"), parent.globalDirty());
             GuiSkin.background(g, this.width, this.height, 0xAA000000);
             super.render(g, mx, my, delta);
             g.drawCenteredString(this.font, I18n.get("rpessentials.gui.restriction_list.count", items.size()),

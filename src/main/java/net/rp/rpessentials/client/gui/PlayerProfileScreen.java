@@ -87,6 +87,10 @@ public class PlayerProfileScreen extends Screen {
     private String pendingDeletePlayerUuid = null;
     private boolean pendingNickReset = false;
     private int pendingDeleteNoteId = -1;
+    /** Apply button of the Profile tab, refreshed every frame (greyed / bold). */
+    private Button applyButton;
+    /** Close was clicked once with unapplied profile changes: the next click (or Escape) closes. */
+    private boolean confirmClose = false;
 
     private static final char[]   COLOR_CHARS = ColorPalette.CHARS;
     private static final String[] COLOR_KEYS  = ColorPalette.KEYS;
@@ -339,10 +343,11 @@ public class PlayerProfileScreen extends Screen {
 
         // ── Bouton Appliquer (onglet profil seulement) ─────────────────────
         if (activeTab == 0) {
-            addRenderableWidget(Button.builder(
-                            Component.translatable("rpessentials.gui.player_profile.btn_apply"),
+            applyButton = Button.builder(Component.translatable("rpessentials.gui.player_profile.btn_apply"),
                             btn -> applyProfile())
-                    .pos(formX, this.height - 35).size(150, 20).build(SkinnedButton::new));
+                    .pos(formX, this.height - 35).size(150, 20).build(SkinnedButton::new);
+            SaveUi.refresh(applyButton, I18n.get("rpessentials.gui.player_profile.btn_apply"), profileDirty());
+            addRenderableWidget(applyButton);
             // Character sheet (staff only, prepared profiles included): opens its own screen.
             int sheetX = formX + 150 + UiLayout.GAP;
             int sheetW = Math.min(130, closeButtonX() - UiLayout.GAP - sheetX);
@@ -361,9 +366,36 @@ public class PlayerProfileScreen extends Screen {
         }
 
         addRenderableWidget(Button.builder(
-                        Component.translatable("rpessentials.gui.player_profile.btn_close"),
+                        Component.literal(UiLayout.fit(this.font,
+                                SaveUi.closeLabel(confirmClose, "rpessentials.gui.player_profile.btn_close"), 56)),
                         btn -> onClose())
-                .pos(closeButtonX(), this.height - 35).size(60, 20).build(SkinnedButton::new));
+                .pos(closeButtonX(), this.height - 35).size(60, 20)
+                .tooltip(SaveUi.closeTooltip(confirmClose))
+                .build(SkinnedButton::new));
+    }
+
+    /** The nickname or role typed in the Profile tab differs from the player's current ones. */
+    private boolean profileDirty() {
+        if (players.isEmpty()) return false;
+        OpenPlayerProfileGuiPacket.PlayerData sel = selectedData();
+        String nick = stateNick.trim().isEmpty() ? ""
+                : (stateNickColorIndex == 0 ? "" : ColorPalette.code(stateNickColorIndex).replace('&', '§'))
+                        + stateNick.trim().replace('&', '§');
+        String current = sel.currentNick() == null ? "" : sel.currentNick().replace('&', '§');
+        boolean nickChanged = !nick.isEmpty() && !nick.equals(current);
+        String role = stateRole.trim();
+        boolean roleChanged = !role.isEmpty() && !role.equals(sel.currentRole() == null ? "" : sel.currentRole().trim());
+        return nickChanged || roleChanged;
+    }
+
+    @Override
+    public void onClose() {
+        if (profileDirty() && !confirmClose) {
+            confirmClose = true;
+            rebuild();
+            return;
+        }
+        super.onClose();
     }
 
     /** Left edge of the Close button, the footer fields stop before it. */
@@ -972,6 +1004,8 @@ public class PlayerProfileScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+        if (activeTab == 0) SaveUi.refresh(applyButton, I18n.get("rpessentials.gui.player_profile.btn_apply"), profileDirty());
+        if (confirmClose && !profileDirty()) { confirmClose = false; rebuild(); }
         GuiSkin.background(g, this.width, this.height, 0x99000000);
         int formX = LIST_W + MARGIN * 3;
 

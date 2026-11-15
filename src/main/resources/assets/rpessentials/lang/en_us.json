@@ -420,5 +420,7 @@
   "rpessentials.gui.color.btn_close": "Back",
   "rpessentials.gui.color.add_header": "New color:",
   "rpessentials.gui.color.bad_hex": "6 hex digits expected",
-  "rpessentials.gui.sheet.use_as_nick_tooltip": "Use the RP name as the player's nickname (same checks as /nick). Greyed out when it already is."
+  "rpessentials.gui.sheet.use_as_nick_tooltip": "Use the RP name as the player's nickname (same checks as /nick). Greyed out when it already is.",
+  "rpessentials.gui.unsaved.discard": "Discard?",
+  "rpessentials.gui.unsaved.discard_tooltip": "Some changes are not saved. Click again to close without saving."
 }
