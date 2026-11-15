@@ -88,6 +88,8 @@ public class ConfigManagerScreen extends Screen {
     private Button applyButton;
     /** Close was clicked once with unapplied changes: the next click (or Escape) closes. */
     private boolean confirmClose = false;
+    /** File clicked once while changes are not applied: clicking it again opens it (changes dropped). */
+    private String confirmFile = null;
     private Button discardButton;
 
     private record ModHeader(int y, String name, int color) {}
@@ -189,7 +191,19 @@ public class ConfigManagerScreen extends Screen {
                     ? Component.literal((selected ? "§e§l▶ " : "§7  ") + file.displayName() + count)
                     : Component.literal((selected ? "▶ " : "  ") + file.displayName()).withStyle(s -> s.withColor(file.color()).withBold(selected))
                             .append(Component.literal(count));
-            rows.add(new ButtonRowList.Row().add(Button.builder(label, btn -> requestFile(fid))
+            boolean armed = fid.equals(confirmFile);
+            if (armed) label = Component.literal(UiLayout.fit(this.font,
+                    "§c" + I18n.get("rpessentials.gui.unsaved.discard_switch"), rw - 6));
+            rows.add(new ButtonRowList.Row().add(Button.builder(label, btn -> {
+                        if (!pendingChanges.isEmpty() && !fid.equals(selectedFileId) && !fid.equals(confirmFile)) {
+                            confirmFile = fid;
+                            rebuild();
+                            return;
+                        }
+                        confirmFile = null;
+                        requestFile(fid);
+                    })
+                    .tooltip(armed ? Tooltip.create(Component.translatable("rpessentials.gui.unsaved.discard_switch_tooltip")) : null)
                     .size(rw, 16).build(SkinnedButton.row(selected)), 0));
         }
         fileList.setRows(rows);
@@ -487,6 +501,7 @@ public class ConfigManagerScreen extends Screen {
             if (!applyButton.getMessage().getString().equals(applyLabel)) applyButton.setMessage(Component.literal(applyLabel));
         }
         if (confirmClose && pendingChanges.isEmpty()) { confirmClose = false; rebuild(); }
+        if (confirmFile != null && pendingChanges.isEmpty()) { confirmFile = null; rebuild(); }
 
         // Render all widgets (EditBox, Button…)
         super.render(g, mouseX, mouseY, delta);

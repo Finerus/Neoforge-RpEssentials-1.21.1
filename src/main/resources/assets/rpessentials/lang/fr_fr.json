@@ -422,5 +422,7 @@
   "rpessentials.gui.color.bad_hex": "6 chiffres hex attendus",
   "rpessentials.gui.sheet.use_as_nick_tooltip": "Utiliser le nom RP comme surnom du joueur (mêmes vérifications que /nick). Grisé quand c'est déjà le cas.",
   "rpessentials.gui.unsaved.discard": "Abandonner ?",
-  "rpessentials.gui.unsaved.discard_tooltip": "Des modifications ne sont pas sauvegardées. Clique à nouveau pour fermer sans sauvegarder."
+  "rpessentials.gui.unsaved.discard_tooltip": "Des modifications ne sont pas sauvegardées. Clique à nouveau pour fermer sans sauvegarder.",
+  "rpessentials.gui.unsaved.discard_switch": "Abandonner les modifs ?",
+  "rpessentials.gui.unsaved.discard_switch_tooltip": "Le formulaire ouvert a des modifications non sauvegardées. Clique à nouveau pour ouvrir celui-ci et les perdre, ou sauvegarde d'abord."
 }

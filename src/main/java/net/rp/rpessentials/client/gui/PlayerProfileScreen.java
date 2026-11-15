@@ -91,6 +91,8 @@ public class PlayerProfileScreen extends Screen {
     private Button applyButton;
     /** Close was clicked once with unapplied profile changes: the next click (or Escape) closes. */
     private boolean confirmClose = false;
+    /** Player clicked once while the profile has unapplied changes: clicking them again selects them. */
+    private int confirmPlayer = -1;
 
     private static final char[]   COLOR_CHARS = ColorPalette.CHARS;
     private static final String[] COLOR_KEYS  = ColorPalette.KEYS;
@@ -269,8 +271,22 @@ public class PlayerProfileScreen extends Screen {
             if (openReports > 0)            label += " §6[" + openReports + "R]";
 
             ButtonRowList.Row row = new ButtonRowList.Row();
-            row.add(Button.builder(Component.literal(label), btn -> { loadPlayerState(idx); rebuild(); })
-                    .size(p.isPrepared() ? rw - 18 : rw, ROW_H - 2)
+            int rowW = p.isPrepared() ? rw - 18 : rw;
+            boolean armed = idx == confirmPlayer;
+            if (armed) label = UiLayout.fit(this.font, "§c" + I18n.get("rpessentials.gui.unsaved.discard_switch"), rowW - 6);
+            row.add(Button.builder(Component.literal(label), btn -> {
+                        // Another player would replace the nickname / role typed but not applied: ask first.
+                        if (idx != stateSelectedPlayer && profileDirty() && idx != confirmPlayer) {
+                            confirmPlayer = idx;
+                            rebuild();
+                            return;
+                        }
+                        confirmPlayer = -1;
+                        loadPlayerState(idx);
+                        rebuild();
+                    })
+                    .size(rowW, ROW_H - 2)
+                    .tooltip(armed ? Tooltip.create(Component.translatable("rpessentials.gui.unsaved.discard_switch_tooltip")) : null)
                     .build(SkinnedButton.row(idx == stateSelectedPlayer)), 0);
 
             if (p.isPrepared()) {
@@ -1006,6 +1022,7 @@ public class PlayerProfileScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         if (activeTab == 0) SaveUi.refresh(applyButton, I18n.get("rpessentials.gui.player_profile.btn_apply"), profileDirty());
         if (confirmClose && !profileDirty()) { confirmClose = false; rebuild(); }
+        if (confirmPlayer >= 0 && !profileDirty()) { confirmPlayer = -1; rebuild(); }
         GuiSkin.background(g, this.width, this.height, 0x99000000);
         int formX = LIST_W + MARGIN * 3;
 

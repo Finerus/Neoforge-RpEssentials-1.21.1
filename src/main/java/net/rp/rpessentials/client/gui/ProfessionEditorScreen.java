@@ -63,6 +63,11 @@ public class ProfessionEditorScreen extends Screen {
     private java.util.function.BooleanSupplier liveDirty = () -> false;
     /** Close was clicked once with unsaved changes: the next click (or Escape) closes. */
     private boolean confirmClose = false;
+    /**
+     * Side list entry (or "New") clicked once while the form has unsaved changes: clicking it again
+     * replaces the form. Values: "prof:<index>", "prof:new", "role:<index>", "role:new".
+     */
+    private String confirmSwitch = null;
     private final Set<String> profDirtyEntries = new HashSet<>();
 
     private List<String> allowedCrafts    = new ArrayList<>();
@@ -490,8 +495,12 @@ public class ProfessionEditorScreen extends Screen {
                     : pe.color().replace("&", "§") + bold + pe.displayName();
             String label = prefix + style + shownName + " §8(" + id + ")" + suffix;
 
-            Button main = Button.builder(Component.literal(label), btn -> loadProfEntry(idx))
-                    .size(rw - 18, ROW_H - 2).build(SkinnedButton.row(i == profSelectedIndex));
+            String target = "prof:" + idx;
+            Button main = Button.builder(Component.literal(switchLabel(target, label, rw - 18)),
+                            btn -> guardedSwitch(target, profDirty, () -> loadProfEntry(idx)))
+                    .size(rw - 18, ROW_H - 2)
+                    .tooltip(switchTooltip(target))
+                    .build(SkinnedButton.row(i == profSelectedIndex));
             Button side = isPendingDelete
                     ? Button.builder(Component.literal("§c!"),
                                     btn -> {
@@ -527,9 +536,12 @@ public class ProfessionEditorScreen extends Screen {
         addRenderableWidget(profList);
 
         addRenderableWidget(Button.builder(
-                        Component.literal(tabColorCode() + I18n.get("rpessentials.gui.profession_editor.btn_new")),
-                        btn -> resetProfForm())
-                .pos(MARGIN, this.height - 35).size(LIST_W, 20).build(SkinnedButton::new));
+                        Component.literal(switchLabel("prof:new",
+                                tabColorCode() + I18n.get("rpessentials.gui.profession_editor.btn_new"), LIST_W)),
+                        btn -> guardedSwitch("prof:new", profDirty, this::resetProfForm))
+                .pos(MARGIN, this.height - 35).size(LIST_W, 20)
+                .tooltip(switchTooltip("prof:new"))
+                .build(SkinnedButton::new));
     }
 
     // =========================================================================
@@ -627,8 +639,12 @@ public class ProfessionEditorScreen extends Screen {
             String label = prefix + style + (i == roleSelectedIndex ? "§l" : "") + id
                     + " §r§8(" + existingRoles.get(i).lpGroup() + ")" + suffix;
 
-            Button main = Button.builder(Component.literal(label), btn -> loadRoleEntry(idx))
-                    .size(rw - 18, ROW_H - 2).build(SkinnedButton.row(i == roleSelectedIndex));
+            String target = "role:" + idx;
+            Button main = Button.builder(Component.literal(switchLabel(target, label, rw - 18)),
+                            btn -> guardedSwitch(target, roleDirty, () -> loadRoleEntry(idx)))
+                    .size(rw - 18, ROW_H - 2)
+                    .tooltip(switchTooltip(target))
+                    .build(SkinnedButton.row(i == roleSelectedIndex));
             Button side = isPendingDelete
                     ? Button.builder(Component.literal("§c!"), btn -> {
                                 PacketDistributor.sendToServer(new DeleteRolePacket(id));
@@ -661,9 +677,12 @@ public class ProfessionEditorScreen extends Screen {
         roleList.setRows(rows);
         addRenderableWidget(roleList);
 
-        addRenderableWidget(Button.builder(Component.literal(tabColorCode() + I18n.get("rpessentials.gui.roles.btn_new")),
-                        btn -> resetRoleForm())
-                .pos(MARGIN, this.height - 35).size(LIST_W, 20).build(SkinnedButton::new));
+        addRenderableWidget(Button.builder(Component.literal(switchLabel("role:new",
+                                tabColorCode() + I18n.get("rpessentials.gui.roles.btn_new"), LIST_W)),
+                        btn -> guardedSwitch("role:new", roleDirty, this::resetRoleForm))
+                .pos(MARGIN, this.height - 35).size(LIST_W, 20)
+                .tooltip(switchTooltip("role:new"))
+                .build(SkinnedButton::new));
     }
 
     private boolean canManageRoles() {
@@ -710,6 +729,29 @@ public class ProfessionEditorScreen extends Screen {
         addCloseButton(btnY);
 
         buildGlobalLeftPanel();
+    }
+
+    // ── Unsaved form: confirm before another entry replaces it ───────────────
+    private void guardedSwitch(String target, boolean dirty, Runnable action) {
+        if (dirty && !target.equals(confirmSwitch)) {
+            confirmSwitch = target;
+            rebuild();
+            return;
+        }
+        confirmSwitch = null;
+        action.run();
+    }
+
+    /** Label of a side list button: "Discard changes?" in red while it waits for the second click. */
+    private String switchLabel(String target, String normal, int width) {
+        return target.equals(confirmSwitch)
+                ? UiLayout.fit(this.font, "§c" + I18n.get("rpessentials.gui.unsaved.discard_switch"), width - 6)
+                : normal;
+    }
+
+    private Tooltip switchTooltip(String target) {
+        return target.equals(confirmSwitch)
+                ? Tooltip.create(Component.translatable("rpessentials.gui.unsaved.discard_switch_tooltip")) : null;
     }
 
     // ── Save / close ─────────────────────────────────────────────────────────
@@ -986,6 +1028,7 @@ public class ProfessionEditorScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         if (liveSaveKey != null) SaveUi.refresh(liveSaveButton, I18n.get(liveSaveKey), liveDirty.getAsBoolean());
         if (confirmClose && !anyDirty()) { confirmClose = false; rebuild(); }
+        if (confirmSwitch != null && !anyDirty()) { confirmSwitch = null; rebuild(); }
         GuiSkin.background(g, this.width, this.height, 0x99000000);
 
         GuiSkin.panel(g, MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
