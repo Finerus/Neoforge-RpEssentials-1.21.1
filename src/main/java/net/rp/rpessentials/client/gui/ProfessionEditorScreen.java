@@ -285,9 +285,15 @@ public class ProfessionEditorScreen extends Screen {
         restrictPendingDelete = null;
     }
 
+    /**
+     * Entries of a restriction list: delete button, icon, value (click = contents of a pattern / tag), ⚠.
+     * {@code pool}: ids for patterns (null = not expanded). {@code emptyKey}: text shown in the list when
+     * it is empty (null = nothing, the caller draws its own).
+     */
     private int buildRestrictionList(int formX, int formW, int top, int bottom, List<String> list,
                                      Set<String> dirty, BiConsumer<Integer, String> remover,
-                                     java.util.function.Function<String, Warning> warnings) {
+                                     java.util.function.Function<String, Warning> warnings,
+                                     List<String> pool, String emptyKey) {
         // Minecraft list widget: delete button, item icon, value. Kept between rebuilds (scroll position).
         if (restrictList == null) restrictList = new ButtonRowList(Minecraft.getInstance(), 18);
         restrictList.layout(formX - 6, top, Math.min(formW, 38 + 320 + 6) + 12, bottom - top);
@@ -313,11 +319,15 @@ public class ProfessionEditorScreen extends Screen {
                     .build(SkinnedButton::new);
             String color = dirty.contains(value) ? "§e§o" : "§7";
             Warning warn = warnings != null ? warnings.apply(value) : null;
-            Button val = valueButton(color, value, globalActiveCategory == 4 ? null : poolFor(globalActiveCategory), this,
-                    Math.max(40, rw - 38 - (warn != null ? 18 : 0)), 16);
+            Button val = valueButton(color, value, pool, this, Math.max(40, rw - 38 - (warn != null ? 18 : 0)), 16);
             ButtonRowList.Row row = new ButtonRowList.Row().add(del, 0).item(() -> iconFor(value), 19, 0).add(val, 38);
             if (warn != null) row.add(warningButton(warn, 16, this::rebuild), rw - 16);
             rows.add(row);
+        }
+        if (list.isEmpty() && emptyKey != null) {
+            for (var line : this.font.split(Component.translatable(emptyKey), Math.max(40, rw - 8))) {
+                rows.add(new ButtonRowList.Row().text(line, 4, 5));
+            }
         }
         restrictList.setRows(rows);
         addRenderableWidget(restrictList);
@@ -397,6 +407,21 @@ public class ProfessionEditorScreen extends Screen {
                     .pos(UiLayout.cellX(formX, formW, PROF_TAB_KEYS.length, UiLayout.TAB_GAP, i), y).size(tabW, 16).build(SkinnedButton.tab(ti == profActiveTab)));
         }
         y = r.manageY();
+
+        // Preview of the entries of the active tab, like the global restrictions; the Manage button
+        // goes right above Save. On short windows (no room for a list) only the button is shown.
+        int listBottom = this.height - 35 - UiLayout.GAP - 18 - 2;
+        if (listBottom - y >= 36) {
+            y = buildRestrictionList(formX, formW, y, listBottom, getProfActiveList(), profDirtyEntries,
+                    (idx, value) -> {
+                        getProfActiveList().remove((int) idx);
+                        profDirtyEntries.remove(value);
+                        profDirty = true;
+                        rebuild();
+                    },
+                    profWarnings(profActiveTab), getPoolForCurrentTab(),
+                    "rpessentials.gui.empty.prof." + PROF_TAB_KEYS[profActiveTab]);
+        }
 
         addManageButton(formX, formW, y, getProfActiveList(), profDirtyEntries, getPoolForCurrentTab(),
                 I18n.get("rpessentials.gui.profession_editor.hint_item"), () -> profDirty = true, v -> profDirty = true,
@@ -656,7 +681,8 @@ public class ProfessionEditorScreen extends Screen {
         java.util.function.Function<String, Warning> warnings = globalWarnings(globalActiveCategory);
         // The list stops so that the Manage button (18 px) sits right above Save (y = height - 35).
         int listEnd = buildRestrictionList(formX, formW, PANEL_TOP + 18, this.height - 35 - UiLayout.GAP - 18 - 2, list,
-                globalDirtyEntries, this::removeGlobalRestriction, warnings);
+                globalDirtyEntries, this::removeGlobalRestriction, warnings,
+                globalActiveCategory == 4 ? null : poolFor(globalActiveCategory), null);
         if (globalActiveCategory == 4) {
             addRenderableWidget(Button.builder(
                             Component.literal(I18n.get("rpessentials.gui.restriction_list.manage", list.size())),
