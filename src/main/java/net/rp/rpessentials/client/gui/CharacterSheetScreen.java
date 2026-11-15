@@ -37,6 +37,10 @@ public class CharacterSheetScreen extends Screen {
     private final Screen back;
     private final UUID target;
     private final String targetName;
+    /** Current nickname of the player (§ codes) and how to change it; null setter = no button. */
+    private String currentNick;
+    private final java.util.function.Consumer<String> nickSetter;
+    private Button useAsNickButton;
 
     private boolean requested = false;
     private boolean loaded = false;
@@ -49,11 +53,25 @@ public class CharacterSheetScreen extends Screen {
     private ButtonRowList list;
     private Button saveButton;
 
-    public CharacterSheetScreen(Screen back, UUID target, String targetName) {
+    public CharacterSheetScreen(Screen back, UUID target, String targetName,
+                                String currentNick, java.util.function.Consumer<String> nickSetter) {
         super(Component.translatable(K + "title", targetName));
         this.back = back;
         this.target = target;
         this.targetName = targetName;
+        this.currentNick = currentNick == null ? "" : currentNick;
+        this.nickSetter = nickSetter;
+    }
+
+    private static String normalize(String s) {
+        return s == null ? "" : s.trim().replace('&', '§');
+    }
+
+    /** "Use as nickname" is only useful when the RP name is set and differs from the current nickname. */
+    private void refreshNickButton() {
+        if (useAsNickButton == null) return;
+        String rp = normalize(values.getOrDefault("name", ""));
+        useAsNickButton.active = !rp.isEmpty() && !rp.equals(normalize(currentNick));
     }
 
     /** Called when the server sends the sheet (on open and after a save). */
@@ -105,6 +123,20 @@ public class CharacterSheetScreen extends Screen {
                 ButtonRowList.Row row = new ButtonRowList.Row().text(label, 0, 8);
                 if (f.multiline()) {
                     row.add(textButton(f, widgetW), widgetX, 2);
+                } else if (f.id().equals("name") && nickSetter != null) {
+                    // RP name: field + button that copies it to the player's nickname.
+                    row.add(lineBox(f, widgetW - 22), widgetX, 3);
+                    useAsNickButton = Button.builder(Component.literal("§e⇄"), b -> {
+                                String rp = values.getOrDefault("name", "").trim();
+                                nickSetter.accept(rp);
+                                currentNick = normalize(rp);
+                                refreshNickButton();
+                            })
+                            .size(20, 18)
+                            .tooltip(Tooltip.create(Component.translatable(K + "use_as_nick_tooltip")))
+                            .build(SkinnedButton::new);
+                    row.add(useAsNickButton, widgetX + widgetW - 20, 3);
+                    refreshNickButton();
                 } else {
                     row.add(lineBox(f, widgetW), widgetX, 3);
                 }
@@ -138,6 +170,7 @@ public class CharacterSheetScreen extends Screen {
             values.put(f.id(), v);
             confirmDiscard = false;
             refreshSaveButton();
+            refreshNickButton();
         });
         return box;
     }

@@ -352,7 +352,8 @@ public class PlayerProfileScreen extends Screen {
                                 Component.literal(UiLayout.fit(this.font,
                                         I18n.get("rpessentials.gui.player_profile.btn_sheet"), sheetW - 8)),
                                 btn -> Minecraft.getInstance().setScreen(
-                                        new CharacterSheetScreen(this, sel.uuid(), sel.mcName())))
+                                        new CharacterSheetScreen(this, sel.uuid(), sel.mcName(), sel.currentNick(),
+                                                nick -> setNicknameFromSheet(sel.uuid(), nick))))
                         .pos(sheetX, this.height - 35).size(sheetW, 20)
                         .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.player_profile.btn_sheet_tooltip")))
                         .build(SkinnedButton::new));
@@ -1249,6 +1250,34 @@ public class PlayerProfileScreen extends Screen {
                 target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
                 target.noteCount(), target.isOnline(), target.notes(), target.isPrepared()));
         rebuild();
+    }
+
+    /**
+     * Character sheet "use as nickname": sends only the nickname (an empty role means "unchanged",
+     * the same checks as /nick apply on the server) and updates the profile form.
+     */
+    private void setNicknameFromSheet(java.util.UUID uuid, String nick) {
+        int index = -1;
+        for (int i = 0; i < players.size(); i++) if (players.get(i).uuid().equals(uuid)) { index = i; break; }
+        if (index < 0 || nick.isBlank()) return;
+        OpenPlayerProfileGuiPacket.PlayerData p = players.get(index);
+        String finalNick = nick.trim().replace('&', '§');
+        PacketDistributor.sendToServer(new SetPlayerProfilePacket(uuid, nick.trim(), "", "", false, false, 0));
+        players.set(index, new OpenPlayerProfileGuiPacket.PlayerData(
+                p.uuid(), p.mcName(), finalNick, p.currentRole(),
+                p.currentLicenses(), p.activeWarnCount(), p.isMuted(),
+                p.muteExpiry(), p.playtimeMs(), p.sessionMs(),
+                p.noteCount(), p.isOnline(), p.notes(), p.isPrepared()));
+        if (index == stateSelectedPlayer) {
+            String raw = finalNick;
+            stateNickColorIndex = 0;
+            String lead = ColorPalette.leadingCode(raw);
+            if (!lead.isEmpty()) {
+                int colorIdx = ColorPalette.ensure(lead);
+                if (colorIdx > 0) { stateNickColorIndex = colorIdx; raw = raw.substring(lead.length()); }
+            }
+            stateNick = raw.replace('§', '&');
+        }
     }
 
     private void grantSelectedLicense() {

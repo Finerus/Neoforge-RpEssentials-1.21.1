@@ -167,10 +167,9 @@ public class SheetTextEditorScreen extends Screen {
         if (preview != null) {
             g.drawString(this.font, "§8" + I18n.get(K + "preview"), preview.getX() + 6, preview.getY() - 9, 0x888888, false);
         }
+        // Character count; the codes are explained in the tooltips of the toolbar buttons.
         String count = value.length() + " / " + maxLength;
-        g.drawString(this.font, "§8" + count, 12, this.height - 42, 0x888888, false);
-        String help = UiLayout.fit(this.font, "§8" + I18n.get(K + "help"), this.width - 24 - this.font.width(count) - 12);
-        g.drawString(this.font, help, 12 + this.font.width(count) + 12, this.height - 42, 0x888888, false);
+        g.drawString(this.font, (value.length() >= maxLength ? "§c" : "§7") + count, 12, this.height - 42, 0xAAAAAA, false);
     }
 
     @Override

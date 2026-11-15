@@ -419,5 +419,6 @@
   "rpessentials.gui.color.btn_add": "§aAjouter cette couleur",
   "rpessentials.gui.color.btn_close": "Retour",
   "rpessentials.gui.color.add_header": "Nouvelle couleur :",
-  "rpessentials.gui.color.bad_hex": "6 chiffres hex attendus"
+  "rpessentials.gui.color.bad_hex": "6 chiffres hex attendus",
+  "rpessentials.gui.sheet.use_as_nick_tooltip": "Utiliser le nom RP comme surnom du joueur (mêmes vérifications que /nick). Grisé quand c'est déjà le cas."
 }
