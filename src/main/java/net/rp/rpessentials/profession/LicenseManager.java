@@ -148,28 +148,20 @@ public class LicenseManager {
     }
 
     private static void loadAuditFromFile() {
-        try (FileReader reader = new FileReader(auditFile)) {
-            Type type = new TypeToken<List<AuditEntry>>(){}.getType();
-            List<AuditEntry> data = GSON.fromJson(reader, type);
-            if (data != null) {
-                auditLog.clear();
-                auditLog.addAll(data);
-            }
-        } catch (Exception e) {
-            RpEssentials.LOGGER.error("[LicenseManager] Failed to load audit log", e);
+        List<AuditEntry> data = net.rp.rpessentials.core.JsonStore.read(auditFile,
+                new TypeToken<List<AuditEntry>>(){}.getType(), GSON, "LicenseManager");
+        if (data != null) {
+            auditLog.clear();
+            auditLog.addAll(data);
         }
     }
 
     private static void loadTempFromFile() {
-        try (FileReader reader = new FileReader(tempFile)) {
-            Type type = new TypeToken<List<TempLicenseEntry>>(){}.getType();
-            List<TempLicenseEntry> data = GSON.fromJson(reader, type);
-            if (data != null) {
-                tempLicenses.clear();
-                tempLicenses.addAll(data);
-            }
-        } catch (Exception e) {
-            RpEssentials.LOGGER.error("[LicenseManager] Failed to load temp licenses", e);
+        List<TempLicenseEntry> data = net.rp.rpessentials.core.JsonStore.read(tempFile,
+                new TypeToken<List<TempLicenseEntry>>(){}.getType(), GSON, "LicenseManager");
+        if (data != null) {
+            tempLicenses.clear();
+            tempLicenses.addAll(data);
         }
     }
 

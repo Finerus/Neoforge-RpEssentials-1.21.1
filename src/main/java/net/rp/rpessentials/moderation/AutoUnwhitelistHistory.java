@@ -44,43 +44,26 @@ public class AutoUnwhitelistHistory {
         }
     }
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final String FILENAME = "autounwhitelist-history.json";
+    private static final net.rp.rpessentials.core.JsonStore<List<Entry>> STORE = new net.rp.rpessentials.core.JsonStore<>(
+            "autounwhitelist-history.json", new TypeToken<List<Entry>>(){}.getType(), "AutoUnwhitelistHistory");
 
     private static final List<Entry> history =
             Collections.synchronizedList(new ArrayList<>());
-    private static File dataFile = null;
+    private static boolean loaded = false;
 
     private static synchronized void ensureInitialized() {
-        if (dataFile != null) return;
-        try {
-            File folder = RpEssentialsDataPaths.getDataFolder();
-            if (!folder.exists()) folder.mkdirs();
-            dataFile = new File(folder, FILENAME);
-            if (dataFile.exists()) load();
-        } catch (Exception e) {
-            RpEssentials.LOGGER.error("[AutoUnwhitelistHistory] Failed to initialize.", e);
-        }
-    }
-
-    private static void load() {
-        try (FileReader reader = new FileReader(dataFile)) {
-            Type type = new TypeToken<List<Entry>>(){}.getType();
-            List<Entry> data = GSON.fromJson(reader, type);
-            if (data != null) {
-                history.clear();
-                history.addAll(data);
-            }
-        } catch (Exception e) {
-            RpEssentials.LOGGER.error("[AutoUnwhitelistHistory] Failed to load.", e);
+        if (loaded) return;
+        loaded = true;
+        List<Entry> data = STORE.load();
+        if (data != null) {
+            history.clear();
+            history.addAll(data);
         }
     }
 
     private static void save() {
-        if (dataFile == null) return;
-        List<Entry> snapshot = new ArrayList<>(history);
-        File target = dataFile;
-        RpEssentialsIO.saveJson(target, snapshot, GSON);
+        if (!loaded) return;
+        STORE.save(new ArrayList<>(history));
     }
 
     public static void record(String playerName, String playerUUID, String lastConnection,
@@ -98,7 +81,8 @@ public class AutoUnwhitelistHistory {
     }
 
     public static void reload() {
-        dataFile = null;
+        loaded = false;
+        STORE.reset();
         history.clear();
         ensureInitialized();
     }

@@ -93,23 +93,26 @@ public class NoteManager {
         if (notesDir == null) return;
         File[] files = notesDir.listFiles((d, n) -> n.endsWith(".json"));
         if (files == null) return;
+        Type type = new TypeToken<List<NoteEntry>>(){}.getType();
         for (File file : files) {
-            try (FileReader reader = new FileReader(file)) {
-                String fname   = file.getName().replace(".json", "");
-                String uuidStr = fname.contains(" - ")
-                        ? fname.substring(fname.lastIndexOf(" - ") + 3)
-                        : fname;
-                UUID uuid = UUID.fromString(uuidStr);
-                if (fname.contains(" - "))
-                    playerNames.put(uuid, fname.substring(0, fname.lastIndexOf(" - ")));
-                Type type = new TypeToken<List<NoteEntry>>(){}.getType();
-                List<NoteEntry> list = GSON.fromJson(reader, type);
-                if (list != null) {
-                    list.sort(Comparator.comparingInt(e -> e.id));
-                    notes.put(uuid, new ArrayList<>(list));
-                }
-            } catch (Exception e) {
-                RpEssentials.LOGGER.warn("[NoteManager] Could not load file: {}", file.getName());
+            String fname   = file.getName().replace(".json", "");
+            String uuidStr = fname.contains(" - ")
+                    ? fname.substring(fname.lastIndexOf(" - ") + 3)
+                    : fname;
+            UUID uuid;
+            try {
+                uuid = UUID.fromString(uuidStr);
+            } catch (IllegalArgumentException e) {
+                RpEssentials.LOGGER.warn("[NoteManager] Not a note file (no UUID in the name): {}", file.getName());
+                continue;
+            }
+            if (fname.contains(" - "))
+                playerNames.put(uuid, fname.substring(0, fname.lastIndexOf(" - ")));
+            // An unreadable file is moved aside, so the next save of this player never overwrites it.
+            List<NoteEntry> list = net.rp.rpessentials.core.JsonStore.read(file, type, GSON, "NoteManager");
+            if (list != null) {
+                list.sort(Comparator.comparingInt(e -> e.id));
+                notes.put(uuid, new ArrayList<>(list));
             }
         }
         RpEssentials.LOGGER.info("[NoteManager] Loaded notes for {} players", notes.size());

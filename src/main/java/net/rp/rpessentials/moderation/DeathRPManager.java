@@ -95,12 +95,9 @@ public class DeathRPManager {
     }
 
     private static void loadHistory() {
-        try (FileReader reader = new FileReader(historyFile)) {
-            com.google.gson.reflect.TypeToken<java.util.List<DeathHistoryEntry>> t =
-                    new com.google.gson.reflect.TypeToken<>(){};
-            java.util.List<DeathHistoryEntry> data = GSON.fromJson(reader, t.getType());
-            if (data != null) { history.clear(); history.addAll(data); }
-        } catch (Exception e) { LOGGER.error("[DeathRP] Failed to load history", e); }
+        java.util.List<DeathHistoryEntry> data = net.rp.rpessentials.core.JsonStore.read(historyFile,
+                new com.google.gson.reflect.TypeToken<java.util.List<DeathHistoryEntry>>(){}.getType(), GSON, "DeathRP");
+        if (data != null) { history.clear(); history.addAll(data); }
         purgeOldHistory();
     }
 

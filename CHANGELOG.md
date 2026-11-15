@@ -103,6 +103,7 @@ All notable changes to this project will be documented in this file.
 * **Container restrictions:** only opening the container is refused; placing a block against a restricted chest works again.
 * **Death RP history purge:** it ran only when the once-a-minute check fell exactly on 3:00 and could miss a day when the server lagged; it now runs once a day as soon as it is 3 AM or later.
 * **Periodic tasks:** an error in one of them (tab blur, world border, schedule...) is logged and no longer stops the others or reaches the server tick.
+* **Data safety:** staff notes, temporary licenses, the license audit log, the Death RP history and the auto-unwhitelist history started empty when their file could not be read, and the next save overwrote it, losing its content. Like the other data files, an unreadable file is now moved aside (`.corrupt-<time>`) and kept.
 * **Display mode options** (`zoneMessageMode`, `hrpMessageMode`, the Death RP message modes, `scheduleDeathHoursNotifyMode`) and `forceState` are validated: a wrong value is refused by the Config Manager and `config set` (which list the allowed values) instead of silently falling back to the chat.
 * **Config values:** `true` / `false` options refused anything else (a typo used to become `false`), and values are checked against the rules of each option (allowed words, list checks), in the Config Manager too.
 * **`config set zoneMessageMode`** refused `TITLE` and `IMMERSIVE:<preset>`, which the option accepts.
@@ -125,9 +126,11 @@ All notable changes to this project will be documented in this file.
 * **Config access:** `Cfg.ready(spec...)` and `Cfg.get(value, fallback)` replace the `try/catch (IllegalStateException)` blocks around config reads.
 * **Tab list blur:** names are parsed once per player and shared by every viewer; viewers who see everyone only check new players.
 * **Official events instead of mixins:** `MixinServerPlayer` (nickname) -> `PlayerEvent.NameFormat`, `MixinServerGamePacketListenerImpl` (chat) -> `ServerChatEvent` (mute at HIGHEST, format and proximity at LOWEST, in `RpChatEvents`), `MixinServerPlayerGameMode` (containers) -> `RightClickBlock` with `setUseBlock(FALSE)`. Date formatters are created once per pattern instead of for each message.
+* **Data files:** `JsonStore` (location in the world, UTF-8 read, moving aside unreadable files, grouped saves); `AutoUnwhitelistHistory` uses it, and `JsonStore.read` protects the reads that were not protected.
+* **Build:** the unused mixin annotation processor was removed.
 * **Server tick:** the periodic tasks are declared in `TickScheduler` (one line each: period, offset, name); the schedule logic moved to `RpEssentialsScheduleManager.tick`.
 * **Commands:** the ~60 hand-written `config set` subcommands were replaced by `ConfigSetCommand` (one generic command).
-* **New classes:** `RpChatEvents`, `TickScheduler`, `SaveUi`, `CustomColorsScreen`, `CharacterSheetManager`, `CharacterSheetScreen`, `SheetTextEditorScreen`, `RpText`, `CharacterSheetChangedEvent`, `RequestCharacterSheetPacket`, `CharacterSheetPacket`, `SaveCharacterSheetPacket`, `ConfigSetCommand`, `RestrictionCoverage`, `DiscordWebhook`, `RpDiscordCommands`, `ReportManager`, `ReportService`, `RpReportCommands`, `RequestPlayerReportsPacket`, `PlayerReportsPacket`, `ReportActionPacket`. `OpenPlayerProfileGuiPacket` carries the number of open reports per player.
+* **New classes:** `JsonStore`, `ConfigRules`, `RpChatEvents`, `TickScheduler`, `SaveUi`, `CustomColorsScreen`, `CharacterSheetManager`, `CharacterSheetScreen`, `SheetTextEditorScreen`, `RpText`, `CharacterSheetChangedEvent`, `RequestCharacterSheetPacket`, `CharacterSheetPacket`, `SaveCharacterSheetPacket`, `ConfigSetCommand`, `RestrictionCoverage`, `DiscordWebhook`, `RpDiscordCommands`, `ReportManager`, `ReportService`, `RpReportCommands`, `RequestPlayerReportsPacket`, `PlayerReportsPacket`, `ReportActionPacket`. `OpenPlayerProfileGuiPacket` carries the number of open reports per player.
 
 ### Migration Notes
 
