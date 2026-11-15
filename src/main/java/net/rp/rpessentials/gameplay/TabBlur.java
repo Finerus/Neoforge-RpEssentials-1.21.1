@@ -100,9 +100,9 @@ public final class TabBlur {
                     Math.pow(RpEssentialsConfig.SNEAK_PROXIMITY_DISTANCE.get(), 2),
                     RpEssentialsConfig.OBFUSCATED_NAME_LENGTH.get(),
                     new HashSet<>(RpEssentialsConfig.WHITELIST.get()),
-                    RpEssentialsConfig.BLUR_STYLE.get(),
+                    net.rp.rpessentials.config.ConfigRules.value(RpEssentialsConfig.BLUR_STYLE),
                     RpEssentialsConfig.BLUR_CODES.get(),
-                    RpEssentialsConfig.NAMETAG_BLUR_MODE.get());
+                    net.rp.rpessentials.config.ConfigRules.value(RpEssentialsConfig.NAMETAG_BLUR_MODE));
             current = s;
             return s;
         } else {

@@ -599,7 +599,7 @@ public class RpEssentialsScheduleManager {
             rawMsg = rawMsg
                     .replace("{start}", parts[0].trim())
                     .replace("{end}",   parts.length > 1 ? parts[1].trim() : "?");
-            String mode = ScheduleConfig.HRP_MESSAGE_MODE.get();
+            String mode = net.rp.rpessentials.config.ConfigRules.value(ScheduleConfig.HRP_MESSAGE_MODE);
             for (ServerPlayer p : server.getPlayerList().getPlayers())
                 DeathRPManager.sendMessageToPlayer(p, rawMsg, mode);
         }

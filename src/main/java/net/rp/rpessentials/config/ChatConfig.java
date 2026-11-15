@@ -147,7 +147,8 @@ public class ChatConfig {
                         "NO_OBFUSCATED : everything except the obfuscated code (&k)",
                         "NONE          : no color or format codes at all",
                         "Staff members always keep every code.")
-                .defineInList("playerChatCodes", "ALL", java.util.Arrays.asList("ALL", "NO_OBFUSCATED", "NONE"));
+                .define("playerChatCodes", "ALL");
+        ConfigRules.oneOf(PLAYER_CHAT_CODES, java.util.Arrays.asList("ALL", "NO_OBFUSCATED", "NONE"));
 
         ENABLE_PM_SPY = BUILDER
                 .comment("If true, players with the spyMessages role permission can read private messages (/msg).",

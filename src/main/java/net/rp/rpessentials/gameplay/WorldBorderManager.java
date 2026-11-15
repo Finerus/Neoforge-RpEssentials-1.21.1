@@ -291,7 +291,7 @@ public class WorldBorderManager {
         DimBorderConfig cfg = resolveDimConfig(dimId);
         if (cfg.distance <= 0) return;
 
-        boolean square = !"CIRCLE".equalsIgnoreCase(RpEssentialsConfig.WORLD_BORDER_SHAPE.get());
+        boolean square = !"CIRCLE".equalsIgnoreCase(net.rp.rpessentials.config.ConfigRules.value(RpEssentialsConfig.WORLD_BORDER_SHAPE));
         int prewarnDist = resolvePrewarnDistance(dimId, cfg.distance);
 
         var spawn = player.serverLevel().getSharedSpawnPos();
@@ -474,7 +474,7 @@ public class WorldBorderManager {
 
     private static void sendMessage(ServerPlayer player, String message) {
         String mode = "ACTION_BAR";
-        try { mode = RpEssentialsConfig.ZONE_MESSAGE_MODE.get().toUpperCase(); }
+        try { mode = net.rp.rpessentials.config.ConfigRules.value(RpEssentialsConfig.ZONE_MESSAGE_MODE).toUpperCase(); }
         catch (Exception ignored) {}
         ImmersivePresetHelper.send(player, message, mode);
     }

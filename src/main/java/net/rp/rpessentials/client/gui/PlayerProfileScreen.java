@@ -262,19 +262,30 @@ public class PlayerProfileScreen extends Screen {
         for (int idx : getVisibleIndices()) {
             OpenPlayerProfileGuiPacket.PlayerData p = players.get(idx);
 
+            // "Nickname (RealName)": the nickname in its own colors, the real name in grey; the selected one in bold.
+            boolean selected = idx == stateSelectedPlayer;
             String statusSymbol = p.isPrepared() ? "§b# " : (p.isOnline() ? "§a● " : "§7○ ");
-            String label = (idx == stateSelectedPlayer ? "§e> " : "  ") + statusSymbol + "§f" + p.mcName();
-            if (!p.currentNick().isEmpty()) label += " §7(" + stripColor(p.currentNick()) + ")";
-            if (p.activeWarnCount() > 0)    label += " §c[" + p.activeWarnCount() + "W]";
-            if (p.isMuted())                label += " §6[M]";
+            net.minecraft.network.chat.MutableComponent name = Component.empty().withStyle(s -> s.withBold(selected));
+            net.minecraft.network.chat.MutableComponent label = Component.literal((selected ? "§e> " : "  ") + statusSymbol);
+            if (!p.currentNick().isEmpty()) {
+                name.append(net.rp.rpessentials.util.ColorHelper.parseSection(
+                        "§f" + net.rp.rpessentials.util.ColorHelper.translateAlternateColorCodes(p.currentNick())));
+                label.append(name).append(Component.literal(" §7(" + p.mcName() + ")"));
+            } else {
+                label.append(name.append(Component.literal("§f" + p.mcName())));
+            }
+            String badges = "";
+            if (p.activeWarnCount() > 0)    badges += " §c[" + p.activeWarnCount() + "W]";
+            if (p.isMuted())                badges += " §6[M]";
             int openReports = reportCounts.getOrDefault(p.uuid(), 0);
-            if (openReports > 0)            label += " §6[" + openReports + "R]";
+            if (openReports > 0)            badges += " §6[" + openReports + "R]";
+            if (!badges.isEmpty()) label.append(Component.literal(badges));
 
             ButtonRowList.Row row = new ButtonRowList.Row();
             int rowW = p.isPrepared() ? rw - 18 : rw;
             boolean armed = idx == confirmPlayer;
-            if (armed) label = UiLayout.fit(this.font, "§c" + I18n.get("rpessentials.gui.unsaved.discard_switch"), rowW - 6);
-            row.add(Button.builder(Component.literal(label), btn -> {
+            if (armed) label = Component.literal(UiLayout.fit(this.font, "§c" + I18n.get("rpessentials.gui.unsaved.discard_switch"), rowW - 6));
+            row.add(Button.builder(label, btn -> {
                         // Another player would replace the nickname / role typed but not applied: ask first.
                         if (idx != stateSelectedPlayer && profileDirty() && idx != confirmPlayer) {
                             confirmPlayer = idx;
@@ -1449,10 +1460,6 @@ public class PlayerProfileScreen extends Screen {
                 target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
                 Math.max(0, target.noteCount() - 1), target.isOnline(), updated, target.isPrepared()));
         rebuild();
-    }
-
-    private String stripColor(String s) {
-        return ColorHelper.stripAll(s);
     }
 
 

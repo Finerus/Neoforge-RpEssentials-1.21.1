@@ -124,7 +124,8 @@ public class RpEssentialsConfig {
 
         BLUR_STYLE = BUILDER
                 .comment("Look of a hidden name: OBFUSCATED (default, animated), DASHES, HASHES or STARS.")
-                .defineInList("blurStyle", "OBFUSCATED", Arrays.asList("OBFUSCATED", "DASHES", "HASHES", "STARS"));
+                .define("blurStyle", "OBFUSCATED");
+        ConfigRules.oneOf(BLUR_STYLE, Arrays.asList("OBFUSCATED", "DASHES", "HASHES", "STARS"));
 
         BLUR_CODES = BUILDER
                 .comment("Color and format codes applied to a hidden name, for example &7 or &8&o. Empty = none.")
@@ -135,7 +136,8 @@ public class RpEssentialsConfig {
                         "OFF  : nametag unchanged (default)",
                         "BLUR : the nametag shows the hidden name",
                         "HIDE : the nametag is not displayed")
-                .defineInList("nametagBlurMode", "OFF", Arrays.asList("OFF", "BLUR", "HIDE"));
+                .define("nametagBlurMode", "OFF");
+        ConfigRules.oneOf(NAMETAG_BLUR_MODE, Arrays.asList("OFF", "BLUR", "HIDE"));
 
         ENABLE_SNEAK_STEALTH = BUILDER
                 .comment("If true, sneaking players are only visible at a much closer distance.")
@@ -230,7 +232,8 @@ public class RpEssentialsConfig {
                 .comment("Shape of the world border around the spawn point.",
                         "SQUARE : the limit is a square, worldBorderDistance is half of its side (default).",
                         "CIRCLE : the limit is a circle, worldBorderDistance is its radius.")
-                .defineInList("worldBorderShape", "SQUARE", Arrays.asList("SQUARE", "CIRCLE"));
+                .define("worldBorderShape", "SQUARE");
+        ConfigRules.oneOf(WORLD_BORDER_SHAPE, Arrays.asList("SQUARE", "CIRCLE"));
 
         WORLD_BORDER_TELEPORT_ENABLED = BUILDER
                 .comment("If true, players reaching the world border are teleported to the opposite side.")
@@ -297,7 +300,8 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("zoneMessageMode", "ACTION_BAR", ConfigRules::isDisplayMode);
+                .define("zoneMessageMode", "ACTION_BAR");
+        ConfigRules.displayMode(ZONE_MESSAGE_MODE);
 
         BUILDER.pop(); // World Border Warning
 
@@ -364,7 +368,8 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("enableMessageMode", "CHAT", ConfigRules::isDisplayMode);
+                .define("enableMessageMode", "CHAT");
+        ConfigRules.displayMode(DEATH_RP_PLAYER_ENABLE_MODE);
 
         DEATH_RP_PLAYER_DISABLE_MSG = BUILDER
                 .comment("Message sent to the player when their RP death is individually disabled.",
@@ -379,7 +384,8 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("disableMessageMode", "CHAT", ConfigRules::isDisplayMode);
+                .define("disableMessageMode", "CHAT");
+        ConfigRules.displayMode(DEATH_RP_PLAYER_DISABLE_MODE);
 
         DEATH_RP_PLAYER_TOGGLE_SOUND = BUILDER
                 .comment("Sound played to the player on individual toggle. 'none' to disable.")
@@ -410,7 +416,8 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("enableMessageMode", "CHAT", ConfigRules::isDisplayMode);
+                .define("enableMessageMode", "CHAT");
+        ConfigRules.displayMode(DEATH_RP_GLOBAL_ENABLE_MODE);
 
         DEATH_RP_GLOBAL_DISABLE_MSG = BUILDER
                 .comment("Message broadcast when the Death RP system is globally disabled.",
@@ -425,7 +432,8 @@ public class RpEssentialsConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("disableMessageMode", "CHAT", ConfigRules::isDisplayMode);
+                .define("disableMessageMode", "CHAT");
+        ConfigRules.displayMode(DEATH_RP_GLOBAL_DISABLE_MODE);
 
         DEATH_RP_GLOBAL_TOGGLE_SOUND = BUILDER
                 .comment("Sound played to all on global toggle. 'none' to disable.")

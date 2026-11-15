@@ -396,6 +396,11 @@ public class ConfigInspector {
                 RpEssentials.LOGGER.warn("[ConfigInspector] Value '{}' refused by the rules of '{}'", raw, String.join(".", cv.getPath()));
                 return false;
             }
+            // Words-only options (display modes, forceState...): a typo is refused here, never saved.
+            if (parsed instanceof String str && ConfigRules.problem(String.join(".", cv.getPath()), str) != null) {
+                RpEssentials.LOGGER.warn("[ConfigInspector] Value '{}' refused by the rules of '{}'", raw, String.join(".", cv.getPath()));
+                return false;
+            }
             ((ModConfigSpec.ConfigValue<Object>) cv).set(parsed);
             return true;
         } catch (Exception e) {

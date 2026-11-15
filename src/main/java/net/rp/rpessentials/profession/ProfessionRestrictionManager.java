@@ -190,7 +190,8 @@ public class ProfessionRestrictionManager {
         public ProfessionData(String id, String displayName, String colorCode) {
             this.id = id;
             this.displayName = displayName;
-            this.colorCode = colorCode;
+            // "&6" or "&#FF8800" written in the file work like "§6" / "§#FF8800".
+            this.colorCode = net.rp.rpessentials.util.ColorHelper.translateAlternateColorCodes(colorCode);
         }
 
         public String getFormattedName() {

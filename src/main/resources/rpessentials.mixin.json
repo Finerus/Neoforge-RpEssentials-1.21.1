@@ -29,7 +29,8 @@
   ],
   "client": [
     "client.MixinPlayerTabOverlay",
-    "client.MixinItemInHandRenderer"
+    "client.MixinItemInHandRenderer",
+    "client.MixinStringDecomposer"
   ]
 ,
   "injectors": {

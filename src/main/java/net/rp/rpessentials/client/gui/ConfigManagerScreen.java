@@ -91,6 +91,10 @@ public class ConfigManagerScreen extends Screen {
     /** File clicked once while changes are not applied: clicking it again opens it (changes dropped). */
     private String confirmFile = null;
     private Button discardButton;
+    /** Reset button clicked once (path of its option): the next click puts the default value back. */
+    private String pendingResetPath = null;
+    /** Discard clicked once: the next click drops every change. */
+    private boolean confirmDiscard = false;
 
     private record ModHeader(int y, String name, int color) {}
     private final List<ModHeader> modHeaders = new ArrayList<>();
@@ -254,14 +258,23 @@ public class ConfigManagerScreen extends Screen {
                 continue;
             }
             boolean isPending = pendingChanges.containsKey(entry.fullPath());
-            row.block(GuiSkin.LIST_ROW, isPending ? 0x33FFAA00 : 0x22FFFFFF, 0, 1);
+            // A value the option does not accept (typo in the file, or typed here): the row turns red.
+            String problem = problemOf(entry, editBoxValues.getOrDefault(entry.fullPath(), entry.currentValue()));
+            row.block(GuiSkin.LIST_ROW, problem != null ? 0x55FF3333 : isPending ? 0x33FFAA00 : 0x22FFFFFF, 0, 1);
 
-            // Key label; hovering it shows the comment of the option.
-            String keyLabel = formatKeyName(entry.key());
-            int labelColor = isPending ? 0xFFDD44 : 0xCCCCCC;
+            // Key label; hovering it shows the comment of the option (and what is expected when the value is wrong).
+            String keyLabel = (problem != null ? "⚠ " : "") + formatKeyName(entry.key());
+            int labelColor = problem != null ? 0xFF6666 : isPending ? 0xFFDD44 : 0xCCCCCC;
             net.minecraft.client.gui.components.StringWidget label = new net.minecraft.client.gui.components.StringWidget(
                     this.font.width(keyLabel), 9, Component.literal(keyLabel).withStyle(s -> s.withColor(labelColor)), this.font);
-            if (!entry.comment().isBlank()) label.setTooltip(Tooltip.create(Component.literal(entry.comment())));
+            if (problem != null) {
+                net.minecraft.network.chat.MutableComponent tip = Component.translatable(
+                        "rpessentials.gui.config.invalid_tooltip", problem).withStyle(net.minecraft.ChatFormatting.RED);
+                if (!entry.comment().isBlank()) {
+                    tip.append(Component.literal("\n\n" + entry.comment()).withStyle(net.minecraft.ChatFormatting.WHITE));
+                }
+                label.setTooltip(Tooltip.create(tip));
+            } else if (!entry.comment().isBlank()) label.setTooltip(Tooltip.create(Component.literal(entry.comment())));
             row.add(label, 18, 6);
             int infoX = 18 + this.font.width(keyLabel) + 4;
             if (!entry.comment().isBlank()) {
@@ -316,7 +329,11 @@ public class ConfigManagerScreen extends Screen {
                         Component.literal(entry.key()));
                 box.setMaxLength(32);
                 box.setValue(currentEdit);
-                box.setResponder(val -> markChange(entry.fullPath(), val, entry.currentValue()));
+                box.setTextColor(textColor(entry, currentEdit));
+                box.setResponder(val -> {
+                    markChange(entry.fullPath(), val, entry.currentValue());
+                    box.setTextColor(textColor(entry, val));
+                });
                 out.add(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
             }
@@ -330,7 +347,11 @@ public class ConfigManagerScreen extends Screen {
                         Component.literal(entry.key()));
                 box.setMaxLength(512);
                 box.setValue(currentEdit);
-                box.setResponder(val -> markChange(entry.fullPath(), val, entry.currentValue()));
+                box.setTextColor(textColor(entry, currentEdit));
+                box.setResponder(val -> {
+                    markChange(entry.fullPath(), val, entry.currentValue());
+                    box.setTextColor(textColor(entry, val));
+                });
                 out.add(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
             }
@@ -364,7 +385,11 @@ public class ConfigManagerScreen extends Screen {
                         Component.literal(entry.key()));
                 box.setMaxLength(512);
                 box.setValue(currentEdit);
-                box.setResponder(val -> markChange(entry.fullPath(), val, entry.currentValue()));
+                box.setTextColor(textColor(entry, currentEdit));
+                box.setResponder(val -> {
+                    markChange(entry.fullPath(), val, entry.currentValue());
+                    box.setTextColor(textColor(entry, val));
+                });
                 out.add(box);
                 editBoxValues.put(entry.fullPath(), currentEdit);
             }
@@ -376,14 +401,24 @@ public class ConfigManagerScreen extends Screen {
                 && entry.type() != ConfigInspector.ValueType.UNKNOWN) {
             String def = entry.defaultValue();
             boolean differs = !editBoxValues.getOrDefault(entry.fullPath(), entry.currentValue()).equals(def);
-            out.add(Button.builder(Component.literal(differs ? "§e↺" : "§8↺"),
+            // Two clicks: the first one arms the button ("!"), the second one puts the default value back.
+            boolean armed = entry.fullPath().equals(pendingResetPath);
+            out.add(Button.builder(Component.literal(armed ? "§c!" : differs ? "§e↺" : "§8↺"),
                             btn -> {
+                                if (!differs) return;
+                                if (!entry.fullPath().equals(pendingResetPath)) {
+                                    pendingResetPath = entry.fullPath();
+                                    rebuild();
+                                    return;
+                                }
+                                pendingResetPath = null;
                                 markChange(entry.fullPath(), def, entry.currentValue());
                                 editBoxValues.put(entry.fullPath(), def);
                                 rebuild();
                             })
                     .pos(formX + 2, y + 2).size(14, 16)
-                    .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.config.reset_tooltip", def)))
+                    .tooltip(Tooltip.create(Component.translatable(armed
+                            ? "rpessentials.gui.config.reset_confirm" : "rpessentials.gui.config.reset_tooltip", def)))
                     .build(SkinnedButton::new));
         }
     }
@@ -410,11 +445,22 @@ public class ConfigManagerScreen extends Screen {
         addRenderableWidget(applyButton);
 
         // Discard
-        discardButton = Button.builder(Component.translatable("rpessentials.gui.config.btn_discard"), btn -> {
+        // Discard asks once too: it drops every change typed.
+        discardButton = Button.builder(Component.literal(confirmDiscard
+                        ? "§c" + I18n.get("rpessentials.gui.config.btn_discard_confirm")
+                        : I18n.get("rpessentials.gui.config.btn_discard")), btn -> {
+            if (!confirmDiscard) {
+                confirmDiscard = true;
+                rebuild();
+                return;
+            }
+            confirmDiscard = false;
             pendingChanges.clear();
             editBoxValues.clear();
             rebuild();
-        }).pos(r[2], y).size(r[3], 20).build(SkinnedButton::new);
+        }).pos(r[2], y).size(r[3], 20)
+                .tooltip(confirmDiscard ? Tooltip.create(Component.translatable("rpessentials.gui.config.btn_discard_confirm_tooltip")) : null)
+                .build(SkinnedButton::new);
         discardButton.active = !pendingChanges.isEmpty();
         addRenderableWidget(discardButton);
 
@@ -502,6 +548,7 @@ public class ConfigManagerScreen extends Screen {
         }
         if (confirmClose && pendingChanges.isEmpty()) { confirmClose = false; rebuild(); }
         if (confirmFile != null && pendingChanges.isEmpty()) { confirmFile = null; rebuild(); }
+        if (confirmDiscard && pendingChanges.isEmpty()) { confirmDiscard = false; rebuild(); }
 
         // Render all widgets (EditBox, Button…)
         super.render(g, mouseX, mouseY, delta);
@@ -641,8 +688,53 @@ public class ConfigManagerScreen extends Screen {
         pendingRebuild = true;
     }
 
+    /**
+     * What the option expects when {@code value} is not accepted (wrong word, not a number, out of range,
+     * not true / false), null when the value is fine.
+     */
+    private static String problemOf(ConfigFileEntriesPacket.EntryTransfer e, String value) {
+        if (value == null || e.isSection()) return null;
+        String v = value.trim();
+        switch (e.type()) {
+            case BOOLEAN -> { return v.equalsIgnoreCase("true") || v.equalsIgnoreCase("false") ? null : "true / false"; }
+            case INT, LONG, DOUBLE -> {
+                String range = e.hasRange() ? formatNum(e.rangeMin()) + " – " + formatNum(e.rangeMax()) : null;
+                double d;
+                try {
+                    d = e.type() == ConfigInspector.ValueType.DOUBLE ? Double.parseDouble(v) : Long.parseLong(v);
+                } catch (NumberFormatException ex) {
+                    return range != null ? range : I18n.get("rpessentials.gui.config.expected_number");
+                }
+                return e.hasRange() && (d < e.rangeMin() || d > e.rangeMax()) ? range : null;
+            }
+            case LIST_STRING, LIST_INT -> { return null; }
+            default -> { return net.rp.rpessentials.config.ConfigRules.problem(e.fullPath(), value); }
+        }
+    }
+
+    private static int textColor(ConfigFileEntriesPacket.EntryTransfer e, String value) {
+        return problemOf(e, value) != null ? 0xFF5555 : 0xE0E0E0;
+    }
+
     private void applyChanges() {
         if (selectedFileId == null || pendingChanges.isEmpty()) return;
+        // Nothing is sent while a value is wrong: its row turns red and the chat says how many to fix.
+        if (currentEntries != null) {
+            int wrong = 0;
+            for (ConfigFileEntriesPacket.EntryTransfer e : currentEntries) {
+                String pending = pendingChanges.get(e.fullPath());
+                if (pending != null && problemOf(e, pending) != null) wrong++;
+            }
+            if (wrong > 0) {
+                if (Minecraft.getInstance().player != null) {
+                    Minecraft.getInstance().player.displayClientMessage(
+                            Component.translatable("rpessentials.gui.config.invalid_values", wrong)
+                                    .withStyle(net.minecraft.ChatFormatting.RED), false);
+                }
+                rebuild();
+                return;
+            }
+        }
         Map<String, String> batch = new HashMap<>();
         List<String> sent = new ArrayList<>();
         int size = 0;

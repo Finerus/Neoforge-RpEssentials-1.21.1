@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.rp.rpessentials.lang.ServerLang;
+import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.util.TimeHelper;
 import net.rp.rpessentials.api.RpPlaceholders;
 import net.rp.rpessentials.config.MessagesConfig;
@@ -82,6 +83,7 @@ public final class PlayerStatsLines {
                     "profession", d != null ? d.getFormattedName() : t.profession, "date", String.valueOf(t.expiresAt)));
         }
         if (!anyTemp) out.add(ServerLang.get(v, MessagesConfig.STATS_TEMP_NONE));
+        // Nicknames history, newest first; the one the player has now is marked "(current)".
         List<String> nicks = new ArrayList<>();
         for (HistoryManager.Entry e : HistoryManager.get(id, v)) {
             if (!HistoryManager.NICK.equals(e.type)) continue;
@@ -90,6 +92,15 @@ public final class PlayerStatsLines {
             n = n.replace("§f", "").trim();
             if (!n.isEmpty() && !n.equals("-") && !nicks.contains(n)) nicks.add(n);
             if (nicks.size() >= 6) break;
+        }
+        String current = net.rp.rpessentials.identity.NicknameManager.getNickname(id);
+        if (current != null && !current.isBlank()) {
+            String plain = plain(current);
+            int at = -1;
+            for (int i = 0; i < nicks.size() && at < 0; i++) if (plain(nicks.get(i)).equalsIgnoreCase(plain)) at = i;
+            // Set before the history existed: shown first all the same.
+            if (at < 0) { nicks.add(0, ColorHelper.translateAlternateColorCodes(current)); at = 0; }
+            nicks.set(at, nicks.get(at) + " " + ServerLang.get(v, MessagesConfig.STATS_NICK_CURRENT));
         }
         out.add(nicks.isEmpty() ? ServerLang.get(v, MessagesConfig.STATS_NICKS_NONE)
                 : ServerLang.get(v, MessagesConfig.STATS_NICKS, "list", String.join("§7, §r", nicks)));
@@ -115,6 +126,11 @@ public final class PlayerStatsLines {
                 ? ServerLang.get(v, MessagesConfig.STATS_VANISH_LEVEL, "level", String.valueOf(VanishManager.getLevel(id)))
                 : ServerLang.get(v, MessagesConfig.STATS_VISIBLE)));
         return out;
+    }
+
+    /** Text without colors or formatting, to compare two nicknames. */
+    private static String plain(String s) {
+        return ColorHelper.stripAll(ColorHelper.translateAlternateColorCodes(s)).trim();
     }
 
     /** Creation time of the player's save file, 0 when unknown. */

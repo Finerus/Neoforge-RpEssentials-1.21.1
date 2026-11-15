@@ -36,7 +36,7 @@ public final class ServerLang {
     }
 
     private static boolean modSource() {
-        if (Cfg.ready(MessagesConfig.SPEC)) { return "MOD".equalsIgnoreCase(MessagesConfig.MESSAGE_SOURCE.get()); } else { return false; }
+        if (Cfg.ready(MessagesConfig.SPEC)) { return "MOD".equalsIgnoreCase(net.rp.rpessentials.config.ConfigRules.value(MessagesConfig.MESSAGE_SOURCE)); } else { return false; }
     }
 
     private static String serverLang() {

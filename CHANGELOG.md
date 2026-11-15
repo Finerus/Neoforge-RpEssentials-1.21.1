@@ -59,6 +59,10 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 
+* **Config Manager:** values not accepted (wrong word, not a number, out of range, not `true` / `false`) turn red while typing; Apply sends nothing while one is wrong (red rows, message in the chat). The ↺ reset button and Discard ask for a second click.
+* **Save with an empty required field** (profession ID or name, role ID) frames the field in red and says so in the chat, instead of doing nothing.
+* **Player Profile:** the player list shows `Nickname (RealName)` with the nickname in its colors and the real name in grey; the selected player is in bold. The Stats tab shows the "Nicknames history" with `(current)` after the nickname the player has now. The Reports tab is no longer further from the others (tabs share the leftover pixels).
+* **`/rp annonce`:** the title, subtitle and chat formats accept the staff member who announces (`{nick}`, `{real}`, `{nick_real}`, `{player}`); the default formats now show `{nick}` (remove it to hide the name).
 * **Player activity:** `lastconnection.json` now records the first login (for players who joined before, the date of their save file is used at their next login), the number of logins, and logins and playtime per day for the last 35 days.
 * **Grouped saves:** data files are written at most once per second with the latest data, instead of once per change (a full reset used to rewrite `licenses.json` about ten times). Pending saves are written at server stop.
 * **Expired warns:** at login only the joining player's expired warns are purged; the global purge runs at startup and at server stop.
@@ -104,7 +108,8 @@ All notable changes to this project will be documented in this file.
 * **Death RP history purge:** it ran only when the once-a-minute check fell exactly on 3:00 and could miss a day when the server lagged; it now runs once a day as soon as it is 3 AM or later.
 * **Periodic tasks:** an error in one of them (tab blur, world border, schedule...) is logged and no longer stops the others or reaches the server tick.
 * **Data safety:** staff notes, temporary licenses, the license audit log, the Death RP history and the auto-unwhitelist history started empty when their file could not be read, and the next save overwrote it, losing its content. Like the other data files, an unreadable file is now moved aside (`.corrupt-<time>`) and kept.
-* **Display mode options** (`zoneMessageMode`, `hrpMessageMode`, the Death RP message modes, `scheduleDeathHoursNotifyMode`) and `forceState` are validated: a wrong value is refused by the Config Manager and `config set` (which list the allowed values) instead of silently falling back to the chat.
+* **Options that accept only some words** (display modes such as `zoneMessageMode`, `hrpMessageMode`, the Death RP message modes and `scheduleDeathHoursNotifyMode`, plus `forceState`, `nametagBlurMode`, `blurStyle`, `worldBorderShape`, `playerChatCodes`, `messageSource`, `licenseIdDisplay` and the vanish tab list `mode`): a typo written in the file (`HIDDE`) is kept in the file instead of being replaced, the default value is used meanwhile, the line is red in the Config Manager (hover: expected values), staff are told in the chat when they join and after a config reload, and the server log and `/rpessentials config validate` list it. The Config Manager and `config set` refuse a wrong value (`zoneMessageMode` now accepts `TITLE` and `IMMERSIVE:<preset>`).
+* **Hex colors (`§#RRGGBB`) shown as text:** a profession or nickname with a hex color showed `FF8800Forgeron` in buttons, screens and chat. The client now draws these colors everywhere; profession colors written with `&` in the file work too.
 * **Config values:** `true` / `false` options refused anything else (a typo used to become `false`), and values are checked against the rules of each option (allowed words, list checks), in the Config Manager too.
 * **`config set zoneMessageMode`** refused `TITLE` and `IMMERSIVE:<preset>`, which the option accepts.
 * **Rotating icons:** `*` patterns and `#tags` show their items in turn again in the restriction lists.

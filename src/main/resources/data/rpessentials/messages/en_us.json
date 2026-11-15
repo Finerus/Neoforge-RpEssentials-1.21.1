@@ -160,8 +160,8 @@
   "RP Commands.actionFormat": "§5* §e{player} §f{action} §5*",
   "RP Commands.actionSpy": "§7[SPY] §e{player} §7(far) : §5* §f{action} §5*",
   "RP Commands.annonceTitleText": "§6§l[ANNONCE]",
-  "RP Commands.annonceSubtitleFormat": "§e{message}",
-  "RP Commands.annonceChatFormat": "§6§l[ANNONCE] §f{message}",
+  "RP Commands.annonceSubtitleFormat": "§e{message} §8- §7{nick}",
+  "RP Commands.annonceChatFormat": "§6§l[ANNONCE] §7{nick}§8: §f{message}",
   "RP Commands.annonceSent": "§a[INFO] Announcement sent.",
 
   "Licenses.selfNickSet": "§aYour nickname has been set to: {nick}",
@@ -640,6 +640,8 @@
   "Common Text.colorsGradient": "gradient",
   "Common Text.colorsGradientText": "text",
   "Common Text.validateBadLine": "{option}: bad line '{value}'",
+  "Common Text.validateInvalidValue": "{option}: '{value}' is not valid (expected: {expected}), '{default}' is used",
+  "Common Text.validateInvalidWarn": "§6⚠ [RpEssentials] §e{count} §6config value(s) are not valid and replaced by their default until fixed:",
   "Common Text.validateBadPattern": "{option}: bad pattern '{value}'",
   "Common Text.validateBadPatternIn": "{option}: bad pattern '{value}' in '{line}'",
   "Common Text.validateUnknownProfession": "{option}: unknown profession '{value}'",
@@ -751,8 +753,9 @@
 
   "Player Stats Extra.logins": "§7Logins: §f{total} §8(7 days: §f{d7}§8, 30 days: §f{d30}§8)",
   "Player Stats Extra.playtimeRecent": "§7Playtime: §f{d7} §8in 7 days, §f{d30} §8in 30 days",
-  "Player Stats Extra.nicknames": "§7Nicknames: §r{list}",
-  "Player Stats Extra.nicknamesNone": "§7Nicknames: §8no change recorded",
+  "Player Stats Extra.nicknames": "§7Nicknames history: §r{list}",
+  "Player Stats Extra.nicknamesNone": "§7Nicknames history: §8no change recorded",
+  "Player Stats Extra.nicknameCurrent": "§7(current)",
   "Player Stats Extra.typeNick": "Nickname",
 
   "Reports.historyType": "Report",

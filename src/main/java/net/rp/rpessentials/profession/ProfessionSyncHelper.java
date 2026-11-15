@@ -65,7 +65,7 @@ public class ProfessionSyncHelper {
     }
 
     private static String licenseIdMode() {
-        return Cfg.get(ProfessionConfig.LICENSE_ID_DISPLAY, "NAME_AND_ID");
+        return net.rp.rpessentials.config.ConfigRules.value(ProfessionConfig.LICENSE_ID_DISPLAY);
     }
 
     public static void syncToPlayer(ServerPlayer player) {

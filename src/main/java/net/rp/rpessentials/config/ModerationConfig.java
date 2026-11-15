@@ -333,8 +333,8 @@ public class ModerationConfig {
                         "REMOVE    : the entry is removed.",
                         "OBFUSCATE : the entry stays with an obfuscated name and no head.",
                         "KEEP      : the entry is untouched (the player stays listed).")
-                .defineInList("mode", "REMOVE",
-                        Arrays.asList("REMOVE", "OBFUSCATE", "KEEP"));
+                .define("mode", "REMOVE");
+        ConfigRules.oneOf(VANISH_TAB_MODE, Arrays.asList("REMOVE", "OBFUSCATE", "KEEP"));
 
         VANISH_TAB_MARKER_ENABLED = BUILDER
                 .comment("If true, viewers who can see a vanished player (and the player themselves) get a marker before the name.")

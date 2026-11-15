@@ -306,7 +306,7 @@ public class DeathRPManager {
             var modeConfig = enabled ? RpEssentialsConfig.DEATH_RP_GLOBAL_ENABLE_MODE : RpEssentialsConfig.DEATH_RP_GLOBAL_DISABLE_MODE;
             if (msgConfig == null || modeConfig == null) return;
             String raw  = msgConfig.get().replace("{staff}", staffName);
-            String mode = modeConfig.get();
+            String mode = net.rp.rpessentials.config.ConfigRules.value(modeConfig);
             for (ServerPlayer p : server.getPlayerList().getPlayers())
                 sendMessageToPlayer(p, raw, mode);
         } else { LOGGER.warn("[DeathRP] Config GLOBAL_TOGGLE_MSG unavailable"); }
@@ -325,7 +325,7 @@ public class DeathRPManager {
             String raw  = msgConfig.get()
                     .replace("{player}",   NicknameManager.getDisplayName(target))
                     .replace("{realname}", target.getName().getString());
-            String mode = modeConfig.get();
+            String mode = net.rp.rpessentials.config.ConfigRules.value(modeConfig);
             sendMessageToPlayer(target, raw, mode);
         } else { LOGGER.warn("[DeathRP] Config PLAYER_TOGGLE_MSG unavailable"); }
 

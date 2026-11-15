@@ -48,6 +48,8 @@ public class ProfessionEditorScreen extends Screen {
     private String profStateId       = "";
     private String profStateName     = "";
     private boolean profStateIsNew   = true;
+    /** Save was clicked with required fields left empty: they get a red frame (see markMissing). */
+    private boolean showMissing = false;
     private int profSelectedIndex    = -1;
     private int profColorIndex       = 0;
     private int profActiveTab        = 0;
@@ -393,6 +395,7 @@ public class ProfessionEditorScreen extends Screen {
         idBox.setValue(profStateId);
         idBox.setEditable(profStateIsNew);
         idBox.setResponder(val -> profStateId = val);
+        markMissing(idBox, profStateId);
         addRenderableWidget(idBox);
 
         EditBox nameBox = new SkinnedEditBox(this.font, r.nameX(), r.nameY() + 16, r.fieldW(), 18,
@@ -401,6 +404,7 @@ public class ProfessionEditorScreen extends Screen {
         nameBox.setMaxLength(64);
         nameBox.setValue(profStateName);
         nameBox.setResponder(val -> { profStateName = val; profDirty = true; });
+        markMissing(nameBox, profStateName);
         addRenderableWidget(nameBox);
         y = r.colorY();
 
@@ -579,6 +583,7 @@ public class ProfessionEditorScreen extends Screen {
         idBox.setValue(roleStateId);
         idBox.setEditable(roleStateIsNew);
         idBox.setResponder(val -> roleStateId = val);
+        markMissing(idBox, roleStateId);
         addRenderableWidget(idBox);
 
         EditBox lpBox = new SkinnedEditBox(this.font, r.lpX(), r.lpY() + 16, r.fieldW(), 18,
@@ -1143,10 +1148,25 @@ public class ProfessionEditorScreen extends Screen {
     // =========================================================================
     // LOGIQUE PROFESSIONS
     // =========================================================================
+    /** Save refused: the empty required fields get a red frame and the chat says why. */
+    private void requireFields() {
+        showMissing = true;
+        if (Minecraft.getInstance().player != null) {
+            Minecraft.getInstance().player.displayClientMessage(
+                    Component.translatable("rpessentials.gui.required_fields"), false);
+        }
+        rebuild();
+    }
+
+    /** Red frame on a required field left empty, once Save has been clicked. */
+    private void markMissing(EditBox box, String value) {
+        if (box instanceof SkinnedEditBox s) s.setError(showMissing && value.isBlank());
+    }
+
     private void saveProfession() {
         String id   = profStateId.trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
         String name = profStateName.trim().replace(";", "");
-        if (id.isEmpty() || name.isEmpty()) return;
+        if (id.isEmpty() || name.isEmpty()) { requireFields(); return; }
 
         if (profStateIsNew) {
             for (OpenRolesGuiPacket.RoleEntry r : existingRoles) {
@@ -1186,6 +1206,7 @@ public class ProfessionEditorScreen extends Screen {
 
     private void loadProfEntry(int index, boolean rebuildAfter) {
         profDirty = false;
+        showMissing = false;
         profPendingDelete = null;
         profSelectedIndex = index;
         profStateIsNew    = false;
@@ -1205,6 +1226,7 @@ public class ProfessionEditorScreen extends Screen {
 
     private void resetProfForm() {
         profDirty = false;
+        showMissing = false;
         profSelectedIndex = -1; profStateIsNew = true;
         profStateId = ""; profStateName = ""; profColorIndex = 0; profActiveTab = 0;
         allowedCrafts = new ArrayList<>(); allowedBlocks = new ArrayList<>();
@@ -1234,7 +1256,7 @@ public class ProfessionEditorScreen extends Screen {
     private void saveRole() {
         String id = roleStateId.trim().toLowerCase().replaceAll("[^a-z0-9_]", "_");
         String lp = roleStateLp.trim().isEmpty() ? id : roleStateLp.trim();
-        if (id.isEmpty()) return;
+        if (id.isEmpty()) { requireFields(); return; }
 
         if (roleStateIsNew) {
             for (OpenProfessionGuiPacket.ProfessionEntry p : existingProfessions) {
@@ -1271,6 +1293,7 @@ public class ProfessionEditorScreen extends Screen {
 
     private void loadRoleEntry(int index, boolean rebuildAfter) {
         roleDirty = false;
+        showMissing = false;
         rolePendingDelete = null;
         roleSelectedIndex = index;
         roleStateIsNew    = false;
@@ -1285,6 +1308,7 @@ public class ProfessionEditorScreen extends Screen {
 
     private void resetRoleForm() {
         roleDirty = false;
+        showMissing = false;
         roleSelectedIndex = -1; roleStateIsNew = true;
         roleStateId = ""; roleStateLp = "";
         roleDirtyPerms.clear();

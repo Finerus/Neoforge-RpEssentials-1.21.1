@@ -552,6 +552,8 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> COLORS_GRADIENT;
     public static final ModConfigSpec.ConfigValue<String> COLORS_GRADIENT_TEXT;
     public static final ModConfigSpec.ConfigValue<String> CFG_V_BAD_LINE;
+    public static final ModConfigSpec.ConfigValue<String> CFG_V_INVALID_VALUE;
+    public static final ModConfigSpec.ConfigValue<String> STAFF_CFG_INVALID_WARN;
     public static final ModConfigSpec.ConfigValue<String> CFG_V_BAD_PATTERN;
     public static final ModConfigSpec.ConfigValue<String> CFG_V_BAD_PATTERN_IN;
     public static final ModConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_PROF;
@@ -675,6 +677,7 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> STATS_PLAYTIME_RECENT;
     public static final ModConfigSpec.ConfigValue<String> STATS_NICKS;
     public static final ModConfigSpec.ConfigValue<String> STATS_NICKS_NONE;
+    public static final ModConfigSpec.ConfigValue<String> STATS_NICK_CURRENT;
     public static final ModConfigSpec.ConfigValue<String> HISTORY_T_NICK;
 
     public static final ModConfigSpec.ConfigValue<String> HISTORY_T_REPORT, REPORT_DISABLED, REPORT_SELF,
@@ -704,7 +707,8 @@ public class MessagesConfig {
                         "CONFIG : the values written in this file and in rpessentials-professions.toml (default).",
                         "MOD    : the translation files shipped with the mod, in the language of each player's client.",
                         "         A missing translation falls back to serverLanguage, then en_us, then the value in this file.")
-                .defineInList("messageSource", "CONFIG", java.util.Arrays.asList("CONFIG", "MOD"));
+                .define("messageSource", "CONFIG");
+        ConfigRules.oneOf(MESSAGE_SOURCE, java.util.Arrays.asList("CONFIG", "MOD"));
 
         SERVER_LANGUAGE = BUILDER
                 .comment("Language used in MOD mode for the console and as fallback (for example en_us, fr_fr).")
@@ -1105,7 +1109,8 @@ public class MessagesConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("scheduleDeathHoursNotifyMode", "CHAT", ConfigRules::isDisplayMode);
+                .define("scheduleDeathHoursNotifyMode", "CHAT");
+        ConfigRules.displayMode(SCHEDULE_DEATH_HOURS_NOTIFY_MODE);
 
         BUILDER.pop();
 
@@ -1312,18 +1317,24 @@ public class MessagesConfig {
                 .define("actionSpy", "§7[SPY] §e{player} §7(far) : §5* §f{action} §5*");
 
         RP_ANNONCE_TITLE = BUILDER
-                .comment("Title text shown in the center of the screen for /rp annonce title.")
+                .comment("Title text shown in the center of the screen for /rp annonce title.",
+                        "Placeholders (staff member who announces): {nick} = nickname or name, {real} = Minecraft name,",
+                        "  {nick_real} = 'Nickname (Name)', {player} = like in the RP commands.")
                 .define("annonceTitleText", "§6§l[ANNONCE]");
 
         RP_ANNONCE_SUBTITLE = BUILDER
                 .comment("Subtitle format for /rp annonce title.",
-                        "Placeholder: {message} = announcement content.")
-                .define("annonceSubtitleFormat", "§e{message}");
+                        "Placeholders: {message} = announcement content.",
+                        "  Staff member who announces: {nick} = nickname or name, {real} = Minecraft name,",
+                        "  {nick_real} = 'Nickname (Name)', {player} = like in the RP commands. Remove them to hide the name.")
+                .define("annonceSubtitleFormat", "§e{message} §8- §7{nick}");
 
         RP_ANNONCE_CHAT_FORMAT = BUILDER
                 .comment("Format of /rp annonce chat broadcast.",
-                        "Placeholder: {message} = announcement content.")
-                .define("annonceChatFormat", "§6§l[ANNONCE] §f{message}");
+                        "Placeholders: {message} = announcement content.",
+                        "  Staff member who announces: {nick} = nickname or name, {real} = Minecraft name,",
+                        "  {nick_real} = 'Nickname (Name)', {player} = like in the RP commands. Remove them to hide the name.")
+                .define("annonceChatFormat", "§6§l[ANNONCE] §7{nick}§8: §f{message}");
 
         RP_ANNONCE_SENT = BUILDER
                 .comment("Feedback sent to the staff member after sending an announcement.")
@@ -1956,6 +1967,10 @@ public class MessagesConfig {
         COLORS_GRADIENT = BUILDER.define("colorsGradient", "gradient");
         COLORS_GRADIENT_TEXT = BUILDER.define("colorsGradientText", "text");
         CFG_V_BAD_LINE = BUILDER.comment("Placeholders: {option} {value}").define("validateBadLine", "{option}: bad line '{value}'");
+        CFG_V_INVALID_VALUE = BUILDER.comment("A config option holds a value it does not accept (kept in the file, default used). Placeholders: {option} {value} {expected} {default}")
+                .define("validateInvalidValue", "{option}: '{value}' is not valid (expected: {expected}), '{default}' is used");
+        STAFF_CFG_INVALID_WARN = BUILDER.comment("Told to staff when they join or after a config reload, followed by one line per wrong value. Placeholder: {count}")
+                .define("validateInvalidWarn", "§6⚠ [RpEssentials] §e{count} §6config value(s) are not valid and replaced by their default until fixed:");
         CFG_V_BAD_PATTERN = BUILDER.comment("Placeholders: {option} {value}").define("validateBadPattern", "{option}: bad pattern '{value}'");
         CFG_V_BAD_PATTERN_IN = BUILDER.comment("Placeholders: {option} {value} {line}").define("validateBadPatternIn", "{option}: bad pattern '{value}' in '{line}'");
         CFG_V_UNKNOWN_PROF = BUILDER.comment("Placeholders: {option} {value}").define("validateUnknownProfession", "{option}: unknown profession '{value}'");
@@ -2087,8 +2102,10 @@ public class MessagesConfig {
         BUILDER.push("Player Stats Extra");
         STATS_LOGINS = BUILDER.comment("Placeholders: {total} {d7} {d30}").define("logins", "§7Logins: §f{total} §8(7 days: §f{d7}§8, 30 days: §f{d30}§8)");
         STATS_PLAYTIME_RECENT = BUILDER.comment("Placeholders: {d7} {d30}").define("playtimeRecent", "§7Playtime: §f{d7} §8in 7 days, §f{d30} §8in 30 days");
-        STATS_NICKS = BUILDER.comment("Latest nicknames, newest first. Placeholder: {list}").define("nicknames", "§7Nicknames: §r{list}");
-        STATS_NICKS_NONE = BUILDER.define("nicknamesNone", "§7Nicknames: §8no change recorded");
+        STATS_NICKS = BUILDER.comment("Latest nicknames, newest first. Placeholder: {list}").define("nicknames", "§7Nicknames history: §r{list}");
+        STATS_NICKS_NONE = BUILDER.define("nicknamesNone", "§7Nicknames history: §8no change recorded");
+        STATS_NICK_CURRENT = BUILDER.comment("Written after the nickname the player has now, in the nicknames history.")
+                .define("nicknameCurrent", "§7(current)");
         HISTORY_T_NICK = BUILDER.comment("History type label.").define("typeNick", "Nickname");
         BUILDER.pop();
 

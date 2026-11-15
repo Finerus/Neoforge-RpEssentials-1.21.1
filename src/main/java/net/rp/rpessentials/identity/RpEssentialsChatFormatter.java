@@ -288,7 +288,7 @@ public class RpEssentialsChatFormatter {
     private static final Pattern OBFUSCATED = Pattern.compile("(?i)§k");
 
     private static String sanitize(ServerPlayer sender, String message) {
-        String mode = safeGetString(ChatConfig.PLAYER_CHAT_CODES, "ALL");
+        String mode = net.rp.rpessentials.config.ConfigRules.value(ChatConfig.PLAYER_CHAT_CODES);
         if (mode.equalsIgnoreCase("ALL") || net.rp.rpessentials.permission.RpEssentialsPermissions.isStaff(sender)) return message;
         String converted = ColorHelper.translateAlternateColorCodes(message);
         if (mode.equalsIgnoreCase("NONE")) return ColorHelper.stripAll(converted);

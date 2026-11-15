@@ -351,7 +351,8 @@ public class ProfessionConfig {
                         "NAME_ONLY   : the display name (default)",
                         "NAME_AND_ID : the display name followed by the id in brackets",
                         "ID_ONLY     : the id only")
-                .defineInList("licenseIdDisplay", "NAME_ONLY", Arrays.asList("NAME_ONLY", "NAME_AND_ID", "ID_ONLY"));
+                .define("licenseIdDisplay", "NAME_ONLY");
+        ConfigRules.oneOf(LICENSE_ID_DISPLAY, Arrays.asList("NAME_ONLY", "NAME_AND_ID", "ID_ONLY"));
         BUILDER.pop();
 
         SPEC = BUILDER.build();

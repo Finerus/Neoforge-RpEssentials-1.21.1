@@ -186,6 +186,7 @@ public class RpEssentialsEventHandler {
         TempLicenseExpirationManager.checkOnLogin(player, server);
         TempLicenseExpirationManager.markRevokedLicenseItems(player);
         net.rp.rpessentials.moderation.ReportService.onStaffLogin(player);
+        net.rp.rpessentials.config.ConfigValidator.warnStaff(player);
 
         if (Cfg.ready(ModerationConfig.SPEC)) { if (ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get()) WarnManager.purgeExpiredWarns(player.getUUID()); }
 

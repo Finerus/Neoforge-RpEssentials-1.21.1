@@ -188,6 +188,8 @@ public final class ConfigSetCommand {
                 case BOOLEAN -> { values.add("true"); values.add("false"); }
                 default -> {
                     List<String> hint = VALUE_HINTS.get(o.entry().key());
+                    net.rp.rpessentials.config.ConfigRules.Rule rule = net.rp.rpessentials.config.ConfigRules.rule(o.entry().fullPath());
+                    if (hint == null && rule != null) hint = List.of(rule.expected().split(", "));
                     // "IMMERSIVE:<preset>" explains the format in errors; it is not a value to insert.
                     if (hint != null) for (String h : hint) if (!h.contains("<")) values.add(h);
                 }
@@ -243,7 +245,9 @@ public final class ConfigSetCommand {
         String type = e.type().name().toLowerCase(Locale.ROOT);
         if (e.hasRange()) type += " [" + fmt(e.rangeMin()) + " - " + fmt(e.rangeMax()) + "]";
         List<String> hint = VALUE_HINTS.get(e.key());
+        net.rp.rpessentials.config.ConfigRules.Rule rule = net.rp.rpessentials.config.ConfigRules.rule(e.fullPath());
         if (e.type() == ConfigInspector.ValueType.BOOLEAN) type = "true / false";
+        else if (rule != null) type += " (" + rule.expected() + ")";
         else if (hint != null) type += " (" + String.join(", ", hint) + ")";
         return type;
     }

@@ -217,7 +217,8 @@ public class ScheduleConfig {
                         "  FORCE_OPEN   : always open",
                         "  FORCE_CLOSED : always closed",
                         "Set by /schedule forceopen, /schedule forceclose and /schedule resetforcestate.")
-                .defineInList("forceState", "NONE", java.util.List.of("NONE", "FORCE_OPEN", "FORCE_CLOSED"));
+                .define("forceState", "NONE");
+        ConfigRules.oneOf(FORCE_STATE, java.util.List.of("NONE", "FORCE_OPEN", "FORCE_CLOSED"));
 
         FORCE_CLOSED_MESSAGE = BUILDER
                 .comment("Message shown to non-staff players trying to connect when the server is forcibly closed.",
@@ -305,7 +306,8 @@ public class ScheduleConfig {
                         "  TITLE      : big title in the middle of the screen",
                         "  IMMERSIVE  : animated text with the 'default' preset",
                         "  IMMERSIVE:<preset> : animated text with a preset of immersivePresets (rpessentials-rp.toml), e.g. IMMERSIVE:death")
-                .define("hrpMessageMode", "CHAT", ConfigRules::isDisplayMode);
+                .define("hrpMessageMode", "CHAT");
+        ConfigRules.displayMode(HRP_MESSAGE_MODE);
         BUILDER.pop();
 
 

@@ -121,6 +121,8 @@ public class RpEssentials {
                 java.util.List<Object> specs = new java.util.ArrayList<>(pendingSpecs);
                 pendingSpecs.clear();
                 for (Object s : specs) ConfigRefresh.refresh(srv, s);
+                // A typo written in a file is kept there: tell the staff online.
+                net.rp.rpessentials.config.ConfigValidator.warnOnlineStaff(srv);
             }), java.util.concurrent.CompletableFuture.delayedExecutor(1500, java.util.concurrent.TimeUnit.MILLISECONDS));
         });
         modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading e) ->

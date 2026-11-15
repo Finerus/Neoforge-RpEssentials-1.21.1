@@ -15,7 +15,6 @@ public final class UiLayout {
 
     private UiLayout() {}
 
-    /** Width of each of {@code n} equal cells filling {@code width}, with {@code gap} between them. */
     /**
      * The text, cut with "…" when it is wider than {@code maxWidth} (formatting codes kept and not counted).
      */
@@ -25,16 +24,22 @@ public final class UiLayout {
         return font.plainSubstrByWidth(text, room) + "…";
     }
 
+    /** Width of each of {@code n} equal cells filling {@code width}, with {@code gap} between them. */
     public static int cellW(int width, int n, int gap) {
         if (n <= 0) return width;
         return Math.max(MIN_W, (width - gap * (n - 1)) / n);
     }
 
-    /** X of cell {@code i} for {@link #cellW}; the last cell is aligned on the right edge. */
+    /**
+     * X of cell {@code i} for {@link #cellW}. The pixels left over by the division are spread over the
+     * gaps (at most one more pixel each), so the last cell ends on the right edge without a wider gap
+     * before it.
+     */
     public static int cellX(int x, int width, int n, int gap, int i) {
         int w = cellW(width, n, gap);
-        if (i == n - 1 && n > 1) return x + width - w;
-        return x + i * (w + gap);
+        if (n <= 1) return x;
+        int extra = Math.max(0, width - (w * n + gap * (n - 1)));
+        return x + i * (w + gap) + extra * i / (n - 1);
     }
 
     /**

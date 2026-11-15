@@ -512,10 +512,10 @@ public class RpEssentialsRpCommands {
 
         switch (type.toLowerCase()) {
             case "title" -> {
-                // Le titre lui-même n'affiche pas de nom de joueur,
-                // mais le sous-titre peut contenir {player} etc.
+                // Title and subtitle can both name the staff member ({nick}, {real}, {nick_real}, {player}).
                 for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                    Component title = ColorHelper.parseColors(Msg.get(p, MessagesConfig.RP_ANNONCE_TITLE));
+                    Component title = ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
+                            Msg.get(p, MessagesConfig.RP_ANNONCE_TITLE), player));
                     Component subtitle = ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
                             Msg.get(p, MessagesConfig.RP_ANNONCE_SUBTITLE, "message", message), player));
                     p.connection.send(new ClientboundSetTitleTextPacket(title));

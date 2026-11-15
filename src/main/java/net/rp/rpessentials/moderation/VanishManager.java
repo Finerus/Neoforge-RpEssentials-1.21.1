@@ -92,7 +92,7 @@ public final class VanishManager {
     }
 
     private static String tabMode() {
-        return Cfg.get(ModerationConfig.VANISH_TAB_MODE, "REMOVE");
+        return net.rp.rpessentials.config.ConfigRules.value(ModerationConfig.VANISH_TAB_MODE);
     }
 
     private static String marker() {

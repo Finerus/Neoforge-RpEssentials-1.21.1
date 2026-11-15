@@ -35,7 +35,7 @@ public final class ConfigValidator {
 
     /** Problems in the viewer's language. */
     public static List<String> validate(ServerPlayer v) {
-        List<String> out = new ArrayList<>();
+        List<String> out = new ArrayList<>(invalidValues(v));
         for (String c : net.rp.rpessentials.commands.CommandToggles.activeConflicts())
             add(out, v, MessagesConfig.CFG_V_CMD_CONFLICT, "command", c);
         if (Cfg.ready(ModerationConfig.SPEC, ProfessionConfig.SPEC, RpConfig.SPEC, RpEssentialsConfig.SPEC, ScheduleConfig.SPEC)) {
@@ -174,6 +174,33 @@ public final class ConfigValidator {
             add(out, v, MessagesConfig.CFG_V_NOT_LOADED);
         }
         return out;
+    }
+
+    /** Options holding a word they do not accept (kept in the file, the default is used meanwhile). */
+    public static List<String> invalidValues(ServerPlayer v) {
+        List<String> out = new ArrayList<>();
+        for (ConfigRules.Problem p : ConfigRules.problems()) {
+            add(out, v, MessagesConfig.CFG_V_INVALID_VALUE, "option", p.path(), "value", p.value(),
+                    "expected", p.expected(), "default", p.defaultValue());
+        }
+        return out;
+    }
+
+    /** Tells a staff member about the wrong config values, if any (on join and after a reload). */
+    public static void warnStaff(ServerPlayer staff) {
+        if (!net.rp.rpessentials.permission.RpEssentialsPermissions.isStaff(staff)) return;
+        List<String> lines = invalidValues(staff);
+        if (lines.isEmpty()) return;
+        staff.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(
+                ServerLang.get(staff, MessagesConfig.STAFF_CFG_INVALID_WARN, "count", String.valueOf(lines.size()))));
+        for (String l : lines) staff.sendSystemMessage(net.minecraft.network.chat.Component.literal("§c- §f" + l));
+    }
+
+    /** {@link #warnStaff} for every staff member online, and the server log. */
+    public static void warnOnlineStaff(MinecraftServer server) {
+        for (String l : invalidValues(null)) net.rp.rpessentials.RpEssentials.LOGGER.warn("[Config] {}", l);
+        if (server == null) return;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) warnStaff(p);
     }
 
     private static void add(List<String> out, ServerPlayer v, ModConfigSpec.ConfigValue<String> key, String... args) {
