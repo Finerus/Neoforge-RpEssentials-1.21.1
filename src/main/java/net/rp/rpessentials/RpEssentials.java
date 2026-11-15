@@ -33,6 +33,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.UUID;
 import net.rp.rpessentials.core.BackupManager;
+import net.rp.rpessentials.core.TickScheduler;
 import net.rp.rpessentials.core.ConfigRefresh;
 import net.rp.rpessentials.core.RpEssentialsEventHandler;
 import net.rp.rpessentials.core.RpEssentialsIO;
@@ -50,7 +51,29 @@ public class RpEssentials {
 
     public static final String MODID = "rpessentials";
     public static final Logger LOGGER = LogUtils.getLogger();
-    private long tickCounter = 0;
+    /**
+     * Periodic server tasks. Offsets spread the tasks that share a period over different ticks.
+     * 20 ticks = 1 second.
+     */
+    private final TickScheduler ticks = new TickScheduler()
+            .every(40, 0, "tab blur", TabBlur::tick)
+            .every(72000, 36000, "history purge", s -> net.rp.rpessentials.moderation.HistoryManager.tick())
+            .every(20, 0, "zone views", WorldBorderManager::tickZoneViews)
+            .every(() -> Cfg.get(RpEssentialsConfig.WORLD_BORDER_CHECK_INTERVAL, 100), 13, "world border", WorldBorderManager::tick)
+            .every(400, 37, "expired caches", s -> {
+                RpEssentialsRoleManager.clearExpired();
+                ProfessionRestrictionEventHandler.cleanupCaches();
+                RpEssentialsPermissions.clearExpiredCache();
+            })
+            .every(400, 37, "schedule", RpEssentialsScheduleManager::tick)
+            .every(1200, 97, "midnight sweeps", s -> {
+                RpEssentialsScheduleManager.tickMidnightSweep(s);
+                TempLicenseExpirationManager.tickMidnightSweep(s);
+            })
+            .every(1200, 97, "auto unwhitelist", LastConnectionManager::tickAutoUnwhitelist)
+            .every(1200, 97, "backups", s -> BackupManager.tick())
+            .every(1200, 97, "death rp history purge", s -> net.rp.rpessentials.moderation.DeathRPManager.tickDailyPurge())
+            .every(1200, 97, "playtime flush", s -> PlaytimeManager.flush());
     private final java.util.Set<Object> pendingSpecs = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static volatile Boolean lpPresent = null;
     private static final long LP_META_TTL_MS = 30000L;
@@ -159,68 +182,7 @@ public class RpEssentials {
     // =========================================================================
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        MinecraftServer server = event.getServer();
-        long t = tickCounter++;
-
-        if (t % 40 == 0) TabBlur.tick(server);
-        if (t % 72000 == 36000) net.rp.rpessentials.moderation.HistoryManager.tick();
-        if (t % 20 == 0) WorldBorderManager.tickZoneViews(server);
-
-        int wbInterval = 40;
-        wbInterval = Cfg.get(RpEssentialsConfig.WORLD_BORDER_CHECK_INTERVAL, wbInterval);
-        if ((t + 13) % wbInterval == 0) {
-            WorldBorderManager.tick(server);
-        }
-
-        if ((t + 37) % 400 == 0) {
-            RpEssentialsRoleManager.clearExpired();
-            ProfessionRestrictionEventHandler.cleanupCaches();
-            RpEssentialsPermissions.clearExpiredCache();
-
-            LocalTime now = RpEssentialsScheduleManager.nowTime();
-
-            if (Cfg.ready(ScheduleConfig.SPEC)) {
-                if (ScheduleConfig.ENABLE_SCHEDULE.get()
-                        && !RpEssentialsScheduleManager.getSchedules().isEmpty()) {
-                    RpEssentialsScheduleManager.DaySchedule active  = RpEssentialsScheduleManager.getActiveSchedule();
-                    RpEssentialsScheduleManager.DaySchedule todayS  = RpEssentialsScheduleManager.getTodaySchedule();
-
-                    if (!RpEssentialsScheduleManager.hasOpenedToday()
-                            && todayS != null
-                            && todayS == active) {
-                        RpEssentialsScheduleManager.markOpenedToday();
-                        RpEssentialsScheduleManager.sendOpeningMessage(server, todayS);
-                    }
-
-                    if (active != null) {
-                        RpEssentialsScheduleManager.checkWarnings(server, now, active);
-                    }
-
-                    if (!RpEssentialsScheduleManager.hasClosedToday() && active == null
-                            && !"FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) {
-                        RpEssentialsScheduleManager.markClosedToday();
-                        RpEssentialsScheduleManager.closeServer(server);
-                        net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
-                    }
-                }
-            }
-
-            RpEssentialsScheduleManager.tickDeathHoursNotifications(server, now);
-            RpEssentialsScheduleManager.tickHrpNotifications(server, now);
-        }
-
-        if ((t + 97) % 1200 == 0) {
-            LocalTime now = RpEssentialsScheduleManager.nowTime();
-            RpEssentialsScheduleManager.tickMidnightSweep(server);
-            TempLicenseExpirationManager.tickMidnightSweep(server);
-            LastConnectionManager.tickAutoUnwhitelist(server);
-            BackupManager.tick();
-            if (now.getHour() == 3 && now.getMinute() == 0) {
-                net.rp.rpessentials.moderation.DeathRPManager.purgeOldHistory();
-            }
-        }
-
-        if ((t + 97) % 1200 == 0) PlaytimeManager.flush();
+        ticks.tick(event.getServer());
     }
 
     // =========================================================================

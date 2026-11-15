@@ -98,6 +98,8 @@ All notable changes to this project will be documented in this file.
 * **Restriction patterns:** in a `*` pattern every other character is matched as written, so ids containing `$`, `+`, `(`... no longer break the pattern.
 * **French translations (`MOD` mode):** 149 messages had no French translation and were shown in English (warns, licenses, schedule display, Death RP, last connection, dice...). 7 others were translated under an old section name (`Misc.`) and never found. Every message now exists in both languages.
 * **Restriction tooltips:** profession names with a hex color or a gradient are displayed with their colors instead of showing the code.
+* **Death RP history purge:** it ran only when the once-a-minute check fell exactly on 3:00 and could miss a day when the server lagged; it now runs once a day as soon as it is 3 AM or later.
+* **Periodic tasks:** an error in one of them (tab blur, world border, schedule...) is logged and no longer stops the others or reaches the server tick.
 * **Config values:** `true` / `false` options refused anything else (a typo used to become `false`), and values are checked against the rules of each option (allowed words, list checks), in the Config Manager too.
 * **`config set zoneMessageMode`** refused `TITLE` and `IMMERSIVE:<preset>`, which the option accepts.
 * **Rotating icons:** `*` patterns and `#tags` show their items in turn again in the restriction lists.
@@ -118,8 +120,9 @@ All notable changes to this project will be documented in this file.
 * **Packages:** the classes of the root package moved to `core`, `util`, `lang`, `permission`, `gameplay`, `commands`, `network`, `client` and `items`. The `api` package did not move, but `RpEssentialsAPI` returns `DiceManager` types, now in `gameplay`.
 * **Config access:** `Cfg.ready(spec...)` and `Cfg.get(value, fallback)` replace the `try/catch (IllegalStateException)` blocks around config reads.
 * **Tab list blur:** names are parsed once per player and shared by every viewer; viewers who see everyone only check new players.
+* **Server tick:** the periodic tasks are declared in `TickScheduler` (one line each: period, offset, name); the schedule logic moved to `RpEssentialsScheduleManager.tick`.
 * **Commands:** the ~60 hand-written `config set` subcommands were replaced by `ConfigSetCommand` (one generic command).
-* **New classes:** `CustomColorsScreen`, `CharacterSheetManager`, `CharacterSheetScreen`, `SheetTextEditorScreen`, `RpText`, `CharacterSheetChangedEvent`, `RequestCharacterSheetPacket`, `CharacterSheetPacket`, `SaveCharacterSheetPacket`, `ConfigSetCommand`, `RestrictionCoverage`, `DiscordWebhook`, `RpDiscordCommands`, `ReportManager`, `ReportService`, `RpReportCommands`, `RequestPlayerReportsPacket`, `PlayerReportsPacket`, `ReportActionPacket`. `OpenPlayerProfileGuiPacket` carries the number of open reports per player.
+* **New classes:** `TickScheduler`, `SaveUi`, `CustomColorsScreen`, `CharacterSheetManager`, `CharacterSheetScreen`, `SheetTextEditorScreen`, `RpText`, `CharacterSheetChangedEvent`, `RequestCharacterSheetPacket`, `CharacterSheetPacket`, `SaveCharacterSheetPacket`, `ConfigSetCommand`, `RestrictionCoverage`, `DiscordWebhook`, `RpDiscordCommands`, `ReportManager`, `ReportService`, `RpReportCommands`, `RequestPlayerReportsPacket`, `PlayerReportsPacket`, `ReportActionPacket`. `OpenPlayerProfileGuiPacket` carries the number of open reports per player.
 
 ### Migration Notes
 

@@ -676,5 +676,29 @@ public class RpEssentialsScheduleManager {
 
     public static LocalTime nowTime() { return TimeHelper.nowTime(); }
 
+    /**
+     * Every 20 seconds: opening message, closing warnings and closing of the server when the
+     * schedule says so, then the death hours and HRP hours notifications.
+     */
+    public static void tick(MinecraftServer server) {
+        LocalTime now = nowTime();
+        if (Cfg.ready(ScheduleConfig.SPEC) && ScheduleConfig.ENABLE_SCHEDULE.get() && !getSchedules().isEmpty()) {
+            DaySchedule active = getActiveSchedule();
+            DaySchedule today = getTodaySchedule();
+            if (!hasOpenedToday() && today != null && today == active) {
+                markOpenedToday();
+                sendOpeningMessage(server, today);
+            }
+            if (active != null) checkWarnings(server, now, active);
+            if (!hasClosedToday() && active == null && !"FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) {
+                markClosedToday();
+                closeServer(server);
+                net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
+            }
+        }
+        tickDeathHoursNotifications(server, now);
+        tickHrpNotifications(server, now);
+    }
+
     public static LocalDate today() { return TimeHelper.today(); }
 }

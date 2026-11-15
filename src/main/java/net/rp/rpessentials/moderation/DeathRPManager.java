@@ -117,6 +117,20 @@ public class DeathRPManager {
     }
 
 
+    /** Day of the last automatic purge (server time zone). */
+    private static java.time.LocalDate lastPurgeDay = null;
+
+    /**
+     * Called every minute: purges old entries once a day, as soon as it is 3 AM or later.
+     * (The old check needed to fall exactly on the 3:00 minute and could miss a day when the server lagged.)
+     */
+    public static void tickDailyPurge() {
+        java.time.LocalDate today = net.rp.rpessentials.util.TimeHelper.today();
+        if (today.equals(lastPurgeDay) || net.rp.rpessentials.util.TimeHelper.nowTime().getHour() < 3) return;
+        lastPurgeDay = today;
+        purgeOldHistory();
+    }
+
     public static void purgeOldHistory() {
         if (Cfg.ready(ModerationConfig.SPEC)) {
             int maxDays = net.rp.rpessentials.config.ModerationConfig.DEATH_HISTORY_MAX_DAYS.get();
