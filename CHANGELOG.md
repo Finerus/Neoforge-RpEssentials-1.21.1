@@ -39,7 +39,7 @@ All notable changes to this project will be documented in this file.
 * **Translations everywhere:** no more hardcoded text. Every message is sent in the language of the player who receives it in `MOD` mode, including broadcasts (announcements, `/rp commerce`, `/rp action`, dice, staff broadcast, spy messages), durations ("2h 30min remaining", "Permanent"), playtimes, day names, `/colors`, `/schedule` status, `config validate`, login notices and the license item. GUI screens, restriction tooltips and the license card use the game language (`assets/rpessentials/lang`).
 * **Stats tab:** the Player Profile Stats tab also shows the first join, last login and logout (with "x days ago"), all warns received and mutes received, the current absence, temporary licenses with their end date, RP death state and number of RP deaths, whitelist, OP level, role and LuckPerms group, and vanish level, the number of logins (total, last 7 and 30 days), the playtime of the last 7 and 30 days, and the latest RP nicknames. These lines are built on the server in the staff member's language, and the tab scrolls.
 * **Player history:** one timeline per player in `history.json` (warns, warn removals, mutes, unmutes, notes, manage actions, licenses given/revoked/expired, RP deaths, nickname changes). `/rpessentials history <player> [page]` (works for offline players), `/rpessentials history purge`, and a new History tab in the Player Profile GUI. `Player History` section of `rpessentials-moderation.toml`: `historyEnabled`, `historyRetention` (days per type, `-1` = forever, default `*=365`, `NOTE=-1`, `DEATH_RP=-1`) and `historyMaxPerPlayer`. Old lines are removed at startup and every hour. Vanish is respected: an action done by a vanished staff member, and a vanish / unvanish action, are only shown (command, GUI, stats) to staff whose OP level can see that vanish level.
-* **Drawn interface:** the RpEssentials screens can use drawn textures (`assets/rpessentials/textures/gui/sprites/`: background, panel, buttons, list lines, tabs, text fields, note lines, section titles, separators, with nine-slice scaling). Each player switches between the drawn and the classic interface with the button at the top right of every screen, or with `guiStyle` in the new client file `rpessentials-client.toml` (classic `LEGACY` by default). A missing texture keeps the classic look, and resource packs can replace the textures.
+* **Drawn interface:** the RpEssentials screens can use drawn textures (`assets/rpessentials/textures/gui/sprites/`: background, panel, buttons, list lines, tabs, text fields, note lines, section titles, separators, with nine-slice scaling). You can switch between the drawn and the classic interface with the button at the top right of every screen, or with `guiStyle` in the new client file `rpessentials-client.toml` (classic `LEGACY` by default). A missing texture keeps the classic look, and resource packs can replace the textures (main intent, I did not draw anything yet, but the files are there if needed).
 * **Dice:** `/roll` accepts expressions (`d20`, `2d6+3`, `d100-10`, `<dice>+2`), advantage and disadvantage (`adv d20`, `dis d20`) and secret rolls (`/roll secret d20`, shown only to the roller and the staff). The details are shown next to the total (`4 + 6 + 3`). New `Dice Rolls` section in `rpessentials-rp.toml`: `allowExpressions`, `allowSecretRolls`, `maxDiceCount`, `maxDiceSides`.
 * **Dice API:** `DiceRollEvent.Pre` (cancellable, result can be replaced) and `DiceRollEvent.Post` (result and audience), with `getRoll()` (each value, modifier, advantage, secret, expression), plus `RpEssentialsAPI.getDiceTypes`, `getDice`, `rollDice`, `rollDiceSilently`, `rollDiceDetailed` and `parseDice`.
 * **Temp ban:** `manage <player> tempban <duration> [reason]` (`3d`, `12h`, `30m`, `1d12h`, `2w`), with confirmation, quick action after an unwhitelist, and a Temp ban button in the profile GUI (in days). The player sees the end date on the login screen and the ban is lifted automatically.
@@ -94,15 +94,10 @@ All notable changes to this project will be documented in this file.
 * **License revoke:** the command no longer sends a "Removed tag" message to every operator.
 * **Saving:** licenses and prepared profiles are copied before being written on the save thread, which avoids rare save errors; `mutes.json` keeps the player names again.
 * **GUI:** a prepared profile can no longer receive a license for a profession that does not exist.
-* **Config reload** no longer resets nicknames and licenses.
 * **Schedule summary** is logged only when it changes.
-* **`/whois`** now finds hex and gradient nicknames.
 * **Silent commands** still log to the console when `logToStaff` is disabled.
-* **Hex nicknames** are displayed correctly in `/list`, success messages and the profile preview.
 * **Tab list blur:** `/blurtab whitelist|blacklist|alwaysvisible add|remove` now applies right away instead of after a config reload.
 * **Restriction patterns:** in a `*` pattern every other character is matched as written, so ids containing `$`, `+`, `(`... no longer break the pattern.
-* **French translations (`MOD` mode):** 149 messages had no French translation and were shown in English (warns, licenses, schedule display, Death RP, last connection, dice...). 7 others were translated under an old section name (`Misc.`) and never found. Every message now exists in both languages.
-* **Restriction tooltips:** profession names with a hex color or a gradient are displayed with their colors instead of showing the code.
 * **Mute:** muted players could talk again when `enableChatFormat` was off; the mute is now checked first, whatever the chat options, and a muted message is dropped before other mods (Discord bridges...) relay it.
 * **Nicknames:** the nickname is the player's display name through the official `PlayerEvent.NameFormat`, so it keeps the hover card and the click-to-/tell of a player name and the scoreboard team formatting, in death messages, advancements and every mod that shows player names.
 * **Container restrictions:** only opening the container is refused; placing a block against a restricted chest works again.
@@ -113,7 +108,6 @@ All notable changes to this project will be documented in this file.
 * **Hex colors (`§#RRGGBB`) shown as text:** a profession or nickname with a hex color showed `FF8800Forgeron` in buttons, screens and chat. The client now draws these colors everywhere; profession colors written with `&` in the file work too.
 * **Config values:** `true` / `false` options refused anything else (a typo used to become `false`), and values are checked against the rules of each option (allowed words, list checks), in the Config Manager too.
 * **`config set zoneMessageMode`** refused `TITLE` and `IMMERSIVE:<preset>`, which the option accepts.
-* **Rotating icons:** `*` patterns and `#tags` show their items in turn again in the restriction lists.
 * **Unsaved changes:** save buttons (profession, role, global restrictions and their lists, Config Manager, profile Apply, character sheet, text editor) are greyed out when there is nothing to save and bold when there is. Closing the profession editor, the Config Manager, the player profile, a character sheet or the text editor with unsaved changes asks for a second click ("Discard?"). The same goes for picking another profession, role or "New" in the profession editor, another file in the Config Manager, or another player in the profile while changes are not saved: the clicked entry turns into "Discard changes?" and a second click opens it. Before, the form was replaced without warning.
 * **Side lists:** the selected profession, role and config file are in bold.
 * **Scroll bars:** a small gap separates the rows from the scroll bar.
@@ -150,9 +144,10 @@ All notable changes to this project will be documented in this file.
 * Entries written as `item|dim=...` or `item|zone=...` are only enforced by the server.
 
 ### Personal notes
+
 Heyyyyy, so, you know, I was like "this mod is good, but does not feel polished", so I decided that I would go through any details of it and correct anything that looked bad,
 And here we are with a new versions that is fixing and adding a lot of needed utilities and things!
-Anyway, this took me long enough time and I have to listen to *TAF (The Aura Farmer)* - Horror Skunx because I'm a gen Z guy... have a great day!
+Anyway, this took me long enough time and I have to listen to *TAF (The Aura Farmer)* - Horror Skunx because I'm a gen Z boy... have a great day!
 
 ## [5.0.1] 
 
