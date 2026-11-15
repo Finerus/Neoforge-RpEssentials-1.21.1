@@ -566,7 +566,7 @@
   "GUI Feedback.categoryBlockedEquipment": "Blocked equipment",
   "GUI Feedback.categoryContainers": "Container restrictions",
   "GUI Feedback.professionInvalid": "§c[RpEssentials] Invalid ID or name.",
-  "GUI Feedback.professionReserved": "§c[RpEssentials] This ID is reserved (role or staff tag).",
+  "GUI Feedback.professionReserved": "§c[RpEssentials] This ID is already used by a role.",
   "GUI Feedback.professionCreated": "§a[RpEssentials] Profession §e{id} §acreated.",
   "GUI Feedback.professionUpdated": "§a[RpEssentials] Profession §e{id} §aupdated.",
   "GUI Feedback.professionSummary": "§7  §6Name: §f{name}  §6Color: {color}■§r",

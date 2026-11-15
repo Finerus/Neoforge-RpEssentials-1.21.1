@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 
 ### Breaking Changes
 
+* **Roles and permissions merged:** the `Roles` section of `rpessentials-core.toml` moved into `Permissions System`, and `staffTags` / `luckPermsStaffGroups` are gone: being staff now only comes from a role with `isStaff` (or `opLevelBypass`). Old files are updated automatically at startup (see Migration Notes).
 * **World border shape:** the new `worldBorderShape` option defaults to `SQUARE`. Existing servers switch from a circular limit to a square one, where `worldBorderDistance` is half of the side. Set it to `CIRCLE` to keep the previous behavior.
 * **Network:** `ConfigGuiFilesPacket`, `SyncTooltipPacket`, `ManagePlayerPacket` (new tempban action), the nametag packets and the history packets changed or were added. Server and clients must run the same version.
 
@@ -139,6 +140,11 @@ All notable changes to this project will be documented in this file.
 
 ### Migration Notes
 
+* **Automatic config migration** (at startup, before the files are read, in `config/rpessentials` and `defaultconfigs/rpessentials`; each changed file is first copied to `<name>.bak-migration`, and every change is written in the server log with `[Migration]`):
+  * `roles`, `luckPermsSync` and `luckPermsImportAllGroups` move from `Roles` to `Permissions System`.
+  * Each name of `staffTags` (and of `luckPermsStaffGroups` when `useLuckPermsGroups` was true) gets `isStaff` through the role of the same name: added to the role when it exists, otherwise a role `name;name;isStaff` is created. The same players stay staff. With LuckPerms and `luckPermsSync`, a created role also creates its LuckPerms group.
+  * Pre 4.2.0 files: `diceRollFormat` and `diceRollSpyFormat` move from the RP file to the messages file.
+  * Per world overrides in `<world>/serverconfig/rpessentials` are not migrated: update them by hand if you use them.
 * New options are added to the existing config files automatically. Review `worldBorderShape` before updating a server in production.
 * `messageSource` defaults to `CONFIG`: existing message customizations keep working.
 * Entries written as `item|dim=...` or `item|zone=...` are only enforced by the server.

@@ -1885,7 +1885,7 @@ public class MessagesConfig {
         GUI_CAT_BLOCKED_EQUIPMENT = BUILDER.comment("Category label.").define("categoryBlockedEquipment", "Blocked equipment");
         GUI_CAT_CONTAINERS = BUILDER.comment("Category label.").define("categoryContainers", "Container restrictions");
         GUI_PROF_INVALID = BUILDER.comment("Profession editor: invalid ID or name.").define("professionInvalid", "§c[RpEssentials] Invalid ID or name.");
-        GUI_PROF_RESERVED = BUILDER.comment("Profession editor: reserved ID.").define("professionReserved", "§c[RpEssentials] This ID is reserved (role or staff tag).");
+        GUI_PROF_RESERVED = BUILDER.comment("Profession editor: reserved ID.").define("professionReserved", "§c[RpEssentials] This ID is already used by a role.");
         GUI_PROF_CREATED = BUILDER.comment("Placeholder: {id}").define("professionCreated", "§a[RpEssentials] Profession §e{id} §acreated.");
         GUI_PROF_UPDATED = BUILDER.comment("Placeholder: {id}").define("professionUpdated", "§a[RpEssentials] Profession §e{id} §aupdated.");
         GUI_PROF_SUMMARY = BUILDER.comment("Placeholders: {name} {color} (color code)").define("professionSummary", "§7  §6Name: §f{name}  §6Color: {color}■§r");

@@ -35,10 +35,8 @@ public class RpEssentialsConfig {
     public static final ModConfigSpec.BooleanValue LP_SYNC_IMPORT_ALL_GROUPS;
 
     // === PERMISSIONS ===
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> STAFF_TAGS;
     public static final ModConfigSpec.IntValue OP_LEVEL_BYPASS;
     public static final ModConfigSpec.BooleanValue USE_LUCKPERMS_GROUPS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> LUCKPERMS_STAFF_GROUPS;
 
     // === WORLD BORDER & ZONES ===
     public static final ModConfigSpec.BooleanValue ENABLE_WORLD_BORDER_WARNING;
@@ -191,12 +189,6 @@ public class RpEssentialsConfig {
         // =========================================================================
         BUILDER.push("Permissions System");
 
-        STAFF_TAGS = BUILDER
-                .comment("LuckPerms tags/groups considered as staff.")
-                .defineList("staffTags",
-                        Arrays.asList("admin", "moderator", "staff"),
-                        obj -> obj instanceof String);
-
         OP_LEVEL_BYPASS = BUILDER
                 .comment("Minimum OP level for a player to be considered staff (staff commands).",
                         "It does NOT bypass profession restrictions: use the professionWhitelist role permission for that.",
@@ -204,14 +196,49 @@ public class RpEssentialsConfig {
                 .defineInRange("opLevelBypass", 3, 0, 4);
 
         USE_LUCKPERMS_GROUPS = BUILDER
-                .comment("If true, uses LuckPerms groups to determine staff status.")
+                .comment("If true, the LuckPerms groups of a player give them the role of the same name (and the",
+                        "rpessentials.<permission> nodes count, see luckPermsSync). If false, only the vanilla tags",
+                        "(/tag <player> add <role>) give roles. Ignored if LuckPerms is absent.")
                 .define("useLuckPermsGroups", true);
 
-        LUCKPERMS_STAFF_GROUPS = BUILDER
-                .comment("LuckPerms groups considered as staff. Only used if useLuckPermsGroups = true.")
-                .defineList("luckPermsStaffGroups",
-                        Arrays.asList("admin", "moderator", "staff"),
-                        obj -> obj instanceof String);
+        ROLES = BUILDER
+                .comment("Role definitions with their associated permissions (replace the old staffTags and luckPermsStaffGroups).",
+                        "A player has a role when they have the vanilla tag of its id, or the LuckPerms group of its id.",
+                        "Format: id;luckpermsGroup;perm1,perm2,...",
+                        "",
+                        "Available permissions:",
+                        "  isStaff                : access to staff commands",
+                        "  tabWhitelist           : always visible in the tab list, bypassing distance and obfuscation (Always Visible)",
+                        "  scheduleWhitelist      : can connect outside server hours",
+                        "  professionWhitelist    : bypasses profession restrictions",
+                        "  seeNicknames           : sees 'Nickname (RealName)' in tab",
+                        "  seeAll                 : sees all players clearly in tab regardless of range",
+                        "  bypassWorldBorder      : not teleported by world border",
+                        "  spyMessages            : receives spy messages (proximity chat, RP actions)",
+                        "  bypassAutoUnwhitelist  : never removed by auto-unwhitelist",
+                        "  bypassDeathRpWhitelist : death RP does not remove them from whitelist")
+                .defineList("roles",
+                        java.util.Arrays.asList(
+                                "admin;admin;isStaff,professionWhitelist,scheduleWhitelist,seeNicknames,seeAll,bypassWorldBorder,spyMessages,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
+                                "moderator;moderator;isStaff,scheduleWhitelist,professionWhitelist,seeNicknames,bypassWorldBorder,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
+                                "builder;builder;scheduleWhitelist,professionWhitelist,bypassWorldBorder,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
+                                "player;player"
+                        ),
+                        obj -> obj instanceof String && ((String) obj).contains(";"));
+
+        LP_SYNC_ENABLED = BUILDER
+                .comment("Two way sync between the roles and the LuckPerms groups.",
+                        "Each role permission is mirrored as a rpessentials.<permission> node (e.g. rpessentials.seeall)",
+                        "on the LuckPerms group of the role. Roles created here appear in LuckPerms, and groups holding",
+                        "rpessentials.* nodes appear here as roles. Nodes given directly to a player are also applied.",
+                        "Ignored if LuckPerms is absent.")
+                .define("luckPermsSync", true);
+
+        LP_SYNC_IMPORT_ALL_GROUPS = BUILDER
+                .comment("If true, every LuckPerms group becomes a role, even without any rpessentials.* node.",
+                        "If false, a group becomes a role as soon as it holds at least one rpessentials.* node.",
+                        "When true, deleting a role here has no lasting effect unless the LuckPerms group is deleted too.")
+                .define("luckPermsImportAllGroups", false);
 
         BUILDER.pop(); // Permissions System
 
@@ -451,50 +478,6 @@ public class RpEssentialsConfig {
 
         BUILDER.pop(); // DeathRP
 
-        // =========================================================================
-        // ROLES
-        // =========================================================================
-        BUILDER.push("Roles");
-
-        ROLES = BUILDER
-                .comment("Role definitions with their associated permissions.",
-                        "Format: id;luckpermsGroup;perm1,perm2,...",
-                        "",
-                        "Available permissions:",
-                        "  isStaff                : access to staff commands",
-                        "  tabWhitelist           : always visible in the tab list, bypassing distance and obfuscation (Always Visible)",
-                        "  scheduleWhitelist      : can connect outside server hours",
-                        "  professionWhitelist    : bypasses profession restrictions",
-                        "  seeNicknames           : sees 'Nickname (RealName)' in tab",
-                        "  seeAll                 : sees all players clearly in tab regardless of range",
-                        "  bypassWorldBorder      : not teleported by world border",
-                        "  spyMessages            : receives spy messages (proximity chat, RP actions)",
-                        "  bypassAutoUnwhitelist  : never removed by auto-unwhitelist",
-                        "  bypassDeathRpWhitelist : death RP does not remove them from whitelist")
-                .defineList("roles",
-                        java.util.Arrays.asList(
-                                "admin;admin;isStaff,professionWhitelist,scheduleWhitelist,seeNicknames,seeAll,bypassWorldBorder,spyMessages,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
-                                "moderator;moderator;isStaff,scheduleWhitelist,professionWhitelist,seeNicknames,bypassWorldBorder,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
-                                "builder;builder;scheduleWhitelist,professionWhitelist,bypassWorldBorder,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
-                                "player;player"
-                        ),
-                        obj -> obj instanceof String && ((String) obj).contains(";"));
-
-        LP_SYNC_ENABLED = BUILDER
-                .comment("Two way sync between the roles and the LuckPerms groups.",
-                        "Each role permission is mirrored as a rpessentials.<permission> node (e.g. rpessentials.seeall)",
-                        "on the LuckPerms group of the role. Roles created here appear in LuckPerms, and groups holding",
-                        "rpessentials.* nodes appear here as roles. Nodes given directly to a player are also applied.",
-                        "Ignored if LuckPerms is absent.")
-                .define("luckPermsSync", true);
-
-        LP_SYNC_IMPORT_ALL_GROUPS = BUILDER
-                .comment("If true, every LuckPerms group becomes a role, even without any rpessentials.* node.",
-                        "If false, a group becomes a role as soon as it holds at least one rpessentials.* node.",
-                        "When true, deleting a role here has no lasting effect unless the LuckPerms group is deleted too.")
-                .define("luckPermsImportAllGroups", false);
-
-        BUILDER.pop(); // Roles
 
         BUILDER.push("Backups");
 

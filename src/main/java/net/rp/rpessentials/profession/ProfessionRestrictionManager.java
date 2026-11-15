@@ -339,9 +339,6 @@ public class ProfessionRestrictionManager {
             for (String e : RpEssentialsConfig.ROLES.get()) {
                 if (e.split(";", 2)[0].trim().equalsIgnoreCase(id)) return true;
             }
-            for (String t : RpEssentialsConfig.STAFF_TAGS.get()) {
-                if (t.equalsIgnoreCase(id)) return true;
-            }
         }
         return false;
     }

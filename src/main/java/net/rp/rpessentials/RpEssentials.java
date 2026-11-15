@@ -82,6 +82,8 @@ public class RpEssentials {
     private final java.util.concurrent.atomic.AtomicBoolean refreshPending = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public RpEssentials(IEventBus modEventBus, ModContainer modContainer) {
+        // Old config layouts are updated before NeoForge reads (and corrects) the files.
+        net.rp.rpessentials.core.ConfigMigration.run();
 
         modContainer.registerConfig(ModConfig.Type.SERVER, RpEssentialsConfig.SPEC, "rpessentials/rpessentials-core.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ChatConfig.SPEC,         "rpessentials/rpessentials-chat.toml");

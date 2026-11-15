@@ -404,7 +404,7 @@
   "GUI Feedback.categoryBlockedEquipment": "Équipement bloqué",
   "GUI Feedback.categoryContainers": "Restrictions de conteneurs",
   "GUI Feedback.professionInvalid": "§c[RpEssentials] ID ou nom invalide.",
-  "GUI Feedback.professionReserved": "§c[RpEssentials] Cet ID est réservé (rôle ou tag staff).",
+  "GUI Feedback.professionReserved": "§c[RpEssentials] Cet ID est déjà utilisé par un rôle.",
   "GUI Feedback.professionCreated": "§a[RpEssentials] Métier §e{id} §acréé.",
   "GUI Feedback.professionUpdated": "§a[RpEssentials] Métier §e{id} §amis à jour.",
   "GUI Feedback.professionSummary": "§7  §6Nom : §f{name}  §6Couleur : {color}■§r",

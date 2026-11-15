@@ -121,15 +121,6 @@ public class RpEssentialsRoleManager {
             if (rolePerms != null) result.addAll(rolePerms);
         }
         if (Cfg.ready(RpEssentialsConfig.SPEC)) {
-            for (String staffTag : RpEssentialsConfig.STAFF_TAGS.get()) {
-                if (playerTags.contains(staffTag)) {
-                    result.add(Permission.IS_STAFF);
-                    break;
-                }
-            }
-        }
-
-        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             if (!RpEssentialsConfig.USE_LUCKPERMS_GROUPS.get()) return result;
         }
 
@@ -141,16 +132,11 @@ public class RpEssentialsRoleManager {
                 Set<Permission> primaryPerms = rolePermissions.get(primary);
                 if (primaryPerms != null) result.addAll(primaryPerms);
 
-                List<? extends String> staffGroups = List.of();
-                staffGroups = Cfg.get(RpEssentialsConfig.LUCKPERMS_STAFF_GROUPS, staffGroups);
-                if (staffGroups.contains(primary)) result.add(Permission.IS_STAFF);
-
                 for (net.luckperms.api.model.group.Group group :
                         user.getInheritedGroups(user.getQueryOptions())) {
                     String name = group.getName().toLowerCase();
                     Set<Permission> groupPerms = rolePermissions.get(name);
                     if (groupPerms != null) result.addAll(groupPerms);
-                    if (staffGroups.contains(name)) result.add(Permission.IS_STAFF);
                 }
 
                 boolean nodes = true;
