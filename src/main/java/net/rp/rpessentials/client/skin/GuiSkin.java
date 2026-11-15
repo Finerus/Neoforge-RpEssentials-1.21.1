@@ -42,7 +42,7 @@ public final class GuiSkin {
         if (Cfg.ready(ClientConfig.SPEC)) {
             return ClientConfig.GUI_STYLE.get() == ClientConfig.GuiStyle.TEXTURED;
         } else {
-            return true;
+            return false;
         }
     }
 
