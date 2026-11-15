@@ -101,6 +101,7 @@ All notable changes to this project will be documented in this file.
 * **Config values:** `true` / `false` options refused anything else (a typo used to become `false`), and values are checked against the rules of each option (allowed words, list checks), in the Config Manager too.
 * **`config set zoneMessageMode`** refused `TITLE` and `IMMERSIVE:<preset>`, which the option accepts.
 * **Rotating icons:** `*` patterns and `#tags` show their items in turn again in the restriction lists.
+* **Manage and History tabs:** their list stops above a separator instead of running behind the Close button.
 * **Notes tab:** the "New note" text no longer shows behind the note field (twice); the field and its buttons are aligned with Close and have the same height. Same layout for the closing note of reports.
 * **Allowing a globally blocked entry:** the profession choice is a check list with a confirm button.
 * **Config not loaded yet:** saving a config value (commands, schedule, profession editor) before the server config was loaded threw an error that the old checks did not catch.

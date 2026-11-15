@@ -764,7 +764,7 @@ public class PlayerProfileScreen extends Screen {
         boolean self = selectedIsSelf();
         int gap = UiLayout.GAP;
         if (manageList == null) manageList = new ButtonRowList(Minecraft.getInstance(), MANAGE_ROW_H);
-        manageList.layout(formX - 6, y, formW + 12, this.height - 16 - y);
+        manageList.layout(formX - 6, y, formW + 12, this.height - FOOTER_LIST_GAP - y);
         int rowW = manageList.rowWidth();
         List<ButtonRowList.Row> rows = new ArrayList<>();
 
@@ -1013,8 +1013,8 @@ public class PlayerProfileScreen extends Screen {
             case 0 -> renderProfileTab(g, formX, formRight - formX - MARGIN, contentY, sel);
             case 1 -> renderStatsTab(g, formX, formRight, contentY, sel);
             case 2 -> renderNotesTab(g, formX, formRight, contentY, sel);
-            case 3 -> renderManageTab(g, formX, contentY, sel);
-            case 4 -> {} // History: list widget, drawn with the other widgets
+            case 3 -> { renderManageTab(g, formX, contentY, sel); renderFooterSeparator(g, formX, formRight); }
+            case 4 -> renderFooterSeparator(g, formX, formRight); // History: list widget + separator above Close
             case 5 -> renderFooterSeparator(g, formX, formRight); // Reports: list widget + footer field
         }
 
@@ -1172,7 +1172,7 @@ public class PlayerProfileScreen extends Screen {
     private void buildHistoryList(int formX, int formW, int contentY) {
         if (players.isEmpty()) return;
         if (historyList == null) historyList = new TextLinesList(Minecraft.getInstance());
-        historyList.layout(formX, contentY, formW, this.height - 40 - contentY);
+        historyList.layout(formX, contentY, formW, this.height - FOOTER_LIST_GAP - contentY);
         java.util.UUID id = selectedData().uuid();
         historyList.setLines(id, historyLines(id));
         addRenderableWidget(historyList);
