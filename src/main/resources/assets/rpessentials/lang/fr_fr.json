@@ -405,5 +405,19 @@
   "rpessentials.gui.sheet.editor.tool.bold": "Gras (**texte**)",
   "rpessentials.gui.sheet.editor.tool.italic": "Italique (*texte*)",
   "rpessentials.gui.sheet.editor.tool.underline": "Souligné (__texte__)",
-  "rpessentials.gui.sheet.editor.tool.strike": "Barré (~~texte~~)"
+  "rpessentials.gui.sheet.editor.tool.strike": "Barré (~~texte~~)",
+  "rpessentials.gui.color.custom_hint": "Ta couleur (à gérer avec le carré +)",
+  "rpessentials.gui.color.add_tooltip": "Ajouter ou supprimer tes propres couleurs (code hex)",
+  "rpessentials.gui.color.custom_title": "Mes couleurs",
+  "rpessentials.gui.color.custom_subtitle": "Enregistrées sur ton ordinateur, visibles dans toutes les palettes.",
+  "rpessentials.gui.color.custom_none": "Aucune couleur ajoutée pour l'instant.",
+  "rpessentials.gui.color.delete_tooltip": "Supprimer cette couleur",
+  "rpessentials.gui.color.confirm_delete": "Clique à nouveau pour la supprimer.",
+  "rpessentials.gui.color.field_name": "Nom",
+  "rpessentials.gui.color.field_hex": "Code hex",
+  "rpessentials.gui.color.name_hint": "Nom (ex. Bordeaux)",
+  "rpessentials.gui.color.btn_add": "§aAjouter cette couleur",
+  "rpessentials.gui.color.btn_close": "Retour",
+  "rpessentials.gui.color.add_header": "Nouvelle couleur :",
+  "rpessentials.gui.color.bad_hex": "6 chiffres hex attendus"
 }

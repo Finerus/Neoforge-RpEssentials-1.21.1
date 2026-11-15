@@ -56,15 +56,27 @@ public class SheetTextEditorScreen extends Screen {
         // ── Toolbar: colors, reset, then markdown formats ─────────────────────
         int x = margin;
         int y = 26;
-        for (int i = 1; i < ColorPalette.CHARS.length; i++) {
-            final char code = ColorPalette.CHARS[i];
-            addRenderableWidget(Button.builder(Component.literal("§" + code + "■"), b -> insert("&" + code))
-                    .pos(x, y).size(SWATCH, SWATCH)
-                    .tooltip(Tooltip.create(Component.literal(ColorPalette.name(i) + " §8(&" + code + ")")))
-                    .build(SkinnedButton::new));
+        // Same palette as the nickname and profession colors (custom colors included), without "none".
+        int colors = ColorPalette.count();
+        for (int i = 1; i <= colors; i++) {
+            if (x + SWATCH > this.width - margin) { x = margin; y += SWATCH + 2; }
+            if (i == colors) {
+                addRenderableWidget(Button.builder(Component.literal("§a+"),
+                                b -> Minecraft.getInstance().setScreen(new CustomColorsScreen(this)))
+                        .pos(x, y).size(SWATCH, SWATCH)
+                        .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.color.add_tooltip")))
+                        .build(SkinnedButton::new));
+            } else {
+                final String code = ColorPalette.code(i);
+                addRenderableWidget(Button.builder(ColorPalette.label(i, false, null), b -> insert(code))
+                        .pos(x, y).size(SWATCH, SWATCH)
+                        .tooltip(Tooltip.create(ColorPalette.tooltip(i)))
+                        .build(SkinnedButton::new));
+            }
             x += SWATCH + 1;
         }
         x += 4;
+        if (x + 24 > this.width - margin) { x = margin; y += SWATCH + 2; }
         addRenderableWidget(tool("§7&r", "reset", 22, () -> insert("&r"), x, y));
         x += 24;
         int fy = y;

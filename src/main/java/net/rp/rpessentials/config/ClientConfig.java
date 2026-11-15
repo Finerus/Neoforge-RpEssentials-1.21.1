@@ -9,6 +9,7 @@ public final class ClientConfig {
 
     public static final ModConfigSpec SPEC;
     public static final ModConfigSpec.EnumValue<GuiStyle> GUI_STYLE;
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> CUSTOM_COLORS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -18,6 +19,10 @@ public final class ClientConfig {
                         "TEXTURED: drawn textures (textures/gui/sprites), the classic look is used for any missing texture.",
                         "LEGACY: the classic flat look. Can also be switched with the button at the top right of each screen.")
                 .defineEnum("guiStyle", GuiStyle.TEXTURED);
+        CUSTOM_COLORS = b
+                .comment("Your own colors in the color palettes (nickname, profession, character sheet), as Name;RRGGBB.",
+                        "Added and removed with the + square of the palette. Example: [\"Burgundy;800020\"]")
+                .defineList("customColors", java.util.List.of(), o -> o instanceof String);
         b.pop();
         SPEC = b.build();
     }

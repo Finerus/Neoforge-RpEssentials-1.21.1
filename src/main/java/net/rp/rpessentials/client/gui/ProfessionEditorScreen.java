@@ -382,14 +382,8 @@ public class ProfessionEditorScreen extends Screen {
         y = r.colorY();
 
         ColorPalette.Dims pal = ColorPalette.dims(formW, this.height);
-        for (int i = 0; i < ColorPalette.CHARS.length; i++) {
-            final int idx = i;
-            Button.Builder cb = Button.builder(Component.literal(ColorPalette.label(idx, idx == profColorIndex, pal)),
-                            btn -> { profColorIndex = idx; profDirty = true; rebuild(); })
-                    .pos(pal.x(formX, i), pal.y(y + 14, i)).size(pal.btnW(), pal.btnH());
-            if (pal.swatches()) cb.tooltip(Tooltip.create(Component.literal(ColorPalette.name(idx))));
-            addRenderableWidget(cb.build(SkinnedButton::new));
-        }
+        ColorPalette.addButtons(this::addRenderableWidget, pal, formX, y + 14,
+                idx -> { profColorIndex = idx; profDirty = true; rebuild(); }, this);
         y = r.tabsY();
 
         int tabW = UiLayout.cellW(formW, PROF_TAB_KEYS.length, UiLayout.TAB_GAP);
@@ -1056,7 +1050,7 @@ public class ProfessionEditorScreen extends Screen {
             }
         }
 
-        String colorCode = profColorIndex == 0 ? "" : "&" + COLOR_CHARS[profColorIndex];
+        String colorCode = ColorPalette.code(profColorIndex);
         PacketDistributor.sendToServer(new SaveProfessionPacket(id, name, colorCode,
                 new ArrayList<>(allowedCrafts), new ArrayList<>(allowedBlocks),
                 new ArrayList<>(allowedItems), new ArrayList<>(allowedEquipment), profStateIsNew));
@@ -1088,12 +1082,7 @@ public class ProfessionEditorScreen extends Screen {
         OpenProfessionGuiPacket.ProfessionEntry e = existingProfessions.get(index);
         profStateId   = e.id();
         profStateName = e.displayName();
-        profColorIndex = 0;
-        String codeChar = e.color().replace("&", "").replace("§", "");
-        if (!codeChar.isEmpty()) {
-            for (int i = 1; i < COLOR_CHARS.length; i++)
-                if (String.valueOf(COLOR_CHARS[i]).equals(codeChar)) { profColorIndex = i; break; }
-        }
+        profColorIndex = ColorPalette.ensure(ColorPalette.leadingCode(e.color()));
         allowedCrafts    = new ArrayList<>(e.allowedCrafts());
         allowedBlocks    = new ArrayList<>(e.allowedBlocks());
         allowedItems     = new ArrayList<>(e.allowedItems());

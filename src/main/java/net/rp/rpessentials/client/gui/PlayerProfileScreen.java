@@ -433,14 +433,8 @@ public class PlayerProfileScreen extends Screen {
 
         // --- Palette de couleurs ---
         ColorPalette.Dims pal = ColorPalette.dims(formW, this.height);
-        for (int i = 0; i < ColorPalette.CHARS.length; i++) {
-            final int ci = i;
-            Button.Builder cb = Button.builder(Component.literal(ColorPalette.label(ci, ci == stateNickColorIndex, pal)),
-                            btn -> { stateNickColorIndex = ci; rebuild(); })
-                    .pos(pal.x(formX, i), pal.y(y, i)).size(pal.btnW(), pal.btnH());
-            if (pal.swatches()) cb.tooltip(Tooltip.create(Component.literal(ColorPalette.name(ci))));
-            addRenderableWidget(cb.build(SkinnedButton::new));
-        }
+        ColorPalette.addButtons(this::addRenderableWidget, pal, formX, y,
+                ci -> { stateNickColorIndex = ci; rebuild(); }, this);
         y += pal.height() + 8;
 
         // --- Role ---
@@ -1223,11 +1217,10 @@ public class PlayerProfileScreen extends Screen {
         OpenPlayerProfileGuiPacket.PlayerData p = players.get(idx);
         String rawNick = p.currentNick();
         stateNickColorIndex = 0;
-        if (rawNick.startsWith("§") && rawNick.length() > 1) {
-            char c = rawNick.charAt(1);
-            for (int i = 1; i < COLOR_CHARS.length; i++) {
-                if (COLOR_CHARS[i] == c) { stateNickColorIndex = i; rawNick = rawNick.substring(2); break; }
-            }
+        String lead = ColorPalette.leadingCode(rawNick);
+        if (!lead.isEmpty()) {
+            int colorIdx = ColorPalette.ensure(lead);
+            if (colorIdx > 0) { stateNickColorIndex = colorIdx; rawNick = rawNick.substring(lead.length()); }
         }
         stateNick = rawNick.replace('§', '&');
         stateRole  = p.currentRole();
@@ -1245,7 +1238,7 @@ public class PlayerProfileScreen extends Screen {
                 ? ""
                 : stateNickColorIndex == 0
                 ? stateNick.trim()
-                : "§" + COLOR_CHARS[stateNickColorIndex] + stateNick.trim();
+                : ColorPalette.code(stateNickColorIndex).replace('&', '§') + stateNick.trim();
 
         PacketDistributor.sendToServer(new SetPlayerProfilePacket(
                 target.uuid(), finalNick, stateRole.trim(), "", false, false, 0));

@@ -88,7 +88,7 @@ public record SaveProfessionPacket(
             String cleanName = packet.displayName().trim().replace("&", "§").replace(";", "");
             if (cleanName.length() > 48) cleanName = cleanName.substring(0, 48);
             String cleanColor = packet.color().trim().replace("&", "§");
-            if (!cleanColor.matches("(§[0-9a-f])?")) cleanColor = "";
+            if (!cleanColor.matches("(§[0-9a-f]|§#[0-9a-fA-F]{6})?")) cleanColor = "";
             List<String> crafts = PacketValidation.cleanItems(packet.allowedCrafts());
             List<String> blocks = PacketValidation.cleanItems(packet.allowedBlocks());
             List<String> items = PacketValidation.cleanItems(packet.allowedItems());

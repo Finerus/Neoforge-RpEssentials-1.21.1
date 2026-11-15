@@ -141,7 +141,8 @@ public final class ClientTooltipRestrictions {
         label = I18n.get("rpessentials.tooltip.restriction." + label);
         String profs = required.isEmpty() ? "§8-" : String.join("§7, ", required);
         String sc = scope.isEmpty() ? "" : " §8(" + scope + ")";
-        return Component.literal("§7" + label + ": " + mark + sc + "§8: §7" + profs);
+        // Parsed (not literal): profession names may use hex colors (§#RRGGBB) or gradients.
+        return net.rp.rpessentials.util.ColorHelper.parseSection("§7" + label + ": " + mark + sc + "§8: §7" + profs);
     }
 
     /**

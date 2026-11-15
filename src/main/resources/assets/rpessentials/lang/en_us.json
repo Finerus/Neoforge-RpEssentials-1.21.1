@@ -405,5 +405,19 @@
   "rpessentials.gui.sheet.editor.tool.bold": "Bold (**text**)",
   "rpessentials.gui.sheet.editor.tool.italic": "Italic (*text*)",
   "rpessentials.gui.sheet.editor.tool.underline": "Underline (__text__)",
-  "rpessentials.gui.sheet.editor.tool.strike": "Strikethrough (~~text~~)"
+  "rpessentials.gui.sheet.editor.tool.strike": "Strikethrough (~~text~~)",
+  "rpessentials.gui.color.custom_hint": "Your color (managed with the + square)",
+  "rpessentials.gui.color.add_tooltip": "Add or remove your own colors (hex code)",
+  "rpessentials.gui.color.custom_title": "My colors",
+  "rpessentials.gui.color.custom_subtitle": "Saved on your computer, shown in every color palette.",
+  "rpessentials.gui.color.custom_none": "No color added yet.",
+  "rpessentials.gui.color.delete_tooltip": "Remove this color",
+  "rpessentials.gui.color.confirm_delete": "Click again to remove it.",
+  "rpessentials.gui.color.field_name": "Name",
+  "rpessentials.gui.color.field_hex": "Hex code",
+  "rpessentials.gui.color.name_hint": "Name (e.g. Burgundy)",
+  "rpessentials.gui.color.btn_add": "§aAdd this color",
+  "rpessentials.gui.color.btn_close": "Back",
+  "rpessentials.gui.color.add_header": "New color:",
+  "rpessentials.gui.color.bad_hex": "6 hex digits expected"
 }
