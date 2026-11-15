@@ -262,23 +262,31 @@ public class ConfigManagerScreen extends Screen {
             String problem = problemOf(entry, editBoxValues.getOrDefault(entry.fullPath(), entry.currentValue()));
             row.block(GuiSkin.LIST_ROW, problem != null ? 0x55FF3333 : isPending ? 0x33FFAA00 : 0x22FFFFFF, 0, 1);
 
-            // Key label; hovering it shows the comment of the option (and what is expected when the value is wrong).
+            // Key label and ℹ icon; hovering either shows the comment of the option
+            // (and what is expected when the value is wrong).
             String keyLabel = (problem != null ? "⚠ " : "") + formatKeyName(entry.key());
             int labelColor = problem != null ? 0xFF6666 : isPending ? 0xFFDD44 : 0xCCCCCC;
             net.minecraft.client.gui.components.StringWidget label = new net.minecraft.client.gui.components.StringWidget(
                     this.font.width(keyLabel), 9, Component.literal(keyLabel).withStyle(s -> s.withColor(labelColor)), this.font);
+            Tooltip tip = null;
             if (problem != null) {
-                net.minecraft.network.chat.MutableComponent tip = Component.translatable(
+                net.minecraft.network.chat.MutableComponent text = Component.translatable(
                         "rpessentials.gui.config.invalid_tooltip", problem).withStyle(net.minecraft.ChatFormatting.RED);
                 if (!entry.comment().isBlank()) {
-                    tip.append(Component.literal("\n\n" + entry.comment()).withStyle(net.minecraft.ChatFormatting.WHITE));
+                    text.append(Component.literal("\n\n" + entry.comment()).withStyle(net.minecraft.ChatFormatting.WHITE));
                 }
-                label.setTooltip(Tooltip.create(tip));
-            } else if (!entry.comment().isBlank()) label.setTooltip(Tooltip.create(Component.literal(entry.comment())));
+                tip = Tooltip.create(text);
+            } else if (!entry.comment().isBlank()) {
+                tip = Tooltip.create(Component.literal(entry.comment()));
+            }
+            label.setTooltip(tip);
             row.add(label, 18, 6);
             int infoX = 18 + this.font.width(keyLabel) + 4;
             if (!entry.comment().isBlank()) {
-                row.text("§8ℹ", infoX, 6);
+                net.minecraft.client.gui.components.StringWidget info = new net.minecraft.client.gui.components.StringWidget(
+                        this.font.width("ℹ"), 9, Component.literal("ℹ").withStyle(net.minecraft.ChatFormatting.DARK_GRAY), this.font);
+                info.setTooltip(tip);
+                row.add(info, infoX, 6);
                 infoX += 10;
             }
             if (entry.hasRange()) {

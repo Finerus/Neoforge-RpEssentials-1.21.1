@@ -49,7 +49,7 @@ public class LastConnectionManager {
         /** Playtime cumulatif en millisecondes. Ajouté en 4.1.6, défaut 0 (rétrocompat). */
         public long totalPlaytimeMs = 0L;
         public long lastLoginMs = 0L;
-        /** First login seen by the mod (epoch ms). 0 = unknown (player not seen since 5.1.0). */
+        /** First login seen by the mod (epoch ms). 0 = unknown (player not seen since 6.0.0). */
         public long firstLoginMs = 0L;
         /** Number of logins since the mod tracks them. */
         public int loginCount = 0;
@@ -349,7 +349,7 @@ public class LastConnectionManager {
 
     /**
      * First login of a player who has no recorded one: the creation date of their save file when it is
-     * clearly older than this login (players who joined before 5.1.0), otherwise now.
+     * clearly older than this login (players who joined before 6.0.0), otherwise now.
      */
     private static long firstSeen(ServerPlayer player, long now) {
         try {

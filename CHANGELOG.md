@@ -1,7 +1,7 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
-## [5.1.0]
+## [6.0.0]
 
 ### Breaking Changes
 
@@ -60,7 +60,7 @@ All notable changes to this project will be documented in this file.
 
 ### Improved
 
-* **Config Manager:** values not accepted (wrong word, not a number, out of range, not `true` / `false`) turn red while typing; Apply sends nothing while one is wrong (red rows, message in the chat). The ↺ reset button and Discard ask for a second click.
+* **Config Manager:** values not accepted (wrong word, not a number, out of range, not `true` / `false`) turn red while typing; Apply sends nothing while one is wrong (red rows, message in the chat). The ↺ reset button and Discard ask for a second click. Hovering the ℹ icon shows the option comment, like hovering its name.
 * **Save with an empty required field** (profession ID or name, role ID) frames the field in red and says so in the chat, instead of doing nothing.
 * **Player Profile:** the player list shows `Nickname (RealName)` with the nickname in its colors and the real name in grey; the selected player is in bold. The Stats tab shows the "Nicknames history" with `(current)` after the nickname the player has now. The Reports tab is no longer further from the others (tabs share the leftover pixels).
 * **`/rp annonce`:** the title, subtitle and chat formats accept the staff member who announces (`{nick}`, `{real}`, `{nick_real}`, `{player}`); the default formats now show `{nick}` (remove it to hide the name).
@@ -150,11 +150,9 @@ All notable changes to this project will be documented in this file.
 * Entries written as `item|dim=...` or `item|zone=...` are only enforced by the server.
 
 ### Personal notes
-
-Hi, so hum, as hard as it is to believe, it's not considered as a major update... Even if the changelog is huuuuugggeeee, it's technically just little details.
-I think that as the mod is beginning to be really polished, I have to focus on details and assure that everything is well-connected.
-That's also why I added so much API, when this mod will be finished I will go on other mods but those new mods will probably be connected to RpEssentials so doing that will allow me to connect those mods.
-Anyway, enjoy all those little details!
+Heyyyyy, so, you know, I was like "this mod is good, but does not feel polished", so I decided that I would go through any details of it and correct anything that looked bad,
+And here we are with a new versions that is fixing and adding a lot of needed utilities and things!
+Anyway, this took me long enough time and I have to listen to *TAF (The Aura Farmer)* - Horror Skunx because I'm a gen Z guy... have a great day!
 
 ## [5.0.1] 
 

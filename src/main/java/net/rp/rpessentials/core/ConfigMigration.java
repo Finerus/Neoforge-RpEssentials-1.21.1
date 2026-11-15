@@ -23,9 +23,9 @@ import java.util.Set;
  * <p>
  * Steps (each one only when the old layout is found):
  * <ol>
- *   <li><b>Roles moved into "Permissions System"</b> (5.1.0): the "Roles" section ({@code roles},
+ *   <li><b>Roles moved into "Permissions System"</b> (6.0.0): the "Roles" section ({@code roles},
  *       {@code luckPermsSync}, {@code luckPermsImportAllGroups}) moves into "Permissions System".</li>
- *   <li><b>staffTags and luckPermsStaffGroups removed</b> (5.1.0): each tag / group listed there gets the
+ *   <li><b>staffTags and luckPermsStaffGroups removed</b> (6.0.0): each tag / group listed there gets the
  *       {@code isStaff} permission through a role of the same name (added to the role when it exists,
  *       otherwise a role {@code name;name;isStaff} is created), so the same players stay staff.
  *       {@code luckPermsStaffGroups} only counted when {@code useLuckPermsGroups} was true.</li>
@@ -55,7 +55,7 @@ public final class ConfigMigration {
     }
 
     // =========================================================================
-    // ROLES + PERMISSIONS SYSTEM (5.1.0)
+    // ROLES + PERMISSIONS SYSTEM (6.0.0)
     // =========================================================================
     private static void migrateRoles(Path file) throws Exception {
         if (!Files.isRegularFile(file)) return;

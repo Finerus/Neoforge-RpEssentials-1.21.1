@@ -37,7 +37,7 @@ public final class PlayerStatsLines {
         // ── Activity ─────────────────────────────────────────────────────────
         out.add(ServerLang.get(v, MessagesConfig.STATS_SECTION_ACTIVITY));
         LastConnectionManager.ConnectionEntry ce = LastConnectionManager.getEntry(id);
-        // Recorded since 5.1.0; for a player not seen since, the save file date is the best guess.
+        // Recorded since 6.0.0; for a player not seen since, the save file date is the best guess.
         long first = ce != null && ce.firstLoginMs > 0 ? ce.firstLoginMs : firstJoin(server, id);
         out.add(ServerLang.get(v, MessagesConfig.STATS_FIRST_JOIN, "date", date(v, first), "ago", ago(v, first)));
         long lastLogin = ce != null ? ce.lastLoginMs : 0L;
