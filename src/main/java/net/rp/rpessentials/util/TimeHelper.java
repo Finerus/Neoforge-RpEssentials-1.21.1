@@ -20,7 +20,13 @@ public final class TimeHelper {
 
     private TimeHelper() {}
 
-    public static void reload() { cached = null; }
+    public static void reload() {
+        cached = null;
+        FORMATS.clear();
+    }
+
+    /** One formatter per pattern and thread (SimpleDateFormat is not thread-safe), created once. */
+    private static final java.util.Map<String, ThreadLocal<SimpleDateFormat>> FORMATS = new java.util.concurrent.ConcurrentHashMap<>();
 
     public static ZoneId zone() {
         ZoneId z = cached;
@@ -50,7 +56,15 @@ public final class TimeHelper {
         return f;
     }
 
-    public static String format(String pattern, long epochMs) { return sdf(pattern).format(new Date(epochMs)); }
+    /**
+     * Formats a date with a SimpleDateFormat pattern (the syntax the config comments document).
+     * The formatter is reused instead of being created for each message.
+     */
+    public static String format(String pattern, long epochMs) {
+        if (FORMATS.size() > 64) FORMATS.clear();   // admin patterns are few; never grows without bound
+        ThreadLocal<SimpleDateFormat> local = FORMATS.computeIfAbsent(pattern, p -> ThreadLocal.withInitial(() -> sdf(p)));
+        return local.get().format(new Date(epochMs));
+    }
 
     public static String format(String pattern) { return format(pattern, System.currentTimeMillis()); }
 }

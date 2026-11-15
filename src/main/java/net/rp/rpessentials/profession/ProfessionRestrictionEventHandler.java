@@ -125,6 +125,16 @@ public class ProfessionRestrictionEventHandler {
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (player.isCreative()) return;
+
+        // Container restrictions: only opening the block is refused, the held item can still be used
+        // on it (placing a block against a chest...). Replaces the ServerPlayerGameMode mixin.
+        ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(event.getPos()).getBlock());
+        if (!ProfessionRestrictionManager.canOpenContainer(player, blockId)) {
+            event.setUseBlock(net.neoforged.neoforge.common.util.TriState.FALSE);
+            ProfessionRestrictionManager.notifyBlocked(player, "container",
+                    () -> ProfessionRestrictionManager.getContainerOpenBlockedMessage(player, blockId));
+        }
+
         ItemStack stack = event.getItemStack();
         if (stack.isEmpty()) return;
 

@@ -5,9 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ClientboundPlayerInfoUpdatePacketAccessor",
-    "MixinServerPlayer",
     "MixinServerCommonPacketListenerImpl",
-    "MixinServerGamePacketListenerImpl",
     "MixinPlayerList",
     "MixinEntity",
     "MixinResultSlot",
@@ -17,7 +15,6 @@
     "MixinAnvilMenu",
     "MixinSmithingMenu",
     "MixinItemCombinerMenuBase",
-    "MixinServerPlayerGameMode",
     "MixinDeathMessage",
     "MixinTrackedEntity",
     "ChunkMapAccessor",

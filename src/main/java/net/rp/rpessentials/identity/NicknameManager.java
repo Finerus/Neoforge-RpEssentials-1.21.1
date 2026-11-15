@@ -134,13 +134,28 @@ public class NicknameManager {
             nicknames.put(playerUUID, nickname);
         }
 
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
-            if (target != null) SyncNametagDataPacket.refreshNow(target);
-        }
-
+        refreshOnline(playerUUID);
         saveToFile();
+    }
+
+    /**
+     * Updates an online player after a nickname change: display name (cached by Minecraft, see
+     * RpChatEvents.onNameFormat) and nametag.
+     */
+    private static void refreshOnline(UUID playerUUID) {
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
+        if (target == null) return;
+        target.refreshDisplayName();
+        SyncNametagDataPacket.refreshNow(target);
+    }
+
+    /** Display names of every online player, after a reload or a clear. */
+    private static void refreshAllOnline() {
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) p.refreshDisplayName();
     }
 
     /**
@@ -183,12 +198,7 @@ public class NicknameManager {
         recordChange(playerUUID, null);
         nicknames.remove(playerUUID);
         saveToFile();
-
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
-            if (target != null) SyncNametagDataPacket.refreshNow(target);
-        }
+        refreshOnline(playerUUID);
     }
 
     /**
@@ -233,6 +243,7 @@ public class NicknameManager {
         ensureInitialized();
         nicknames.clear();
         saveToFile();
+        refreshAllOnline();
     }
 
     /**
@@ -256,5 +267,6 @@ public class NicknameManager {
         nicknameFile = null;
         nicknames.clear();
         init();
+        refreshAllOnline();
     }
 }

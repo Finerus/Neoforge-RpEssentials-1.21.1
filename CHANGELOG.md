@@ -98,6 +98,9 @@ All notable changes to this project will be documented in this file.
 * **Restriction patterns:** in a `*` pattern every other character is matched as written, so ids containing `$`, `+`, `(`... no longer break the pattern.
 * **French translations (`MOD` mode):** 149 messages had no French translation and were shown in English (warns, licenses, schedule display, Death RP, last connection, dice...). 7 others were translated under an old section name (`Misc.`) and never found. Every message now exists in both languages.
 * **Restriction tooltips:** profession names with a hex color or a gradient are displayed with their colors instead of showing the code.
+* **Mute:** muted players could talk again when `enableChatFormat` was off; the mute is now checked first, whatever the chat options, and a muted message is dropped before other mods (Discord bridges...) relay it.
+* **Nicknames:** the nickname is the player's display name through the official `PlayerEvent.NameFormat`, so it keeps the hover card and the click-to-/tell of a player name and the scoreboard team formatting, in death messages, advancements and every mod that shows player names.
+* **Container restrictions:** only opening the container is refused; placing a block against a restricted chest works again.
 * **Death RP history purge:** it ran only when the once-a-minute check fell exactly on 3:00 and could miss a day when the server lagged; it now runs once a day as soon as it is 3 AM or later.
 * **Periodic tasks:** an error in one of them (tab blur, world border, schedule...) is logged and no longer stops the others or reaches the server tick.
 * **Config values:** `true` / `false` options refused anything else (a typo used to become `false`), and values are checked against the rules of each option (allowed words, list checks), in the Config Manager too.
@@ -120,9 +123,10 @@ All notable changes to this project will be documented in this file.
 * **Packages:** the classes of the root package moved to `core`, `util`, `lang`, `permission`, `gameplay`, `commands`, `network`, `client` and `items`. The `api` package did not move, but `RpEssentialsAPI` returns `DiceManager` types, now in `gameplay`.
 * **Config access:** `Cfg.ready(spec...)` and `Cfg.get(value, fallback)` replace the `try/catch (IllegalStateException)` blocks around config reads.
 * **Tab list blur:** names are parsed once per player and shared by every viewer; viewers who see everyone only check new players.
+* **Official events instead of mixins:** `MixinServerPlayer` (nickname) -> `PlayerEvent.NameFormat`, `MixinServerGamePacketListenerImpl` (chat) -> `ServerChatEvent` (mute at HIGHEST, format and proximity at LOWEST, in `RpChatEvents`), `MixinServerPlayerGameMode` (containers) -> `RightClickBlock` with `setUseBlock(FALSE)`. Date formatters are created once per pattern instead of for each message.
 * **Server tick:** the periodic tasks are declared in `TickScheduler` (one line each: period, offset, name); the schedule logic moved to `RpEssentialsScheduleManager.tick`.
 * **Commands:** the ~60 hand-written `config set` subcommands were replaced by `ConfigSetCommand` (one generic command).
-* **New classes:** `TickScheduler`, `SaveUi`, `CustomColorsScreen`, `CharacterSheetManager`, `CharacterSheetScreen`, `SheetTextEditorScreen`, `RpText`, `CharacterSheetChangedEvent`, `RequestCharacterSheetPacket`, `CharacterSheetPacket`, `SaveCharacterSheetPacket`, `ConfigSetCommand`, `RestrictionCoverage`, `DiscordWebhook`, `RpDiscordCommands`, `ReportManager`, `ReportService`, `RpReportCommands`, `RequestPlayerReportsPacket`, `PlayerReportsPacket`, `ReportActionPacket`. `OpenPlayerProfileGuiPacket` carries the number of open reports per player.
+* **New classes:** `RpChatEvents`, `TickScheduler`, `SaveUi`, `CustomColorsScreen`, `CharacterSheetManager`, `CharacterSheetScreen`, `SheetTextEditorScreen`, `RpText`, `CharacterSheetChangedEvent`, `RequestCharacterSheetPacket`, `CharacterSheetPacket`, `SaveCharacterSheetPacket`, `ConfigSetCommand`, `RestrictionCoverage`, `DiscordWebhook`, `RpDiscordCommands`, `ReportManager`, `ReportService`, `RpReportCommands`, `RequestPlayerReportsPacket`, `PlayerReportsPacket`, `ReportActionPacket`. `OpenPlayerProfileGuiPacket` carries the number of open reports per player.
 
 ### Migration Notes
 
