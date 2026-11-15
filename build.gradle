@@ -70,7 +70,6 @@ dependencies {
 
     compileOnly 'net.luckperms:api:5.4'
 
-    annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
 
     implementation files('libs/immersivemessages-neoforge-1.0.18-1.21.1.jar')
     implementation "maven.modrinth:txnilib:neoforge-1.21.1-1.0.24"
