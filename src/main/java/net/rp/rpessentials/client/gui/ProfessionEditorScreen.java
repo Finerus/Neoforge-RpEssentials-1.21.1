@@ -286,7 +286,8 @@ public class ProfessionEditorScreen extends Screen {
                     ClientGuiOpener.requestedTab = mainTab;
                     PacketDistributor.sendToServer(new RequestOpenGuiPacket(RequestOpenGuiPacket.GuiType.PROFESSION));
                 })
-                .pos(this.width - MARGIN - 18, 2).size(18, 13)
+                // Left of the interface style button (16 px wide at width - 18).
+                .pos(this.width - 18 - UiLayout.GAP - 18, 2).size(18, 13)
                 .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
                 .build(SkinnedButton::new));
     }
