@@ -2,7 +2,7 @@
 
 **Rp Essentials** is a comprehensive server side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It covers identity obfuscation, professions and licenses, moderation, chat formatting, server scheduling, Death RP, world border and zones, and more, all configurable in real time without restarts.
 
-> Current version: **6.0.0**. Full changelog on [Modrinth](https://modrinth.com/mod/rp-essentials/changelog).
+> Current version: **6.1.0**. Full changelog on [Modrinth](https://modrinth.com/mod/rp-essentials/changelog).
 
 Full documentation, configuration reference and setup guides now live on the **[GitHub Wiki](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki)**.
 
@@ -37,7 +37,7 @@ Hi, here is all you need to know about AI in this project:
   Today I'm learning to do most of the new features by myself but AI is still a good tool to help me code complex things.
   From my own perspective, AI is a great tool for coding and I will continue to use it if needed, but I will **never ever** use AI to generate visual assets.
 
--   Even though AI was used for the development, I test the mod every time before posting a new version to be sure that there are no bugs left or no problems. This does not mean that there are not any bugs, but I try as much as I can to find and correct them ^^ And if it matters to you, I use this mod pretty often and for the moment, I never had any issue with it (or they were fixed pretty quickly)! (And if you find an issue, you can always tell it to me on the github page or in the comment section)
+- Even though AI was used for the development, I test the mod every time before posting a new version to be sure that there are no bugs left or no problems. This does not mean that there are not any bugs, but I try as much as I can to find and correct them ^^ And if it matters to you, I use this mod pretty often and for the moment, I never had any issue with it (or they were fixed pretty quickly)! (And if you find an issue, you can always tell it to me on the github page or in the comment section)
 
 - That's pretty much the only things I had to say, have a great day!
 
@@ -84,7 +84,7 @@ See the [Installation](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/w
 |:-----------|:----------------------|
 | Mod ID     | `rpessentials`        |
 | Group ID   | `net.rp.rpessentials` |
-| Version    | 6.0.0                 |
+| Version    | 6.1.0                 |
 | MC Version | 1.21.1                |
 | NeoForge   | 21.1.219+             |
 | Java       | 21                    |
