@@ -1,0 +1,198 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev.legacyforge'
+    id 'idea'
+}
+
+version = "${mod_version}+forge-${minecraft_version}"
+group = mod_group_id
+
+repositories {
+    mavenCentral()
+    maven { url "https://api.modrinth.com/maven" }
+    maven {
+        name = "Illusive Soulworks maven"
+        url = "https://maven.theillusivec4.top/"
+    }
+}
+
+base {
+    archivesName = mod_id
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = mod_group_id
+            artifactId = mod_id
+            version = project.version
+            artifact jar
+        }
+    }
+}
+
+// Minecraft 1.20.1 runs on Java 17: the mod must be compiled for Java 17.
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+// ModDevGradle (legacy Forge flavour): sets up Minecraft + Forge 1.20.1, the run configurations and IntelliJ.
+legacyForge {
+    version = "${minecraft_version}-${forge_version}"
+
+    parchment {
+        minecraftVersion = project.parchment_minecraft_version
+        mappingsVersion = project.parchment_mappings_version
+    }
+
+    runs {
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+        // Own folders: the worlds of the NeoForge 1.21.1 version (runs/client, runs/server) must never be opened
+        // by Minecraft 1.20.1 (a newer world cannot be loaded by an older game).
+        client {
+            client()
+            ideName = 'Forge 1.20.1 - Client'
+            gameDirectory = rootProject.file('runs/forge-1.20.1/client')
+        }
+        // Second player for tests (two clients at once): own folder (options, logs) and own name.
+        // Same name as the first client ("Dev") = same UUID = one kicks the other.
+        client2 {
+            client()
+            ideName = 'Forge 1.20.1 - Client 2 (Dev2)'
+            gameDirectory = rootProject.file('runs/forge-1.20.1/client2')
+            programArguments.addAll('--username', 'Dev2')
+        }
+        server {
+            server()
+            ideName = 'Forge 1.20.1 - Server'
+            gameDirectory = rootProject.file('runs/forge-1.20.1/server')
+            programArgument '--nogui'
+        }
+        gameTestServer {
+            type = "gameTestServer"
+            ideName = 'Forge 1.20.1 - GameTestServer'
+            gameDirectory = rootProject.file('runs/forge-1.20.1/gameTestServer')
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+// Mixins: Forge 1.20.1 needs a refmap (names are obfuscated in production).
+mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+    config "${mod_id}.mixin.json"
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // MixinExtras (@WrapOperation, @Local): bundled in NeoForge, but not in Forge 1.20.1 -> shipped inside our jar.
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.4.1"))
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.4.1"))
+
+    compileOnly 'net.luckperms:api:5.4'
+
+    // Immersive Messages (and its library TxniLib): optional, only used for the IMMERSIVE display mode.
+    modCompileOnly "maven.modrinth:immersive-messages-api:forge-1.20.1-1.0.18"
+    modCompileOnly "maven.modrinth:txnilib:forge-1.20.1-1.0.24"
+
+    modCompileOnly "top.theillusivec4.curios:curios-forge:${curios_version}:api"
+    modRuntimeOnly "top.theillusivec4.curios:curios-forge:${curios_version}"
+}
+
+// ── Extra mods for the dev CLIENTS (Forge 1.20.1 - Client / Client 2) ────────────────────────────────
+// Put normal CurseForge jars in forge-1.20.1/run-mods/ (not in Git). They use obfuscated (SRG) names, so they
+// are remapped to the dev names here, then copied into the mods folder of both clients before they start.
+// Not given to the dev server: many of them are client-only (Embeddium, Oculus...) and would crash it.
+// Jars in run-mods/disabled/ are ignored (mods that cannot run in a dev environment, see the text file there).
+configurations {
+    devClientMods {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+def remappedClientMods = obfuscation.createRemappingConfiguration(configurations.devClientMods)
+// The remapping only works on module dependencies: each jar of run-mods/ is read through a local repository.
+repositories {
+    flatDir { dirs 'run-mods' }
+}
+dependencies {
+    fileTree(dir: 'run-mods', include: '*.jar').each { f ->
+        "${remappedClientMods.name}"("local:${f.name - '.jar'}")
+    }
+}
+def syncClientMods = tasks.register('syncClientMods') {
+    group = 'mod development'
+    description = 'Copies the remapped jars of run-mods/ into the mods folder of the dev clients.'
+    def mods = configurations.devClientMods
+    inputs.files(mods)
+    def dirs = ['client', 'client2'].collect { rootProject.file("runs/forge-1.20.1/${it}/mods") }
+    outputs.dirs(dirs)
+    doLast {
+        dirs.each { dir ->
+            project.sync {
+                from mods
+                into dir
+            }
+        }
+    }
+}
+tasks.matching { it.name in ['runClient', 'runClient2'] }.configureEach { dependsOn syncClientMods }
+
+jar {
+    manifest {
+        attributes(['MixinConfigs': "${mod_id}.mixin.json"])
+    }
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            forge_version          : forge_version,
+            forge_version_range    : forge_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
+            mod_logo_file          : mod_logo_file
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [file: [jarVersion: mod_version]]
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xmaxerrs', '5000']
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

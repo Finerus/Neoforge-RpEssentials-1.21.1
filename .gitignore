@@ -84,3 +84,6 @@ repo
 /gui_backup/2026-11-14_avant_widgets/gui/UiLayout.java
 /gui_backup/2026-11-14_etape2/gui/UiLayout.java
 /gui_backup/2026-11-14_etape3/gui/UiLayout.java
+
+# Mods of the Forge 1.20.1 dev clients (local copies, see forge-1.20.1/build.gradle)
+/forge-1.20.1/run-mods/

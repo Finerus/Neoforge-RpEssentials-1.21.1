@@ -1,0 +1,140 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev'
+    id 'idea'
+}
+
+version = mod_version
+group = mod_group_id
+
+repositories {
+    mavenCentral()
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
+    maven { url "https://maven.su5ed.dev/releases" }
+    maven { url "https://api.modrinth.com/maven" }
+    maven {
+        name = "Illusive Soulworks maven"
+        url = "https://maven.theillusivec4.top/"
+    }
+}
+
+base {
+    archivesName = mod_id
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId = mod_group_id
+            artifactId = mod_id
+            version = mod_version
+            artifact jar
+        }
+    }
+    // repositories {} vide = publie dans ~/.m2/repository par défaut
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// ModDevGradle: sets up Minecraft + NeoForge, the run configurations and the IntelliJ integration.
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        minecraftVersion = project.parchment_minecraft_version
+        mappingsVersion = project.parchment_mappings_version
+    }
+
+    runs {
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+        // Same folders as before (runs/<name> at the root): the dev worlds and configs are kept.
+        client {
+            client()
+            ideName = 'NeoForge 1.21.1 - Client'
+            gameDirectory = rootProject.file('runs/client')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        server {
+            server()
+            ideName = 'NeoForge 1.21.1 - Server'
+            gameDirectory = rootProject.file('runs/server')
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        gameTestServer {
+            type = "gameTestServer"
+            ideName = 'NeoForge 1.21.1 - GameTestServer'
+            gameDirectory = rootProject.file('runs/gameTestServer')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    // NeoForge itself is added by ModDevGradle (neoForge.version above).
+    compileOnly 'net.luckperms:api:5.4'
+
+
+    // Immersive Messages (and its library TxniLib): optional, only used for the IMMERSIVE display mode.
+    // Not shipped in the jar; without it the message falls back to the action bar.
+    compileOnly "maven.modrinth:immersive-messages-api:neoforge-1.21.1-1.0.18"
+    compileOnly "maven.modrinth:txnilib:neoforge-1.21.1-1.0.24"
+    // Forgified Fabric API is not shipped either: the old one of TxniLib is checked in core/FabricApiCheck.
+
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+}
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
+            mod_logo_file          : mod_logo_file
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties + [file: [jarVersion: mod_version]]
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}

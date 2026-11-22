@@ -8,3 +8,10 @@ pluginManagement {
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
+
+rootProject.name = 'RpEssentials'
+
+// One folder per Minecraft version. "gradlew build" builds both;
+// "gradlew :forge-1.20.1:build" (or :neoforge-1.21.1:build) builds one.
+include 'neoforge-1.21.1'
+include 'forge-1.20.1'

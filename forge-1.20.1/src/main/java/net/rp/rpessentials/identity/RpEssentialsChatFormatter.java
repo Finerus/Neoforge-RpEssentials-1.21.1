@@ -1,0 +1,391 @@
+package net.rp.rpessentials.identity;
+
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
+import net.rp.rpessentials.config.Cfg;
+import net.rp.rpessentials.config.MessagesConfig;
+import net.rp.rpessentials.lang.ServerLang;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.util.ColorHelper;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.util.TimeHelper;
+import net.rp.rpessentials.commands.RpChatUi;
+import net.rp.rpessentials.config.ChatConfig;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.regex.Pattern;
+
+/**
+ * Gestionnaire du formatage des messages de chat.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * VARIABLES DISPONIBLES DANS LES FORMATS DE CHAT ($xxx) :
+ *
+ *   RÉTROCOMPATIBLES (comportement inchangé) :
+ *     $name     — nickname si défini, sinon MC username  (identique à $nick)
+ *     $prefix   — préfixe LuckPerms
+ *     $suffix   — suffixe LuckPerms
+ *
+ *   NOUVELLES (opt-in, n'affectent pas les configs existantes) :
+ *     $nick      — nickname si défini, sinon MC username  (alias de $name)
+ *     $real      — toujours le MC username brut
+ *     $nick_real — "Nickname (RealName)" quand ils diffèrent, sinon juste le nom
+ *
+ * VARIABLES DISPONIBLES DANS LES COMMANDES RP ({xxx}) :
+ *
+ *   RÉTROCOMPATIBLES :
+ *     {player}   — nickname si défini, sinon MC username
+ *     {nickname} — idem (join/leave uniquement)
+ *
+ *   NOUVELLES :
+ *     {nick}      — alias de {player}
+ *     {real}      — toujours le MC username
+ *     {nick_real} — "Nickname (RealName)" quand ils diffèrent
+ *
+ *   MESSAGES PRIVÉS (nouvelles) :
+ *     {target_nick}, {target_real}, {target_nick_real}
+ *     {sender_nick}, {sender_real}, {sender_nick_real}
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * TOGGLE AUTOMATIQUE :
+ *   ChatConfig.SHOW_REAL_NAME_IN_CHAT = true
+ *   → ajoute "(RealName)" automatiquement partout sans modifier les formats.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+public class RpEssentialsChatFormatter {
+
+    private static final Pattern MARKDOWN_BOLD         = Pattern.compile("\\*\\*(.+?)\\*\\*");
+    private static final Pattern MARKDOWN_ITALIC        = Pattern.compile("\\*(.+?)\\*");
+    private static final Pattern MARKDOWN_UNDERLINE     = Pattern.compile("__(.+?)__");
+    private static final Pattern MARKDOWN_STRIKETHROUGH = Pattern.compile("~~(.+?)~~");
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+
+    // =========================================================================
+    // CHAT PRINCIPAL
+    // =========================================================================
+
+    /**
+     * Formate un message de chat complet.
+     * @param isGlobal true = format global, false = format proximité
+     */
+    public static Component formatChatMessage(ServerPlayer sender, String message, boolean isGlobal) {
+        if (!safeGetBool(ChatConfig.ENABLE_CHAT_FORMAT)) {
+            return Component.literal("<" + sender.getName().getString() + "> " + message);
+        }
+
+        String timestamp  = buildTimestamp();
+        String clean = sanitize(sender, message);
+        String body = safeGetBool(ChatConfig.MARKDOWN_ENABLED) ? applyMarkdown(clean) : clean;
+        String color      = getColorCode(safeGetString(ChatConfig.CHAT_MESSAGE_COLOR, "WHITE"));
+        String finalBody  = color + body;
+
+        // Pre-calcul des variantes de nom — utilisees dans playerNameFormat ET chatMessageFormat
+        String nick     = NicknameManager.getNickname(sender.getUUID());
+        String real     = sender.getName().getString();
+        String display  = nick != null ? nick : real;
+        String nickReal = buildNickRealStr(nick, real);
+        String prefix   = nullToEmpty(RpEssentials.getPlayerPrefix(sender));
+        String suffix   = nullToEmpty(RpEssentials.getPlayerSuffix(sender));
+
+        // Nom formate avec les variables de playerNameFormat
+        String playerName = buildFormattedNameFromParts(
+                safeGetString(ChatConfig.PLAYER_NAME_FORMAT, "$name"),
+                display, real, nickReal, prefix, suffix, nick);
+
+        String fmt;
+        if (Cfg.ready(ChatConfig.SPEC)) {
+            fmt = isGlobal ? ChatConfig.GLOBAL_CHAT_FORMAT.get() : ChatConfig.PROXIMITY_CHAT_FORMAT.get();
+            if (fmt == null || fmt.isBlank()) fmt = ChatConfig.CHAT_MESSAGE_FORMAT.get();
+        } else {
+            fmt = safeGetString(ChatConfig.CHAT_MESSAGE_FORMAT, "$name: $msg");
+        }
+
+        // Resolution des variables dans le format de message lui-meme
+        // (permet d'utiliser $nick_real, $real, $nick directement dans chatMessageFormat)
+        fmt = fmt.replace("$nick_real", nickReal)
+                .replace("$real",      real)
+                .replace("$nick",      display)
+                .replace("$time",      timestamp)
+                .replace("$name",      playerName)
+                .replace("$msg",       finalBody);
+
+        return ColorHelper.parseColors(ColorHelper.translateAlternateColorCodes(fmt));
+    }
+
+    /** Surcharge sans isGlobal (rétrocompatibilité). */
+    public static Component formatChatMessage(ServerPlayer sender, String message) {
+        return formatChatMessage(sender, message, true);
+    }
+
+    // =========================================================================
+    // RÉSOLUTION DES PLACEHOLDERS — COMMANDES RP
+    // =========================================================================
+
+    /**
+     * Remplace tous les placeholders de nom dans un format de commande RP.
+     *
+     * Rétrocompatibles : {player}
+     * Nouvelles        : {nick}, {real}, {nick_real}
+     *
+     * Si SHOW_REAL_NAME_IN_CHAT est actif et que {player} est utilisé,
+     * le realname est automatiquement ajouté.
+     */
+    public static String resolveRpPlaceholders(String format, ServerPlayer player) {
+        String nick     = NicknameManager.getNickname(player.getUUID());
+        String realName = player.getName().getString();
+        String display  = nick != null ? nick : realName;
+        String nickReal = buildNickRealStr(nick, realName);
+
+        format = format.replace("{nick_real}", nickReal);
+        format = format.replace("{real}",      realName);
+        format = format.replace("{nick}",      display);
+        format = format.replace("{player}",    buildPlayerValue(display, realName));
+        return format;
+    }
+
+    public static String resolveRpPlaceholders(String format, ServerPlayer player, String precomputedNick) {
+        String realName = player.getName().getString();
+        String display  = precomputedNick != null ? precomputedNick : realName;
+        String nickReal = buildNickRealStr(precomputedNick, realName);
+
+        format = format.replace("{nick_real}", nickReal);
+        format = format.replace("{real}",      realName);
+        format = format.replace("{nick}",      display);
+        format = format.replace("{player}",    buildPlayerValue(display, realName));
+        return format;
+    }
+
+    /**
+     * Remplace les placeholders dans les messages join/leave.
+     *
+     * Rétrocompatibles : {player} (MC username), {nickname} (nick ou real)
+     * Nouvelles        : {nick}, {real}, {nick_real}
+     */
+    public static String resolveJoinLeavePlaceholders(String format, ServerPlayer player) {
+        if (format == null || "none".equalsIgnoreCase(format)) return format;
+
+        String nick     = NicknameManager.getNickname(player.getUUID());
+        String realName = player.getName().getString();
+        String display  = nick != null ? nick : realName;
+        String nickReal = buildNickRealStr(nick, realName);
+
+        // Nouvelles variables en premier
+        format = format.replace("{nick_real}", nickReal);
+        format = format.replace("{real}",      realName);
+        format = format.replace("{nick}",      display);
+
+        // Rétrocompatibles
+        format = format.replace("{player}",   realName);   // {player} = MC username dans join/leave
+        format = format.replace("{nickname}", display);     // {nickname} = nick ou real
+
+        return format;
+    }
+
+    // =========================================================================
+    // HELPERS PUBLICS
+    // =========================================================================
+
+    /**
+     * Retourne le nom d'affichage pour les commandes RP,
+     * en appliquant showRealNameInChat si actif.
+     */
+    public static String getDisplayForRp(ServerPlayer player) {
+        String nick     = NicknameManager.getNickname(player.getUUID());
+        String realName = player.getName().getString();
+        String display  = nick != null ? nick : realName;
+        return buildPlayerValue(display, realName);
+    }
+
+    /**
+     * Construit "Nickname (RealName)" si différents, sinon le nom effectif.
+     * Méthode publique pour réutilisation (MP, inspect, etc.).
+     */
+    public static String buildNickReal(ServerPlayer player) {
+        String nick     = NicknameManager.getNickname(player.getUUID());
+        String realName = player.getName().getString();
+        return buildNickRealStr(nick, realName);
+    }
+
+    // =========================================================================
+    // PRIVATE — CONSTRUCTION DU NOM
+    // =========================================================================
+
+    /**
+     * Construit la partie "nom" a partir des pieces deja calculees.
+     * Appele depuis formatChatMessage qui a deja les valeurs pour eviter un double appel
+     * a NicknameManager et LuckPerms.
+     */
+    private static String buildFormattedNameFromParts(String playerNameFmt,
+                                                      String display, String real, String nickReal,
+                                                      String prefix, String suffix, String nick) {
+
+        String fmt = playerNameFmt;
+
+        // Nouvelles variables en premier
+        fmt = fmt.replace("$nick_real", nickReal);
+        fmt = fmt.replace("$real",      real);
+        fmt = fmt.replace("$nick",      display);
+
+        // Retrocompatibles
+        fmt = fmt.replace("$name",   display);
+        fmt = fmt.replace("$prefix", prefix);
+        fmt = fmt.replace("$suffix", suffix);
+
+        // showRealNameInChat : auto-ajout si le format n'utilise pas encore les nouvelles vars
+        if (isShowRealEnabled() && nick != null && !nick.equals(real)) {
+            boolean alreadyShows = playerNameFmt.contains("$real")
+                    || playerNameFmt.contains("$nick_real");
+            if (!alreadyShows) {
+                fmt = fmt + " §8(" + real + ")";
+            }
+        }
+
+        return WHITESPACE.matcher(fmt).replaceAll(" ").trim() + "§r";
+    }
+
+    /** Valeur de {player} pour les commandes RP avec showRealName. */
+    private static String buildPlayerValue(String display, String realName) {
+        if (isShowRealEnabled() && !display.equals(realName)) {
+            return display + " §8(" + realName + ")§r";
+        }
+        return display;
+    }
+
+    /** "Nickname (RealName)" si différents, sinon le nom effectif. */
+    private static String buildNickRealStr(String nick, String realName) {
+        if (nick != null && !nick.equals(realName)) {
+            return nick + " §8(" + realName + ")§r";
+        }
+        return nick != null ? nick : realName;
+    }
+
+    // =========================================================================
+    // PRIVATE — UTILITAIRES
+    // =========================================================================
+    private static boolean isShowRealEnabled() {
+        if (Cfg.ready(ChatConfig.SPEC)) {
+            return ChatConfig.SHOW_REAL_NAME_IN_CHAT != null && ChatConfig.SHOW_REAL_NAME_IN_CHAT.get();
+        } else { return false; }
+    }
+
+    private static String buildTimestamp() {
+        if (!safeGetBool(ChatConfig.ENABLE_TIMESTAMP)) return "";
+        try {
+            return TimeHelper.format(ChatConfig.TIMESTAMP_FORMAT.get());
+        } catch (Exception e) { return ""; }
+    }
+
+    private static boolean safeGetBool(net.minecraftforge.common.ForgeConfigSpec.BooleanValue v) {
+        return Cfg.get(v, false);
+    }
+
+    private static String safeGetString(net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> v, String def) {
+        return Cfg.get(v, def);
+    }
+
+    private static String nullToEmpty(String s) { return s != null ? s : ""; }
+
+    private static final Pattern OBFUSCATED = Pattern.compile("(?i)§k");
+
+    private static String sanitize(ServerPlayer sender, String message) {
+        String mode = net.rp.rpessentials.config.ConfigRules.value(ChatConfig.PLAYER_CHAT_CODES);
+        if (mode.equalsIgnoreCase("ALL") || RpPerms.has(sender, RpPerm.CHAT_CODES)) return message;
+        String converted = ColorHelper.translateAlternateColorCodes(message);
+        if (mode.equalsIgnoreCase("NONE")) return ColorHelper.stripAll(converted);
+        return OBFUSCATED.matcher(converted).replaceAll("");
+    }
+
+    // =========================================================================
+    // MARKDOWN
+    // =========================================================================
+    private static String applyMarkdown(String message) {
+        message = MARKDOWN_BOLD.matcher(message).replaceAll("§l$1§r");
+        message = MARKDOWN_ITALIC.matcher(message).replaceAll("§o$1§r");
+        message = MARKDOWN_UNDERLINE.matcher(message).replaceAll("§n$1§r");
+        message = MARKDOWN_STRIKETHROUGH.matcher(message).replaceAll("§m$1§r");
+        return message;
+    }
+
+    private static String getColorCode(String name) {
+        return switch (name.toUpperCase()) {
+            case "AQUA"         -> "§b";
+            case "RED"          -> "§c";
+            case "LIGHT_PURPLE" -> "§d";
+            case "YELLOW"       -> "§e";
+            case "WHITE"        -> "§f";
+            case "BLACK"        -> "§0";
+            case "GOLD"         -> "§6";
+            case "GRAY"         -> "§7";
+            case "BLUE"         -> "§9";
+            case "GREEN"        -> "§a";
+            case "DARK_GRAY"    -> "§8";
+            case "DARK_AQUA"    -> "§3";
+            case "DARK_RED"     -> "§4";
+            case "DARK_PURPLE"  -> "§5";
+            case "DARK_GREEN"   -> "§2";
+            case "DARK_BLUE"    -> "§1";
+            default             -> "§f";
+        };
+    }
+
+    // =========================================================================
+    // /colors
+    // =========================================================================
+    public static Component getColorsHelp() {
+        return getColorsHelp(null);
+    }
+
+    /** /colors content in the viewer's language. */
+    public static Component getColorsHelp(ServerPlayer v) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(RpChatUi.header(ServerLang.get(v, MessagesConfig.COLORS_TITLE)));
+        String[] colorNames = ServerLang.get(v, MessagesConfig.COLORS_NAMES).split(",");
+
+        String[][] colors = {
+                {"§0","0","BLACK"},     {"§1","1","DARK_BLUE"},
+                {"§2","2","DARK_GREEN"},{"§3","3","DARK_AQUA"},
+                {"§4","4","DARK_RED"},  {"§5","5","DARK_PURPLE"},
+                {"§6","6","GOLD"},      {"§7","7","GRAY"},
+                {"§8","8","DARK_GRAY"}, {"§9","9","BLUE"},
+                {"§a","a","GREEN"},     {"§b","b","AQUA"},
+                {"§c","c","RED"},       {"§d","d","LIGHT_PURPLE"},
+                {"§e","e","YELLOW"},    {"§f","f","WHITE"}
+        };
+        for (int i = 0; i < colors.length; i++) {
+            String[] c = colors[i];
+            String name = i < colorNames.length ? colorNames[i].trim() : c[2];
+            sb.append(c[0]).append("███ §7").append(name).append(" §8(&").append(c[1]).append(")\n");
+        }
+
+        String nick = ServerLang.get(v, MessagesConfig.COLORS_VAR_NICK);
+        String real = ServerLang.get(v, MessagesConfig.COLORS_VAR_REAL);
+        String nickReal = ServerLang.get(v, MessagesConfig.COLORS_VAR_NICK_REAL);
+        sb.append(RpChatUi.section(ServerLang.get(v, MessagesConfig.COLORS_FORMATTING)));
+        sb.append("§l").append(ServerLang.get(v, MessagesConfig.COLORS_BOLD)).append("§r §7(&l)   §o")
+                .append(ServerLang.get(v, MessagesConfig.COLORS_ITALIC)).append("§r §7(&o)   §n")
+                .append(ServerLang.get(v, MessagesConfig.COLORS_UNDERLINE)).append("§r §7(&n)\n");
+        sb.append("§m").append(ServerLang.get(v, MessagesConfig.COLORS_STRIKE)).append("§r §7(&m)   §k")
+                .append(ServerLang.get(v, MessagesConfig.COLORS_OBFUSCATED)).append("§r §7(&k)   §r")
+                .append(ServerLang.get(v, MessagesConfig.COLORS_RESET)).append(" §7(&r)\n");
+
+        sb.append(RpChatUi.section(ServerLang.get(v, MessagesConfig.COLORS_CHAT_VARS)));
+        sb.append("§f$name/$nick §8").append(nick).append("\n");
+        sb.append("§f$real §8").append(real).append("\n");
+        sb.append("§f$nick_real §8").append(nickReal).append("\n");
+
+        sb.append(RpChatUi.section(ServerLang.get(v, MessagesConfig.COLORS_RP_VARS)));
+        sb.append("§f{player}/{nick} §8").append(nick).append("\n");
+        sb.append("§f{real} §8").append(real).append("\n");
+        sb.append("§f{nick_real} §8").append(nickReal).append("\n");
+
+        sb.append(RpChatUi.section(ServerLang.get(v, MessagesConfig.COLORS_HEX)));
+        sb.append("§f&#RRGGBB §8").append(ServerLang.get(v, MessagesConfig.COLORS_HEX_COLOR)).append("\n");
+        sb.append("§f<grad:#RRGGBB:#RRGGBB>").append(ServerLang.get(v, MessagesConfig.COLORS_GRADIENT_TEXT))
+                .append("</grad> §8").append(ServerLang.get(v, MessagesConfig.COLORS_GRADIENT)).append("\n");
+        sb.append(RpChatUi.LINE);
+        return Component.literal(sb.toString());
+    }
+}
