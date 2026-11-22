@@ -4,7 +4,7 @@ import net.rp.rpessentials.config.Cfg;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 
 import java.io.InputStream;
@@ -32,7 +32,7 @@ public final class ServerLang {
     }
 
     public static String lang(ServerPlayer p) {
-        return normalize(p.clientInformation().language());
+        return normalize(p.getLanguage());
     }
 
     private static boolean modSource() {
@@ -83,7 +83,7 @@ public final class ServerLang {
         return value;
     }
 
-    public static String get(ServerPlayer p, ModConfigSpec.ConfigValue<String> cv, String... replacements) {
+    public static String get(ServerPlayer p, ForgeConfigSpec.ConfigValue<String> cv, String... replacements) {
         String value = Cfg.get(cv, cv.getDefault());
         if (modSource()) {
             String key = String.join(".", cv.getPath());

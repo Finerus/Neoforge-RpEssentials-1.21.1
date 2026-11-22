@@ -1,14 +1,11 @@
 package net.rp.rpessentials.profession;
 
 import net.rp.rpessentials.lang.ServerLang;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.item.component.ItemLore;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.items.RpEssentialsItems;
 import net.rp.rpessentials.util.TimeHelper;
@@ -64,8 +61,7 @@ public class LicenseHelper {
         // ── Build the ItemStack ───────────────────────────────────────────────
         ItemStack license = new ItemStack(RpEssentialsItems.LICENSE.get());
         String colorPrefix = profData.colorCode.replace("&", "§");
-        license.set(DataComponents.CUSTOM_NAME,
-                ColorHelper.parseColors(
+        license.setHoverName(ColorHelper.parseColors(
                         colorPrefix + ServerLang.get(target, MessagesConfig.LICENSE_ITEM_NAME) + profData.displayName));
 
         List<Component> lore = new ArrayList<>();
@@ -74,7 +70,9 @@ public class LicenseHelper {
         if (expiryDate != null) {
             lore.add(ColorHelper.parseSection(ServerLang.get(target, MessagesConfig.LICENSE_LORE_VALID_UNTIL, "date", expiryDate)));
         }
-        license.set(DataComponents.LORE, new ItemLore(lore));
+        net.minecraft.nbt.ListTag loreTag = new net.minecraft.nbt.ListTag();
+        for (Component line : lore) loreTag.add(net.minecraft.nbt.StringTag.valueOf(Component.Serializer.toJson(line)));
+        license.getOrCreateTagElement("display").put("Lore", loreTag);
 
         CompoundTag tag = new CompoundTag();
         tag.putString("professionId", professionId);
@@ -82,7 +80,7 @@ public class LicenseHelper {
         tag.putString("holderUuid", target.getUUID().toString());
         tag.putString("issueDate", dateStr);
         if (expiryDate != null) tag.putString("expiryDate", expiryDate);
-        license.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        for (String k : tag.getAllKeys()) license.getOrCreateTag().put(k, tag.get(k));
 
         // ── Give to player ────────────────────────────────────────────────────
         if (!target.getInventory().add(license)) {

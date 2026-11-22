@@ -11,9 +11,9 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.moderation.ManageService;
@@ -1289,7 +1289,7 @@ public class PlayerProfileScreen extends net.rp.rpessentials.client.skin.CanvasS
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+    public void renderBackground(GuiGraphics g) {}
 
     // =========================================================================
     // SCROLL MOLETTE

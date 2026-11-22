@@ -7,9 +7,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.gameplay.DiceManager;
 import net.rp.rpessentials.network.DiceRollPacket;
 
@@ -83,7 +83,7 @@ public class DiceSelectionScreen extends net.rp.rpessentials.client.skin.CanvasS
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {}
+    public void renderBackground(GuiGraphics g) {}
 
     @Override
     public boolean isPauseScreen() { return false; }

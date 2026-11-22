@@ -1,12 +1,12 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.client.gui.ConfigManagerScreen;
 import net.rp.rpessentials.config.ConfigInspector;
@@ -83,7 +83,7 @@ public record ConfigFileEntriesPacket(String fileId, List<EntryTransfer> entries
     // =========================================================================
 
     public static final Type<ConfigFileEntriesPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "config_file_entries"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "config_file_entries"));
 
     public static final StreamCodec<FriendlyByteBuf, ConfigFileEntriesPacket> STREAM_CODEC =
             new StreamCodec<>() {

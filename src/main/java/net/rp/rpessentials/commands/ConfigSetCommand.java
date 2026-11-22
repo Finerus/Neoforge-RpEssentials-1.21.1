@@ -169,7 +169,7 @@ public final class ConfigSetCommand {
     /** Option of the core file stored in RpEssentialsConfig.{@code constant} (for the old Death RP names). */
     private static Option byConstant(CommandSourceStack src, String fileId, String constant) {
         try {
-            var cv = (net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<?>)
+            var cv = (net.minecraftforge.common.ForgeConfigSpec.ConfigValue<?>)
                     net.rp.rpessentials.config.RpEssentialsConfig.class.getField(constant).get(null);
             String path = String.join(".", cv.getPath());
             for (Option o : options(src, fileId)) if (o.entry().fullPath().equals(path)) return o;

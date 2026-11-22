@@ -278,11 +278,11 @@ public class RpEssentialsChatFormatter {
         } catch (Exception e) { return ""; }
     }
 
-    private static boolean safeGetBool(net.neoforged.neoforge.common.ModConfigSpec.BooleanValue v) {
+    private static boolean safeGetBool(net.minecraftforge.common.ForgeConfigSpec.BooleanValue v) {
         return Cfg.get(v, false);
     }
 
-    private static String safeGetString(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> v, String def) {
+    private static String safeGetString(net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> v, String def) {
         return Cfg.get(v, def);
     }
 

@@ -9,14 +9,15 @@ import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.client.RpKeyBindings;
 import net.rp.rpessentials.compat.LuckPermsSync;
 import net.rp.rpessentials.config.*;
@@ -81,9 +82,10 @@ public class RpEssentials {
     private static final Map<UUID, LpMeta> lpMetaCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.atomic.AtomicBoolean refreshPending = new java.util.concurrent.atomic.AtomicBoolean(false);
 
-    public RpEssentials(IEventBus modEventBus, ModContainer modContainer) {
-        // Old Fabric API shipped by TxniLib on a NeoForge where it disconnects every player: clear error.
-        net.rp.rpessentials.core.FabricApiCheck.run();
+    public RpEssentials() {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        ModLoadingContext modContainer = ModLoadingContext.get();
+        net.rp.rpessentials.network.NetworkHandler.register();
         // Old config layouts are updated before NeoForge reads (and corrects) the files.
         net.rp.rpessentials.core.ConfigMigration.run();
 
@@ -96,17 +98,21 @@ public class RpEssentials {
         modContainer.registerConfig(ModConfig.Type.SERVER, RpConfig.SPEC,           "rpessentials/rpessentials-rp.toml");
         modContainer.registerConfig(ModConfig.Type.CLIENT, net.rp.rpessentials.config.ClientConfig.SPEC, "rpessentials/rpessentials-client.toml");
 
-        modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings);
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
+            modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings);
+            // The license arm pose must exist before the first player model is drawn (see LicenseArmPose.init).
+            net.rp.rpessentials.client.LicenseArmPose.init();
+        }
         RpEssentialsItems.ITEMS.register(modEventBus);
-        try {
+        if (net.minecraftforge.fml.ModList.get().isLoaded("curios")) {
             CuriosCompat.register(modEventBus);
             LOGGER.info("[RpEssentials] Curios compatibility enabled.");
-        } catch (NoClassDefFoundError e) {
+        } else {
             LOGGER.info("[RpEssentials] Curios not found, skipping compatibility.");
         }
-        NeoForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(this);
 
-        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading event) -> {
+        modEventBus.addListener((net.minecraftforge.fml.event.config.ModConfigEvent.Loading event) -> {
             if (event.getConfig().getType() == ModConfig.Type.SERVER && event.getConfig().getSpec() == ProfessionConfig.SPEC) {
                 RpEssentialsScheduleManager.reload();
                 ProfessionRestrictionManager.reloadCache();
@@ -114,7 +120,7 @@ public class RpEssentials {
                 LOGGER.info("[RpEssentials] Config loaded: schedule, professions & immersive presets initialized.");
             }
         });
-        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Reloading event) -> {
+        modEventBus.addListener((net.minecraftforge.fml.event.config.ModConfigEvent.Reloading event) -> {
             if (event.getConfig().getType() != ModConfig.Type.SERVER) return;
             MinecraftServer srv = ServerLifecycleHooks.getCurrentServer();
             if (srv == null) return;
@@ -129,9 +135,9 @@ public class RpEssentials {
                 net.rp.rpessentials.config.ConfigValidator.warnOnlineStaff(srv);
             }), java.util.concurrent.CompletableFuture.delayedExecutor(1500, java.util.concurrent.TimeUnit.MILLISECONDS));
         });
-        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading e) ->
+        modEventBus.addListener((net.minecraftforge.fml.event.config.ModConfigEvent.Loading e) ->
                 ProfessionRestrictionEventHandler.clearTooltipCache());
-        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Reloading e) ->
+        modEventBus.addListener((net.minecraftforge.fml.event.config.ModConfigEvent.Reloading e) ->
                 ProfessionRestrictionEventHandler.clearTooltipCache());
     }
 
@@ -187,7 +193,8 @@ public class RpEssentials {
     // SERVER TICK
     // =========================================================================
     @SubscribeEvent
-    public void onServerTick(ServerTickEvent.Post event) {
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         ticks.tick(event.getServer());
     }
 
@@ -195,12 +202,12 @@ public class RpEssentials {
     // SERVER STOPPING
     // =========================================================================
     @SubscribeEvent
-    public void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+    public void onServerStopping(net.minecraftforge.event.server.ServerStoppingEvent event) {
         RpEssentialsEventHandler.flushOnlinePlayers(event.getServer());
     }
 
     @SubscribeEvent
-    public void onServerStopped(net.neoforged.neoforge.event.server.ServerStoppedEvent event) {
+    public void onServerStopped(net.minecraftforge.event.server.ServerStoppedEvent event) {
         RpEssentialsRoleManager.clearAll();
         WorldBorderManager.clearAllCache();
         RpEssentialsPermissions.clearCache();

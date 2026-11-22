@@ -1,11 +1,11 @@
 package net.rp.rpessentials.client;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.util.TriState;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.rp.rpessentials.RpEssentials;
 
 /**
@@ -27,6 +27,6 @@ public final class ClientRestrictionHandler {
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (!event.getLevel().isClientSide() || event.getEntity().isCreative()) return;
         if (event.getItemStack().isEmpty()) return;
-        if (ClientTooltipRestrictions.isUseBlocked(event.getItemStack().getItem())) event.setUseItem(TriState.FALSE);
+        if (ClientTooltipRestrictions.isUseBlocked(event.getItemStack().getItem())) event.setUseItem(Event.Result.DENY);
     }
 }

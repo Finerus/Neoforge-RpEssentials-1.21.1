@@ -8,13 +8,12 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.items.LicenseItem;
 
@@ -98,13 +97,13 @@ public class LicenseHeldLayer extends RenderLayer<AbstractClientPlayer, PlayerMo
     }
 
     /** Adds the layer to both player models (wide and slim arms). */
-    @EventBusSubscriber(modid = RpEssentials.MODID, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = RpEssentials.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
     public static final class Registration {
         private Registration() {}
 
         @SubscribeEvent
         public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
-            for (PlayerSkin.Model model : event.getSkins()) {
+            for (String model : event.getSkins()) {
                 if (event.getSkin(model) instanceof PlayerRenderer renderer) {
                     renderer.addLayer(new LicenseHeldLayer(renderer));
                 }

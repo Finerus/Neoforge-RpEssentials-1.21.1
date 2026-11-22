@@ -3,7 +3,6 @@ package net.rp.rpessentials.gameplay;
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.RpConfig;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
@@ -35,7 +34,7 @@ public class AfkPlatformInitializer {
 
         public ModState() {}
 
-        public static ModState load(CompoundTag tag, HolderLookup.Provider provider) {
+        public static ModState load(CompoundTag tag) {
             ModState state = new ModState();
             state.afkPlatformPlaced = tag.getBoolean("afkPlatformPlaced");
             state.platformKey = tag.getString("platformKey");
@@ -49,7 +48,7 @@ public class AfkPlatformInitializer {
         }
 
         @Override
-        public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+        public CompoundTag save(CompoundTag tag) {
             tag.putBoolean("afkPlatformPlaced", afkPlatformPlaced);
             tag.putString("platformKey", platformKey);
             tag.putString("lastModVersion", lastModVersion);
@@ -99,9 +98,7 @@ public class AfkPlatformInitializer {
 
     /** Mod state of the server (saved with the overworld, data/rpessentials_modstate.dat). */
     public static ModState state(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(ModState::new, ModState::load),
-                SAVED_DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(ModState::load, ModState::new, SAVED_DATA_ID);
     }
 
     public static void tryPlace(MinecraftServer server) {

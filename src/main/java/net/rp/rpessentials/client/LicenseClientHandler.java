@@ -2,10 +2,10 @@ package net.rp.rpessentials.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionHand;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.client.gui.LicenseScreen;
 import net.rp.rpessentials.items.LicenseItem;
@@ -33,7 +33,7 @@ public class LicenseClientHandler {
 
     /** Profession system turned off: every line of the license tooltip is scrambled, except the one saying so. */
     @SubscribeEvent
-    public static void onTooltip(net.neoforged.neoforge.event.entity.player.ItemTooltipEvent event) {
+    public static void onTooltip(net.minecraftforge.event.entity.player.ItemTooltipEvent event) {
         if (ClientFeatures.professionsEnabled() || !(event.getItemStack().getItem() instanceof LicenseItem)) return;
         java.util.List<net.minecraft.network.chat.Component> lines = event.getToolTip();
         for (int i = 0; i < lines.size(); i++) {

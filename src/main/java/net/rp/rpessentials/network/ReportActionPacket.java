@@ -4,12 +4,12 @@ import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.PacketDistributor;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.moderation.ReportService;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
@@ -27,7 +27,7 @@ public record ReportActionPacket(UUID targetUuid, int reportId, Action action, S
     public static final int MAX_NOTE = 256;
 
     public static final Type<ReportActionPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "report_action"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "report_action"));
 
     public static final StreamCodec<FriendlyByteBuf, ReportActionPacket> STREAM_CODEC =
             new StreamCodec<>() {

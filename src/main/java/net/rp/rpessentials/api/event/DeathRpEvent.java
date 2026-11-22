@@ -2,11 +2,12 @@ package net.rp.rpessentials.api.event;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.Cancelable;
 
 /** Annuler l'événement empêche le traitement RP (message, whitelist, historique, reset). */
-public class DeathRpEvent extends Event implements ICancellableEvent {
+@Cancelable
+public class DeathRpEvent extends Event {
     private final ServerPlayer player;
     private final DamageSource source;
 

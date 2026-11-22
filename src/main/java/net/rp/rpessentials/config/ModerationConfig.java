@@ -1,96 +1,96 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.util.Arrays;
 import java.util.List;
 
 public class ModerationConfig {
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     // =========================================================================
     // MODERATION (Silent Commands)
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_SILENT_COMMANDS;
-    public static final ModConfigSpec.BooleanValue LOG_TO_STAFF;
-    public static final ModConfigSpec.BooleanValue LOG_TO_CONSOLE;
-    public static final ModConfigSpec.BooleanValue NOTIFY_TARGET;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_SILENT_COMMANDS;
+    public static final ForgeConfigSpec.BooleanValue LOG_TO_STAFF;
+    public static final ForgeConfigSpec.BooleanValue LOG_TO_CONSOLE;
+    public static final ForgeConfigSpec.BooleanValue NOTIFY_TARGET;
 
     // =========================================================================
     // PLATFORMS
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_PLATFORMS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> PLATFORMS;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_PLATFORMS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PLATFORMS;
 
     // =========================================================================
     // LAST CONNECTION
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_LAST_CONNECTION;
-    public static final ModConfigSpec.BooleanValue LAST_CONNECTION_TRACK_LOGOUT;
-    public static final ModConfigSpec.ConfigValue<String> LAST_CONNECTION_DATE_FORMAT;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_LAST_CONNECTION;
+    public static final ForgeConfigSpec.BooleanValue LAST_CONNECTION_TRACK_LOGOUT;
+    public static final ForgeConfigSpec.ConfigValue<String> LAST_CONNECTION_DATE_FORMAT;
 
     // =========================================================================
     // WARN SYSTEM
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_WARN_SYSTEM;
-    public static final ModConfigSpec.BooleanValue WARN_NOTIFY_ON_JOIN;
-    public static final ModConfigSpec.ConfigValue<String> WARN_JOIN_MESSAGE;
-    public static final ModConfigSpec.IntValue WARN_MAX_TEMP_DAYS;
-    public static final ModConfigSpec.BooleanValue WARN_AUTO_PURGE_EXPIRED;
-    public static final ModConfigSpec.BooleanValue HISTORY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> HISTORY_RETENTION;
-    public static final ModConfigSpec.IntValue HISTORY_MAX_PER_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> WARN_ADDED_BROADCAST_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> WARN_REMOVED_BROADCAST_FORMAT;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_WARN_SYSTEM;
+    public static final ForgeConfigSpec.BooleanValue WARN_NOTIFY_ON_JOIN;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_JOIN_MESSAGE;
+    public static final ForgeConfigSpec.IntValue WARN_MAX_TEMP_DAYS;
+    public static final ForgeConfigSpec.BooleanValue WARN_AUTO_PURGE_EXPIRED;
+    public static final ForgeConfigSpec.BooleanValue HISTORY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> HISTORY_RETENTION;
+    public static final ForgeConfigSpec.IntValue HISTORY_MAX_PER_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_ADDED_BROADCAST_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_REMOVED_BROADCAST_FORMAT;
 
     // =========================================================================
     // NOTE LIMIT
     // =========================================================================
-    public static ModConfigSpec.IntValue NOTE_MAX_PER_PLAYER;
+    public static ForgeConfigSpec.IntValue NOTE_MAX_PER_PLAYER;
 
-    public static ModConfigSpec.BooleanValue ENABLE_REPORTS;
-    public static ModConfigSpec.IntValue REPORT_COOLDOWN_SECONDS;
-    public static ModConfigSpec.IntValue REPORT_MAX_OPEN_PER_PLAYER;
-    public static ModConfigSpec.IntValue REPORT_REASON_MAX_LENGTH;
-    public static ModConfigSpec.BooleanValue REPORT_NOTIFY_ON_JOIN;
-    public static ModConfigSpec.IntValue REPORT_CLOSED_RETENTION_DAYS;
-    public static ModConfigSpec.IntValue DEATH_HISTORY_MAX_DAYS;
+    public static ForgeConfigSpec.BooleanValue ENABLE_REPORTS;
+    public static ForgeConfigSpec.IntValue REPORT_COOLDOWN_SECONDS;
+    public static ForgeConfigSpec.IntValue REPORT_MAX_OPEN_PER_PLAYER;
+    public static ForgeConfigSpec.IntValue REPORT_REASON_MAX_LENGTH;
+    public static ForgeConfigSpec.BooleanValue REPORT_NOTIFY_ON_JOIN;
+    public static ForgeConfigSpec.IntValue REPORT_CLOSED_RETENTION_DAYS;
+    public static ForgeConfigSpec.IntValue DEATH_HISTORY_MAX_DAYS;
 
     // =========================================================================
     // AUTO UNWHITELIST SYSTEM
     // =========================================================================
-    public static ModConfigSpec.BooleanValue AUTO_UNWHITELIST_ENABLED;
-    public static ModConfigSpec.IntValue     AUTO_UNWHITELIST_DAYS;
-    public static ModConfigSpec.ConfigValue<List<? extends String>> AUTO_UNWHITELIST_EXTRA_COMMANDS;
+    public static ForgeConfigSpec.BooleanValue AUTO_UNWHITELIST_ENABLED;
+    public static ForgeConfigSpec.IntValue     AUTO_UNWHITELIST_DAYS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> AUTO_UNWHITELIST_EXTRA_COMMANDS;
 
     // =========================================================================
     // MUTE SYSTEM
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_MUTE_SYSTEM;
-    public static final ModConfigSpec.BooleanValue MUTE_AUTO_FROM_WARNS;
-    public static final ModConfigSpec.IntValue MUTE_AUTO_WARN_COUNT;
-    public static final ModConfigSpec.IntValue MUTE_AUTO_DURATION_MINUTES;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_MUTE_SYSTEM;
+    public static final ForgeConfigSpec.BooleanValue MUTE_AUTO_FROM_WARNS;
+    public static final ForgeConfigSpec.IntValue MUTE_AUTO_WARN_COUNT;
+    public static final ForgeConfigSpec.IntValue MUTE_AUTO_DURATION_MINUTES;
 
     // =========================================================================
     // VANISH SYSTEM
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_VANISH;
-    public static final ModConfigSpec.IntValue VANISH_DEFAULT_LEVEL;
-    public static final ModConfigSpec.BooleanValue VANISH_PERSIST;
-    public static final ModConfigSpec.BooleanValue VANISH_NOTIFY_STAFF;
-    public static final ModConfigSpec.BooleanValue VANISH_LOGIN_REMINDER;
-    public static final ModConfigSpec.BooleanValue VANISH_INVULNERABLE;
-    public static final ModConfigSpec.BooleanValue VANISH_FAKE_MESSAGES;
-    public static final ModConfigSpec.ConfigValue<String> VANISH_FAKE_MARK;
-    public static final ModConfigSpec.ConfigValue<String> VANISH_TAB_MODE;
-    public static final ModConfigSpec.BooleanValue VANISH_TAB_MARKER_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String> VANISH_TAB_MARKER;
-    public static final ModConfigSpec.BooleanValue VH_WORLD, VH_LIST, VH_SELECTORS, VH_JOIN_VANILLA,
+    public static final ForgeConfigSpec.BooleanValue ENABLE_VANISH;
+    public static final ForgeConfigSpec.IntValue VANISH_DEFAULT_LEVEL;
+    public static final ForgeConfigSpec.BooleanValue VANISH_PERSIST;
+    public static final ForgeConfigSpec.BooleanValue VANISH_NOTIFY_STAFF;
+    public static final ForgeConfigSpec.BooleanValue VANISH_LOGIN_REMINDER;
+    public static final ForgeConfigSpec.BooleanValue VANISH_INVULNERABLE;
+    public static final ForgeConfigSpec.BooleanValue VANISH_FAKE_MESSAGES;
+    public static final ForgeConfigSpec.ConfigValue<String> VANISH_FAKE_MARK;
+    public static final ForgeConfigSpec.ConfigValue<String> VANISH_TAB_MODE;
+    public static final ForgeConfigSpec.BooleanValue VANISH_TAB_MARKER_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> VANISH_TAB_MARKER;
+    public static final ForgeConfigSpec.BooleanValue VH_WORLD, VH_LIST, VH_SELECTORS, VH_JOIN_VANILLA,
             VH_JOIN_CUSTOM, VH_DEATH, VH_ADVANCEMENTS, VH_NOISE, VH_GAME_EVENTS, VH_CONTAINERS,
             VH_NAMETAG, VH_GUI, VH_PING, VH_MOBS, VH_PICKUP, VH_TRIGGERS;
 
-    private static ModConfigSpec.BooleanValue vh(String key, String comment) {
+    private static ForgeConfigSpec.BooleanValue vh(String key, String comment) {
         return BUILDER.comment(comment).define(key, true);
     }
 
@@ -131,7 +131,7 @@ public class ModerationConfig {
                 .comment("List of TP platforms.",
                         "Format: id;DisplayName;dimension;x;y;z",
                         "Example: spawn;The Spawn;minecraft:overworld;0;100;0")
-                .defineList("platforms", Arrays.asList("platform1;Platform 1;minecraft:overworld;0;300;0"), obj -> obj instanceof String);
+                .defineListAllowEmpty("platforms", Arrays.asList("platform1;Platform 1;minecraft:overworld;0;300;0"), obj -> obj instanceof String);
 
         BUILDER.pop();
 
@@ -281,7 +281,7 @@ public class ModerationConfig {
 
         AUTO_UNWHITELIST_EXTRA_COMMANDS = BUILDER
                 .comment("Extra commands run for each removed player. Placeholders: {player} {uuid}")
-                .defineList("autoUnwhitelistExtraCommands",
+                .defineListAllowEmpty("autoUnwhitelistExtraCommands",
                         java.util.Collections.emptyList(), obj -> obj instanceof String);
 
         BUILDER.pop();
@@ -380,7 +380,7 @@ public class ModerationConfig {
                 .comment("How many days each kind of line is kept, as TYPE=days. -1 = forever.",
                         "Types: WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE, NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK (nickname changes), REPORT, SHEET (character sheet changes).",
                         "'*' applies to every type without its own line. Old lines are removed at startup and every hour.")
-                .defineList("historyRetention", Arrays.asList("*=365", "NOTE=-1", "DEATH_RP=-1"), obj -> obj instanceof String);
+                .defineListAllowEmpty("historyRetention", Arrays.asList("*=365", "NOTE=-1", "DEATH_RP=-1"), obj -> obj instanceof String);
         HISTORY_MAX_PER_PLAYER = BUILDER
                 .comment("Maximum lines kept per player, the oldest are removed first. 0 = no limit.")
                 .defineInRange("historyMaxPerPlayer", 200, 0, 100000);

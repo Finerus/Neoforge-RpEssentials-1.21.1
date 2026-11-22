@@ -1,6 +1,6 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 /**
  * Safe access to the config files.
@@ -15,20 +15,20 @@ public final class Cfg {
     private Cfg() {}
 
     /** True when the given config file is loaded and its values can be read and changed. */
-    public static boolean ready(ModConfigSpec spec) {
+    public static boolean ready(ForgeConfigSpec spec) {
         return spec.isLoaded();
     }
 
     /** True when every given config file is loaded. */
-    public static boolean ready(ModConfigSpec... specs) {
-        for (ModConfigSpec spec : specs) {
+    public static boolean ready(ForgeConfigSpec... specs) {
+        for (ForgeConfigSpec spec : specs) {
             if (!spec.isLoaded()) return false;
         }
         return true;
     }
 
     /** The value, or {@code fallback} when its config file is not loaded yet. */
-    public static <T> T get(ModConfigSpec.ConfigValue<T> value, T fallback) {
+    public static <T> T get(ForgeConfigSpec.ConfigValue<T> value, T fallback) {
         try {
             return value.get();
         } catch (IllegalStateException | NullPointerException e) {

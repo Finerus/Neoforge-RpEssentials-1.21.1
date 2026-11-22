@@ -12,7 +12,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.moderation.VanishManager;
 
@@ -82,8 +82,8 @@ public class RpBlurTabCommands {
     }
 
     private static int modifyList(CommandContext<CommandSourceStack> ctx,
-                                  ModConfigSpec.ConfigValue<List<? extends String>> config,
-                                  ModConfigSpec.ConfigValue<String> listKey, boolean add) {
+                                  ForgeConfigSpec.ConfigValue<List<? extends String>> config,
+                                  ForgeConfigSpec.ConfigValue<String> listKey, boolean add) {
         String listName = Msg.get(ctx.getSource(), listKey);
         String player = StringArgumentType.getString(ctx, "player");
         List<String> list = new ArrayList<>(config.get());
@@ -113,8 +113,8 @@ public class RpBlurTabCommands {
     }
 
     private static int listConfig(CommandContext<CommandSourceStack> ctx,
-                                  ModConfigSpec.ConfigValue<List<? extends String>> config,
-                                  ModConfigSpec.ConfigValue<String> labelKey) {
+                                  ForgeConfigSpec.ConfigValue<List<? extends String>> config,
+                                  ForgeConfigSpec.ConfigValue<String> labelKey) {
         String label = Msg.get(ctx.getSource(), labelKey);
         List<? extends String> list = config.get();
         if (list.isEmpty()) {

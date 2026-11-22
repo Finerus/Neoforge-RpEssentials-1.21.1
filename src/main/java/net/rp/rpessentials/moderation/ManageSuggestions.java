@@ -3,7 +3,7 @@ package net.rp.rpessentials.moderation;
 import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.util.ColorHelper;
@@ -14,9 +14,9 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.CommandEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.CommandEvent;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 
@@ -75,7 +75,7 @@ public class ManageSuggestions {
         if (last != null && now - last < 5000L) return;
 
         String base = net.rp.rpessentials.commands.CommandToggles.manage() + " " + name + " ";
-        ModConfigSpec.ConfigValue<String> header = switch (kind) {
+        ForgeConfigSpec.ConfigValue<String> header = switch (kind) {
             case UNWHITELISTED -> MessagesConfig.MANAGE_SUG_HEAD_WL;
             case DEOPPED -> MessagesConfig.MANAGE_SUG_HEAD_DEOP;
             case BANNED -> MessagesConfig.MANAGE_SUG_HEAD_BAN;
@@ -104,8 +104,8 @@ public class ManageSuggestions {
         }
     }
 
-    private static Component line(ServerPlayer p, ModConfigSpec.ConfigValue<String> label,
-                                  ModConfigSpec.ConfigValue<String> hover, String command, boolean run) {
+    private static Component line(ServerPlayer p, ForgeConfigSpec.ConfigValue<String> label,
+                                  ForgeConfigSpec.ConfigValue<String> hover, String command, boolean run) {
         Component hoverText = ColorHelper.parseSection(ServerLang.get(p, hover));
         return Component.literal("  §8> ").append(ColorHelper.parseSection(ServerLang.get(p, label)).copy()
                 .withStyle(s -> s

@@ -7,6 +7,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(ChunkMap.class)
 public interface ChunkMapAccessor {
-    @Accessor(value = "entityMap", remap = false)
+    @Accessor(value = "entityMap")
     Int2ObjectMap<?> rpessentials$entityMap();
 }

@@ -14,8 +14,8 @@ import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.identity.NicknameManager;
@@ -60,7 +60,7 @@ public class RpConfigCommands {
 
         configNode.then(Commands.literal("exportlang").executes(ctx -> {
             try {
-                java.nio.file.Path p = net.neoforged.fml.loading.FMLPaths.CONFIGDIR.get().resolve("rpessentials/en_us.json");
+                java.nio.file.Path p = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("rpessentials/en_us.json");
                 java.nio.file.Files.createDirectories(p.getParent());
                 java.nio.file.Files.writeString(p, ConfigInspector.exportDefaults(MessagesConfig.class, ProfessionConfig.class));
                 ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_CFG_EXPORT_DONE, "path", p.toString()), false);
@@ -135,7 +135,7 @@ public class RpConfigCommands {
     }
 
     private static int showStatus(CommandContext<CommandSourceStack> ctx) {
-        java.util.function.Function<ModConfigSpec.ConfigValue<String>, String> L = cv -> Msg.get(ctx.getSource(), cv);
+        java.util.function.Function<ForgeConfigSpec.ConfigValue<String>, String> L = cv -> Msg.get(ctx.getSource(), cv);
         String schedule;
         try {
             schedule = !ScheduleConfig.ENABLE_SCHEDULE.get() ? L.apply(MessagesConfig.STAFF_STATS_DISABLED)
@@ -240,12 +240,12 @@ public class RpConfigCommands {
     // =========================================================================
 
     /** Name of an option as written in the config file (its last path element). */
-    static String optName(ModConfigSpec.ConfigValue<?> cv) {
+    static String optName(ForgeConfigSpec.ConfigValue<?> cv) {
         java.util.List<String> p = cv.getPath();
         return p.get(p.size() - 1);
     }
 
-    static int updateConfigInt(CommandContext<CommandSourceStack> ctx, ModConfigSpec.IntValue config) {
+    static int updateConfigInt(CommandContext<CommandSourceStack> ctx, ForgeConfigSpec.IntValue config) {
         String name = optName(config);
         int val = IntegerArgumentType.getInteger(ctx, "value");
         config.set(val);
@@ -254,7 +254,7 @@ public class RpConfigCommands {
         return 1;
     }
 
-    static int updateConfigBool(CommandContext<CommandSourceStack> ctx, ModConfigSpec.BooleanValue config) {
+    static int updateConfigBool(CommandContext<CommandSourceStack> ctx, ForgeConfigSpec.BooleanValue config) {
         String name = optName(config);
         boolean val = BoolArgumentType.getBool(ctx, "value");
         config.set(val);
@@ -269,7 +269,7 @@ public class RpConfigCommands {
     }
 
     static int updateConfigString(CommandContext<CommandSourceStack> ctx,
-                                   ModConfigSpec.ConfigValue<String> configValue) {
+                                   ForgeConfigSpec.ConfigValue<String> configValue) {
         String label = configValue == null ? "" : optName(configValue);
         if (Cfg.ready(MessagesConfig.SPEC)) {
             String value = StringArgumentType.getString(ctx, "value");
@@ -289,7 +289,7 @@ public class RpConfigCommands {
     }
 
     static int updateConfigDouble(CommandContext<CommandSourceStack> ctx,
-                                   ModConfigSpec.DoubleValue configValue) {
+                                   ForgeConfigSpec.DoubleValue configValue) {
         String label = configValue == null ? "" : optName(configValue);
         if (Cfg.ready(MessagesConfig.SPEC)) {
             double value = DoubleArgumentType.getDouble(ctx, "value");

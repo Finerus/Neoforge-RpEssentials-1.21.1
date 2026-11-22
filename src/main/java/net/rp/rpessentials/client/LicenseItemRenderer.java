@@ -11,7 +11,6 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -19,9 +18,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
 import org.joml.Matrix4f;
@@ -43,9 +41,9 @@ public class LicenseItemRenderer extends BlockEntityWithoutLevelRenderer {
     }
 
     public static final ResourceLocation TEXTURE_VALID =
-            ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "textures/item/license_card.png");
+            new ResourceLocation(RpEssentials.MODID, "textures/item/license_card.png");
     public static final ResourceLocation TEXTURE_REVOKED =
-            ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "textures/item/license_card_revoked.png");
+            new ResourceLocation(RpEssentials.MODID, "textures/item/license_card_revoked.png");
 
     private static final float CARD_W = 128f;
     private static final float CARD_H = 92f;
@@ -62,9 +60,9 @@ public class LicenseItemRenderer extends BlockEntityWithoutLevelRenderer {
         String profId = "", holder = "?", issueDate = "?", expiryDate = null;
         boolean revoked = false;
 
-        CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
+        CompoundTag cd = stack.getTag();
         if (cd != null) {
-            CompoundTag tag = cd.copyTag();
+            CompoundTag tag = cd.copy();
             profId    = tag.getString("professionId");
             holder    = tag.contains("holderName")  ? tag.getString("holderName")  : "?";
             issueDate = tag.contains("issueDate")   ? tag.getString("issueDate")   : "?";
@@ -96,10 +94,10 @@ public class LicenseItemRenderer extends BlockEntityWithoutLevelRenderer {
         var vc = buffer.getBuffer(RenderType.text(texture));
         Matrix4f m = ps.last().pose();
 
-        vc.addVertex(m, -hw,  hh, 0f).setColor(255, 255, 255, 255).setUv(0f, 1f).setLight(LightTexture.FULL_BRIGHT);
-        vc.addVertex(m,  hw,  hh, 0f).setColor(255, 255, 255, 255).setUv(1f, 1f).setLight(LightTexture.FULL_BRIGHT);
-        vc.addVertex(m,  hw, -hh, 0f).setColor(255, 255, 255, 255).setUv(1f, 0f).setLight(LightTexture.FULL_BRIGHT);
-        vc.addVertex(m, -hw, -hh, 0f).setColor(255, 255, 255, 255).setUv(0f, 0f).setLight(LightTexture.FULL_BRIGHT);
+        vc.vertex(m, -hw,  hh, 0f).color(255, 255, 255, 255).uv(0f, 1f).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        vc.vertex(m,  hw,  hh, 0f).color(255, 255, 255, 255).uv(1f, 1f).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        vc.vertex(m,  hw, -hh, 0f).color(255, 255, 255, 255).uv(1f, 0f).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        vc.vertex(m, -hw, -hh, 0f).color(255, 255, 255, 255).uv(0f, 0f).uv2(LightTexture.FULL_BRIGHT).endVertex();
     }
 
     private void renderText(PoseStack ps, MultiBufferSource buffer,

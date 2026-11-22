@@ -66,10 +66,10 @@ public class TempLicenseExpirationManager {
     private static void markStackIfRevoked(ServerPlayer player, net.minecraft.world.item.ItemStack stack,
                                            List<String> activeLicenses) {
         if (stack.isEmpty() || !(stack.getItem() instanceof LicenseItem)) return;
-        if (!stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) return;
+        if (!stack.hasTag()) return;
 
         net.minecraft.nbt.CompoundTag tag =
-                stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA).copyTag();
+                stack.getTag().copy();
         String profId = tag.getString("professionId");
         if (profId.isEmpty()) return;
 
@@ -94,8 +94,7 @@ public class TempLicenseExpirationManager {
         } else {
             return;
         }
-        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                net.minecraft.world.item.component.CustomData.of(tag));
+        stack.setTag(tag);
     }
 
     public static void tickMidnightSweep(MinecraftServer server) {

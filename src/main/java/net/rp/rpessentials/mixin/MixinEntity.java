@@ -20,8 +20,7 @@ public abstract class MixinEntity {
 
     @Inject(
             method = "saveWithoutId",
-            at = @At("HEAD"),
-            remap = false
+            at = @At("HEAD")
     )
     private void rpessentials$beginSave(CompoundTag tag, CallbackInfoReturnable<CompoundTag> cir) {
         rpessentials$saving.set(true);
@@ -29,14 +28,13 @@ public abstract class MixinEntity {
 
     @Inject(
             method = "saveWithoutId",
-            at = @At("RETURN"),
-            remap = false
+            at = @At("RETURN")
     )
     private void rpessentials$endSave(CompoundTag tag, CallbackInfoReturnable<CompoundTag> cir) {
         rpessentials$saving.set(false);
     }
 
-    @Inject(method = "isIgnoringBlockTriggers", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    @Inject(method = "isIgnoringBlockTriggers", at = @At("HEAD"), cancellable = true, require = 0)
     private void rpessentials$vanishTriggers(CallbackInfoReturnable<Boolean> cir) {
         if ((Object) this instanceof ServerPlayer p && VanishManager.isVanished(p.getUUID())
                 && VanishManager.hides(VanishManager.Aspect.TRIGGERS)) {
@@ -47,8 +45,7 @@ public abstract class MixinEntity {
     @Inject(
             method = "getCustomName",
             at = @At("HEAD"),
-            cancellable = true,
-            remap = false
+            cancellable = true
     )
     private void onGetCustomName(CallbackInfoReturnable<Component> cir) {
         if (!((Object) this instanceof ServerPlayer serverPlayer)) return;

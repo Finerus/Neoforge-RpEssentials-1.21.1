@@ -5,7 +5,7 @@ import net.rp.rpessentials.permission.RpPerms;
 
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.commands.CommandToggles;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.util.ColorHelper;
@@ -100,7 +100,7 @@ public class RpManageCommands {
         return node;
     }
 
-    private static String t(CommandContext<CommandSourceStack> ctx, ModConfigSpec.ConfigValue<String> cv, String... a) {
+    private static String t(CommandContext<CommandSourceStack> ctx, ForgeConfigSpec.ConfigValue<String> cv, String... a) {
         return ServerLang.get(ctx.getSource().getEntity() instanceof ServerPlayer p ? p : null, cv, a);
     }
 

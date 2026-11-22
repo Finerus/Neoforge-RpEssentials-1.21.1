@@ -5,11 +5,11 @@ import net.rp.rpessentials.permission.RpPerms;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.ServerChatEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.ServerChatEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.ChatConfig;

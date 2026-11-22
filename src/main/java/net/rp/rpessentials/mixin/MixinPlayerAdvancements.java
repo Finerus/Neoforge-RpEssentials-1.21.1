@@ -1,6 +1,6 @@
 package net.rp.rpessentials.mixin;
 
-import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.Advancement;
 import net.minecraft.server.PlayerAdvancements;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.moderation.VanishManager;
@@ -15,13 +15,13 @@ public abstract class MixinPlayerAdvancements {
 
     @Shadow private ServerPlayer player;
 
-    @Inject(method = "award", at = @At("HEAD"), remap = false, require = 0)
-    private void rpessentials$beginAward(AdvancementHolder holder, String criterion, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "award", at = @At("HEAD"), require = 0)
+    private void rpessentials$beginAward(Advancement holder, String criterion, CallbackInfoReturnable<Boolean> cir) {
         VanishManager.beginAward(player.getUUID());
     }
 
-    @Inject(method = "award", at = @At("RETURN"), remap = false, require = 0)
-    private void rpessentials$endAward(AdvancementHolder holder, String criterion, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "award", at = @At("RETURN"), require = 0)
+    private void rpessentials$endAward(Advancement holder, String criterion, CallbackInfoReturnable<Boolean> cir) {
         VanishManager.endAward();
     }
 }

@@ -1,21 +1,18 @@
 package net.rp.rpessentials.network;
 
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraft.resources.ResourceLocation;
+import net.rp.rpessentials.network.compat.DirectionalPayloadHandler;
+import net.rp.rpessentials.network.compat.PayloadRegistrar;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.network.SyncNametagDataPacket;
 import net.rp.rpessentials.client.ClientNametagConfig;
 import net.rp.rpessentials.client.ClientProfessionRestrictions;
 
-@EventBusSubscriber(modid = RpEssentials.MODID)
 public class NetworkHandler {
 
-    @SubscribeEvent
-    public static void register(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
+    /** Called from the mod constructor: Forge 1.20.1 channels must exist before the game connects. */
+    public static void register() {
+        PayloadRegistrar registrar = PayloadRegistrar.create(new ResourceLocation(RpEssentials.MODID, "main"), "1");
 
         // ── Nametag sync ──────────────────────────────────────────────────────
         registrar.playToClient(
@@ -262,7 +259,7 @@ public class NetworkHandler {
 
     private static void handleSyncProfessionRestrictions(
             SyncProfessionRestrictionsPacket packet,
-            net.neoforged.neoforge.network.handling.IPayloadContext ctx) {
+            net.rp.rpessentials.network.compat.IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             ClientProfessionRestrictions.updateRestrictions(
                     packet.blockedCrafts(), packet.blockedEquipment());

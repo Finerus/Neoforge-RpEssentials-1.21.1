@@ -5,7 +5,7 @@ import net.rp.rpessentials.permission.RpPerms;
 
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.api.event.DiceRollEvent;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.config.RpConfig;
 import net.rp.rpessentials.config.MessagesConfig;
@@ -174,11 +174,11 @@ public class DiceManager {
     private static final java.util.regex.Pattern EXPR = java.util.regex.Pattern.compile("^(\\d*)d(\\d+)([+-]\\d+)?$");
     private static final java.util.regex.Pattern NAMED = java.util.regex.Pattern.compile("^(.+?)([+-]\\d+)?$");
 
-    private static int intOpt(net.neoforged.neoforge.common.ModConfigSpec.IntValue v, int def) {
+    private static int intOpt(net.minecraftforge.common.ForgeConfigSpec.IntValue v, int def) {
         return Cfg.get(v, def);
     }
 
-    private static boolean boolOpt(net.neoforged.neoforge.common.ModConfigSpec.BooleanValue v, boolean def) {
+    private static boolean boolOpt(net.minecraftforge.common.ForgeConfigSpec.BooleanValue v, boolean def) {
         return Cfg.get(v, def);
     }
 
@@ -307,10 +307,10 @@ public class DiceManager {
 
         Roll roll = execute(req);
         DiceRollEvent.Pre pre = new DiceRollEvent.Pre(player, req.dice(), roll.result(), roll);
-        if (NeoForge.EVENT_BUS.post(pre).isCanceled()) return Status.CANCELLED;
+        if (MinecraftForge.EVENT_BUS.post(pre)) return Status.CANCELLED;
         if (!ignoreCooldown) RpCooldownManager.setCooldown(player.getUUID(), "dice");
 
-        String result = pre.getResult();
+        String result = pre.getRollResult();
         boolean replaced = !result.equals(roll.result());
         String playerName = NicknameManager.getDisplayName(player);
         String shownDice = req.expression();
@@ -344,7 +344,7 @@ public class DiceManager {
 
         RpEssentials.LOGGER.info("[DICE] {} rolled {}{} and got {} {}", playerName, shownDice,
                 req.secret() ? " (secret)" : "", result, roll.rolls());
-        NeoForge.EVENT_BUS.post(new DiceRollEvent.Post(player, req.dice(), result, audience, roll));
+        MinecraftForge.EVENT_BUS.post(new DiceRollEvent.Post(player, req.dice(), result, audience, roll));
         return Status.OK;
     }
 

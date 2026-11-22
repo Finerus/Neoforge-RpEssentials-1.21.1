@@ -8,13 +8,13 @@ import net.rp.rpessentials.lang.ServerLang;
 import com.mojang.authlib.GameProfile;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.ByteBufCodecs;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.profession.PendingProfileManager;
@@ -26,7 +26,7 @@ import net.rp.rpessentials.profession.PendingProfileManager;
 public record RequestAddPlayerPacket(String playerName) implements CustomPacketPayload {
 
     public static final Type<RequestAddPlayerPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "request_add_player"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "request_add_player"));
 
     public static final StreamCodec<ByteBuf, RequestAddPlayerPacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8, RequestAddPlayerPacket::playerName,

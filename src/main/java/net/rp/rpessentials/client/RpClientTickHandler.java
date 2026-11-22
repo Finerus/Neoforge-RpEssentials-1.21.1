@@ -3,11 +3,11 @@ package net.rp.rpessentials.client;
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.RpConfig;
 import net.minecraft.client.Minecraft;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.TickEvent;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.network.RequestOpenGuiPacket;
 
@@ -20,7 +20,8 @@ public class RpClientTickHandler {
     private static int evictTick = 0;
 
     @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
 
         // Éviction périodique du cache des joueurs déconnectés (~toutes les 10s)

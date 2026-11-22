@@ -210,7 +210,7 @@ public final class ReportService {
     // =========================================================================
     // HELPERS
     // =========================================================================
-    private static Component msg(ServerPlayer viewer, net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key,
+    private static Component msg(ServerPlayer viewer, net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> key,
                                  String... replacements) {
         return ColorHelper.parseSection(ServerLang.get(viewer, key, replacements));
     }
@@ -224,9 +224,9 @@ public final class ReportService {
         return msg(viewer, MessagesConfig.REPORT_NOT_FOUND, "id", String.valueOf(id));
     }
 
-    private static Component button(ServerPlayer viewer, net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> label,
+    private static Component button(ServerPlayer viewer, net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> label,
                                     ClickEvent.Action action, String command,
-                                    net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> hover) {
+                                    net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> hover) {
         MutableComponent b = msg(viewer, label).copy();
         b.withStyle(s -> {
             var st = s.withClickEvent(new ClickEvent(action, command));

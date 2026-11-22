@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
-    id 'net.neoforged.moddev' version '2.0.148'
+    id 'net.neoforged.moddev.legacyforge' version '2.0.148'
     id 'idea'
 }
 
@@ -9,13 +9,11 @@ tasks.named('wrapper', Wrapper).configure {
     distributionType = Wrapper.DistributionType.BIN
 }
 
-version = mod_version
+version = "${mod_version}+forge-${minecraft_version}"
 group = mod_group_id
 
 repositories {
     mavenCentral()
-    maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-    maven { url "https://maven.su5ed.dev/releases" }
     maven { url "https://api.modrinth.com/maven" }
     maven {
         name = "Illusive Soulworks maven"
@@ -32,18 +30,18 @@ publishing {
         mavenJava(MavenPublication) {
             groupId = mod_group_id
             artifactId = mod_id
-            version = mod_version
+            version = project.version
             artifact jar
         }
     }
-    // repositories {} vide = publie dans ~/.m2/repository par défaut
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+// Minecraft 1.20.1 runs on Java 17: the mod must be compiled for Java 17.
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
-// ModDevGradle: sets up Minecraft + NeoForge, the run configurations and the IntelliJ integration.
-neoForge {
-    version = project.neo_version
+// ModDevGradle (legacy Forge flavour): sets up Minecraft + Forge 1.20.1, the run configurations and IntelliJ.
+legacyForge {
+    version = "${minecraft_version}-${forge_version}"
 
     parchment {
         minecraftVersion = project.parchment_minecraft_version
@@ -55,22 +53,27 @@ neoForge {
             systemProperty 'forge.logging.markers', 'REGISTRIES'
             logLevel = org.slf4j.event.Level.DEBUG
         }
-        // Same folders as before (runs/<name>): the dev worlds and configs are kept.
+        // Own folders: the worlds of the NeoForge 1.21.1 branch (runs/client, runs/server) must never be opened
+        // by Minecraft 1.20.1 (a newer world cannot be loaded by an older game).
         client {
             client()
-            gameDirectory = project.file('runs/client')
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            gameDirectory = project.file('runs/forge-1.20.1/client')
+        }
+        // Second player for tests (two clients at once): own folder (options, logs) and own name.
+        // Same name as the first client ("Dev") = same UUID = one kicks the other.
+        client2 {
+            client()
+            gameDirectory = project.file('runs/forge-1.20.1/client2')
+            programArguments.addAll('--username', 'Dev2')
         }
         server {
             server()
-            gameDirectory = project.file('runs/server')
+            gameDirectory = project.file('runs/forge-1.20.1/server')
             programArgument '--nogui'
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
         gameTestServer {
             type = "gameTestServer"
-            gameDirectory = project.file('runs/gameTestServer')
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            gameDirectory = project.file('runs/forge-1.20.1/gameTestServer')
         }
     }
 
@@ -81,6 +84,12 @@ neoForge {
     }
 }
 
+// Mixins: Forge 1.20.1 needs a refmap (names are obfuscated in production).
+mixin {
+    add sourceSets.main, "${mod_id}.refmap.json"
+    config "${mod_id}.mixin.json"
+}
+
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 configurations {
@@ -89,18 +98,26 @@ configurations {
 }
 
 dependencies {
-    // NeoForge itself is added by ModDevGradle (neoForge.version above).
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // MixinExtras (@WrapOperation, @Local): bundled in NeoForge, but not in Forge 1.20.1 -> shipped inside our jar.
+    compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:0.4.1"))
+    implementation(jarJar("io.github.llamalad7:mixinextras-forge:0.4.1"))
+
     compileOnly 'net.luckperms:api:5.4'
 
-
     // Immersive Messages (and its library TxniLib): optional, only used for the IMMERSIVE display mode.
-    // Not shipped in the jar; without it the message falls back to the action bar.
-    compileOnly "maven.modrinth:immersive-messages-api:neoforge-1.21.1-1.0.18"
-    compileOnly "maven.modrinth:txnilib:neoforge-1.21.1-1.0.24"
-    // Forgified Fabric API is not shipped either: the old one of TxniLib is checked in core/FabricApiCheck.
+    modCompileOnly "maven.modrinth:immersive-messages-api:forge-1.20.1-1.0.18"
+    modCompileOnly "maven.modrinth:txnilib:forge-1.20.1-1.0.24"
 
-    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
-    runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+    modCompileOnly "top.theillusivec4.curios:curios-forge:${curios_version}:api"
+    modRuntimeOnly "top.theillusivec4.curios:curios-forge:${curios_version}"
+}
+
+jar {
+    manifest {
+        attributes(['MixinConfigs': "${mod_id}.mixin.json"])
+    }
 }
 
 processResources {
@@ -111,8 +128,8 @@ tasks.withType(ProcessResources).configureEach {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,
-            neo_version            : neo_version,
-            neo_version_range      : neo_version_range,
+            forge_version          : forge_version,
+            forge_version_range    : forge_version_range,
             loader_version_range   : loader_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
@@ -124,13 +141,14 @@ tasks.withType(ProcessResources).configureEach {
     ]
     inputs.properties replaceProperties
 
-    filesMatching(['META-INF/neoforge.mods.toml']) {
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
         expand replaceProperties + [file: [jarVersion: mod_version]]
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xmaxerrs', '5000']
 }
 
 idea {

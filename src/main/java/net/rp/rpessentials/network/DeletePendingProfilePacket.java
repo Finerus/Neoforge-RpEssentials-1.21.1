@@ -7,11 +7,11 @@ import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.profession.PendingProfileManager;
@@ -25,7 +25,7 @@ import java.util.UUID;
 public record DeletePendingProfilePacket(UUID targetUuid) implements CustomPacketPayload {
 
     public static final Type<DeletePendingProfilePacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "delete_pending_profile"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "delete_pending_profile"));
 
     public static final StreamCodec<FriendlyByteBuf, DeletePendingProfilePacket> STREAM_CODEC =
             new StreamCodec<>() {

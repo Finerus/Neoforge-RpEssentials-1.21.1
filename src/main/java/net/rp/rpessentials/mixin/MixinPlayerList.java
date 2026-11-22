@@ -43,8 +43,7 @@ public abstract class MixinPlayerList implements IRpPlayerList {
     @Inject(
             method = "broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V",
             at = @At("HEAD"),
-            cancellable = true,
-            remap = false
+            cancellable = true
     )
     public void onBroadcastSystemMessage(Component component, boolean bl, CallbackInfo ci) {
         if (rpessentials$isSendingCustomMessage) return;

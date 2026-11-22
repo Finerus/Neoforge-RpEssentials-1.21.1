@@ -4,12 +4,12 @@ import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.TickEvent;
 import net.rp.rpessentials.api.event.RpTeleportEvent;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpConfig;
@@ -74,7 +74,7 @@ public final class TeleportWarmupManager {
         }
     }
 
-    private static boolean opt(net.neoforged.neoforge.common.ModConfigSpec.BooleanValue v, boolean def) {
+    private static boolean opt(net.minecraftforge.common.ForgeConfigSpec.BooleanValue v, boolean def) {
         return Cfg.get(v, def);
     }
 
@@ -88,10 +88,10 @@ public final class TeleportWarmupManager {
         Vec3 dest = new Vec3(x, y, z);
         RpTeleportEvent.Warmup warmup = new RpTeleportEvent.Warmup(player, kind, level, dest, Math.max(0, seconds) * 20,
                 opt(RpConfig.TELEPORT_CANCEL_ON_MOVE, true), opt(RpConfig.TELEPORT_CANCEL_ON_DAMAGE, true));
-        if (NeoForge.EVENT_BUS.post(warmup).isCanceled()) return false;
+        if (MinecraftForge.EVENT_BUS.post(warmup)) return false;
 
         Pending old = PENDING.remove(player.getUUID());
-        if (old != null) NeoForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, old.kind, old.level, old.destination,
+        if (old != null) MinecraftForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, old.kind, old.level, old.destination,
                 RpTeleportEvent.Cancelled.Reason.REPLACED));
 
         Pending p = new Pending(kind, level, dest, yaw, pitch, player.position(), warmup.getWarmupTicks(),
@@ -112,7 +112,7 @@ public final class TeleportWarmupManager {
     /** Cancels a pending teleport without message. */
     public static void cancel(ServerPlayer player) {
         Pending p = PENDING.remove(player.getUUID());
-        if (p != null) NeoForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, p.kind, p.level, p.destination,
+        if (p != null) MinecraftForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, p.kind, p.level, p.destination,
                 RpTeleportEvent.Cancelled.Reason.OTHER));
     }
 
@@ -127,20 +127,21 @@ public final class TeleportWarmupManager {
         player.displayClientMessage(ColorHelper.parseColors(ServerLang.get(player,
                 reason == RpTeleportEvent.Cancelled.Reason.DAMAGED ? MessagesConfig.TP_WARMUP_CANCELLED_DAMAGE
                         : MessagesConfig.TP_WARMUP_CANCELLED_MOVE)), true);
-        NeoForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, p.kind, p.level, p.destination, reason));
+        MinecraftForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, p.kind, p.level, p.destination, reason));
     }
 
     private static void finish(ServerPlayer player, Pending p) {
-        if (NeoForge.EVENT_BUS.post(new RpTeleportEvent.Pre(player, p.kind, p.level, p.destination)).isCanceled()) return;
+        if (MinecraftForge.EVENT_BUS.post(new RpTeleportEvent.Pre(player, p.kind, p.level, p.destination))) return;
         ServerLevel fromLevel = player.serverLevel();
         Vec3 from = player.position();
         player.teleportTo(p.level, p.destination.x, p.destination.y, p.destination.z, java.util.Set.of(), p.yaw, p.pitch);
         if (p.after != null) p.after.accept(player);
-        NeoForge.EVENT_BUS.post(new RpTeleportEvent.Post(player, p.kind, p.level, p.destination, fromLevel, from));
+        MinecraftForge.EVENT_BUS.post(new RpTeleportEvent.Post(player, p.kind, p.level, p.destination, fromLevel, from));
     }
 
     @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Post event) {
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
         if (PENDING.isEmpty()) return;
         for (Iterator<Map.Entry<UUID, Pending>> it = PENDING.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<UUID, Pending> e = it.next();
@@ -155,7 +156,7 @@ public final class TeleportWarmupManager {
                 continue;
             }
             p.left--;
-            NeoForge.EVENT_BUS.post(new RpTeleportEvent.Tick(player, p.kind, p.level, p.destination, p.left, p.total));
+            MinecraftForge.EVENT_BUS.post(new RpTeleportEvent.Tick(player, p.kind, p.level, p.destination, p.left, p.total));
             if (p.left <= 0) {
                 it.remove();
                 finish(player, p);
@@ -166,17 +167,17 @@ public final class TeleportWarmupManager {
     }
 
     @SubscribeEvent
-    public static void onDamage(LivingDamageEvent.Post event) {
+    public static void onDamage(LivingDamageEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         Pending p = PENDING.get(player.getUUID());
-        if (p != null && p.cancelOnDamage && event.getNewDamage() > 0) abort(player, p, RpTeleportEvent.Cancelled.Reason.DAMAGED);
+        if (p != null && p.cancelOnDamage && event.getAmount() > 0) abort(player, p, RpTeleportEvent.Cancelled.Reason.DAMAGED);
     }
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         Pending p = PENDING.remove(player.getUUID());
-        if (p != null) NeoForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, p.kind, p.level, p.destination,
+        if (p != null) MinecraftForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, p.kind, p.level, p.destination,
                 RpTeleportEvent.Cancelled.Reason.DISCONNECTED));
     }
 }

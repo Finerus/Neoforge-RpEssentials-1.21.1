@@ -4,7 +4,7 @@ import net.rp.rpessentials.config.Cfg;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ public final class PlayerCommands {
 
     private PlayerCommands() {}
 
-    public static List<? extends String> get(ModConfigSpec.ConfigValue<List<? extends String>> cv) {
+    public static List<? extends String> get(ForgeConfigSpec.ConfigValue<List<? extends String>> cv) {
         return Cfg.get(cv, List.of());
     }
 

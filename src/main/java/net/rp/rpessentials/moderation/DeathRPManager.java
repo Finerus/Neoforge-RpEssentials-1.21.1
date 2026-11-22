@@ -18,7 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.config.ScheduleConfig;
@@ -341,9 +341,9 @@ public class DeathRPManager {
     // ── Son ─────────────────────────────────────────────────────────────────────
     private static void playSound(
             MinecraftServer server, ServerPlayer solo,
-            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> soundConfig,
-            net.neoforged.neoforge.common.ModConfigSpec.DoubleValue volumeConfig,
-            net.neoforged.neoforge.common.ModConfigSpec.DoubleValue pitchConfig,
+            net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> soundConfig,
+            net.minecraftforge.common.ForgeConfigSpec.DoubleValue volumeConfig,
+            net.minecraftforge.common.ForgeConfigSpec.DoubleValue pitchConfig,
             String label) {
         if (server == null) return;
         if (!Cfg.ready(RpEssentialsConfig.SPEC)) {

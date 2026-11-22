@@ -11,9 +11,9 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.config.ConfigInspector;
 import net.rp.rpessentials.network.ConfigFileEntriesPacket;
 import net.rp.rpessentials.network.ConfigGuiFilesPacket;
@@ -604,7 +604,7 @@ public class ConfigManagerScreen extends net.rp.rpessentials.client.skin.CanvasS
 
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {
+    public void renderBackground(GuiGraphics g) {
         // Intentionally empty — we draw our own background in render()
     }
 
@@ -901,7 +901,7 @@ public class ConfigManagerScreen extends net.rp.rpessentials.client.skin.CanvasS
      */
     private static String formatSectionName(String name) {
         if (name == null) return "";
-        // The raw key from ModConfigSpec paths uses the exact string passed to push()
+        // The raw key from ForgeConfigSpec paths uses the exact string passed to push()
         return name;
     }
 
@@ -1070,8 +1070,8 @@ public class ConfigManagerScreen extends net.rp.rpessentials.client.skin.CanvasS
 
         /** Vanilla background in the legacy look; on the canvas the window is already darkened. */
         @Override
-        public void renderBackground(GuiGraphics g, int mx, int my, float partial) {
-            if (!canvasActive()) super.renderBackground(g, mx, my, partial);
+        public void renderBackground(GuiGraphics g) {
+            if (!canvasActive()) super.renderBackground(g);
         }
 
         @Override

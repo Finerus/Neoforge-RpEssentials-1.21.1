@@ -1,12 +1,12 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ public record OpenGlobalRestrictionsPacket(
 ) implements CustomPacketPayload {
 
     public static final Type<OpenGlobalRestrictionsPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "open_global_restrictions"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "open_global_restrictions"));
 
     public static final StreamCodec<FriendlyByteBuf, OpenGlobalRestrictionsPacket> STREAM_CODEC =
             new StreamCodec<>() {

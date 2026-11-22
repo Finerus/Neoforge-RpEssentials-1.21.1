@@ -7,13 +7,13 @@ import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.util.GuiFeedback;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
@@ -33,7 +33,7 @@ public record SaveGlobalRestrictionsPacket(
 ) implements CustomPacketPayload {
 
     public static final Type<SaveGlobalRestrictionsPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "save_global_restrictions"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "save_global_restrictions"));
 
     public static final StreamCodec<FriendlyByteBuf, SaveGlobalRestrictionsPacket> STREAM_CODEC =
             new StreamCodec<>() {
@@ -98,7 +98,7 @@ public record SaveGlobalRestrictionsPacket(
                     List<String> out = new ArrayList<>();
                     for (Object[] cat : details) {
                         @SuppressWarnings("unchecked")
-                        ModConfigSpec.ConfigValue<String> label = (ModConfigSpec.ConfigValue<String>) cat[0];
+                        ForgeConfigSpec.ConfigValue<String> label = (ForgeConfigSpec.ConfigValue<String>) cat[0];
                         out.add("§e" + ServerLang.get(v, label) + "§7:");
                         @SuppressWarnings("unchecked")
                         List<String> lines = (List<String>) cat[1];
@@ -113,8 +113,8 @@ public record SaveGlobalRestrictionsPacket(
         });
     }
 
-    private static void applyCategory(List<Object[]> details, ModConfigSpec.ConfigValue<String> label,
-                                      ModConfigSpec.ConfigValue<List<? extends String>> cfg,
+    private static void applyCategory(List<Object[]> details, ForgeConfigSpec.ConfigValue<String> label,
+                                      ForgeConfigSpec.ConfigValue<List<? extends String>> cfg,
                                       List<String> next) {
         List<String> before = new ArrayList<>(cfg.get());
         List<String> d = GuiFeedback.diff(before, next);

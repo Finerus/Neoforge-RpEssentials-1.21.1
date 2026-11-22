@@ -1,40 +1,40 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 public class ChatConfig {
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     // === CHAT SYSTEM ===
-    public static final ModConfigSpec.BooleanValue ENABLE_CHAT_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> PLAYER_NAME_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> GLOBAL_CHAT_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> CHAT_MESSAGE_COLOR;
-    public static final ModConfigSpec.BooleanValue ENABLE_TIMESTAMP;
-    public static final ModConfigSpec.ConfigValue<String> TIMESTAMP_FORMAT;
-    public static final ModConfigSpec.BooleanValue MARKDOWN_ENABLED;
-    public static final ModConfigSpec.BooleanValue ENABLE_COLORS_COMMAND;
-    public static final ModConfigSpec.BooleanValue LOG_PRIVATE_MESSAGES;
-    public static final ModConfigSpec.BooleanValue SHOW_REAL_NAME_IN_CHAT;
-    public static final ModConfigSpec.BooleanValue HIDE_REAL_NAMES;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_CHAT_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> PLAYER_NAME_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> GLOBAL_CHAT_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> CHAT_MESSAGE_COLOR;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_TIMESTAMP;
+    public static final ForgeConfigSpec.ConfigValue<String> TIMESTAMP_FORMAT;
+    public static final ForgeConfigSpec.BooleanValue MARKDOWN_ENABLED;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_COLORS_COMMAND;
+    public static final ForgeConfigSpec.BooleanValue LOG_PRIVATE_MESSAGES;
+    public static final ForgeConfigSpec.BooleanValue SHOW_REAL_NAME_IN_CHAT;
+    public static final ForgeConfigSpec.BooleanValue HIDE_REAL_NAMES;
 
     // === PROXIMITY CHAT ===
-    public static final ModConfigSpec.BooleanValue ENABLE_PROXIMITY_CHAT;
-    public static final ModConfigSpec.BooleanValue ENABLE_PROXIMITY_SPY;
-    public static final ModConfigSpec.IntValue PROXIMITY_CHAT_DISTANCE;
-    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_BYPASS_PREFIX;
-    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> CHAT_MESSAGE_FORMAT;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_PROXIMITY_CHAT;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_PROXIMITY_SPY;
+    public static final ForgeConfigSpec.IntValue PROXIMITY_CHAT_DISTANCE;
+    public static final ForgeConfigSpec.ConfigValue<String> PROXIMITY_CHAT_BYPASS_PREFIX;
+    public static final ForgeConfigSpec.ConfigValue<String> PROXIMITY_CHAT_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> CHAT_MESSAGE_FORMAT;
 
     // === CHAT SYSTEM 2 ===
-    public static final ModConfigSpec.ConfigValue<String> PLAYER_CHAT_CODES;
-    public static final ModConfigSpec.BooleanValue ENABLE_PM_SPY;
+    public static final ForgeConfigSpec.ConfigValue<String> PLAYER_CHAT_CODES;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_PM_SPY;
 
     // === JOIN/LEAVE MESSAGES ===
-    public static final ModConfigSpec.BooleanValue ENABLE_CUSTOM_JOIN_LEAVE;
-    public static final ModConfigSpec.ConfigValue<String> JOIN_MESSAGE;
-    public static final ModConfigSpec.ConfigValue<String> LEAVE_MESSAGE;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_CUSTOM_JOIN_LEAVE;
+    public static final ForgeConfigSpec.ConfigValue<String> JOIN_MESSAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> LEAVE_MESSAGE;
 
     static {
         BUILDER.push("Chat System");

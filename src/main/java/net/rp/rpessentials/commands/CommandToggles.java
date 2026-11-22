@@ -9,11 +9,11 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
 import java.util.ArrayList;
@@ -39,7 +39,7 @@ public final class CommandToggles {
     /** Skipped unprefixed commands: [prefix, name]. */
     private static final List<String[]> CONFLICTS = new ArrayList<>();
 
-    private static boolean opt(ModConfigSpec.BooleanValue v) {
+    private static boolean opt(ForgeConfigSpec.BooleanValue v) {
         return Cfg.get(v, false);
     }
 

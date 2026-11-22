@@ -16,7 +16,7 @@ import java.util.List;
 @Mixin(EntitySelector.class)
 public abstract class MixinEntitySelector {
 
-    @Inject(method = "findPlayers", at = @At("RETURN"), cancellable = true, remap = false)
+    @Inject(method = "findPlayers", at = @At("RETURN"), cancellable = true)
     private void rpessentials$filterPlayers(CommandSourceStack source, CallbackInfoReturnable<List<ServerPlayer>> cir) {
         List<ServerPlayer> result = cir.getReturnValue();
         if (result == null || result.isEmpty() || !VanishManager.anyVanished()
@@ -26,7 +26,7 @@ public abstract class MixinEntitySelector {
         cir.setReturnValue(out);
     }
 
-    @Inject(method = "findEntities", at = @At("RETURN"), cancellable = true, remap = false)
+    @Inject(method = "findEntities", at = @At("RETURN"), cancellable = true)
     private void rpessentials$filterEntities(CommandSourceStack source, CallbackInfoReturnable<List<? extends Entity>> cir) {
         List<? extends Entity> result = cir.getReturnValue();
         if (result == null || result.isEmpty() || !VanishManager.anyVanished()

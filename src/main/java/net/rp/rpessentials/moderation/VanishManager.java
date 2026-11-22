@@ -19,7 +19,7 @@ import net.minecraft.network.protocol.status.ServerStatus;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.core.RpEssentialsDataPaths;
@@ -58,7 +58,7 @@ public final class VanishManager {
     // =========================================================================
     // CONFIG
     // =========================================================================
-    private static boolean opt(ModConfigSpec.BooleanValue v) {
+    private static boolean opt(ForgeConfigSpec.BooleanValue v) {
         return Cfg.get(v, v.getDefault());
     }
 
@@ -321,7 +321,7 @@ public final class VanishManager {
         for (GameProfile g : p.sample()) if (!vanished.containsKey(g.getId())) sample.add(g);
         return new ServerStatus(status.description(),
                 Optional.of(new ServerStatus.Players(p.max(), Math.max(0, p.online() - hiddenOnline), sample)),
-                status.version(), status.favicon(), status.enforcesSecureChat());
+                status.version(), status.favicon(), status.enforcesSecureChat(), status.forgeData());
     }
 
     public static boolean silentOpen(ServerPlayer p) {

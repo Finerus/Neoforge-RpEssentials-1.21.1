@@ -191,13 +191,13 @@ public class SheetTextEditorScreen extends net.rp.rpessentials.client.skin.Canva
         renderScreen(g, mouseX, mouseY, delta);
         g.drawCenteredString(this.font, "§6" + I18n.get(K + "title", fieldName), this.width / 2, 10, 0xFFD700);
         if (preview != null) {
-            g.drawString(this.font, "§8" + I18n.get(K + "preview"), preview.getX() + 6, preview.getY() - 9, 0x888888, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
+            g.drawString(this.font, "§8" + I18n.get(K + "preview"), preview.getLeft() + 6, preview.getTop() - 9, 0x888888, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         }
         // The character count is drawn by the Minecraft text area itself (under it, on the right).
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {}
+    public void renderBackground(GuiGraphics g) {}
 
     @Override
     public boolean isPauseScreen() { return false; }

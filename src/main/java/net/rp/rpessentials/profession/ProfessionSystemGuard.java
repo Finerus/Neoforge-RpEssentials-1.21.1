@@ -4,9 +4,9 @@ import com.mojang.brigadier.ParseResults;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.CommandEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.CommandEvent;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.config.ProfessionConfig;
 

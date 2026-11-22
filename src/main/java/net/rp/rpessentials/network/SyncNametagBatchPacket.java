@@ -1,10 +1,10 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.network.PacketValidation;
 
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import net.rp.rpessentials.RpEssentials;
 public record SyncNametagBatchPacket(List<SyncNametagDataPacket> entries) implements CustomPacketPayload {
 
     public static final Type<SyncNametagBatchPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "sync_nametag_batch"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "sync_nametag_batch"));
 
     public static final StreamCodec<FriendlyByteBuf, SyncNametagBatchPacket> CODEC =
             new StreamCodec<>() {

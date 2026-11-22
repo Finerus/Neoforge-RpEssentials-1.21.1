@@ -194,7 +194,7 @@ public final class HistoryManager {
     public static void record(UUID target, String targetName, String type, String actor, String detail, int hiddenLevel) {
         if (target == null) return;
         int hidden = Math.max(0, hiddenLevel);
-        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        net.minecraft.server.MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null && actor != null) {
             net.minecraft.server.level.ServerPlayer a = server.getPlayerList().getPlayerByName(actor);
             if (a != null && VanishManager.isVanished(a.getUUID())) hidden = Math.max(hidden, Math.max(1, VanishManager.getLevel(a.getUUID())));
@@ -268,7 +268,7 @@ public final class HistoryManager {
         return removed;
     }
 
-    private static net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> typeKey(String type) {
+    private static net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> typeKey(String type) {
         return switch (type) {
             case WARN -> MessagesConfig.HISTORY_T_WARN;
             case WARN_REMOVE -> MessagesConfig.HISTORY_T_WARN_REMOVE;

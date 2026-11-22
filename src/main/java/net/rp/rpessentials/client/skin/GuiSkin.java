@@ -6,8 +6,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.rp.rpessentials.RpEssentials;
@@ -55,7 +53,7 @@ public final class GuiSkin {
     public static final String SEPARATOR = "separator";
 
     public static ResourceLocation id(String name) {
-        return ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, name);
+        return new ResourceLocation(RpEssentials.MODID, name);
     }
 
     // ── Mode ─────────────────────────────────────────────────────────────────
@@ -80,10 +78,9 @@ public final class GuiSkin {
         return textured();
     }
 
-    /** True when the sprite has a PNG (the atlas returns the missing texture otherwise). */
+    /** True when the sprite has a PNG (see {@link GuiSprites}). */
     public static boolean has(String name) {
-        TextureAtlasSprite s = Minecraft.getInstance().getGuiSprites().getSprite(id(name));
-        return !s.contents().name().equals(MissingTextureAtlasSprite.getLocation());
+        return GuiSprites.exists(id(name));
     }
 
     // ── Scope (screen / tab) ─────────────────────────────────────────────────
@@ -174,7 +171,7 @@ public final class GuiSkin {
         GuiTemplateExporter.record(base, id, state, x, y, w, h);
         String sprite = resolve(base, id, state);
         if (sprite == null) return false;
-        g.blitSprite(id(sprite), x, y, w, h);
+        GuiSprites.blit(g, id(sprite), x, y, w, h);
         return true;
     }
 

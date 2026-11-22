@@ -3,8 +3,8 @@ package net.rp.rpessentials.identity;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.common.MinecraftForge;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.api.event.CharacterSheetChangedEvent;
 import net.rp.rpessentials.config.Cfg;
@@ -84,7 +84,7 @@ public final class CharacterSheetManager {
         return out;
     }
 
-    private static void addIf(List<Field> out, ModConfigSpec.BooleanValue toggle, String id, boolean multi) {
+    private static void addIf(List<Field> out, ForgeConfigSpec.BooleanValue toggle, String id, boolean multi) {
         if (Cfg.get(toggle, true)) out.add(new Field(id, "", multi));
     }
 
@@ -188,7 +188,7 @@ public final class CharacterSheetManager {
         List<String> labels = new ArrayList<>();
         for (Field f : fields()) if (changed.contains(f.id())) labels.add(label(f));
         HistoryManager.record(player, mcName, HistoryManager.SHEET, actor, String.join(", ", labels));
-        NeoForge.EVENT_BUS.post(new CharacterSheetChangedEvent(player, List.copyOf(changed)));
+        MinecraftForge.EVENT_BUS.post(new CharacterSheetChangedEvent(player, List.copyOf(changed)));
         return changed;
     }
 

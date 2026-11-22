@@ -1,8 +1,8 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.rp.rpessentials.RpEssentials;
 
@@ -15,7 +15,7 @@ import java.util.Set;
 public record SyncProfessionRestrictionsPacket(Set<String> blockedCrafts, Set<String> blockedEquipment) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<SyncProfessionRestrictionsPacket> TYPE =
-            new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "sync_profession_restrictions"));
+            new CustomPacketPayload.Type<>(new ResourceLocation(RpEssentials.MODID, "sync_profession_restrictions"));
 
     public static final StreamCodec<FriendlyByteBuf, SyncProfessionRestrictionsPacket> STREAM_CODEC = StreamCodec.of(
             SyncProfessionRestrictionsPacket::encode,

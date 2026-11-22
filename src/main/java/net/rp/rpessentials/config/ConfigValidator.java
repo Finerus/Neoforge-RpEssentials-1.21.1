@@ -9,8 +9,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.gameplay.WorldBorderManager;
 
@@ -203,7 +203,7 @@ public final class ConfigValidator {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) warnStaff(p);
     }
 
-    private static void add(List<String> out, ServerPlayer v, ModConfigSpec.ConfigValue<String> key, String... args) {
+    private static void add(List<String> out, ServerPlayer v, ForgeConfigSpec.ConfigValue<String> key, String... args) {
         out.add(ServerLang.get(v, key, args));
     }
 
@@ -248,7 +248,7 @@ public final class ConfigValidator {
     }
 
     /** A sound id that is not registered. Empty means "no sound". */
-    private static void sound(List<String> out, ServerPlayer v, ModConfigSpec.ConfigValue<String> cv) {
+    private static void sound(List<String> out, ServerPlayer v, ForgeConfigSpec.ConfigValue<String> cv) {
         String id = cv.get();
         if (id == null || id.isBlank()) return;
         ResourceLocation rl = ResourceLocation.tryParse(id.trim());

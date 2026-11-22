@@ -15,12 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ContainerOpenersCounter.class)
 public abstract class MixinContainerOpenersCounter {
 
-    @Inject(method = "incrementOpeners", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    @Inject(method = "incrementOpeners", at = @At("HEAD"), cancellable = true, require = 0)
     private void rpessentials$silentOpen(Player player, Level level, BlockPos pos, BlockState state, CallbackInfo ci) {
         if (player instanceof ServerPlayer sp && VanishManager.silentOpen(sp)) ci.cancel();
     }
 
-    @Inject(method = "decrementOpeners", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    @Inject(method = "decrementOpeners", at = @At("HEAD"), cancellable = true, require = 0)
     private void rpessentials$silentClose(Player player, Level level, BlockPos pos, BlockState state, CallbackInfo ci) {
         if (player instanceof ServerPlayer sp && VanishManager.silentClose(sp)) ci.cancel();
     }

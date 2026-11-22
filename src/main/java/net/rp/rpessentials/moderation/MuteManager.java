@@ -130,7 +130,7 @@ public class MuteManager {
         // Résolution des noms sur le thread serveur
         Map<UUID, MuteEntry> snapshot = new HashMap<>(mutes);
         net.minecraft.server.MinecraftServer server =
-                net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+                net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
 
         Map<String, MuteEntry> data = new LinkedHashMap<>();
         for (Map.Entry<UUID, MuteEntry> e : snapshot.entrySet()) {

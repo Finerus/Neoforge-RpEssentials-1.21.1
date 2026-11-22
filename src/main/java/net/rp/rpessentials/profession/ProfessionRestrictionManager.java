@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.MinecraftForge;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
@@ -309,7 +309,7 @@ public class ProfessionRestrictionManager {
             }
             ProfessionCheckEvent ev = new ProfessionCheckEvent(player, id,
                     ProfessionCheckEvent.Type.valueOf(kind.name()), result);
-            NeoForge.EVENT_BUS.post(ev);
+            MinecraftForge.EVENT_BUS.post(ev);
             result = ev.isAllowed();
             if (cacheable) map.put(id, result);
             return result;

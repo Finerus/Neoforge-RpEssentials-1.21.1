@@ -272,7 +272,7 @@ public class CustomColorsScreen extends net.rp.rpessentials.client.skin.CanvasSc
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {}
+    public void renderBackground(GuiGraphics g) {}
 
     @Override
     public boolean isPauseScreen() { return false; }

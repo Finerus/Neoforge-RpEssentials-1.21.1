@@ -1,8 +1,8 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.rp.rpessentials.client.gui.ConfigManagerScreen;
 import net.rp.rpessentials.client.gui.PlayerProfileScreen;
 import net.rp.rpessentials.client.gui.ProfessionEditorScreen;

@@ -98,7 +98,7 @@ public class NicknameManager {
 
         // Bug 7 — résolution des noms sur le thread serveur avant d'aller async
         Map<UUID, String> snapshot = new HashMap<>(nicknames);
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
 
         Map<String, String> data = new java.util.LinkedHashMap<>();
         for (Map.Entry<UUID, String> entry : snapshot.entrySet()) {
@@ -149,7 +149,7 @@ public class NicknameManager {
      * RpChatEvents.onNameFormat) and nametag.
      */
     private static void refreshOnline(UUID playerUUID) {
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
         if (target == null) return;
@@ -159,7 +159,7 @@ public class NicknameManager {
 
     /** Display names of every online player, after a reload or a clear. */
     private static void refreshAllOnline() {
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) p.refreshDisplayName();
     }

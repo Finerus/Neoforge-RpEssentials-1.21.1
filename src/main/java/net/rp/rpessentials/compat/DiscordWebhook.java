@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
@@ -106,7 +106,7 @@ public final class DiscordWebhook {
         return URL.matcher(url).matches();
     }
 
-    private static boolean on(ModConfigSpec.BooleanValue toggle) {
+    private static boolean on(ForgeConfigSpec.BooleanValue toggle) {
         return configured() && Cfg.get(toggle, false);
     }
 
@@ -118,7 +118,7 @@ public final class DiscordWebhook {
      */
     public static void onHistory(String targetName, String type, String actor, String detail, int hiddenLevel) {
         if (hiddenLevel > 0 || type == null) return;
-        ModConfigSpec.BooleanValue toggle;
+        ForgeConfigSpec.BooleanValue toggle;
         int color;
         switch (type) {
             case HistoryManager.REPORT -> { toggle = RpEssentialsConfig.DISCORD_REPORTS; color = COLOR_ORANGE; }
@@ -160,7 +160,7 @@ public final class DiscordWebhook {
         String url = url();
         if (url.isEmpty()) { reply.accept(ServerLang.get(viewer, MessagesConfig.DISCORD_NOT_SET)); return; }
         if (!validUrl(url)) { reply.accept(ServerLang.get(viewer, MessagesConfig.DISCORD_BAD_URL)); return; }
-        var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         send(ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_TITLE), ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_DESC),
                 COLOR_BLUE, null, error -> {
                     String msg = error == null

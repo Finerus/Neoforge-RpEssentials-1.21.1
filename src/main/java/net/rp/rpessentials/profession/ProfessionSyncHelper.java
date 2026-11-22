@@ -2,7 +2,7 @@ package net.rp.rpessentials.profession;
 
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 import net.rp.rpessentials.network.SyncProfessionRestrictionsPacket;

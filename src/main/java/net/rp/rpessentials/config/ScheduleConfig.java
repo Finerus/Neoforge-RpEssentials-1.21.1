@@ -1,6 +1,6 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.util.Arrays;
 import java.util.List;
@@ -14,89 +14,89 @@ import java.util.List;
  */
 public class ScheduleConfig {
 
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     // =========================================================================
     // GÉNÉRAL
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_SCHEDULE;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> SCHEDULE_EXCEPTIONS;
-    public static final ModConfigSpec.BooleanValue KICK_NON_STAFF;
-    public static final ModConfigSpec.BooleanValue NOTIFY_REFUSED_JOIN;
-    public static final ModConfigSpec.ConfigValue<String> TIMEZONE;
-    public static final ModConfigSpec.ConfigValue<List<? extends Integer>> WARNING_TIMES;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_SCHEDULE;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> SCHEDULE_EXCEPTIONS;
+    public static final ForgeConfigSpec.BooleanValue KICK_NON_STAFF;
+    public static final ForgeConfigSpec.BooleanValue NOTIFY_REFUSED_JOIN;
+    public static final ForgeConfigSpec.ConfigValue<String> TIMEZONE;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends Integer>> WARNING_TIMES;
 
     // =========================================================================
     // HORAIRES PAR JOUR
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue          MONDAY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String>   MONDAY_OPEN;
-    public static final ModConfigSpec.ConfigValue<String>   MONDAY_CLOSE;
+    public static final ForgeConfigSpec.BooleanValue          MONDAY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String>   MONDAY_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String>   MONDAY_CLOSE;
 
-    public static final ModConfigSpec.BooleanValue          TUESDAY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String>   TUESDAY_OPEN;
-    public static final ModConfigSpec.ConfigValue<String>   TUESDAY_CLOSE;
+    public static final ForgeConfigSpec.BooleanValue          TUESDAY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String>   TUESDAY_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String>   TUESDAY_CLOSE;
 
-    public static final ModConfigSpec.BooleanValue          WEDNESDAY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String>   WEDNESDAY_OPEN;
-    public static final ModConfigSpec.ConfigValue<String>   WEDNESDAY_CLOSE;
+    public static final ForgeConfigSpec.BooleanValue          WEDNESDAY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String>   WEDNESDAY_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String>   WEDNESDAY_CLOSE;
 
-    public static final ModConfigSpec.BooleanValue          THURSDAY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String>   THURSDAY_OPEN;
-    public static final ModConfigSpec.ConfigValue<String>   THURSDAY_CLOSE;
+    public static final ForgeConfigSpec.BooleanValue          THURSDAY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String>   THURSDAY_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String>   THURSDAY_CLOSE;
 
-    public static final ModConfigSpec.BooleanValue          FRIDAY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String>   FRIDAY_OPEN;
-    public static final ModConfigSpec.ConfigValue<String>   FRIDAY_CLOSE;
+    public static final ForgeConfigSpec.BooleanValue          FRIDAY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String>   FRIDAY_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String>   FRIDAY_CLOSE;
 
-    public static final ModConfigSpec.BooleanValue          SATURDAY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String>   SATURDAY_OPEN;
-    public static final ModConfigSpec.ConfigValue<String>   SATURDAY_CLOSE;
+    public static final ForgeConfigSpec.BooleanValue          SATURDAY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String>   SATURDAY_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String>   SATURDAY_CLOSE;
 
-    public static final ModConfigSpec.BooleanValue          SUNDAY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String>   SUNDAY_OPEN;
-    public static final ModConfigSpec.ConfigValue<String>   SUNDAY_CLOSE;
+    public static final ForgeConfigSpec.BooleanValue          SUNDAY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String>   SUNDAY_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String>   SUNDAY_CLOSE;
 
     // =========================================================================
     // MESSAGES
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> MSG_SERVER_CLOSED;
-    public static final ModConfigSpec.ConfigValue<String> MSG_SERVER_OPENED;
-    public static final ModConfigSpec.ConfigValue<String> MSG_WARNING;
-    public static final ModConfigSpec.ConfigValue<String> MSG_CLOSING_IMMINENT;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_SERVER_CLOSED;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_SERVER_OPENED;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_WARNING;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_CLOSING_IMMINENT;
 
     // =========================================================================
     // FORCE CLOSE
     // =========================================================================
-    public static ModConfigSpec.ConfigValue<String> FORCE_STATE;
-    public static ModConfigSpec.ConfigValue<String> FORCE_CLOSED_MESSAGE;
-    public static ModConfigSpec.ConfigValue<java.util.List<? extends String>> SCHEDULE_WHITELIST;
+    public static ForgeConfigSpec.ConfigValue<String> FORCE_STATE;
+    public static ForgeConfigSpec.ConfigValue<String> FORCE_CLOSED_MESSAGE;
+    public static ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> SCHEDULE_WHITELIST;
 
     // =========================================================================
     // WELCOME
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_WELCOME;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> WELCOME_LINES;
-    public static final ModConfigSpec.ConfigValue<String> WELCOME_SOUND;
-    public static final ModConfigSpec.DoubleValue WELCOME_SOUND_VOLUME;
-    public static final ModConfigSpec.DoubleValue WELCOME_SOUND_PITCH;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_WELCOME;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> WELCOME_LINES;
+    public static final ForgeConfigSpec.ConfigValue<String> WELCOME_SOUND;
+    public static final ForgeConfigSpec.DoubleValue WELCOME_SOUND_VOLUME;
+    public static final ForgeConfigSpec.DoubleValue WELCOME_SOUND_PITCH;
 
     // =========================================================================
     // DEATH RP SCHEDULE
     // =========================================================================
-    public static ModConfigSpec.BooleanValue DEATH_HOURS_ENABLED;
-    public static ModConfigSpec.ConfigValue<List<? extends String>> DEATH_HOURS_SLOTS;
+    public static ForgeConfigSpec.BooleanValue DEATH_HOURS_ENABLED;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> DEATH_HOURS_SLOTS;
 
     // =========================================================================
     // HRP SCHEDULE
     // =========================================================================
-    public static ModConfigSpec.BooleanValue ENABLE_HRP_HOURS;
-    public static ModConfigSpec.ConfigValue<List<? extends String>> HRP_TOLERATED_SLOTS;
-    public static ModConfigSpec.ConfigValue<List<? extends String>> HRP_ALLOWED_SLOTS;
-    public static ModConfigSpec.ConfigValue<String> HRP_TOLERATED_MESSAGE;
-    public static ModConfigSpec.ConfigValue<String> HRP_ALLOWED_MESSAGE;
-    public static ModConfigSpec.ConfigValue<String> HRP_MESSAGE_MODE;
+    public static ForgeConfigSpec.BooleanValue ENABLE_HRP_HOURS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> HRP_TOLERATED_SLOTS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> HRP_ALLOWED_SLOTS;
+    public static ForgeConfigSpec.ConfigValue<String> HRP_TOLERATED_MESSAGE;
+    public static ForgeConfigSpec.ConfigValue<String> HRP_ALLOWED_MESSAGE;
+    public static ForgeConfigSpec.ConfigValue<String> HRP_MESSAGE_MODE;
 
     // =========================================================================
     // STATIC INITIALIZER
@@ -127,7 +127,7 @@ public class ScheduleConfig {
         WARNING_TIMES = BUILDER
                 .comment("Minutes before closing at which warning messages are sent.",
                         "Example: [30, 15, 5, 1]")
-                .defineList("warningTimes", Arrays.asList(30, 15, 5, 1),
+                .defineListAllowEmpty("warningTimes", Arrays.asList(30, 15, 5, 1),
                         obj -> obj instanceof Integer);
 
         BUILDER.pop();
@@ -229,7 +229,7 @@ public class ScheduleConfig {
         SCHEDULE_WHITELIST = BUILDER
                 .comment("Players in this list can connect even when the server is forcibly or schedule-closed.",
                         "Also bypasses FORCE_CLOSED. Staff members are always exempt regardless of this list.")
-                .defineList("scheduleWhitelist", java.util.List.of(), obj -> obj instanceof String);
+                .defineListAllowEmpty("scheduleWhitelist", java.util.List.of(), obj -> obj instanceof String);
 
         BUILDER.pop();
 
@@ -243,7 +243,7 @@ public class ScheduleConfig {
         WELCOME_LINES = BUILDER
                 .comment("Lines of the welcome message. Supports & and § color codes.",
                         "Placeholders: {player}, {nickname}")
-                .defineList("welcomeLines",
+                .defineListAllowEmpty("welcomeLines",
                         java.util.Arrays.asList(
                                 "§6§m------------------------------------",
                                 "§e§lWelcome to the server, {player}!",
@@ -275,7 +275,7 @@ public class ScheduleConfig {
         DEATH_HOURS_SLOTS = BUILDER
                 .comment("Time slots during which RP death is active. Format: HH:MM-HH:MM.",
                         "Supports cross-midnight. Example: [\"22:00-23:59\", \"00:00-06:00\"]")
-                .defineList("deathHoursSlots",
+                .defineListAllowEmpty("deathHoursSlots",
                         java.util.Arrays.asList("22:00-23:59"), obj -> obj instanceof String);
         BUILDER.pop();
 
@@ -287,11 +287,11 @@ public class ScheduleConfig {
                 .define("enableHrpHours", false);
         HRP_TOLERATED_SLOTS = BUILDER
                 .comment("Slots where HRP is tolerated (noted but not punished). Format: HH:MM-HH:MM.")
-                .defineList("hrpToleratedSlots",
+                .defineListAllowEmpty("hrpToleratedSlots",
                         java.util.Arrays.asList("21:00-22:00"), obj -> obj instanceof String);
         HRP_ALLOWED_SLOTS = BUILDER
                 .comment("Slots where HRP is fully allowed. Format: HH:MM-HH:MM.")
-                .defineList("hrpAllowedSlots",
+                .defineListAllowEmpty("hrpAllowedSlots",
                         java.util.Arrays.asList("22:00-23:59"), obj -> obj instanceof String);
         HRP_TOLERATED_MESSAGE = BUILDER
                 .comment("Message broadcast when HRP-tolerated hours begin. Placeholders: {start} {end}")
@@ -321,7 +321,7 @@ public class ScheduleConfig {
                         "                           an end before the start runs past midnight: 20:00-03:00 closes at 3 am the next day",
                         "Example: [\"2026-12-24=18:00-02:00\", \"2026-12-25=CLOSED\", \"2026-07-14=OPEN\"]",
                         "Dates already passed are ignored. The next ones are listed in /schedule. A wrong line is reported to the staff.")
-                .defineList("scheduleExceptions", List.of(), obj -> obj instanceof String);
+                .defineListAllowEmpty("scheduleExceptions", List.of(), obj -> obj instanceof String);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

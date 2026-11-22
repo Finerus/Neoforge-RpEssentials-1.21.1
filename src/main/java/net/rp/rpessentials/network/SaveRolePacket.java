@@ -3,12 +3,12 @@ package net.rp.rpessentials.network;
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.*;
 import net.rp.rpessentials.compat.LuckPermsSync;
 import net.rp.rpessentials.config.RpEssentialsConfig;
@@ -32,7 +32,7 @@ public record SaveRolePacket(
 
 
     public static final Type<SaveRolePacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "save_role"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "save_role"));
 
     public static final StreamCodec<FriendlyByteBuf, SaveRolePacket> STREAM_CODEC =
             new StreamCodec<>() {

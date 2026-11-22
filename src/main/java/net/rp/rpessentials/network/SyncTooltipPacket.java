@@ -1,10 +1,10 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.client.ClientTooltipRestrictions;
 
@@ -16,7 +16,7 @@ public record SyncTooltipPacket(List<List<String>> blocked, List<List<String>> a
                                 List<String> zones, String idMode) implements CustomPacketPayload {
 
     public static final Type<SyncTooltipPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "sync_tooltip"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "sync_tooltip"));
 
     public static final StreamCodec<FriendlyByteBuf, SyncTooltipPacket> STREAM_CODEC =
             new StreamCodec<>() {

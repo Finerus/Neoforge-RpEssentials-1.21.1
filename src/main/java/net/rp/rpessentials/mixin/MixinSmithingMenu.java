@@ -26,8 +26,7 @@ public abstract class MixinSmithingMenu extends MixinItemCombinerMenuBase {
     @Inject(
             method = "mayPickup(Lnet/minecraft/world/entity/player/Player;Z)Z",
             at = @At("HEAD"),
-            cancellable = true,
-            remap = false
+            cancellable = true
     )
     private void rpessentials$blockSmithing(Player player, boolean hasStack, CallbackInfoReturnable<Boolean> cir) {
         if (!(player instanceof ServerPlayer serverPlayer)) return;

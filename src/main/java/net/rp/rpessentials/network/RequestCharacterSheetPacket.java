@@ -4,12 +4,12 @@ import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.PacketDistributor;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 
@@ -19,7 +19,7 @@ import java.util.UUID;
 public record RequestCharacterSheetPacket(UUID targetUuid) implements CustomPacketPayload {
 
     public static final Type<RequestCharacterSheetPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "request_character_sheet"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "request_character_sheet"));
 
     public static final StreamCodec<FriendlyByteBuf, RequestCharacterSheetPacket> STREAM_CODEC =
             new StreamCodec<>() {

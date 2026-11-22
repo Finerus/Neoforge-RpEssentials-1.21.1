@@ -29,15 +29,16 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
     private boolean scrollToEnd;
 
     public ButtonRowList(Minecraft mc, int rowHeight) {
-        super(mc, 100, 100, 0, rowHeight);
+        super(mc, 100, 100, 0, 100, rowHeight);
+        setRenderBackground(false);
+        setRenderTopAndBottom(false);
     }
 
     /** Places the list. */
     public void layout(int x, int y, int w, int h) {
-        // Not updateSizeAndPosition(): in 1.21.1 it also moves the list back to x = 0.
-        setSize(w, h);
-        setPosition(x, y);
-        clampScrollAmount();
+        updateSize(w, h, y, y + h);
+        setLeftPos(x);
+        setScrollAmount(getScrollAmount()); // clamps to the new size
     }
 
     /** Width available for the widgets of a row. */
@@ -70,7 +71,7 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
     /** Same as the hit area of the vanilla list, so what is drawn is what is clicked. */
     @Override
     public int getRowLeft() {
-        return getX() + getWidth() / 2 - getRowWidth() / 2;
+        return getLeft() + getWidth() / 2 - getRowWidth() / 2;
     }
 
     @Override
@@ -78,12 +79,10 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         return getRight() - SIDE;
     }
 
-    @Override
-    protected void renderListBackground(GuiGraphics g) {}
 
     @Override
-    public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderWidget(g, mouseX, mouseY, partialTick);
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.render(g, mouseX, mouseY, partialTick);
         // F8: the buttons of rows scrolled out of view are exported too.
         if (net.rp.rpessentials.client.skin.GuiTemplateExporter.capturing()) {
             for (Row row : children()) {
@@ -94,8 +93,6 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         }
     }
 
-    @Override
-    protected void renderListSeparators(GuiGraphics g) {}
 
     /**
      * One line of the list: widgets and texts placed at an offset from the top left corner of the row,
@@ -184,7 +181,7 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
                 boolean sprite = blockSprite != null && GuiSkin.resolve(blockSprite, blockId, "") != null;
                 if (sprite) {
                     // Drawn once, by the first visible row of the block.
-                    if (blockIndex == 0 || top < list.getY()) {
+                    if (blockIndex == 0 || top < list.getTop()) {
                         int blockTop = top - blockIndex * rowH;
                         GuiSkin.draw(g, blockSprite, blockId, "", left, blockTop, width, blockSize * rowH - 2);
                     }

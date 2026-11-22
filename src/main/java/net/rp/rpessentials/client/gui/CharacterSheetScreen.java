@@ -8,7 +8,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.client.skin.GuiSkin;
 import net.rp.rpessentials.client.skin.SkinnedButton;
 import net.rp.rpessentials.client.skin.SkinnedEditBox;
@@ -226,7 +226,7 @@ public class CharacterSheetScreen extends net.rp.rpessentials.client.skin.Canvas
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {}
+    public void renderBackground(GuiGraphics g) {}
 
     @Override
     public boolean isPauseScreen() { return false; }

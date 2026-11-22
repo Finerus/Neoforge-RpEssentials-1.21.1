@@ -1,16 +1,21 @@
 package net.rp.rpessentials.gameplay;
 
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Message shown once per player at login: a welcome message on the first launch of the mod on a server
@@ -38,6 +43,7 @@ public final class ModNotices {
         AfkPlatformInitializer.ModState state = AfkPlatformInitializer.state(server);
         String current = currentVersion();
         String last = state.lastModVersion();
+        ROLE_HINT_SHOWN.clear();
         if (last.equals(current)) return;
         if (last.isEmpty()) {
             // Before 6.1.0 the version was not saved: a world where the mod already ran gets the update notes.
@@ -61,6 +67,7 @@ public final class ModNotices {
     public static void onLogin(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
+        roleHint(player);
         AfkPlatformInitializer.ModState state = AfkPlatformInitializer.state(server);
         String to = state.noticeTo();
         if (to.isEmpty()) return;
@@ -73,6 +80,37 @@ public final class ModNotices {
         }
         // The server has its staff now: the welcome is not shown to anyone else.
         if (welcome && staff) state.startNotice("", "");
+    }
+
+    /** Players who got the role hint since the server started. */
+    private static final Set<UUID> ROLE_HINT_SHOWN = ConcurrentHashMap.newKeySet();
+
+    /**
+     * An OP can give roles (roles.set) but gets the RpEssentials staff permissions from a role only: on a new
+     * server the first OP has none and nothing told how to get them. Shown at login (once per server start)
+     * to a player who can give roles but has no staff permission, with the command to click.
+     */
+    private static void roleHint(ServerPlayer player) {
+        if (RpPerms.has(player, RpPerm.CONFIG_GUI) || !RpPerms.has(player, RpPerm.ROLES_SET)) return;
+        if (!ROLE_HINT_SHOWN.add(player.getUUID())) return;
+        String cmd = "/rpessentials setrole " + player.getGameProfile().getName() + " " + adminRole();
+        player.sendSystemMessage(Component.literal("§6[RpEssentials] ")
+                .append(Component.translatable("rpessentials.notice.role_hint")));
+        player.sendSystemMessage(Component.literal("§e" + cmd).withStyle(s -> s
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, cmd))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.translatable("rpessentials.notice.role_hint_click")))));
+    }
+
+    /** First role that grants every permission (rpessentials.*), "admin" with the default config. */
+    private static String adminRole() {
+        if (net.rp.rpessentials.config.Cfg.ready(net.rp.rpessentials.config.RpEssentialsConfig.SPEC)) {
+            for (String line : net.rp.rpessentials.config.RpEssentialsConfig.ROLES.get()) {
+                String[] p = line.split(";", 3);
+                if (p.length > 2 && p[2].contains("rpessentials.*")) return p[0].trim();
+            }
+        }
+        return "admin";
     }
 
     static List<Component> lines(String from, String to) {

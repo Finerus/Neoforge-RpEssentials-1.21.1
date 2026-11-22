@@ -4,7 +4,7 @@ import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
 import net.rp.rpessentials.config.Cfg;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.registries.Registries;
@@ -83,11 +83,11 @@ public final class ManageService {
 
     private ManageService() {}
 
-    private static Result ok(ServerPlayer v, ModConfigSpec.ConfigValue<String> cv, String... a) {
+    private static Result ok(ServerPlayer v, ForgeConfigSpec.ConfigValue<String> cv, String... a) {
         return new Result(true, ServerLang.get(v, cv, a));
     }
 
-    private static Result fail(ServerPlayer v, ModConfigSpec.ConfigValue<String> cv, String... a) {
+    private static Result fail(ServerPlayer v, ForgeConfigSpec.ConfigValue<String> cv, String... a) {
         return new Result(false, ServerLang.get(v, cv, a));
     }
 
@@ -364,7 +364,7 @@ public final class ManageService {
                 String[] parts = p.split(";");
                 if (parts.length < 6 || !parts[0].equals(id)) continue;
                 ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION,
-                        ResourceLocation.parse(parts[2])));
+                        new ResourceLocation(parts[2])));
                 if (level == null) return null;
                 return new Spot(level, Double.parseDouble(parts[3]), Double.parseDouble(parts[4]),
                         Double.parseDouble(parts[5]), 0f, 0f, parts[1]);
@@ -376,7 +376,7 @@ public final class ManageService {
     private static Spot afkSpot(MinecraftServer server) {
         try {
             ServerLevel level = server.getLevel(ResourceKey.create(Registries.DIMENSION,
-                    ResourceLocation.parse(RpConfig.AFK_DIMENSION.get())));
+                    new ResourceLocation(RpConfig.AFK_DIMENSION.get())));
             if (level == null) return null;
             return new Spot(level, RpConfig.AFK_X.get(), RpConfig.AFK_Y.get(), RpConfig.AFK_Z.get(),
                     RpConfig.AFK_YAW.get().floatValue(), RpConfig.AFK_PITCH.get().floatValue(), "AFK");

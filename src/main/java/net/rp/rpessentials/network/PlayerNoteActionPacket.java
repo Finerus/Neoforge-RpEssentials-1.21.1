@@ -6,12 +6,12 @@ import net.rp.rpessentials.permission.RpPerms;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.util.GuiFeedback;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
@@ -33,7 +33,7 @@ public record PlayerNoteActionPacket(
 ) implements CustomPacketPayload {
 
     public static final Type<PlayerNoteActionPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "player_note_action"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "player_note_action"));
 
     public static final StreamCodec<FriendlyByteBuf, PlayerNoteActionPacket> STREAM_CODEC =
             new StreamCodec<>() {

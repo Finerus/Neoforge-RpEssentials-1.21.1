@@ -5,11 +5,11 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RenderNameTagEvent;
-import net.neoforged.neoforge.common.util.TriState;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.client.event.RenderNameTagEvent;
+import net.minecraftforge.eventbus.api.Event;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.RpEssentials;
 
@@ -25,7 +25,7 @@ public class ClientNametagRenderer {
         if (!(event.getEntity() instanceof AbstractClientPlayer target)) return;
 
         if (ClientNametagConfig.shouldHideNametags()) {
-            event.setCanRender(TriState.FALSE);
+            event.setResult(Event.Result.DENY);
             return;
         }
 
@@ -35,7 +35,7 @@ public class ClientNametagRenderer {
             String ins = tab != null ? tab.getStyle().getInsertion() : null;
             if (ins != null && ins.startsWith("rpe_blur")) {
                 if (ins.endsWith(":HIDE")) {
-                    event.setCanRender(TriState.FALSE);
+                    event.setResult(Event.Result.DENY);
                     return;
                 }
                 if (ins.endsWith(":BLUR")) {

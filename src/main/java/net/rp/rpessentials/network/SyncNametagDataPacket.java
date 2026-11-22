@@ -1,13 +1,13 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.identity.NicknameManager;
 import net.rp.rpessentials.moderation.VanishManager;
 import net.rp.rpessentials.profession.LicenseManager;
@@ -35,7 +35,7 @@ public record SyncNametagDataPacket(
 ) implements CustomPacketPayload {
 
     public static final Type<SyncNametagDataPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "sync_nametag_data"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "sync_nametag_data"));
 
     public static final StreamCodec<FriendlyByteBuf, SyncNametagDataPacket> CODEC =
             new StreamCodec<>() {
@@ -105,7 +105,7 @@ public record SyncNametagDataPacket(
         if (server == null) return;
         for (ServerPlayer viewer : server.getPlayerList().getPlayers()) {
             if (!VanishManager.canHide(VanishManager.Aspect.NAMETAG, viewer, target.getUUID())) {
-                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(viewer, packet);
+                net.rp.rpessentials.network.compat.PacketDistributor.sendToPlayer(viewer, packet);
             }
         }
     }
@@ -140,7 +140,7 @@ public record SyncNametagDataPacket(
             list.add(from(online));
         }
         if (!list.isEmpty()) {
-            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(viewer, new SyncNametagBatchPacket(list));
+            net.rp.rpessentials.network.compat.PacketDistributor.sendToPlayer(viewer, new SyncNametagBatchPacket(list));
         }
     }
 }

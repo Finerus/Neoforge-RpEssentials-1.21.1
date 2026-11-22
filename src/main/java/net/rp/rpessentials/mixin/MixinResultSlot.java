@@ -41,8 +41,7 @@ public class MixinResultSlot {
     @Inject(
             method = "mayPickup(Lnet/minecraft/world/entity/player/Player;)Z",
             at = @At("HEAD"),
-            cancellable = true,
-            remap = false
+            cancellable = true
     )
     private void rpessentials$blockCraft(Player player, CallbackInfoReturnable<Boolean> cir) {
         Slot self = (Slot)(Object) this;

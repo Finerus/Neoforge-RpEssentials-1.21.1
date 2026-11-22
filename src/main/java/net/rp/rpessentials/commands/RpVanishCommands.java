@@ -3,7 +3,7 @@ package net.rp.rpessentials.commands;
 import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.CommandDispatcher;
@@ -77,7 +77,7 @@ public class RpVanishCommands {
     }
 
     private static void feedback(CommandSourceStack src, ServerPlayer target,
-                                 ModConfigSpec.ConfigValue<String> msg, String... args) {
+                                 ForgeConfigSpec.ConfigValue<String> msg, String... args) {
         src.sendSuccess(() -> Msg.c(src, msg, args), false);
         if (src.getEntity() != target) target.sendSystemMessage(Msg.c(target, msg, args));
     }

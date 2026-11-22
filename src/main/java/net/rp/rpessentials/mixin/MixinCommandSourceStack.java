@@ -24,7 +24,7 @@ import java.util.Set;
 @Mixin(CommandSourceStack.class)
 public abstract class MixinCommandSourceStack {
 
-    @Inject(method = "getOnlinePlayerNames", at = @At("RETURN"), cancellable = true, remap = false)
+    @Inject(method = "getOnlinePlayerNames", at = @At("RETURN"), cancellable = true)
     private void rpessentials$filterNames(CallbackInfoReturnable<Collection<String>> cir) {
         CommandSourceStack src = (CommandSourceStack) (Object) this;
         boolean vanish = VanishManager.anyVanished() && VanishManager.hides(VanishManager.Aspect.SELECTORS);

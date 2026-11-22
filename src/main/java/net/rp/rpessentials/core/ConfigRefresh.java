@@ -3,7 +3,7 @@ package net.rp.rpessentials.core;
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.compat.LuckPermsSync;
 import net.rp.rpessentials.config.*;
 import net.rp.rpessentials.moderation.VanishManager;

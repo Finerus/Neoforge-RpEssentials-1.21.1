@@ -173,7 +173,7 @@ public class LicenseManager {
         if (licenseFile == null) return;
 
         Map<UUID, List<String>> snapshot = new HashMap<>(playerLicenses);
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
 
         Map<String, List<String>> data = new HashMap<>();
         for (Map.Entry<UUID, List<String>> entry : snapshot.entrySet()) {
@@ -229,7 +229,7 @@ public class LicenseManager {
         if (licenses.contains(profession)) return;
         licenses.add(profession);
         saveToFile();
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
             if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
@@ -249,13 +249,13 @@ public class LicenseManager {
         if (tempLicenses.removeIf(e -> e.targetUUID.equals(uuidStr) && e.profession.equalsIgnoreCase(profession))) {
             saveTempToFile();
         }
-        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        MinecraftServer server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             ServerPlayer target = server.getPlayerList().getPlayer(playerUUID);
             if (target != null) SyncNametagDataPacket.broadcastForPlayer(target);
         }
         if (removed) {
-            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
                     new net.rp.rpessentials.api.event.LicenseRevokedEvent(playerUUID, profession));
         }
     }

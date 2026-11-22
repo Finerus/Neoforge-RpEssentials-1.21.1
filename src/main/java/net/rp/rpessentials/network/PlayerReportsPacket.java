@@ -1,12 +1,12 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.moderation.ReportManager;
 import net.rp.rpessentials.moderation.ReportService;
@@ -27,7 +27,7 @@ public record PlayerReportsPacket(UUID targetUuid, boolean enabled, List<View> r
     public static final int MAX_REPORTS = 100;
 
     public static final Type<PlayerReportsPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "player_reports"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "player_reports"));
 
     public static final StreamCodec<FriendlyByteBuf, PlayerReportsPacket> STREAM_CODEC =
             new StreamCodec<>() {

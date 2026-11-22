@@ -21,8 +21,7 @@ public abstract class MixinStringDecomposer {
     @Inject(
             method = "iterateFormatted(Ljava/lang/String;ILnet/minecraft/network/chat/Style;Lnet/minecraft/network/chat/Style;Lnet/minecraft/util/FormattedCharSink;)Z",
             at = @At("HEAD"),
-            cancellable = true,
-            remap = false
+            cancellable = true
     )
     private static void rpessentials$hexColors(String text, int skip, Style current, Style reset,
                                                FormattedCharSink sink, CallbackInfoReturnable<Boolean> cir) {

@@ -1,9 +1,9 @@
 package net.rp.rpessentials.network;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.ByteBufCodecs;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.rp.rpessentials.RpEssentials;
 
@@ -13,7 +13,7 @@ import java.util.List;
 public record SyncPermissionsPacket(List<String> granted) implements CustomPacketPayload {
 
     public static final Type<SyncPermissionsPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "sync_permissions"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "sync_permissions"));
 
     public static final StreamCodec<ByteBuf, SyncPermissionsPacket> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.STRING_UTF8.apply(ByteBufCodecs.list(512)), SyncPermissionsPacket::granted,

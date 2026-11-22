@@ -1,12 +1,12 @@
 package net.rp.rpessentials.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.RpConfig;
@@ -26,7 +26,7 @@ public record CharacterSheetPacket(UUID targetUuid, boolean enabled, int maxText
     public static final int MAX_VALUE = 20000;
 
     public static final Type<CharacterSheetPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "character_sheet"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "character_sheet"));
 
     public static final StreamCodec<FriendlyByteBuf, CharacterSheetPacket> STREAM_CODEC =
             new StreamCodec<>() {

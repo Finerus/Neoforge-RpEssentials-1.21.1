@@ -1,15 +1,15 @@
 {
   "required": true,
   "minVersion": "0.8",
+  "refmap": "rpessentials.refmap.json",
   "package": "net.rp.rpessentials.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_17",
   "mixins": [
     "ClientboundPlayerInfoUpdatePacketAccessor",
     "MixinServerCommonPacketListenerImpl",
     "MixinPlayerList",
     "MixinEntity",
     "MixinResultSlot",
-    "ArmorSlotAccessor",
     "MixinArmorSlot",
     "MixinArmorItemUse",
     "MixinAnvilMenu",

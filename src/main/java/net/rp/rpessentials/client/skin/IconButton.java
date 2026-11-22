@@ -26,7 +26,7 @@ public class IconButton extends SkinnedButton {
     }
 
     public static ResourceLocation texture(String icon) {
-        return ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "textures/gui/icons/" + icon + ".png");
+        return new ResourceLocation(RpEssentials.MODID, "textures/gui/icons/" + icon + ".png");
     }
 
     /** Draws an icon of the icons folder at its real size. */

@@ -1,12 +1,12 @@
 package net.rp.rpessentials.api.event;
 
 import net.minecraft.server.MinecraftServer;
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.Cancelable;
 
 /**
  * Opening and closing of the RP server (schedule of rpessentials-schedule.toml or forced by staff),
- * posted on {@code NeoForge.EVENT_BUS}.
+ * posted on {@code MinecraftForge.EVENT_BUS}.
  * <ul>
  *   <li>{@link ForceStateChanging}: before /schedule forceopen, forceclose, resetforcestate or the API
  *       change the forced state. Cancellable: nothing changes, nobody is kicked.</li>
@@ -42,7 +42,8 @@ public abstract class ServerScheduleEvent extends Event {
     public Cause getCause() { return cause; }
 
     /** Before the forced state changes. Cancel it to keep the current state. */
-    public static class ForceStateChanging extends ServerScheduleEvent implements ICancellableEvent {
+    @Cancelable
+    public static class ForceStateChanging extends ServerScheduleEvent {
         private final ForceState oldState;
         private final ForceState newState;
         private final String actor;

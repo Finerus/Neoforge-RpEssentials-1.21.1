@@ -1,6 +1,6 @@
 package net.rp.rpessentials.api.event;
 
-import net.neoforged.bus.api.Event;
+import net.minecraftforge.eventbus.api.Event;
 
 import java.util.UUID;
 

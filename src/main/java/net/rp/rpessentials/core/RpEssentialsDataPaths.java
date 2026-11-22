@@ -2,7 +2,7 @@ package net.rp.rpessentials.core;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.io.File;
 import net.rp.rpessentials.RpEssentials;

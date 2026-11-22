@@ -4,12 +4,12 @@ import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.PacketDistributor;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.moderation.HistoryManager;
@@ -25,7 +25,7 @@ public record RequestPlayerHistoryPacket(UUID targetUuid) implements CustomPacke
     public static final int MAX_LINES = 150;
 
     public static final Type<RequestPlayerHistoryPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "request_player_history"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "request_player_history"));
 
     public static final StreamCodec<FriendlyByteBuf, RequestPlayerHistoryPacket> STREAM_CODEC =
             new StreamCodec<>() {

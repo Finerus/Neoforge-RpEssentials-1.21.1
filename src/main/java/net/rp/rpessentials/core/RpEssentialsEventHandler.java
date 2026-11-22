@@ -8,11 +8,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.api.IRpPlayerList;
 import net.rp.rpessentials.compat.LuckPermsSync;
 import net.rp.rpessentials.config.*;
@@ -265,7 +265,7 @@ public class RpEssentialsEventHandler {
     }
 
     @SubscribeEvent
-    public static void onServerStarted(net.neoforged.neoforge.event.server.ServerStartedEvent event) {
+    public static void onServerStarted(net.minecraftforge.event.server.ServerStartedEvent event) {
         NicknameManager.reload();
         LicenseManager.reload();
         WarnManager.reload();
@@ -309,11 +309,11 @@ public class RpEssentialsEventHandler {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onPlayerDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+    public static void onPlayerDeath(net.minecraftforge.event.entity.living.LivingDeathEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (!DeathRPManager.isDeathRPEnabled(player.getUUID())) return;
         net.rp.rpessentials.api.event.DeathRpEvent ev = new net.rp.rpessentials.api.event.DeathRpEvent(player, event.getSource());
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.post(ev);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(ev);
         if (ev.isCanceled()) return;
         DeathRPManager.onPlayerDeathRP(player, event.getSource());
     }

@@ -7,13 +7,13 @@ import net.rp.rpessentials.permission.RpPerms;
 import net.rp.rpessentials.config.Cfg;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.*;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpEssentialsConfig;
@@ -47,7 +47,7 @@ public record SetPlayerProfilePacket(
 ) implements CustomPacketPayload {
 
     public static final Type<SetPlayerProfilePacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "set_player_profile"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "set_player_profile"));
 
     public static final StreamCodec<FriendlyByteBuf, SetPlayerProfilePacket> STREAM_CODEC =
             new StreamCodec<>() {

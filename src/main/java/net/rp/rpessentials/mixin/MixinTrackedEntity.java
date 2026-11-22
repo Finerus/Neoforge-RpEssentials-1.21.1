@@ -29,8 +29,7 @@ public abstract class MixinTrackedEntity implements VanishTrackable {
     @Inject(
             method = "updatePlayer(Lnet/minecraft/server/level/ServerPlayer;)V",
             at = @At("HEAD"),
-            cancellable = true,
-            remap = false
+            cancellable = true
     )
     private void rpessentials$hideVanished(ServerPlayer viewer, CallbackInfo ci) {
         if (!VanishManager.anyVanished()) return;

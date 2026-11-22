@@ -3,7 +3,7 @@ package net.rp.rpessentials.core;
 import com.electronwill.nightconfig.core.CommentedConfig;
 import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.toml.TomlFormat;
-import net.neoforged.fml.loading.FMLPaths;
+import net.minecraftforge.fml.loading.FMLPaths;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 

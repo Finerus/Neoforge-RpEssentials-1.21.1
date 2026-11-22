@@ -1,101 +1,101 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.util.Arrays;
 import java.util.List;
 
 public class RpEssentialsConfig {
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     // === OBFUSCATION ===
-    public static final ModConfigSpec.IntValue PROXIMITY_DISTANCE;
-    public static final ModConfigSpec.BooleanValue ENABLE_BLUR;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> WHITELIST;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> BLACKLIST;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> ALWAYS_VISIBLE_LIST;
-    public static final ModConfigSpec.BooleanValue BLUR_SPECTATORS;
-    public static final ModConfigSpec.BooleanValue WHITELIST_EXEMPT_PROFESSIONS;
-    public static final ModConfigSpec.IntValue OBFUSCATED_NAME_LENGTH;
-    public static final ModConfigSpec.BooleanValue OBFUSCATE_PREFIX;
-    public static final ModConfigSpec.ConfigValue<String> BLUR_STYLE;
-    public static final ModConfigSpec.ConfigValue<String> BLUR_CODES;
-    public static final ModConfigSpec.ConfigValue<String> NAMETAG_BLUR_MODE;
-    public static final ModConfigSpec.BooleanValue ENABLE_SNEAK_STEALTH;
-    public static final ModConfigSpec.IntValue SNEAK_PROXIMITY_DISTANCE;
-    public static final ModConfigSpec.BooleanValue OPS_SEE_ALL;
-    public static final ModConfigSpec.BooleanValue DEBUG_SELF_BLUR;
-    public static final ModConfigSpec.BooleanValue HIDE_NAMETAGS;
-    public static final ModConfigSpec.BooleanValue SHOW_NAMETAG_PREFIX_SUFFIX;
+    public static final ForgeConfigSpec.IntValue PROXIMITY_DISTANCE;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_BLUR;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> WHITELIST;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> BLACKLIST;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ALWAYS_VISIBLE_LIST;
+    public static final ForgeConfigSpec.BooleanValue BLUR_SPECTATORS;
+    public static final ForgeConfigSpec.BooleanValue WHITELIST_EXEMPT_PROFESSIONS;
+    public static final ForgeConfigSpec.IntValue OBFUSCATED_NAME_LENGTH;
+    public static final ForgeConfigSpec.BooleanValue OBFUSCATE_PREFIX;
+    public static final ForgeConfigSpec.ConfigValue<String> BLUR_STYLE;
+    public static final ForgeConfigSpec.ConfigValue<String> BLUR_CODES;
+    public static final ForgeConfigSpec.ConfigValue<String> NAMETAG_BLUR_MODE;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_SNEAK_STEALTH;
+    public static final ForgeConfigSpec.IntValue SNEAK_PROXIMITY_DISTANCE;
+    public static final ForgeConfigSpec.BooleanValue OPS_SEE_ALL;
+    public static final ForgeConfigSpec.BooleanValue DEBUG_SELF_BLUR;
+    public static final ForgeConfigSpec.BooleanValue HIDE_NAMETAGS;
+    public static final ForgeConfigSpec.BooleanValue SHOW_NAMETAG_PREFIX_SUFFIX;
 
     // === ROLES ===
-    public static ModConfigSpec.ConfigValue<List<? extends String>> ROLES;
-    public static final ModConfigSpec.BooleanValue LP_SYNC_ENABLED;
-    public static final ModConfigSpec.BooleanValue LP_SYNC_IMPORT_ALL_GROUPS;
+    public static ForgeConfigSpec.ConfigValue<List<? extends String>> ROLES;
+    public static final ForgeConfigSpec.BooleanValue LP_SYNC_ENABLED;
+    public static final ForgeConfigSpec.BooleanValue LP_SYNC_IMPORT_ALL_GROUPS;
 
     // === PERMISSIONS ===
-    public static final ModConfigSpec.IntValue OP_LEVEL_BYPASS;
-    public static final ModConfigSpec.BooleanValue USE_LUCKPERMS_GROUPS;
+    public static final ForgeConfigSpec.IntValue OP_LEVEL_BYPASS;
+    public static final ForgeConfigSpec.BooleanValue USE_LUCKPERMS_GROUPS;
 
     // === WORLD BORDER & ZONES ===
-    public static final ModConfigSpec.BooleanValue ENABLE_WORLD_BORDER_WARNING;
-    public static final ModConfigSpec.IntValue WORLD_BORDER_DISTANCE;
-    public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_SHAPE;
-    public static final ModConfigSpec.BooleanValue WORLD_BORDER_TELEPORT_ENABLED;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> WORLD_BORDER_DIMENSION_OVERRIDES;
-    public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_PREWARN_MESSAGE;
-    public static final ModConfigSpec.IntValue WORLD_BORDER_PREWARN_DISTANCE;
-    public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_MESSAGE;
-    public static final ModConfigSpec.IntValue WORLD_BORDER_CHECK_INTERVAL;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> NAMED_ZONES;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> ZONE_ACTIONS;
-    public static final ModConfigSpec.ConfigValue<String> ZONE_MESSAGE_MODE;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_WORLD_BORDER_WARNING;
+    public static final ForgeConfigSpec.IntValue WORLD_BORDER_DISTANCE;
+    public static final ForgeConfigSpec.ConfigValue<String> WORLD_BORDER_SHAPE;
+    public static final ForgeConfigSpec.BooleanValue WORLD_BORDER_TELEPORT_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> WORLD_BORDER_DIMENSION_OVERRIDES;
+    public static final ForgeConfigSpec.ConfigValue<String> WORLD_BORDER_PREWARN_MESSAGE;
+    public static final ForgeConfigSpec.IntValue WORLD_BORDER_PREWARN_DISTANCE;
+    public static final ForgeConfigSpec.ConfigValue<String> WORLD_BORDER_MESSAGE;
+    public static final ForgeConfigSpec.IntValue WORLD_BORDER_CHECK_INTERVAL;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> NAMED_ZONES;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> ZONE_ACTIONS;
+    public static final ForgeConfigSpec.ConfigValue<String> ZONE_MESSAGE_MODE;
 
     // === DEATH RP ===
-    public static ModConfigSpec.BooleanValue DEATH_RP_GLOBAL_ENABLED;
-    public static ModConfigSpec.BooleanValue DEATH_RP_WHITELIST_REMOVE;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_DEATH_MESSAGE;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_DEATH_SOUND;
-    public static ModConfigSpec.DoubleValue         DEATH_RP_DEATH_SOUND_VOLUME;
-    public static ModConfigSpec.DoubleValue         DEATH_RP_DEATH_SOUND_PITCH;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_ENABLE_MSG;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_ENABLE_MODE;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_DISABLE_MSG;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_DISABLE_MODE;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_TOGGLE_SOUND;
-    public static ModConfigSpec.DoubleValue         DEATH_RP_PLAYER_TOGGLE_SOUND_VOLUME;
-    public static ModConfigSpec.DoubleValue         DEATH_RP_PLAYER_TOGGLE_SOUND_PITCH;
-    public static ModConfigSpec.BooleanValue        DEATH_RP_RESET_NICKNAME;
-    public static ModConfigSpec.BooleanValue        DEATH_RP_RESET_ROLE;
-    public static ModConfigSpec.BooleanValue        DEATH_RP_RESET_PROFESSIONS;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_ENABLE_MSG;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_ENABLE_MODE;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_DISABLE_MSG;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_DISABLE_MODE;
-    public static ModConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_TOGGLE_SOUND;
-    public static ModConfigSpec.DoubleValue         DEATH_RP_GLOBAL_TOGGLE_SOUND_VOLUME;
-    public static ModConfigSpec.DoubleValue         DEATH_RP_GLOBAL_TOGGLE_SOUND_PITCH;
+    public static ForgeConfigSpec.BooleanValue DEATH_RP_GLOBAL_ENABLED;
+    public static ForgeConfigSpec.BooleanValue DEATH_RP_WHITELIST_REMOVE;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_DEATH_MESSAGE;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_DEATH_SOUND;
+    public static ForgeConfigSpec.DoubleValue         DEATH_RP_DEATH_SOUND_VOLUME;
+    public static ForgeConfigSpec.DoubleValue         DEATH_RP_DEATH_SOUND_PITCH;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_ENABLE_MSG;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_ENABLE_MODE;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_DISABLE_MSG;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_DISABLE_MODE;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_PLAYER_TOGGLE_SOUND;
+    public static ForgeConfigSpec.DoubleValue         DEATH_RP_PLAYER_TOGGLE_SOUND_VOLUME;
+    public static ForgeConfigSpec.DoubleValue         DEATH_RP_PLAYER_TOGGLE_SOUND_PITCH;
+    public static ForgeConfigSpec.BooleanValue        DEATH_RP_RESET_NICKNAME;
+    public static ForgeConfigSpec.BooleanValue        DEATH_RP_RESET_ROLE;
+    public static ForgeConfigSpec.BooleanValue        DEATH_RP_RESET_PROFESSIONS;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_ENABLE_MSG;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_ENABLE_MODE;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_DISABLE_MSG;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_DISABLE_MODE;
+    public static ForgeConfigSpec.ConfigValue<String> DEATH_RP_GLOBAL_TOGGLE_SOUND;
+    public static ForgeConfigSpec.DoubleValue         DEATH_RP_GLOBAL_TOGGLE_SOUND_VOLUME;
+    public static ForgeConfigSpec.DoubleValue         DEATH_RP_GLOBAL_TOGGLE_SOUND_PITCH;
 
     // === BACKUP ===
-    public static final ModConfigSpec.BooleanValue BACKUP_ENABLED;
-    public static final ModConfigSpec.IntValue BACKUP_INTERVAL_HOURS;
-    public static final ModConfigSpec.IntValue BACKUP_KEEP;
+    public static final ForgeConfigSpec.BooleanValue BACKUP_ENABLED;
+    public static final ForgeConfigSpec.IntValue BACKUP_INTERVAL_HOURS;
+    public static final ForgeConfigSpec.IntValue BACKUP_KEEP;
 
     // === COMMANDS ===
-    public static final ModConfigSpec.BooleanValue UNPREFIXED_STAFF_COMMANDS;
-    public static final ModConfigSpec.BooleanValue UNPREFIXED_RP_COMMANDS;
+    public static final ForgeConfigSpec.BooleanValue UNPREFIXED_STAFF_COMMANDS;
+    public static final ForgeConfigSpec.BooleanValue UNPREFIXED_RP_COMMANDS;
 
-    public static final ModConfigSpec.ConfigValue<String> DISCORD_WEBHOOK_URL;
-    public static final ModConfigSpec.ConfigValue<String> DISCORD_USERNAME;
-    public static final ModConfigSpec.BooleanValue DISCORD_REPORTS;
-    public static final ModConfigSpec.BooleanValue DISCORD_WARNS;
-    public static final ModConfigSpec.BooleanValue DISCORD_MUTES;
-    public static final ModConfigSpec.BooleanValue DISCORD_MANAGE;
-    public static final ModConfigSpec.BooleanValue DISCORD_DEATH_RP;
-    public static final ModConfigSpec.BooleanValue DISCORD_LICENSES;
-    public static final ModConfigSpec.BooleanValue DISCORD_NOTES;
-    public static final ModConfigSpec.BooleanValue DISCORD_SCHEDULE;
+    public static final ForgeConfigSpec.ConfigValue<String> DISCORD_WEBHOOK_URL;
+    public static final ForgeConfigSpec.ConfigValue<String> DISCORD_USERNAME;
+    public static final ForgeConfigSpec.BooleanValue DISCORD_REPORTS;
+    public static final ForgeConfigSpec.BooleanValue DISCORD_WARNS;
+    public static final ForgeConfigSpec.BooleanValue DISCORD_MUTES;
+    public static final ForgeConfigSpec.BooleanValue DISCORD_MANAGE;
+    public static final ForgeConfigSpec.BooleanValue DISCORD_DEATH_RP;
+    public static final ForgeConfigSpec.BooleanValue DISCORD_LICENSES;
+    public static final ForgeConfigSpec.BooleanValue DISCORD_NOTES;
+    public static final ForgeConfigSpec.BooleanValue DISCORD_SCHEDULE;
 
     static {
         // =========================================================================
@@ -164,15 +164,15 @@ public class RpEssentialsConfig {
 
         WHITELIST = BUILDER
                 .comment("Players who always see everything clearly and are never obfuscated.")
-                .defineList("whitelist", List.of(), obj -> obj instanceof String);
+                .defineListAllowEmpty("whitelist", List.of(), obj -> obj instanceof String);
 
         BLACKLIST = BUILDER
                 .comment("Players who are always obfuscated regardless of proximity.")
-                .defineList("blacklist", List.of(), obj -> obj instanceof String);
+                .defineListAllowEmpty("blacklist", List.of(), obj -> obj instanceof String);
 
         ALWAYS_VISIBLE_LIST = BUILDER
                 .comment("Players who are always shown clearly in the TabList.")
-                .defineList("alwaysVisibleList", List.of(), obj -> obj instanceof String);
+                .defineListAllowEmpty("alwaysVisibleList", List.of(), obj -> obj instanceof String);
 
         BLUR_SPECTATORS = BUILDER
                 .comment("If true, spectators are also subject to name blurring.")
@@ -203,7 +203,7 @@ public class RpEssentialsConfig {
 
         ROLES = BUILDER
                 .comment(rolesComment())
-                .defineList("roles",
+                .defineListAllowEmpty("roles",
                         java.util.Arrays.asList(
                                 "admin;admin;rpessentials.*",
                                 "moderator;moderator;rpessentials.staff,rpessentials.bypass.profession,rpessentials.see.nicknames,"
@@ -264,7 +264,7 @@ public class RpEssentialsConfig {
                         "  prewarnDistance: pre-warning distance (0 = use global value)",
                         "Example: minecraft:the_nether;1000;false;800"
                 )
-                .defineList("worldBorderDimensionOverrides",
+                .defineListAllowEmpty("worldBorderDimensionOverrides",
                         List.of(),
                         obj -> obj instanceof String && ((String) obj).contains(";"));
 
@@ -298,14 +298,14 @@ public class RpEssentialsConfig {
                         "Format with dimension:    name;centerX;centerZ;radius;dimension;messageEnter;messageExit",
                         "Example: spawn;0;0;50;minecraft:overworld;Welcome to spawn!;You left spawn.",
                         "The radius field accepts: 50 (circle), square:50, rect:50x30, ellipse:50x30 (half sizes, X then Z).")
-                .defineList("namedZones", Arrays.asList(), obj -> obj instanceof String);
+                .defineListAllowEmpty("namedZones", Arrays.asList(), obj -> obj instanceof String);
 
         ZONE_ACTIONS = BUILDER
                 .comment("Commands run when a player enters or leaves a named zone.",
                         "Format: zoneName;enter|exit;command",
                         "Placeholder: {player}",
                         "Example: spawn;enter;effect give {player} minecraft:regeneration 10 0 true")
-                .defineList("zoneActions", List.of(),
+                .defineListAllowEmpty("zoneActions", List.of(),
                         obj -> obj instanceof String && ((String) obj).split(";", 3).length == 3);
 
         ZONE_MESSAGE_MODE = BUILDER

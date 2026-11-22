@@ -113,7 +113,7 @@ public class SkinnedButton extends Button {
         g.setColor(1f, 1f, 1f, this.alpha);
         com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
-        g.blitSprite(GuiSkin.id(sprite), getX(), getY(), getWidth(), getHeight());
+        GuiSprites.blit(g, GuiSkin.id(sprite), getX(), getY(), getWidth(), getHeight());
         g.setColor(1f, 1f, 1f, 1f);
         int color = active ? 0xFFFFFF : 0xA0A0A0;
         renderString(g, Minecraft.getInstance().font, color | Mth.ceil(this.alpha * 255.0F) << 24);

@@ -27,7 +27,7 @@ import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.util.TimeHelper;
-import net.neoforged.neoforge.common.NeoForge;
+import net.minecraftforge.common.MinecraftForge;
 import net.rp.rpessentials.api.event.ServerScheduleEvent;
 
 public class RpEssentialsScheduleManager {
@@ -176,7 +176,7 @@ public class RpEssentialsScheduleManager {
                 RpEssentials.LOGGER.info("[Schedule] {}", summary);
             }
 
-            net.minecraft.server.MinecraftServer srv = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+            net.minecraft.server.MinecraftServer srv = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
             if (srv != null) {
                 for (ServerPlayer p : srv.getPlayerList().getPlayers()) {
                     if (!RpPerms.has(p, RpPerm.NOTIFY)) continue;
@@ -190,9 +190,9 @@ public class RpEssentialsScheduleManager {
     }
 
     private static DaySchedule parseDay(
-            net.neoforged.neoforge.common.ModConfigSpec.BooleanValue enabled,
-            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> open,
-            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> close) {
+            net.minecraftforge.common.ForgeConfigSpec.BooleanValue enabled,
+            net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> open,
+            net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> close) {
         if (!enabled.get()) return null;
         String openStr = open.get();
         String closeStr = close.get();
@@ -499,7 +499,7 @@ public class RpEssentialsScheduleManager {
                     p.sendSystemMessage(ColorHelper.parseColors(msg));
         }
         net.rp.rpessentials.compat.DiscordWebhook.onServerOpened(s.open().format(FMT), s.close().format(FMT));
-        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, ServerScheduleEvent.Cause.SCHEDULE,
+        MinecraftForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, ServerScheduleEvent.Cause.SCHEDULE,
                 s.open().format(FMT), s.close().format(FMT)));
     }
 
@@ -521,7 +521,7 @@ public class RpEssentialsScheduleManager {
     private static boolean setForceState(MinecraftServer server, ServerScheduleEvent.ForceState state, String actor,
                                          ServerScheduleEvent.Cause cause) {
         var ev = new ServerScheduleEvent.ForceStateChanging(server, cause, getForceState(), state, actor);
-        if (NeoForge.EVENT_BUS.post(ev).isCanceled()) return false;
+        if (MinecraftForge.EVENT_BUS.post(ev)) return false;
         if (Cfg.ready(ScheduleConfig.SPEC)) {
             ScheduleConfig.FORCE_STATE.set(state.name());
             ScheduleConfig.SPEC.save();
@@ -529,7 +529,7 @@ public class RpEssentialsScheduleManager {
         return true;
     }
 
-    private static void notifyStaff(MinecraftServer server, net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key,
+    private static void notifyStaff(MinecraftServer server, net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> key,
                                     String... args) {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(net.rp.rpessentials.lang.Msg.c(p, key, args));
@@ -558,7 +558,7 @@ public class RpEssentialsScheduleManager {
             server.getPlayerList().broadcastSystemMessage(ColorHelper.parseColors(msg), false);
         }
         notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_OPEN, "staff", actor);
-        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, cause, null, null));
+        MinecraftForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, cause, null, null));
         return true;
     }
 
@@ -575,7 +575,7 @@ public class RpEssentialsScheduleManager {
         }
         for (ServerPlayer p : toKick) p.connection.disconnect(ColorHelper.parseColors(kickMsg));
         notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_CLOSE, "staff", actor, "count", String.valueOf(toKick.size()));
-        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, cause, toKick.size()));
+        MinecraftForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, cause, toKick.size()));
         return true;
     }
 
@@ -740,7 +740,7 @@ public class RpEssentialsScheduleManager {
         }
     }
 
-    private record ConfigWarning(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key, String[] args) {}
+    private record ConfigWarning(net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> key, String[] args) {}
     private static final List<ConfigWarning> configWarnings = new ArrayList<>();
 
     /** Schedule config problems, in the viewer's language (null = server language). */
@@ -750,7 +750,7 @@ public class RpEssentialsScheduleManager {
         return out;
     }
 
-    private static void warnConfig(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key, String... args) {
+    private static void warnConfig(net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> key, String... args) {
         ConfigWarning w = new ConfigWarning(key, args);
         RpEssentials.LOGGER.error("[Schedule] {}", ServerLang.get(null, key, args));
         configWarnings.add(w);
@@ -778,7 +778,7 @@ public class RpEssentialsScheduleManager {
                 markClosedToday();
                 int kicked = closeServer(server);
                 net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
-                NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, ServerScheduleEvent.Cause.SCHEDULE, kicked));
+                MinecraftForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, ServerScheduleEvent.Cause.SCHEDULE, kicked));
             }
         }
         tickDeathHoursNotifications(server, now);

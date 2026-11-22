@@ -473,6 +473,8 @@
 
   "rpessentials.notice.welcome": "§eMerci d'avoir installé RpEssentials §6%s§e !",
   "rpessentials.notice.welcome_hint": "§7Tout se règle depuis la Config GUI (touche à définir dans Options > Contrôles > RP Essentials) ou avec §f/rpessentials config§7.",
+  "rpessentials.notice.role_hint": "§eTu es OP mais tu n'as pas encore de rôle RpEssentials : les outils staff sont verrouillés. Donne-toi le rôle admin (toutes les permissions) avec :",
+  "rpessentials.notice.role_hint_click": "Clique pour écrire la commande dans le chat",
   "rpessentials.notice.updated": "§eRpEssentials est passé de la version §6%s§e à §6%s§e. Nouveautés :",
   "rpessentials.notice.updated_unknown": "§eRpEssentials a été mis à jour en version §6%s§e. Nouveautés :",
   "rpessentials.notice.changelog": "§8Liste complète des changements : page CurseForge du mod (onglet Files).",

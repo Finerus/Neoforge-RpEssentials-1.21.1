@@ -8,12 +8,12 @@ import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.ByteBufCodecs;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ProfessionConfig;
@@ -25,7 +25,7 @@ import java.util.List;
 public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
 
     public static final Type<DeleteProfessionPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "delete_profession"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "delete_profession"));
 
     public static final StreamCodec<ByteBuf, DeleteProfessionPacket> STREAM_CODEC =
             StreamCodec.composite(
@@ -68,7 +68,7 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
     }
 
     private static void removeFromOverride(
-            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<List<? extends String>> config,
+            net.minecraftforge.common.ForgeConfigSpec.ConfigValue<List<? extends String>> config,
             String profId) {
         List<String> list = new ArrayList<>(config.get());
         list.removeIf(l -> l.split(";", 2)[0].trim().equalsIgnoreCase(profId));

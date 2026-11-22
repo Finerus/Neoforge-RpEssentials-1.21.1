@@ -1,13 +1,12 @@
 package net.rp.rpessentials.moderation;
 
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.common.util.TriState;
-import net.neoforged.neoforge.event.VanillaGameEvent;
-import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
-import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.VanillaGameEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
 import net.rp.rpessentials.RpEssentials;
 
 @EventBusSubscriber(modid = RpEssentials.MODID)
@@ -15,17 +14,17 @@ public class VanishEvents {
 
     @SubscribeEvent
     public static void onTarget(LivingChangeTargetEvent event) {
-        if (event.getNewAboutToBeSetTarget() instanceof ServerPlayer p
+        if (event.getNewTarget() instanceof ServerPlayer p
                 && VanishManager.isVanished(p.getUUID()) && VanishManager.hides(VanishManager.Aspect.MOBS)) {
-            event.setNewAboutToBeSetTarget(null);
+            event.setNewTarget(null);
         }
     }
 
     @SubscribeEvent
-    public static void onPickup(ItemEntityPickupEvent.Pre event) {
-        if (event.getPlayer() instanceof ServerPlayer p
+    public static void onPickup(EntityItemPickupEvent event) {
+        if (event.getEntity() instanceof ServerPlayer p
                 && VanishManager.isVanished(p.getUUID()) && VanishManager.hides(VanishManager.Aspect.PICKUP)) {
-            event.setCanPickup(TriState.FALSE);
+            event.setCanceled(true);
         }
     }
 
@@ -38,7 +37,7 @@ public class VanishEvents {
     }
 
     @SubscribeEvent
-    public static void onDamage(LivingIncomingDamageEvent event) {
+    public static void onDamage(LivingAttackEvent event) {
         if (event.getEntity() instanceof ServerPlayer p
                 && VanishManager.isVanished(p.getUUID()) && VanishManager.invulnerable()) {
             event.setCanceled(true);

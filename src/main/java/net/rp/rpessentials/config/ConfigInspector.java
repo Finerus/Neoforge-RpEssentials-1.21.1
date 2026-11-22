@@ -1,7 +1,7 @@
 package net.rp.rpessentials.config;
 
 import com.electronwill.nightconfig.core.UnmodifiableConfig;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.RpEssentials;
 
 import java.lang.reflect.Field;
@@ -30,9 +30,9 @@ public class ConfigInspector {
     }
 
     private record ConfigClassInfo(String id, String displayName, int color, String mod, int modColor, Theme theme,
-                                   Class<?> clazz, ModConfigSpec spec,
+                                   Class<?> clazz, ForgeConfigSpec spec,
                                    java.util.function.Consumer<net.minecraft.server.MinecraftServer> onApplied) {
-        ConfigClassInfo(String id, String displayName, Class<?> clazz, ModConfigSpec spec) {
+        ConfigClassInfo(String id, String displayName, Class<?> clazz, ForgeConfigSpec spec) {
             this(id, displayName, 0, "RpEssentials", 0xFFD700, Theme.DEFAULT, clazz, spec, null);
         }
     }
@@ -53,13 +53,13 @@ public class ConfigInspector {
         public static final Theme DEFAULT = new Theme(0, 0, 0);
     }
 
-    public static void register(String id, String displayName, int color, Class<?> clazz, ModConfigSpec spec,
+    public static void register(String id, String displayName, int color, Class<?> clazz, ForgeConfigSpec spec,
                                 java.util.function.Consumer<net.minecraft.server.MinecraftServer> onApplied) {
         register("Other", 0xAAAAAA, id, displayName, color, Theme.DEFAULT, clazz, spec, onApplied);
     }
 
     public static void register(String mod, int modColor, String id, String displayName, int color, Theme theme,
-                                Class<?> clazz, ModConfigSpec spec,
+                                Class<?> clazz, ForgeConfigSpec spec,
                                 java.util.function.Consumer<net.minecraft.server.MinecraftServer> onApplied) {
         EXTERNAL.removeIf(c -> c.id().equals(id));
         EXTERNAL.add(new ConfigClassInfo(id, displayName, color, mod, modColor, theme, clazz, spec, onApplied));
@@ -71,7 +71,7 @@ public class ConfigInspector {
         return out;
     }
 
-    private static final Map<Class<?>, Map<String, ModConfigSpec.ConfigValue<?>>> VALUE_MAP_CACHE =
+    private static final Map<Class<?>, Map<String, ForgeConfigSpec.ConfigValue<?>>> VALUE_MAP_CACHE =
             new java.util.concurrent.ConcurrentHashMap<>();
 
     // =========================================================================
@@ -98,7 +98,7 @@ public class ConfigInspector {
         if (opt.isEmpty()) return 0;
 
         ConfigClassInfo info = opt.get();
-        Map<String, ModConfigSpec.ConfigValue<?>> valueMap = buildValueMap(info.clazz());
+        Map<String, ForgeConfigSpec.ConfigValue<?>> valueMap = buildValueMap(info.clazz());
 
         // Pré-calcul des entryData pour la validation de range
         Map<String, EntryData> entryDataMap = getEntries(fileId).stream()
@@ -108,7 +108,7 @@ public class ConfigInspector {
         int applied = 0;
 
         for (Map.Entry<String, String> change : changes.entrySet()) {
-            ModConfigSpec.ConfigValue<?> cv = valueMap.get(change.getKey());
+            ForgeConfigSpec.ConfigValue<?> cv = valueMap.get(change.getKey());
             if (cv == null) {
                 RpEssentials.LOGGER.warn("[ConfigInspector] Unknown path '{}' in file '{}'",
                         change.getKey(), fileId);
@@ -142,7 +142,7 @@ public class ConfigInspector {
             }
             if (info.onApplied() != null) {
                 net.minecraft.server.MinecraftServer server =
-                        net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+                        net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
                 if (server != null) {
                     try { info.onApplied().accept(server); }
                     catch (Exception e) {
@@ -161,7 +161,7 @@ public class ConfigInspector {
         List<EntryData> entries     = new ArrayList<>();
         String          lastSection = null;
 
-        for (ModConfigSpec.ConfigValue<?> cv : buildValueMap(info.clazz()).values()) {
+        for (ForgeConfigSpec.ConfigValue<?> cv : buildValueMap(info.clazz()).values()) {
             List<String> path = cv.getPath();
             if (path.isEmpty()) continue;
 
@@ -193,15 +193,15 @@ public class ConfigInspector {
         return entries;
     }
 
-    static Map<String, ModConfigSpec.ConfigValue<?>> buildValueMap(Class<?> clazz) {
+    static Map<String, ForgeConfigSpec.ConfigValue<?>> buildValueMap(Class<?> clazz) {
         return VALUE_MAP_CACHE.computeIfAbsent(clazz, c -> {
-            Map<String, ModConfigSpec.ConfigValue<?>> map = new LinkedHashMap<>();
+            Map<String, ForgeConfigSpec.ConfigValue<?>> map = new LinkedHashMap<>();
             for (Field field : c.getDeclaredFields()) {
                 if (!Modifier.isStatic(field.getModifiers())) continue;
-                if (!ModConfigSpec.ConfigValue.class.isAssignableFrom(field.getType())) continue;
+                if (!ForgeConfigSpec.ConfigValue.class.isAssignableFrom(field.getType())) continue;
                 try {
                     field.setAccessible(true);
-                    ModConfigSpec.ConfigValue<?> cv = (ModConfigSpec.ConfigValue<?>) field.get(null);
+                    ForgeConfigSpec.ConfigValue<?> cv = (ForgeConfigSpec.ConfigValue<?>) field.get(null);
                     if (cv == null) continue;
                     map.put(String.join(".", cv.getPath()), cv);
                 } catch (Exception ignored) {}
@@ -214,25 +214,25 @@ public class ConfigInspector {
     // VALUE SPEC ACCESS
     // =========================================================================
     /**
-     * Retrieves the NeoForge ValueSpec stored inside ModConfigSpec for the given path.
+     * Retrieves the NeoForge ValueSpec stored inside ForgeConfigSpec for the given path.
      * -
-     * ModConfigSpec extends Night Config's UnmodifiableConfig.
+     * ForgeConfigSpec extends Night Config's UnmodifiableConfig.
      * The Builder stores ValueSpec objects as leaves of the spec config tree.
      * So ((UnmodifiableConfig) spec).get(path) returns the ValueSpec.
      * -
      * Three strategies tried in order:
      *   1. Cast to UnmodifiableConfig and call get(path)          [NeoForge 21.1 primary]
-     *   2. Reflect on fields of ModConfigSpec looking for a Map   [fallback]
+     *   2. Reflect on fields of ForgeConfigSpec looking for a Map   [fallback]
      *   3. Scan UnmodifiableConfig sub-fields                     [fallback]
      */
-    private static Object getValueSpecObj(ModConfigSpec spec, List<String> path) {
+    private static Object getValueSpecObj(ForgeConfigSpec spec, List<String> path) {
         // Strategy 1 — Night Config UnmodifiableConfig.get(List<String>)
         try {
             Object result = ((UnmodifiableConfig) spec).get(path);
             if (result != null && isValueSpec(result)) return result;
         } catch (Exception ignored) {}
 
-        // Strategy 2 — reflect on Map fields of ModConfigSpec
+        // Strategy 2 — reflect on Map fields of ForgeConfigSpec
         Object fromMap = getValueSpecViaMapField(spec, path);
         if (fromMap != null) return fromMap;
 
@@ -262,7 +262,7 @@ public class ConfigInspector {
     }
 
     /** Walk all fields (including superclass) looking for a Map<List,ValueSpec>. */
-    private static Object getValueSpecViaMapField(ModConfigSpec spec, List<String> path) {
+    private static Object getValueSpecViaMapField(ForgeConfigSpec spec, List<String> path) {
         for (Field f : getAllFields(spec.getClass())) {
             try {
                 f.setAccessible(true);
@@ -279,11 +279,11 @@ public class ConfigInspector {
     // TYPE DETECTION
     // =========================================================================
 
-    public static ValueType detectType(ModConfigSpec.ConfigValue<?> cv) {
-        if (cv instanceof ModConfigSpec.BooleanValue) return ValueType.BOOLEAN;
-        if (cv instanceof ModConfigSpec.IntValue)     return ValueType.INT;
-        if (cv instanceof ModConfigSpec.LongValue)    return ValueType.LONG;
-        if (cv instanceof ModConfigSpec.DoubleValue)  return ValueType.DOUBLE;
+    public static ValueType detectType(ForgeConfigSpec.ConfigValue<?> cv) {
+        if (cv instanceof ForgeConfigSpec.BooleanValue) return ValueType.BOOLEAN;
+        if (cv instanceof ForgeConfigSpec.IntValue)     return ValueType.INT;
+        if (cv instanceof ForgeConfigSpec.LongValue)    return ValueType.LONG;
+        if (cv instanceof ForgeConfigSpec.DoubleValue)  return ValueType.DOUBLE;
 
         Object val;
         try { val = cv.get(); } catch (Exception e) { return ValueType.UNKNOWN; }
@@ -339,13 +339,13 @@ public class ConfigInspector {
 
     /**
      * Tries to extract numeric [min, max] from the ValueSpec.
-     * NeoForge 21.1 ValueSpec.getRange() → net.neoforged.neoforge.common.ModConfigSpec.Range
+     * NeoForge 21.1 ValueSpec.getRange() → net.minecraftforge.common.ForgeConfigSpec.Range
      * Range.getMin() / Range.getMax() return Comparable.
      */
-    private static double[] extractRange(ModConfigSpec.ConfigValue<?> cv, Object vs) {
-        if (!(cv instanceof ModConfigSpec.IntValue)
-                && !(cv instanceof ModConfigSpec.DoubleValue)
-                && !(cv instanceof ModConfigSpec.LongValue)) return null;
+    private static double[] extractRange(ForgeConfigSpec.ConfigValue<?> cv, Object vs) {
+        if (!(cv instanceof ForgeConfigSpec.IntValue)
+                && !(cv instanceof ForgeConfigSpec.DoubleValue)
+                && !(cv instanceof ForgeConfigSpec.LongValue)) return null;
         if (vs == null) return null;
 
         // Strategy A: getRange()
@@ -387,13 +387,27 @@ public class ConfigInspector {
 
     public static String serialize(Object value) { return serialize(value, ValueType.UNKNOWN); }
 
+    /** Rules of an option (Forge 1.20.1 has no ConfigValue.getSpec()). */
+    private static ForgeConfigSpec.ValueSpec valueSpec(ForgeConfigSpec.ConfigValue<?> cv) {
+        try {
+            java.lang.reflect.Field f = ForgeConfigSpec.ConfigValue.class.getDeclaredField("spec");
+            f.setAccessible(true);
+            ForgeConfigSpec owner = (ForgeConfigSpec) f.get(cv);
+            if (owner == null) return null;
+            Object o = owner.getSpec().get(cv.getPath());
+            return o instanceof ForgeConfigSpec.ValueSpec v ? v : null;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null;
+        }
+    }
+
     @SuppressWarnings("unchecked")
-    public static boolean applyValue(ModConfigSpec.ConfigValue<?> cv, ValueType type, String raw) {
+    public static boolean applyValue(ForgeConfigSpec.ConfigValue<?> cv, ValueType type, String raw) {
         try {
             Object parsed = parseValue(type, raw);
             if (parsed == null) return false;
             // The option's own rules (allowed words, list element checks...), not only the range.
-            var spec = cv.getSpec();
+            ForgeConfigSpec.ValueSpec spec = valueSpec(cv);
             if (spec != null && !spec.test(parsed)) {
                 RpEssentials.LOGGER.warn("[ConfigInspector] Value '{}' refused by the rules of '{}'", raw, String.join(".", cv.getPath()));
                 return false;
@@ -403,7 +417,7 @@ public class ConfigInspector {
                 RpEssentials.LOGGER.warn("[ConfigInspector] Value '{}' refused by the rules of '{}'", raw, String.join(".", cv.getPath()));
                 return false;
             }
-            ((ModConfigSpec.ConfigValue<Object>) cv).set(parsed);
+            ((ForgeConfigSpec.ConfigValue<Object>) cv).set(parsed);
             return true;
         } catch (Exception e) {
             RpEssentials.LOGGER.warn("[ConfigInspector] Cannot apply '{}' as {}: {}", raw, type, e.getMessage());
@@ -503,7 +517,7 @@ public class ConfigInspector {
     public static String exportDefaults(Class<?>... classes) {
         com.google.gson.JsonObject o = new com.google.gson.JsonObject();
         for (Class<?> c : classes) {
-            for (Map.Entry<String, ModConfigSpec.ConfigValue<?>> e : buildValueMap(c).entrySet()) {
+            for (Map.Entry<String, ForgeConfigSpec.ConfigValue<?>> e : buildValueMap(c).entrySet()) {
                 if (e.getKey().startsWith("Message Source")) continue;
                 if (e.getValue().getDefault() instanceof String s) o.addProperty(e.getKey(), s);
             }

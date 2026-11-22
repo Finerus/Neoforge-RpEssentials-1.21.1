@@ -1,6 +1,6 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +30,7 @@ public final class ConfigRules {
     public static final String DISPLAY_MODES = "CHAT, ACTION_BAR, TITLE, IMMERSIVE, IMMERSIVE:<preset>";
 
     /** A rule: the test and the text shown to say what is expected. */
-    public record Rule(ModConfigSpec.ConfigValue<String> option, Predicate<String> test, String expected) {}
+    public record Rule(ForgeConfigSpec.ConfigValue<String> option, Predicate<String> test, String expected) {}
 
     /** A wrong value found in a loaded file. */
     public record Problem(String path, String value, String expected, String defaultValue) {}
@@ -45,17 +45,17 @@ public final class ConfigRules {
     }
 
     /** Declares a display mode option (call it right after the define). */
-    public static ModConfigSpec.ConfigValue<String> displayMode(ModConfigSpec.ConfigValue<String> option) {
+    public static ForgeConfigSpec.ConfigValue<String> displayMode(ForgeConfigSpec.ConfigValue<String> option) {
         return add(option, ConfigRules::isDisplayMode, DISPLAY_MODES);
     }
 
     /** Declares an option that accepts one of these words, written exactly like this. */
-    public static ModConfigSpec.ConfigValue<String> oneOf(ModConfigSpec.ConfigValue<String> option, List<String> allowed) {
+    public static ForgeConfigSpec.ConfigValue<String> oneOf(ForgeConfigSpec.ConfigValue<String> option, List<String> allowed) {
         List<String> copy = List.copyOf(allowed);
         return add(option, copy::contains, String.join(", ", copy));
     }
 
-    private static ModConfigSpec.ConfigValue<String> add(ModConfigSpec.ConfigValue<String> option,
+    private static ForgeConfigSpec.ConfigValue<String> add(ForgeConfigSpec.ConfigValue<String> option,
                                                          Predicate<String> test, String expected) {
         RULES.put(String.join(".", option.getPath()), new Rule(option, test, expected));
         return option;
@@ -74,7 +74,7 @@ public final class ConfigRules {
     }
 
     /** Value of the option, or its default while the file holds a wrong value (or is not loaded). */
-    public static String value(ModConfigSpec.ConfigValue<String> option) {
+    public static String value(ForgeConfigSpec.ConfigValue<String> option) {
         String v = Cfg.get(option, option.getDefault());
         Rule r = RULES.get(String.join(".", option.getPath()));
         return r == null || r.test().test(v) ? v : option.getDefault();

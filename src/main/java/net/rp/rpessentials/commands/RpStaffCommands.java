@@ -225,7 +225,7 @@ public class RpStaffCommands {
         Optional<Holder.Reference<MobEffect>> effect =
                 BuiltInRegistries.MOB_EFFECT.getHolder(ResourceKey.create(BuiltInRegistries.MOB_EFFECT.key(), effectId));
         if (effect.isPresent()) {
-            target.addEffect(new MobEffectInstance(effect.get(), duration * 20, amplifier, false, false));
+            target.addEffect(new MobEffectInstance(effect.get().value(), duration * 20, amplifier, false, false));
             String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
             logToStaff(ctx.getSource(), sourceName + " gave effect " + effectId + " to " + target.getName().getString());
             if (ModerationConfig.NOTIFY_TARGET.get()) {

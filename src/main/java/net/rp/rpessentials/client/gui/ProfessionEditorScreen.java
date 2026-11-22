@@ -19,9 +19,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.*;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.rp.rpessentials.network.compat.PacketDistributor;
 import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 import net.rp.rpessentials.network.*;
 import org.lwjgl.glfw.GLFW;
@@ -181,8 +181,7 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
                 || b instanceof DispenserBlock || b instanceof CraftingTableBlock || b instanceof AnvilBlock
                 || b instanceof GrindstoneBlock || b instanceof StonecutterBlock || b instanceof LoomBlock
                 || b instanceof CartographyTableBlock || b instanceof SmithingTableBlock
-                || b instanceof EnchantingTableBlock || b instanceof BeaconBlock || b instanceof LecternBlock
-                || b instanceof CrafterBlock) return true;
+                || b instanceof EnchantmentTableBlock || b instanceof BeaconBlock || b instanceof LecternBlock) return true;
         return b instanceof BaseEntityBlock && !id.getNamespace().equals("minecraft");
     }
 
@@ -1310,7 +1309,7 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {}
+    public void renderBackground(GuiGraphics g) {}
 
     // =========================================================================
     // LOGIQUE PROFESSIONS
@@ -1829,7 +1828,7 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         }
 
         @Override
-        public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+        public void renderBackground(GuiGraphics g) {}
 
         @Override
         public boolean isPauseScreen() { return false; }
@@ -1882,7 +1881,7 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         public void onClose() { Minecraft.getInstance().setScreen(back); }
 
         @Override
-        public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+        public void renderBackground(GuiGraphics g) {}
 
         @Override
         public boolean isPauseScreen() { return false; }
@@ -1962,7 +1961,7 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         }
 
         @Override
-        public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+        public void renderBackground(GuiGraphics g) {}
 
         @Override
         public boolean isPauseScreen() { return false; }
@@ -2297,7 +2296,7 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         }
 
         @Override
-        public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+        public void renderBackground(GuiGraphics g) {}
 
         @Override
         public boolean isPauseScreen() { return false; }

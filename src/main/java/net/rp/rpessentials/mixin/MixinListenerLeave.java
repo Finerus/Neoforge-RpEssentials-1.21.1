@@ -20,7 +20,6 @@ public abstract class MixinListenerLeave {
             method = "onDisconnect",
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/server/players/PlayerList;broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V"),
-            remap = false,
             require = 0
     )
     private void rpessentials$hideLeave(PlayerList list, Component message, boolean overlay, Operation<Void> original) {

@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ public final class GuiFeedback {
      * Translated form: the title comes from MessagesConfig and the details are built for each viewer
      * (viewer is null for the console log line).
      */
-    public static void report(ServerPlayer actor, ModConfigSpec.ConfigValue<String> title, String[] titleArgs,
+    public static void report(ServerPlayer actor, ForgeConfigSpec.ConfigValue<String> title, String[] titleArgs,
                               Function<ServerPlayer, List<String>> details, boolean alertOtherStaff) {
         send(actor, p -> ServerLang.get(p, title, titleArgs), details, alertOtherStaff);
     }

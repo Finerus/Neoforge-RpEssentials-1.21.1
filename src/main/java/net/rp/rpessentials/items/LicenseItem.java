@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import net.rp.rpessentials.config.MessagesConfig;
 import org.jetbrains.annotations.NotNull;
 
@@ -22,7 +22,7 @@ public class LicenseItem extends Item {
 
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
-        consumer.accept(new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
+        consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
             @Override
             public boolean applyForgeHandTransform(com.mojang.blaze3d.vertex.PoseStack poseStack,
                                                    net.minecraft.client.player.LocalPlayer player,
@@ -39,7 +39,7 @@ public class LicenseItem extends Item {
             public net.minecraft.client.model.HumanoidModel.ArmPose getArmPose(net.minecraft.world.entity.LivingEntity entity,
                                                                               net.minecraft.world.InteractionHand hand,
                                                                               net.minecraft.world.item.ItemStack stack) {
-                return net.rp.rpessentials.client.LicenseArmPose.POSE.getValue();
+                return net.rp.rpessentials.client.LicenseArmPose.POSE;
             }
         });
     }
@@ -49,18 +49,17 @@ public class LicenseItem extends Item {
      * A value changed by the server admin in the config is still used as is.
      */
     private static net.minecraft.network.chat.MutableComponent text(
-            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> cv, String key) {
+            net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> cv, String key) {
         String v = Cfg.get(cv, cv.getDefault());
         if (!v.equals(cv.getDefault())) return Component.literal(v);
         return Component.translatable(key);
     }
 
     @Override
-    public void appendHoverText(@NotNull ItemStack stack, TooltipContext context,
+    public void appendHoverText(@NotNull ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level level,
                                 @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
-        if (stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) {
-            net.minecraft.nbt.CompoundTag tag = stack.get(
-                    net.minecraft.core.component.DataComponents.CUSTOM_DATA).copyTag();
+        if (stack.hasTag()) {
+            net.minecraft.nbt.CompoundTag tag = stack.getTag().copy();
             if (tag.getBoolean("revoked")) {
                 tooltip.add(text(MessagesConfig.LICENSE_REVOKED_TITLE, "rpessentials.license.tooltip.revoked_title")
                         .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));

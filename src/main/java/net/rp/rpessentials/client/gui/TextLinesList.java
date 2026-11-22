@@ -35,16 +35,17 @@ public class TextLinesList extends ObjectSelectionList<TextLinesList.Row> {
     }
 
     public TextLinesList(Minecraft mc) {
-        super(mc, 100, 100, 0, ROW_H);
+        super(mc, 100, 100, 0, 100, ROW_H);
+        setRenderBackground(false);
+        setRenderTopAndBottom(false);
         this.font = mc.font;
     }
 
     /** Places the list. Lines are wrapped again only when the width changes. */
     public void layout(int x, int y, int w, int h) {
-        // Not updateSizeAndPosition(): in 1.21.1 it also moves the list back to x = 0.
-        setSize(w, h);
-        setPosition(x, y);
-        clampScrollAmount();
+        updateSize(w, h, y, y + h);
+        setLeftPos(x);
+        setScrollAmount(getScrollAmount()); // clamps to the new size
         rewrap(false);
     }
 
@@ -91,7 +92,7 @@ public class TextLinesList extends ObjectSelectionList<TextLinesList.Row> {
 
     @Override
     public int getRowLeft() {
-        return getX();
+        return getLeft();
     }
 
     @Override
@@ -99,12 +100,7 @@ public class TextLinesList extends ObjectSelectionList<TextLinesList.Row> {
         return getRight() - 6;
     }
 
-    /** The list sits inside a panel of the screen: no vanilla background nor separators. */
-    @Override
-    protected void renderListBackground(GuiGraphics g) {}
 
-    @Override
-    protected void renderListSeparators(GuiGraphics g) {}
 
     public class Row extends ObjectSelectionList.Entry<Row> {
         private final FormattedCharSequence text;

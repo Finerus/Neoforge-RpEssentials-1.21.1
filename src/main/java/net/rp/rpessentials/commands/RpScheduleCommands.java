@@ -295,7 +295,7 @@ public class RpScheduleCommands {
             return 0;
         }
         if (Cfg.ready(ScheduleConfig.SPEC)) {
-            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> cfg = switch (day + "_" + type.toUpperCase()) {
+            net.minecraftforge.common.ForgeConfigSpec.ConfigValue<String> cfg = switch (day + "_" + type.toUpperCase()) {
                 case "MONDAY_OPEN"     -> ScheduleConfig.MONDAY_OPEN;
                 case "MONDAY_CLOSE"    -> ScheduleConfig.MONDAY_CLOSE;
                 case "TUESDAY_OPEN"    -> ScheduleConfig.TUESDAY_OPEN;
@@ -324,7 +324,7 @@ public class RpScheduleCommands {
         String day  = StringArgumentType.getString(ctx, "day").toUpperCase();
         boolean val = BoolArgumentType.getBool(ctx, "value");
         if (Cfg.ready(ScheduleConfig.SPEC)) {
-            net.neoforged.neoforge.common.ModConfigSpec.BooleanValue cfg = switch (day) {
+            net.minecraftforge.common.ForgeConfigSpec.BooleanValue cfg = switch (day) {
                 case "MONDAY"    -> ScheduleConfig.MONDAY_ENABLED;
                 case "TUESDAY"   -> ScheduleConfig.TUESDAY_ENABLED;
                 case "WEDNESDAY" -> ScheduleConfig.WEDNESDAY_ENABLED;
@@ -348,7 +348,7 @@ public class RpScheduleCommands {
     private static int setHrpAllowedSlots(CommandContext<CommandSourceStack> ctx) { return setSlotsConfig(ctx, ScheduleConfig.HRP_ALLOWED_SLOTS); }
 
     private static int setSlotsConfig(CommandContext<CommandSourceStack> ctx,
-                                      net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<java.util.List<? extends String>> config) {
+                                      net.minecraftforge.common.ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> config) {
         String label = RpConfigCommands.optName(config);
         String raw = StringArgumentType.getString(ctx, "slots");
         java.util.List<String> slots = java.util.Arrays.stream(raw.split(",")).map(String::trim).collect(java.util.stream.Collectors.toList());

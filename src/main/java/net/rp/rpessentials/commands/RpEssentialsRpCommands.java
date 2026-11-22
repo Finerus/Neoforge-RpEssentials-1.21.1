@@ -21,9 +21,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraft.core.registries.Registries;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpConfig;
@@ -564,11 +564,11 @@ public class RpEssentialsRpCommands {
 
     private static void playAnnonceSound(ServerPlayer player, String soundId) {
         try {
-            ResourceLocation loc = ResourceLocation.parse(soundId);
+            ResourceLocation loc = new ResourceLocation(soundId);
             net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> holder =
                     player.level().registryAccess()
                             .registryOrThrow(Registries.SOUND_EVENT)
-                            .getHolder(loc)
+                            .getHolder(net.minecraft.resources.ResourceKey.create(Registries.SOUND_EVENT, loc))
                             .orElse(null);
             if (holder != null) {
                 player.playNotifySound(holder.value(), SoundSource.MASTER, 1.0f, 1.0f);

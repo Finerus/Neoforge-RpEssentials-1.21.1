@@ -39,6 +39,15 @@ public class SkinnedEditBox extends EditBox {
         if (!text.isEmpty()) error = false;
     }
 
+    /** Copy of the private EditBox.bordered (no getter in 1.20.1). */
+    private boolean bordered = true;
+
+    @Override
+    public void setBordered(boolean bordered) {
+        this.bordered = bordered;
+        super.setBordered(bordered);
+    }
+
     @Override
     public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         renderField(g, mouseX, mouseY, partialTick);
@@ -55,7 +64,7 @@ public class SkinnedEditBox extends EditBox {
     }
 
     private void renderFieldSkinned(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        if (!isBordered() || !isVisible()
+        if (!bordered || !isVisible()
                 || !GuiSkin.draw(g, GuiSkin.TEXT_FIELD, skinId, "", getX(), getY(), getWidth(), getHeight())) {
             super.renderWidget(g, mouseX, mouseY, partialTick);
             return;

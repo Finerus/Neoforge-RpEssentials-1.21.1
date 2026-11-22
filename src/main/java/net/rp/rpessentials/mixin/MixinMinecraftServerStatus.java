@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(MinecraftServer.class)
 public abstract class MixinMinecraftServerStatus {
 
-    @Inject(method = "buildServerStatus", at = @At("RETURN"), cancellable = true, remap = false, require = 0)
+    @Inject(method = "buildServerStatus", at = @At("RETURN"), cancellable = true, require = 0)
     private void rpessentials$filterStatus(CallbackInfoReturnable<ServerStatus> cir) {
         ServerStatus status = cir.getReturnValue();
         if (status == null) return;

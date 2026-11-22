@@ -4,7 +4,7 @@ import net.rp.rpessentials.gameplay.DiceManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.config.ConfigInspector;
 import net.rp.rpessentials.identity.NicknameManager;
@@ -161,7 +161,7 @@ public final class RpEssentialsAPI {
     }
 
     public static void registerConfig(String mod, int modColor, String id, String displayName, int color,
-                                      ConfigInspector.Theme theme, Class<?> clazz, ModConfigSpec spec,
+                                      ConfigInspector.Theme theme, Class<?> clazz, ForgeConfigSpec spec,
                                       Consumer<MinecraftServer> onApplied) {
         ConfigInspector.register(mod, modColor, id, displayName, color, theme, clazz, spec, onApplied);
     }

@@ -6,11 +6,11 @@ import net.rp.rpessentials.permission.RpPerms;
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.moderation.ManageService;
@@ -21,7 +21,7 @@ public record ManagePlayerPacket(UUID target, ManageService.Action action, Strin
         implements CustomPacketPayload {
 
     public static final Type<ManagePlayerPacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "manage_player"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "manage_player"));
 
     public static final StreamCodec<FriendlyByteBuf, ManagePlayerPacket> STREAM_CODEC =
             new StreamCodec<>() {

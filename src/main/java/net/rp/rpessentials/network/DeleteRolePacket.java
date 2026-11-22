@@ -5,12 +5,12 @@ import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.rp.rpessentials.network.compat.ByteBufCodecs;
+import net.rp.rpessentials.network.compat.StreamCodec;
+import net.rp.rpessentials.network.compat.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.rp.rpessentials.network.compat.IPayloadContext;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
@@ -23,7 +23,7 @@ import java.util.List;
 public record DeleteRolePacket(String id) implements CustomPacketPayload {
 
     public static final Type<DeleteRolePacket> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "delete_role"));
+            new Type<>(new ResourceLocation(RpEssentials.MODID, "delete_role"));
 
     public static final StreamCodec<ByteBuf, DeleteRolePacket> STREAM_CODEC =
             StreamCodec.composite(

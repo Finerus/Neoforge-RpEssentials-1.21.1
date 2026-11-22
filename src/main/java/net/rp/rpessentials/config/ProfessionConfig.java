@@ -1,6 +1,6 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,39 +13,39 @@ public class ProfessionConfig {
     public static boolean enabled() {
         return Cfg.get(ENABLE_PROFESSION_SYSTEM, true);
     }
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     // ===============================================================================
     // PROFESSION DEFINITIONS
     // ===============================================================================
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSIONS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PROFESSIONS;
     /** Whole profession / license system on or off (applied live, asks for a confirmation). */
-    public static final ModConfigSpec.BooleanValue ENABLE_PROFESSION_SYSTEM;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_PROFESSION_SYSTEM;
 
     // ===============================================================================
     // GLOBAL RESTRICTIONS
     // ===============================================================================
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_CRAFTS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_UNBREAKABLE_BLOCKS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_ITEMS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_EQUIPMENT;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> CONTAINER_OPEN_RESTRICTIONS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_CRAFTS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_BLOCKS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_ITEMS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_EQUIPMENT;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_CRAFTS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GLOBAL_UNBREAKABLE_BLOCKS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_ITEMS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> GLOBAL_BLOCKED_EQUIPMENT;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> CONTAINER_OPEN_RESTRICTIONS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_CRAFTS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_BLOCKS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_ITEMS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> PROFESSION_ALLOWED_EQUIPMENT;
 
     // ===============================================================================
     // MESSAGES
     // ===============================================================================
-    public static final ModConfigSpec.ConfigValue<String> MSG_CRAFT_BLOCKED;
-    public static final ModConfigSpec.ConfigValue<String> MSG_BLOCK_BREAK_BLOCKED;
-    public static final ModConfigSpec.ConfigValue<String> MSG_ITEM_USE_BLOCKED;
-    public static final ModConfigSpec.ConfigValue<String> MSG_EQUIPMENT_BLOCKED;
-    public static final ModConfigSpec.ConfigValue<String> MSG_CONTAINER_OPEN_BLOCKED;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_CRAFT_BLOCKED;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_BLOCK_BREAK_BLOCKED;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_ITEM_USE_BLOCKED;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_EQUIPMENT_BLOCKED;
+    public static final ForgeConfigSpec.ConfigValue<String> MSG_CONTAINER_OPEN_BLOCKED;
 
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_ID_DISPLAY;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_ID_DISPLAY;
 
     static {
         BUILDER.comment(
@@ -106,7 +106,7 @@ public class ProfessionConfig {
         );
 
         PROFESSIONS = BUILDER
-                .defineList("professions",
+                .defineListAllowEmpty("professions",
                         Arrays.asList(
                                 "hunter;Hunter;§a",
                                 "fisher;Fisher;§b",
@@ -149,7 +149,7 @@ public class ProfessionConfig {
                         "  minecraft:*_pickaxe          - Block all pickaxes",
                         "  minecraft:iron_*             - Block all iron items"
                 )
-                .defineList("globalBlockedCrafts",
+                .defineListAllowEmpty("globalBlockedCrafts",
                         Arrays.asList(
                                 "minecraft:diamond_sword",
                                 "minecraft:diamond_pickaxe",
@@ -172,7 +172,7 @@ public class ProfessionConfig {
                         "  minecraft:ancient_debris     - Cannot mine ancient debris",
                         "  minecraft:*_ore              - Cannot mine any ore"
                 )
-                .defineList("globalUnbreakableBlocks",
+                .defineListAllowEmpty("globalUnbreakableBlocks",
                         Arrays.asList(
                                 "minecraft:diamond_ore",
                                 "minecraft:deepslate_diamond_ore",
@@ -193,7 +193,7 @@ public class ProfessionConfig {
                         "  minecraft:flint_and_steel    - Cannot use flint and steel",
                         "  minecraft:*_bucket           - Cannot use any bucket"
                 )
-                .defineList("globalBlockedItems",
+                .defineListAllowEmpty("globalBlockedItems",
                         Arrays.asList(
                                 "minecraft:flint_and_steel",
                                 "minecraft:fire_charge"
@@ -211,7 +211,7 @@ public class ProfessionConfig {
                         "  minecraft:diamond_helmet     - Cannot wear diamond helmet",
                         "  minecraft:diamond_*          - Cannot use any diamond equipment"
                 )
-                .defineList("globalBlockedEquipment",
+                .defineListAllowEmpty("globalBlockedEquipment",
                         Arrays.asList(
                                 "minecraft:diamond_sword",
                                 "minecraft:diamond_helmet",
@@ -233,7 +233,7 @@ public class ProfessionConfig {
                         "  minecraft:brewing_stand;alchemist",
                         "  minecraft:enchanting_table;alchemist,blacksmith"
                 )
-                .defineList("containerOpenRestrictions",
+                .defineListAllowEmpty("containerOpenRestrictions",
                         Arrays.asList(
                                 "minecraft:anvil;blacksmith",
                                 "minecraft:brewing_stand;alchemist",
@@ -270,7 +270,7 @@ public class ProfessionConfig {
                         "Crafts that each profession IS ALLOWED to make.",
                         "Overrides global craft restrictions."
                 )
-                .defineList("professionAllowedCrafts",
+                .defineListAllowEmpty("professionAllowedCrafts",
                         Arrays.asList(
                                 "blacksmith;minecraft:diamond_sword,minecraft:diamond_pickaxe,minecraft:diamond_axe,minecraft:netherite_sword,minecraft:netherite_pickaxe",
                                 "miner;minecraft:diamond_pickaxe,minecraft:iron_pickaxe",
@@ -285,7 +285,7 @@ public class ProfessionConfig {
                         "Blocks that each profession IS ALLOWED to mine.",
                         "Overrides global unbreakable block restrictions."
                 )
-                .defineList("professionAllowedBlocks",
+                .defineListAllowEmpty("professionAllowedBlocks",
                         Arrays.asList(
                                 "miner;minecraft:diamond_ore,minecraft:deepslate_diamond_ore,minecraft:iron_ore,minecraft:deepslate_iron_ore,minecraft:gold_ore,minecraft:deepslate_gold_ore"
                         ),
@@ -298,7 +298,7 @@ public class ProfessionConfig {
                         "Items that each profession IS ALLOWED to use.",
                         "Overrides global item use restrictions."
                 )
-                .defineList("professionAllowedItems",
+                .defineListAllowEmpty("professionAllowedItems",
                         Arrays.asList(
                                 "alchemist;minecraft:flint_and_steel,minecraft:fire_charge",
                                 "guard;minecraft:flint_and_steel"
@@ -312,7 +312,7 @@ public class ProfessionConfig {
                         "Equipment that each profession IS ALLOWED to wear/wield.",
                         "Overrides global blocked equipment."
                 )
-                .defineList("professionAllowedEquipment",
+                .defineListAllowEmpty("professionAllowedEquipment",
                         Arrays.asList(
                                 "guard;minecraft:diamond_sword,minecraft:diamond_helmet,minecraft:diamond_chestplate,minecraft:diamond_leggings,minecraft:diamond_boots",
                                 "miner;minecraft:diamond_pickaxe"

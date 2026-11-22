@@ -3,11 +3,11 @@ package net.rp.rpessentials.api.event;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.bus.api.Event;
-import net.neoforged.bus.api.ICancellableEvent;
+import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.Cancelable;
 
 /**
- * Posted on NeoForge.EVENT_BUS around the teleports of RpEssentials (/rp spawn, /rp afk,
+ * Posted on MinecraftForge.EVENT_BUS around the teleports of RpEssentials (/rp spawn, /rp afk,
  * and RpEssentialsAPI.teleport). Other mods can use it for animations, sounds or screen effects.
  * <ul>
  *   <li>{@link Warmup}: when the teleport is requested. Cancellable. The delay can be changed (0 = instant).</li>
@@ -40,7 +40,9 @@ public abstract class RpTeleportEvent extends Event {
 
     public Vec3 getDestination() { return destination; }
 
-    public static class Warmup extends RpTeleportEvent implements ICancellableEvent {
+    @Cancelable
+
+    public static class Warmup extends RpTeleportEvent {
         private int warmupTicks;
         private boolean cancelOnMove;
         private boolean cancelOnDamage;
@@ -98,7 +100,9 @@ public abstract class RpTeleportEvent extends Event {
         public Reason getReason() { return reason; }
     }
 
-    public static class Pre extends RpTeleportEvent implements ICancellableEvent {
+    @Cancelable
+
+    public static class Pre extends RpTeleportEvent {
         public Pre(ServerPlayer player, String kind, ServerLevel level, Vec3 destination) {
             super(player, kind, level, destination);
         }

@@ -1,6 +1,6 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 import net.rp.rpessentials.lang.ServerLang;
 
 /**
@@ -14,270 +14,270 @@ import net.rp.rpessentials.lang.ServerLang;
  */
 public class MessagesConfig {
 
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
     // =========================================================================
     // CATEGORY: TRANSLATION
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> MESSAGE_SOURCE;
-    public static final ModConfigSpec.ConfigValue<String> SERVER_LANGUAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> MESSAGE_SOURCE;
+    public static final ForgeConfigSpec.ConfigValue<String> SERVER_LANGUAGE;
 
     // =========================================================================
     // CATEGORY: SYSTEM
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> SYSTEM_CONFIG_NOT_LOADED;
-    public static final ModConfigSpec.ConfigValue<String> SYSTEM_CONFIG_UNAVAILABLE;
-    public static final ModConfigSpec.ConfigValue<String> SYSTEM_CONFIG_NOT_BUILT;
-    public static final ModConfigSpec.ConfigValue<String> SYSTEM_CONFIG_UPDATED;
-    public static final ModConfigSpec.ConfigValue<String> COMMAND_PLAYER_ONLY;
+    public static final ForgeConfigSpec.ConfigValue<String> SYSTEM_CONFIG_NOT_LOADED;
+    public static final ForgeConfigSpec.ConfigValue<String> SYSTEM_CONFIG_UNAVAILABLE;
+    public static final ForgeConfigSpec.ConfigValue<String> SYSTEM_CONFIG_NOT_BUILT;
+    public static final ForgeConfigSpec.ConfigValue<String> SYSTEM_CONFIG_UPDATED;
+    public static final ForgeConfigSpec.ConfigValue<String> COMMAND_PLAYER_ONLY;
 
     // =========================================================================
     // CATEGORY: PRIVATE MESSAGING
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> MP_HOVER_REPLY;
-    public static final ModConfigSpec.ConfigValue<String> MP_TO_SENDER;
-    public static final ModConfigSpec.ConfigValue<String> MP_FROM_TARGET;
-    public static final ModConfigSpec.ConfigValue<String> MP_NO_ONE_TO_REPLY;
-    public static final ModConfigSpec.ConfigValue<String> MP_TARGET_OFFLINE;
-    public static final ModConfigSpec.ConfigValue<String> MP_CONSOLE_TO_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> MP_CONSOLE_FROM_SERVER;
-    public static final ModConfigSpec.ConfigValue<String> MP_SPY_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> MP_SPY_NOTICE;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_HOVER_REPLY;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_TO_SENDER;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_FROM_TARGET;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_NO_ONE_TO_REPLY;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_TARGET_OFFLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_CONSOLE_TO_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_CONSOLE_FROM_SERVER;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_SPY_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> MP_SPY_NOTICE;
 
     // =========================================================================
     // CATEGORY: WARN SYSTEM
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> WARN_RECEIVED_PERM;
-    public static final ModConfigSpec.ConfigValue<String> WARN_RECEIVED_TEMP;
-    public static final ModConfigSpec.ConfigValue<String> WARN_NOT_FOUND;
-    public static final ModConfigSpec.ConfigValue<String> WARN_REMOVE_FAILED;
-    public static final ModConfigSpec.ConfigValue<String> WARN_REMOVED_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> WARN_CLEARED_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> WARN_SYSTEM_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> WARN_SYSTEM_DISABLED_CONFIG;
-    public static final ModConfigSpec.ConfigValue<String> WARN_LIST_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> WARN_LIST_NONE;
-    public static final ModConfigSpec.ConfigValue<String> WARN_LIST_NONE_SELF;
-    public static final ModConfigSpec.ConfigValue<String> WARN_LIST_NONE_STAFF;
-    public static final ModConfigSpec.ConfigValue<String> WARN_PURGE_DONE;
-    public static final ModConfigSpec.ConfigValue<String> WARN_INFO_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> WARN_INFO_PLAYER_LABEL;
-    public static final ModConfigSpec.ConfigValue<String> WARN_INFO_STAFF_LABEL;
-    public static final ModConfigSpec.ConfigValue<String> WARN_INFO_REASON_LABEL;
-    public static final ModConfigSpec.ConfigValue<String> WARN_INFO_DATE_LABEL;
-    public static final ModConfigSpec.ConfigValue<String> WARN_INFO_TYPE_LABEL;
-    public static final ModConfigSpec.ConfigValue<String> WARN_INFO_EXPIRY_LABEL;
-    public static final ModConfigSpec.ConfigValue<String> WARN_TYPE_PERMANENT;
-    public static final ModConfigSpec.ConfigValue<String> WARN_TYPE_EXPIRED;
-    public static final ModConfigSpec.ConfigValue<String> WARN_TYPE_TEMPORARY;
-    public static final ModConfigSpec.ConfigValue<String> WARN_STATUS_PERM_TAG;
-    public static final ModConfigSpec.ConfigValue<String> WARN_STATUS_TEMP_TAG;
-    public static final ModConfigSpec.ConfigValue<String> WARN_STATUS_EXPIRED_TAG;
-    public static final ModConfigSpec.ConfigValue<String> WARN_MAX_DURATION_EXCEEDED;
-    public static final ModConfigSpec.ConfigValue<String> WARN_DURATION_MINUTES;
-    public static final ModConfigSpec.ConfigValue<String> WARN_DURATION_HOURS;
-    public static final ModConfigSpec.ConfigValue<String> WARN_DURATION_DAYS;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_RECEIVED_PERM;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_RECEIVED_TEMP;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_REMOVE_FAILED;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_REMOVED_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_CLEARED_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_SYSTEM_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_SYSTEM_DISABLED_CONFIG;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_LIST_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_LIST_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_LIST_NONE_SELF;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_LIST_NONE_STAFF;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_PURGE_DONE;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_INFO_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_INFO_PLAYER_LABEL;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_INFO_STAFF_LABEL;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_INFO_REASON_LABEL;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_INFO_DATE_LABEL;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_INFO_TYPE_LABEL;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_INFO_EXPIRY_LABEL;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_TYPE_PERMANENT;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_TYPE_EXPIRED;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_TYPE_TEMPORARY;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_STATUS_PERM_TAG;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_STATUS_TEMP_TAG;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_STATUS_EXPIRED_TAG;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_MAX_DURATION_EXCEEDED;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_DURATION_MINUTES;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_DURATION_HOURS;
+    public static final ForgeConfigSpec.ConfigValue<String> WARN_DURATION_DAYS;
 
     // =========================================================================
     // CATEGORY: LAST CONNECTION
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_PLAYER_NOT_FOUND;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_NO_DATA;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_NO_DATA_LIST;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_ONLINE;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_OFFLINE;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_UNKNOWN;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_BOX_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_BOX_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_BOX_STATUS;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_BOX_LOGIN;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_BOX_LOGOUT;
-    public static final ModConfigSpec.ConfigValue<String> LASTCONN_LIST_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_PLAYER_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_NO_DATA;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_NO_DATA_LIST;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_ONLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_OFFLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_UNKNOWN;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_BOX_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_BOX_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_BOX_STATUS;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_BOX_LOGIN;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_BOX_LOGOUT;
+    public static final ForgeConfigSpec.ConfigValue<String> LASTCONN_LIST_HEADER;
 
     // =========================================================================
     // CATEGORY: DEATHRP
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_CONFIG_UNAVAILABLE;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_GLOBAL_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_GLOBAL_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_PLAYER_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_PLAYER_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_OVERRIDE_RESET;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_GLOBAL;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_WHITELIST;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_OVERRIDES;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_NO_OVERRIDES;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_ACTIVE;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_INACTIVE;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_YES;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_NO;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_STATUS_UNKNOWN;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_CONFIG_UNAVAILABLE;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_GLOBAL_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_GLOBAL_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_PLAYER_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_PLAYER_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_OVERRIDE_RESET;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_GLOBAL;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_WHITELIST;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_OVERRIDES;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_NO_OVERRIDES;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_ACTIVE;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_INACTIVE;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_YES;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_NO;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_STATUS_UNKNOWN;
 
     // =========================================================================
     // CATEGORY: WHOIS
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> WHOIS_NOT_FOUND;
-    public static final ModConfigSpec.ConfigValue<String> WHOIS_RESULTS_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> WHOIS_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> WHOIS_RESULTS_HEADER;
 
     // =========================================================================
     // CATEGORY: PLAYER LIST
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> PLAYERLIST_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> PLAYERLIST_HEADER;
 
     // =========================================================================
     // CATEGORY: PROFESSION RESTRICTIONS (fallbacks)
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> PROFESSION_CRAFT_BLOCKED_FALLBACK;
-    public static final ModConfigSpec.ConfigValue<String> PROFESSION_BREAK_BLOCKED_FALLBACK;
-    public static final ModConfigSpec.ConfigValue<String> PROFESSION_USE_BLOCKED_FALLBACK;
-    public static final ModConfigSpec.ConfigValue<String> PROFESSION_EQUIP_BLOCKED_FALLBACK;
-    public static final ModConfigSpec.ConfigValue<String> PROFESSION_NONE_AVAILABLE;
-    public static final ModConfigSpec.ConfigValue<String> PROFESSION_SYSTEM_NOT_INIT;
-    public static final ModConfigSpec.ConfigValue<String> PROFESSION_HAS_LICENSE;
-    public static final ModConfigSpec.ConfigValue<String> PROFESSION_NO_LICENSE;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFESSION_CRAFT_BLOCKED_FALLBACK;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFESSION_BREAK_BLOCKED_FALLBACK;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFESSION_USE_BLOCKED_FALLBACK;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFESSION_EQUIP_BLOCKED_FALLBACK;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFESSION_NONE_AVAILABLE;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFESSION_SYSTEM_NOT_INIT;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFESSION_HAS_LICENSE;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFESSION_NO_LICENSE;
 
     // =========================================================================
     // CATEGORY: LICENSES
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_ITEM_NAME;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LORE_ISSUED_TO;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LORE_DATE;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LORE_ISSUED_DATE;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LORE_VALID_UNTIL;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_TOOLTIP_OFFICIAL;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_TOOLTIP_NONTRANSFERABLE;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_REVOKED_TITLE;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_REVOKED_BODY;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_UNKNOWN_PROFESSION;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_GIVE_STAFF;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_GIVE_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_GIVE_RP_STAFF;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_GIVE_RP_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_REVOKE_STAFF;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_REVOKE_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LIST_NONE;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LIST_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LIST_RP_EXPIRY;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LIST_ALL_NONE;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LIST_ALL_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_LIST_ALL_NONE_FOR_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_EXPIRED_RP_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> PROFILE_PREPARED;
-    public static final ModConfigSpec.ConfigValue<String> CONTAINER_FALLBACK;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_ITEM_NAME;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LORE_ISSUED_TO;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LORE_DATE;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LORE_ISSUED_DATE;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LORE_VALID_UNTIL;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_TOOLTIP_OFFICIAL;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_TOOLTIP_NONTRANSFERABLE;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_REVOKED_TITLE;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_REVOKED_BODY;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_UNKNOWN_PROFESSION;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_GIVE_STAFF;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_GIVE_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_GIVE_RP_STAFF;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_GIVE_RP_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_REVOKE_STAFF;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_REVOKE_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LIST_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LIST_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LIST_RP_EXPIRY;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LIST_ALL_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LIST_ALL_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_LIST_ALL_NONE_FOR_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_EXPIRED_RP_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> PROFILE_PREPARED;
+    public static final ForgeConfigSpec.ConfigValue<String> CONTAINER_FALLBACK;
 
     // =========================================================================
     // CATEGORY: SETROLE
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> SETROLE_UNKNOWN;
-    public static final ModConfigSpec.ConfigValue<String> SETROLE_SUCCESS_STAFF;
-    public static final ModConfigSpec.ConfigValue<String> SETROLE_SUCCESS_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_UPDATED;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_INVALID;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_TIME_INVALID;
-    public static final ModConfigSpec.ConfigValue<String> AUTO_UNWHITELIST_STAFF_NOTIFY;
+    public static final ForgeConfigSpec.ConfigValue<String> SETROLE_UNKNOWN;
+    public static final ForgeConfigSpec.ConfigValue<String> SETROLE_SUCCESS_STAFF;
+    public static final ForgeConfigSpec.ConfigValue<String> SETROLE_SUCCESS_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_UPDATED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_INVALID;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_TIME_INVALID;
+    public static final ForgeConfigSpec.ConfigValue<String> AUTO_UNWHITELIST_STAFF_NOTIFY;
 
     // =========================================================================
     // CATEGORY: SCHEDULE MESSAGES
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_STATUS_OPEN;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_STATUS_CLOSED;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_OPEN_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_CLOSED_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_TODAY_PREFIX;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_OTHER_PREFIX;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_FOOTER;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_LABEL;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_ACTIVE;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_INACTIVE;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_HRP_LABEL;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_HRP_TOLERATED;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_HRP_ALLOWED;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_HRP_INACTIVE;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_NOTIFY;
-    public static final ModConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_NOTIFY_MODE;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_STATUS_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_STATUS_CLOSED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_OPEN_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_CLOSED_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_TODAY_PREFIX;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_OTHER_PREFIX;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_FOOTER;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_LABEL;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_ACTIVE;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_INACTIVE;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_HRP_LABEL;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_HRP_TOLERATED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_HRP_ALLOWED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_HRP_INACTIVE;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_NOTIFY;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHEDULE_DEATH_HOURS_NOTIFY_MODE;
 
-    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_MONDAY;
-    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_TUESDAY;
-    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_WEDNESDAY;
-    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_THURSDAY;
-    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_FRIDAY;
-    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_SATURDAY;
-    public static ModConfigSpec.ConfigValue<String> SCHEDULE_DAY_SUNDAY;
+    public static ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_MONDAY;
+    public static ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_TUESDAY;
+    public static ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_WEDNESDAY;
+    public static ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_THURSDAY;
+    public static ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_FRIDAY;
+    public static ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_SATURDAY;
+    public static ForgeConfigSpec.ConfigValue<String> SCHEDULE_DAY_SUNDAY;
 
     // =========================================================================
     // CATEGORY: RP COMMANDS
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> RP_PERMISSION_DENIED;
-    public static final ModConfigSpec.ConfigValue<String> RP_AFK_TELEPORT;
-    public static final ModConfigSpec.ConfigValue<String> AFK_COMBAT;
-    public static final ModConfigSpec.ConfigValue<String> RP_COMMERCE_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> RP_INCOGNITO_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> RP_INCOGNITO_LOG;
-    public static final ModConfigSpec.ConfigValue<String> RP_ACTION_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> RP_ACTION_SPY;
-    public static final ModConfigSpec.ConfigValue<String> RP_ANNONCE_TITLE;
-    public static final ModConfigSpec.ConfigValue<String> RP_ANNONCE_SUBTITLE;
-    public static final ModConfigSpec.ConfigValue<String> RP_ANNONCE_CHAT_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> RP_ANNONCE_SENT;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_PERMISSION_DENIED;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_AFK_TELEPORT;
+    public static final ForgeConfigSpec.ConfigValue<String> AFK_COMBAT;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_COMMERCE_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_INCOGNITO_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_INCOGNITO_LOG;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_ACTION_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_ACTION_SPY;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_ANNONCE_TITLE;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_ANNONCE_SUBTITLE;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_ANNONCE_CHAT_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_ANNONCE_SENT;
 
-    public static final ModConfigSpec.ConfigValue<String> RP_SELFNICK_SET;
-    public static final ModConfigSpec.ConfigValue<String> RP_SELFNICK_RESET;
-    public static final ModConfigSpec.ConfigValue<String> RP_SELFNICK_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> RP_SELFNICK_COLORS_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> RP_SELFNICK_TOO_LONG;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_SELFNICK_SET;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_SELFNICK_RESET;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_SELFNICK_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_SELFNICK_COLORS_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_SELFNICK_TOO_LONG;
 
-    public static final ModConfigSpec.ConfigValue<String> NICK_USED;
-    public static final ModConfigSpec.ConfigValue<String> NICK_FORBIDDEN;
+    public static final ForgeConfigSpec.ConfigValue<String> NICK_USED;
+    public static final ForgeConfigSpec.ConfigValue<String> NICK_FORBIDDEN;
 
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_REISSUE_STAFF;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_REISSUE_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> LICENSE_REISSUE_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_REISSUE_STAFF;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_REISSUE_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> LICENSE_REISSUE_NOT_FOUND;
 
-    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> PROXIMITY_CHAT_SPY_DISABLED;
 
-    public static final ModConfigSpec.ConfigValue<String> MUTE_RECEIVED;
-    public static final ModConfigSpec.ConfigValue<String> MUTE_EXPIRED;
-    public static final ModConfigSpec.ConfigValue<String> MUTE_NOTIFY_ON_JOIN;
-    public static final ModConfigSpec.ConfigValue<String> MUTE_BLOCKED_MESSAGE;
-    public static final ModConfigSpec.ConfigValue<String> MUTE_STAFF_ADDED;
-    public static final ModConfigSpec.ConfigValue<String> MUTE_STAFF_REMOVED;
-    public static final ModConfigSpec.ConfigValue<String> MUTE_AUTO_NOTIFY;
-    public static final ModConfigSpec.ConfigValue<String> NOTE_ADDED;
-    public static final ModConfigSpec.ConfigValue<String> NOTE_REMOVED;
-    public static final ModConfigSpec.ConfigValue<String> NOTE_NONE;
-    public static final ModConfigSpec.ConfigValue<String> NOTE_LIST_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_HISTORY_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_HISTORY_NONE;
-    public static final ModConfigSpec.ConfigValue<String> DEATHRP_HISTORY_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> RP_COOLDOWN_MESSAGE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> DICE_ROLL_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> DICE_ROLL_SPY_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> DICE_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> DICE_NONE;
-    public static final ModConfigSpec.ConfigValue<String> DICE_UNKNOWN;
+    public static final ForgeConfigSpec.ConfigValue<String> MUTE_RECEIVED;
+    public static final ForgeConfigSpec.ConfigValue<String> MUTE_EXPIRED;
+    public static final ForgeConfigSpec.ConfigValue<String> MUTE_NOTIFY_ON_JOIN;
+    public static final ForgeConfigSpec.ConfigValue<String> MUTE_BLOCKED_MESSAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> MUTE_STAFF_ADDED;
+    public static final ForgeConfigSpec.ConfigValue<String> MUTE_STAFF_REMOVED;
+    public static final ForgeConfigSpec.ConfigValue<String> MUTE_AUTO_NOTIFY;
+    public static final ForgeConfigSpec.ConfigValue<String> NOTE_ADDED;
+    public static final ForgeConfigSpec.ConfigValue<String> NOTE_REMOVED;
+    public static final ForgeConfigSpec.ConfigValue<String> NOTE_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> NOTE_LIST_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_HISTORY_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_HISTORY_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> DEATHRP_HISTORY_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> RP_COOLDOWN_MESSAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_ROLL_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_ROLL_SPY_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_UNKNOWN;
 
-    public static final ModConfigSpec.ConfigValue<String> STAFF_RP_AFK_DIM, STAFF_RP_ANNONCE_TYPE, STAFF_RP_SPAWN_DIM, RP_SPAWN_TELEPORT;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_LIC_ALREADY, STAFF_LIC_ALREADY_TEMP, STAFF_LIC_CREATE_FAILED, STAFF_LIC_AUDIT_NONE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_TOOLS_SILENT_OFF, STAFF_TOOLS_BAD_GAMEMODE, STAFF_TOOLS_GAMEMODE_SET,
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_RP_AFK_DIM, STAFF_RP_ANNONCE_TYPE, STAFF_RP_SPAWN_DIM, RP_SPAWN_TELEPORT;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_LIC_ALREADY, STAFF_LIC_ALREADY_TEMP, STAFF_LIC_CREATE_FAILED, STAFF_LIC_AUDIT_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_TOOLS_SILENT_OFF, STAFF_TOOLS_BAD_GAMEMODE, STAFF_TOOLS_GAMEMODE_SET,
             STAFF_TOOLS_EFFECT_APPLIED, STAFF_TOOLS_BAD_EFFECT, STAFF_TOOLS_PLATFORMS_OFF, STAFF_TOOLS_DIM_MISSING,
             STAFF_TOOLS_TP_TARGET, STAFF_TOOLS_TP_SELF, STAFF_TOOLS_PLATFORM_MISSING, STAFF_TOOLS_PLATFORM_UPDATED,
             STAFF_TOOLS_PLATFORM_CREATED, STAFF_TOOLS_BROADCAST_FORMAT, STAFF_TOOLS_BROADCAST_SENT;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_ZONE_NONE, STAFF_ZONE_LIST, STAFF_ZONE_HIDDEN, STAFF_ZONE_UNKNOWN, STAFF_ZONE_SHOWING;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_VANISH_OFF, STAFF_VANISH_ABOVE, STAFF_VANISH_VISIBLE, STAFF_VANISH_VANISHED,
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_ZONE_NONE, STAFF_ZONE_LIST, STAFF_ZONE_HIDDEN, STAFF_ZONE_UNKNOWN, STAFF_ZONE_SHOWING;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_VANISH_OFF, STAFF_VANISH_ABOVE, STAFF_VANISH_VISIBLE, STAFF_VANISH_VANISHED,
             STAFF_VANISH_LIST_HEADER, STAFF_VANISH_LIST_NONE, STAFF_VANISH_LIST_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_BLUR_ALREADY, STAFF_BLUR_ADDED, STAFF_BLUR_NOT_IN, STAFF_BLUR_REMOVED,
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_BLUR_ALREADY, STAFF_BLUR_ADDED, STAFF_BLUR_NOT_IN, STAFF_BLUR_REMOVED,
             STAFF_BLUR_EMPTY, STAFF_BLUR_CONTENT;
 
-    public static final ModConfigSpec.ConfigValue<String> MANAGE_NO_PERMISSION;
-    public static final ModConfigSpec.ConfigValue<String> MANAGE_NEED_SENSITIVE, MANAGE_NOT_ONLINE, MANAGE_WL_ADDED, MANAGE_WL_REMOVED,
+    public static final ForgeConfigSpec.ConfigValue<String> MANAGE_NO_PERMISSION;
+    public static final ForgeConfigSpec.ConfigValue<String> MANAGE_NEED_SENSITIVE, MANAGE_NOT_ONLINE, MANAGE_WL_ADDED, MANAGE_WL_REMOVED,
             MANAGE_KICK_SELF, MANAGE_KICKED, MANAGE_BAN_SELF, MANAGE_ALREADY_BANNED, MANAGE_BANNED, MANAGE_NOT_BANNED, MANAGE_PARDONED,
             MANAGE_OP_TOO_HIGH, MANAGE_OP_LOWER_SELF, MANAGE_OP_SET, MANAGE_DEOP_SELF, MANAGE_NOT_OP, MANAGE_DEOP_HIGHER, MANAGE_DEOPPED,
             MANAGE_INV_CLEARED, MANAGE_ENDER_CLEARED, MANAGE_ABSENCE_SET, MANAGE_ABSENCE_REMOVED, MANAGE_NO_ABSENCE,
@@ -294,87 +294,87 @@ public class MessagesConfig {
             MANAGE_SUG_L_ABS, MANAGE_SUG_H_ABS, MANAGE_SUG_L_REOP, MANAGE_SUG_H_REOP, MANAGE_SUG_L_KICK, MANAGE_SUG_H_KICK,
             MANAGE_SUG_L_PARDON, MANAGE_SUG_H_PARDON, MANAGE_SUG_L_UNWL, MANAGE_SUG_H_UNWL;
 
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_PLAYER_NOT_FOUND;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_ADDED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_TEMP_ADDED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_REMOVED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_NONE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_ALL_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_TAG_EXPIRED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_TAG_PERM;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_TAG_TEMP;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_ALL_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_LIST_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_WARN_CLEARED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_MUTE_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_MUTE_CONFIG;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_NOTE_LIMIT;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_NOTE_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_NOTE_NOT_FOUND;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_NOTE_CLEARED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_DRP_NOT_FOUND;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_DRP_HOURS;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_DRP_HOURS_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_DRP_HOURS_SLOTS;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_DRP_EFFECTIVE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_DRP_OVERRIDE_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_DRP_ALL_PLAYERS;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_DRP_HISTORY_ALL_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_NOT_FOUND;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_STATUS;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_ONLINE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_OFFLINE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_NICK;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_ROLE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_EMPTY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_UUID;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_UUID_HOVER;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_LICENSES;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_LICENSE_TEMP;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_WARNS;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_WARN_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_MUTE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_MUTE_ACTIVE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_NONE_GREY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_NONE_GREEN;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_LAST_SEEN;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_UNKNOWN;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_PLAYTIME;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_SESSION;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_NOTES;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_INSPECT_NOTE_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_ABS_NOT_FOUND;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_ABS_NONE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_ABS_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_ABS_TAG_ENDED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_ABS_TAG_ACTIVE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_ABS_ENTRY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_ABS_REASON;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_TITLE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_LABEL_STATUS;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_LABEL_NEXT;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_SECTION_OPENING;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_SECTION_SPECIAL;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_FORCED_CLOSED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_FORCED_OPEN;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_TOLERATED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_SETROLE_ALERT;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_STATE_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_STATE_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_FORCE_RESET;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_FORCE_OPEN;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_FORCE_CLOSE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_WL_ALREADY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_WL_ADDED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_WL_NOT_IN;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_WL_REMOVED;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_WL_EMPTY;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_WL_LIST;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_SCHED_CONFIG;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_PLAYER_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_ADDED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_TEMP_ADDED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_REMOVED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_ALL_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_TAG_EXPIRED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_TAG_PERM;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_TAG_TEMP;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_ALL_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_LIST_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_WARN_CLEARED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_MUTE_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_MUTE_CONFIG;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_NOTE_LIMIT;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_NOTE_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_NOTE_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_NOTE_CLEARED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_DRP_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_DRP_HOURS;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_DRP_HOURS_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_DRP_HOURS_SLOTS;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_DRP_EFFECTIVE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_DRP_OVERRIDE_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_DRP_ALL_PLAYERS;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_DRP_HISTORY_ALL_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_STATUS;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_ONLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_OFFLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_NICK;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_ROLE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_EMPTY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_UUID;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_UUID_HOVER;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_LICENSES;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_LICENSE_TEMP;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_WARNS;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_WARN_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_MUTE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_MUTE_ACTIVE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_NONE_GREY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_NONE_GREEN;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_LAST_SEEN;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_UNKNOWN;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_PLAYTIME;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_SESSION;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_NOTES;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_INSPECT_NOTE_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_ABS_NOT_FOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_ABS_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_ABS_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_ABS_TAG_ENDED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_ABS_TAG_ACTIVE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_ABS_ENTRY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_ABS_REASON;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_TITLE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_LABEL_STATUS;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_LABEL_NEXT;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_SECTION_OPENING;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_SECTION_SPECIAL;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_FORCED_CLOSED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_FORCED_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_TOLERATED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_SETROLE_ALERT;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_STATE_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_STATE_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_FORCE_RESET;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_FORCE_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_FORCE_CLOSE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_WL_ALREADY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_WL_ADDED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_WL_NOT_IN;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_WL_REMOVED;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_WL_EMPTY;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_WL_LIST;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_SCHED_CONFIG;
 
-    public static final ModConfigSpec.ConfigValue<String> STAFF_NICK_COLORS_OFF,
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_NICK_COLORS_OFF,
             STAFF_NICK_SET,
             STAFF_NICK_SET_TARGET,
             STAFF_NICK_SET_ERROR,
@@ -386,16 +386,16 @@ public class MessagesConfig {
             STAFF_NICK_WHOIS_HOVER,
             STAFF_NICK_WHOIS_MC,
             STAFF_NICK_WHOIS_NICK;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_HELP_TITLE,
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_HELP_TITLE,
             STAFF_HELP_PUBLIC,
             STAFF_HELP_STAFF_TITLE,
             STAFF_HELP_STAFF;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_TOOLSX_OP_TOO_HIGH,
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_TOOLSX_OP_TOO_HIGH,
             STAFF_TOOLSX_OP_SET,
             STAFF_TOOLSX_OP_NOTHING,
             STAFF_TOOLSX_STAFF_LOG;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_LASTCO_COPY_HOVER;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_STATS_DISABLED,
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_LASTCO_COPY_HOVER;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_STATS_DISABLED,
             STAFF_STATS_OPEN,
             STAFF_STATS_CLOSED,
             STAFF_STATS_NA,
@@ -420,7 +420,7 @@ public class MessagesConfig {
             STAFF_STATS_L_DEATHS,
             STAFF_STATS_V_HOLDERS,
             STAFF_STATS_V_WARNS;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_CFG_BACKUP,
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_CFG_BACKUP,
             STAFF_CFG_EXPORT_DONE,
             STAFF_CFG_EXPORT_FAIL,
             STAFF_CFG_VALUE_SET,
@@ -486,7 +486,7 @@ public class MessagesConfig {
             STAFF_CFG_L_SELF_NICK,
             STAFF_CFG_L_WELCOME;
 
-    public static final ModConfigSpec.ConfigValue<String> GUI_MORE, GUI_CONFIG_NOT_LOADED, GUI_ROLES_NEED_LEVEL,
+    public static final ForgeConfigSpec.ConfigValue<String> GUI_MORE, GUI_CONFIG_NOT_LOADED, GUI_ROLES_NEED_LEVEL,
             GUI_PENDING_DELETED, GUI_PROF_DELETED, GUI_ROLE_DELETED, GUI_LP_GROUP, GUI_LP_GROUP_CHANGED, GUI_PERMISSIONS,
             GUI_NO_PERMISSIONS, GUI_NO_CHANGE, GUI_ROLE_INVALID, GUI_ROLE_ID_TAKEN, GUI_ROLE_CREATED, GUI_ROLE_UPDATED,
             GUI_NOTE_NOT_FOUND, GUI_NOTE_DELETED, GUI_NOTE_EDITED, GUI_NOTE_ADDED, GUI_NOTE_AUTHOR, GUI_NOTE_LIMIT,
@@ -499,190 +499,190 @@ public class MessagesConfig {
             GUI_LABEL_CRAFTS, GUI_LABEL_BLOCKS, GUI_LABEL_ITEMS, GUI_LABEL_EQUIPMENT,
             GUI_PROFILE_OFFLINE, GUI_PREPARED_UPDATED, GUI_NO_LICENSE, GUI_PROFILE_UPDATED, GUI_UNKNOWN_ROLE,
             GUI_ALREADY_LICENSE, GUI_UNKNOWN_PROFESSION;
-    public static final ModConfigSpec.ConfigValue<String> VANISH_MSG_SILENT_JOIN, VANISH_MSG_SILENT_LEAVE;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_SYS_CONFIG_WARNING, SCHED_SYS_STAFF_CLOSED;
+    public static final ForgeConfigSpec.ConfigValue<String> VANISH_MSG_SILENT_JOIN, VANISH_MSG_SILENT_LEAVE;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_SYS_CONFIG_WARNING, SCHED_SYS_STAFF_CLOSED;
 
     // Common Text
-    public static final ModConfigSpec.ConfigValue<String> TIME_PERMANENT;
-    public static final ModConfigSpec.ConfigValue<String> TIME_EXPIRED;
-    public static final ModConfigSpec.ConfigValue<String> TIME_REMAINING_DAYS;
-    public static final ModConfigSpec.ConfigValue<String> TIME_REMAINING_HOURS;
-    public static final ModConfigSpec.ConfigValue<String> TIME_REMAINING_MINUTES;
-    public static final ModConfigSpec.ConfigValue<String> TIME_LESS_MINUTE;
-    public static final ModConfigSpec.ConfigValue<String> TIME_UNIT_DAYS;
-    public static final ModConfigSpec.ConfigValue<String> TIME_UNIT_HOURS;
-    public static final ModConfigSpec.ConfigValue<String> TIME_UNIT_MINUTES;
-    public static final ModConfigSpec.ConfigValue<String> UI_ON;
-    public static final ModConfigSpec.ConfigValue<String> UI_OFF;
-    public static final ModConfigSpec.ConfigValue<String> UI_NA;
-    public static final ModConfigSpec.ConfigValue<String> UI_PAGE;
-    public static final ModConfigSpec.ConfigValue<String> UI_CONSOLE;
-    public static final ModConfigSpec.ConfigValue<String> LOGIN_REFUSED_NOTICE;
-    public static final ModConfigSpec.ConfigValue<String> LOGIN_VANISH_REMINDER;
-    public static final ModConfigSpec.ConfigValue<String> LOGIN_FORCE_CLOSED;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_WARN_INVALID_OPEN;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_WARN_INVALID_CLOSE;
-    public static final ModConfigSpec.ConfigValue<String> MUTE_AUTO_REASON;
-    public static final ModConfigSpec.ConfigValue<String> UNWHITELIST_UNDO;
-    public static final ModConfigSpec.ConfigValue<String> UNWHITELIST_UNDO_HOVER;
-    public static final ModConfigSpec.ConfigValue<String> GUI_REPORT_NICK;
-    public static final ModConfigSpec.ConfigValue<String> GUI_REPORT_NICK_RESET;
-    public static final ModConfigSpec.ConfigValue<String> GUI_REPORT_ROLE;
-    public static final ModConfigSpec.ConfigValue<String> GUI_REPORT_LICENSE;
-    public static final ModConfigSpec.ConfigValue<String> GUI_REPORT_LICENSE_DAYS;
-    public static final ModConfigSpec.ConfigValue<String> VANISH_ADVANCEMENT_HIDDEN;
-    public static final ModConfigSpec.ConfigValue<String> LP_ROLES_SYNCED;
-    public static final ModConfigSpec.ConfigValue<String> LIC_AUDIT_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> LIC_AUDIT_LINE;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_TITLE;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_NAMES;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_FORMATTING;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_BOLD;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_ITALIC;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_UNDERLINE;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_STRIKE;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_OBFUSCATED;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_RESET;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_CHAT_VARS;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_RP_VARS;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_HEX;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_VAR_NICK;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_VAR_REAL;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_VAR_NICK_REAL;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_HEX_COLOR;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_GRADIENT;
-    public static final ModConfigSpec.ConfigValue<String> COLORS_GRADIENT_TEXT;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_BAD_LINE;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_INVALID_VALUE;
-    public static final ModConfigSpec.ConfigValue<String> STAFF_CFG_INVALID_WARN;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_BAD_PATTERN;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_BAD_PATTERN_IN;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_PROF;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_PROF_IN;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_BAD_SLOT;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_EMPTY_ROLE;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_PERM;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_NOT_LOADED;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_CMD_CONFLICT;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_PERMANENT;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_EXPIRED;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_REMAINING_DAYS;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_REMAINING_HOURS;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_REMAINING_MINUTES;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_LESS_MINUTE;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_UNIT_DAYS;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_UNIT_HOURS;
+    public static final ForgeConfigSpec.ConfigValue<String> TIME_UNIT_MINUTES;
+    public static final ForgeConfigSpec.ConfigValue<String> UI_ON;
+    public static final ForgeConfigSpec.ConfigValue<String> UI_OFF;
+    public static final ForgeConfigSpec.ConfigValue<String> UI_NA;
+    public static final ForgeConfigSpec.ConfigValue<String> UI_PAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> UI_CONSOLE;
+    public static final ForgeConfigSpec.ConfigValue<String> LOGIN_REFUSED_NOTICE;
+    public static final ForgeConfigSpec.ConfigValue<String> LOGIN_VANISH_REMINDER;
+    public static final ForgeConfigSpec.ConfigValue<String> LOGIN_FORCE_CLOSED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_WARN_INVALID_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_WARN_INVALID_CLOSE;
+    public static final ForgeConfigSpec.ConfigValue<String> MUTE_AUTO_REASON;
+    public static final ForgeConfigSpec.ConfigValue<String> UNWHITELIST_UNDO;
+    public static final ForgeConfigSpec.ConfigValue<String> UNWHITELIST_UNDO_HOVER;
+    public static final ForgeConfigSpec.ConfigValue<String> GUI_REPORT_NICK;
+    public static final ForgeConfigSpec.ConfigValue<String> GUI_REPORT_NICK_RESET;
+    public static final ForgeConfigSpec.ConfigValue<String> GUI_REPORT_ROLE;
+    public static final ForgeConfigSpec.ConfigValue<String> GUI_REPORT_LICENSE;
+    public static final ForgeConfigSpec.ConfigValue<String> GUI_REPORT_LICENSE_DAYS;
+    public static final ForgeConfigSpec.ConfigValue<String> VANISH_ADVANCEMENT_HIDDEN;
+    public static final ForgeConfigSpec.ConfigValue<String> LP_ROLES_SYNCED;
+    public static final ForgeConfigSpec.ConfigValue<String> LIC_AUDIT_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> LIC_AUDIT_LINE;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_TITLE;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_NAMES;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_FORMATTING;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_BOLD;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_ITALIC;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_UNDERLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_STRIKE;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_OBFUSCATED;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_RESET;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_CHAT_VARS;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_RP_VARS;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_HEX;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_VAR_NICK;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_VAR_REAL;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_VAR_NICK_REAL;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_HEX_COLOR;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_GRADIENT;
+    public static final ForgeConfigSpec.ConfigValue<String> COLORS_GRADIENT_TEXT;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_BAD_LINE;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_INVALID_VALUE;
+    public static final ForgeConfigSpec.ConfigValue<String> STAFF_CFG_INVALID_WARN;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_BAD_PATTERN;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_BAD_PATTERN_IN;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_PROF;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_PROF_IN;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_BAD_SLOT;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_EMPTY_ROLE;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_PERM;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_NOT_LOADED;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_CMD_CONFLICT;
 
     // Status Text
-    public static final ModConfigSpec.ConfigValue<String> SCHED_NEXT_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_NEXT_NOT_INIT;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_NEXT_OPEN;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_NEXT_NONE;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_NEXT_CLOSED;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_TODAY;
-    public static final ModConfigSpec.ConfigValue<String> BLUR_LIST_WHITELIST;
-    public static final ModConfigSpec.ConfigValue<String> BLUR_LIST_BLACKLIST;
-    public static final ModConfigSpec.ConfigValue<String> BLUR_LIST_ALWAYS;
-    public static final ModConfigSpec.ConfigValue<String> BLUR_TITLE_WHITELIST;
-    public static final ModConfigSpec.ConfigValue<String> BLUR_TITLE_BLACKLIST;
-    public static final ModConfigSpec.ConfigValue<String> BLUR_TITLE_ALWAYS;
-    public static final ModConfigSpec.ConfigValue<String> REASON_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_NEXT_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_NEXT_NOT_INIT;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_NEXT_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_NEXT_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_NEXT_CLOSED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_TODAY;
+    public static final ForgeConfigSpec.ConfigValue<String> BLUR_LIST_WHITELIST;
+    public static final ForgeConfigSpec.ConfigValue<String> BLUR_LIST_BLACKLIST;
+    public static final ForgeConfigSpec.ConfigValue<String> BLUR_LIST_ALWAYS;
+    public static final ForgeConfigSpec.ConfigValue<String> BLUR_TITLE_WHITELIST;
+    public static final ForgeConfigSpec.ConfigValue<String> BLUR_TITLE_BLACKLIST;
+    public static final ForgeConfigSpec.ConfigValue<String> BLUR_TITLE_ALWAYS;
+    public static final ForgeConfigSpec.ConfigValue<String> REASON_NONE;
 
     // Player History
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_SYSTEM;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_HEADER;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_EMPTY;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_UNKNOWN_PLAYER;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_LINE;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_PURGED;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_WARN;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_WARN_REMOVE;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_WARN_CLEAR;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_MUTE;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_UNMUTE;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_NOTE;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_NOTE_REMOVE;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_MANAGE;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_LICENSE;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_DEATH_RP;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_ALL_NOTES;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_SYSTEM;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_HEADER;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_EMPTY;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_UNKNOWN_PLAYER;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_LINE;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_PURGED;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_WARN;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_WARN_REMOVE;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_WARN_CLEAR;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_MUTE;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_UNMUTE;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_NOTE;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_NOTE_REMOVE;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_MANAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_LICENSE;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_DEATH_RP;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_ALL_NOTES;
 
     // Audit Text
-    public static final ModConfigSpec.ConfigValue<String> AUDIT_VIA_GUI;
-    public static final ModConfigSpec.ConfigValue<String> AUDIT_TEMP;
-    public static final ModConfigSpec.ConfigValue<String> AUDIT_TEMP_GUI;
-    public static final ModConfigSpec.ConfigValue<String> AUDIT_REISSUED;
-    public static final ModConfigSpec.ConfigValue<String> AUDIT_VIA_MANAGE;
-    public static final ModConfigSpec.ConfigValue<String> AUDIT_EXPIRED_ON;
-    public static final ModConfigSpec.ConfigValue<String> MANAGE_QUEUED_REASON;
+    public static final ForgeConfigSpec.ConfigValue<String> AUDIT_VIA_GUI;
+    public static final ForgeConfigSpec.ConfigValue<String> AUDIT_TEMP;
+    public static final ForgeConfigSpec.ConfigValue<String> AUDIT_TEMP_GUI;
+    public static final ForgeConfigSpec.ConfigValue<String> AUDIT_REISSUED;
+    public static final ForgeConfigSpec.ConfigValue<String> AUDIT_VIA_MANAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> AUDIT_EXPIRED_ON;
+    public static final ForgeConfigSpec.ConfigValue<String> MANAGE_QUEUED_REASON;
 
     // Manage Extra
-    public static final ModConfigSpec.ConfigValue<String> MANAGE_TEMPBANNED;
-    public static final ModConfigSpec.ConfigValue<String> MANAGE_DURATION_EXPECTED;
-    public static final ModConfigSpec.ConfigValue<String> MANAGE_SUG_L_TEMPBAN;
-    public static final ModConfigSpec.ConfigValue<String> MANAGE_SUG_H_TEMPBAN;
+    public static final ForgeConfigSpec.ConfigValue<String> MANAGE_TEMPBANNED;
+    public static final ForgeConfigSpec.ConfigValue<String> MANAGE_DURATION_EXPECTED;
+    public static final ForgeConfigSpec.ConfigValue<String> MANAGE_SUG_L_TEMPBAN;
+    public static final ForgeConfigSpec.ConfigValue<String> MANAGE_SUG_H_TEMPBAN;
 
     // Teleport Warmup
-    public static final ModConfigSpec.ConfigValue<String> TP_WARMUP_COUNTDOWN;
-    public static final ModConfigSpec.ConfigValue<String> TP_WARMUP_CANCELLED_MOVE;
-    public static final ModConfigSpec.ConfigValue<String> TP_WARMUP_CANCELLED_DAMAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> TP_WARMUP_COUNTDOWN;
+    public static final ForgeConfigSpec.ConfigValue<String> TP_WARMUP_CANCELLED_MOVE;
+    public static final ForgeConfigSpec.ConfigValue<String> TP_WARMUP_CANCELLED_DAMAGE;
 
     // Schedule Exceptions
-    public static final ModConfigSpec.ConfigValue<String> SCHED_WARN_INVALID_EXCEPTION;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_SECTION_EXCEPTIONS;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_EXCEPTION_CLOSED;
-    public static final ModConfigSpec.ConfigValue<String> SCHED_EXCEPTION_OPEN;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_WARN_INVALID_EXCEPTION;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_SECTION_EXCEPTIONS;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_EXCEPTION_CLOSED;
+    public static final ForgeConfigSpec.ConfigValue<String> SCHED_EXCEPTION_OPEN;
 
     // Dice Extra
-    public static final ModConfigSpec.ConfigValue<String> DICE_ROLL_DETAIL;
-    public static final ModConfigSpec.ConfigValue<String> DICE_ROLL_SECRET_FORMAT;
-    public static final ModConfigSpec.ConfigValue<String> DICE_ADVANTAGE;
-    public static final ModConfigSpec.ConfigValue<String> DICE_DISADVANTAGE;
-    public static final ModConfigSpec.ConfigValue<String> DICE_SECRET_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> DICE_EXPRESSIONS_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> DICE_TOO_MANY;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_ROLL_DETAIL;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_ROLL_SECRET_FORMAT;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_ADVANTAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_DISADVANTAGE;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_SECRET_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_EXPRESSIONS_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> DICE_TOO_MANY;
 
     // Validate Extra
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_DIMENSION;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_SOUND;
-    public static final ModConfigSpec.ConfigValue<String> CFG_V_ORPHAN_LICENSE;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_DIMENSION;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_UNKNOWN_SOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> CFG_V_ORPHAN_LICENSE;
 
     // Player Stats
-    public static final ModConfigSpec.ConfigValue<String> STATS_SECTION_ACTIVITY;
-    public static final ModConfigSpec.ConfigValue<String> STATS_SECTION_DISCIPLINE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_SECTION_RP;
-    public static final ModConfigSpec.ConfigValue<String> STATS_SECTION_ACCESS;
-    public static final ModConfigSpec.ConfigValue<String> STATS_FIRST_JOIN;
-    public static final ModConfigSpec.ConfigValue<String> STATS_LAST_LOGIN;
-    public static final ModConfigSpec.ConfigValue<String> STATS_LAST_LOGOUT;
-    public static final ModConfigSpec.ConfigValue<String> STATS_ONLINE_NOW;
-    public static final ModConfigSpec.ConfigValue<String> STATS_UNKNOWN;
-    public static final ModConfigSpec.ConfigValue<String> STATS_AGO_NOW;
-    public static final ModConfigSpec.ConfigValue<String> STATS_AGO_MINUTES;
-    public static final ModConfigSpec.ConfigValue<String> STATS_AGO_HOURS;
-    public static final ModConfigSpec.ConfigValue<String> STATS_AGO_DAYS;
-    public static final ModConfigSpec.ConfigValue<String> STATS_WARNS_TOTAL;
-    public static final ModConfigSpec.ConfigValue<String> STATS_MUTES_TOTAL;
-    public static final ModConfigSpec.ConfigValue<String> STATS_ABSENCE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_ABSENCE_NONE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_TEMP_LICENSE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_TEMP_NONE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_DEATHRP;
-    public static final ModConfigSpec.ConfigValue<String> STATS_ENABLED;
-    public static final ModConfigSpec.ConfigValue<String> STATS_DISABLED;
-    public static final ModConfigSpec.ConfigValue<String> STATS_WHITELIST;
-    public static final ModConfigSpec.ConfigValue<String> STATS_YES;
-    public static final ModConfigSpec.ConfigValue<String> STATS_NO;
-    public static final ModConfigSpec.ConfigValue<String> STATS_WHITELIST_OFF;
-    public static final ModConfigSpec.ConfigValue<String> STATS_OP;
-    public static final ModConfigSpec.ConfigValue<String> STATS_ROLE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_ROLE_OFFLINE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_VANISH;
-    public static final ModConfigSpec.ConfigValue<String> STATS_VANISH_LEVEL;
-    public static final ModConfigSpec.ConfigValue<String> STATS_VISIBLE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_SECTION_ACTIVITY;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_SECTION_DISCIPLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_SECTION_RP;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_SECTION_ACCESS;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_FIRST_JOIN;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_LAST_LOGIN;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_LAST_LOGOUT;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_ONLINE_NOW;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_UNKNOWN;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_AGO_NOW;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_AGO_MINUTES;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_AGO_HOURS;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_AGO_DAYS;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_WARNS_TOTAL;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_MUTES_TOTAL;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_ABSENCE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_ABSENCE_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_TEMP_LICENSE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_TEMP_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_DEATHRP;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_DISABLED;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_WHITELIST;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_YES;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_NO;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_WHITELIST_OFF;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_OP;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_ROLE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_ROLE_OFFLINE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_VANISH;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_VANISH_LEVEL;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_VISIBLE;
 
     // Player Stats Extra
-    public static final ModConfigSpec.ConfigValue<String> STATS_LOGINS;
-    public static final ModConfigSpec.ConfigValue<String> STATS_PLAYTIME_RECENT;
-    public static final ModConfigSpec.ConfigValue<String> STATS_NICKS;
-    public static final ModConfigSpec.ConfigValue<String> STATS_NICKS_NONE;
-    public static final ModConfigSpec.ConfigValue<String> STATS_NICK_CURRENT;
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_NICK;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_LOGINS;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_PLAYTIME_RECENT;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_NICKS;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_NICKS_NONE;
+    public static final ForgeConfigSpec.ConfigValue<String> STATS_NICK_CURRENT;
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_NICK;
 
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_REPORT, REPORT_DISABLED, REPORT_SELF,
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_REPORT, REPORT_DISABLED, REPORT_SELF,
             REPORT_UNKNOWN_PLAYER, REPORT_COOLDOWN, REPORT_TOO_MANY, REPORT_SENT, REPORT_STAFF_NEW, REPORT_BTN_VIEW,
             REPORT_BTN_VIEW_HOVER, REPORT_STAFF_JOIN, REPORT_NOT_FOUND, REPORT_CLAIMED, REPORT_CLAIMED_STAFF,
             REPORT_CLOSED, REPORT_REOPENED, REPORT_DELETED, REPORT_ALREADY_CLOSED, REPORT_NOT_CLOSED,
@@ -690,12 +690,12 @@ public class MessagesConfig {
             REPORT_INFO_HANDLER, REPORT_INFO_NOTE, REPORT_STATUS_OPEN, REPORT_STATUS_CLAIMED, REPORT_STATUS_CLOSED,
             REPORT_BTN_CLAIM, REPORT_BTN_CLOSE, REPORT_BTN_TP, REPORT_TP_FAILED;
 
-    public static final ModConfigSpec.ConfigValue<String> DISCORD_BY, DISCORD_SERVER_OPENED, DISCORD_SERVER_OPENED_DESC,
+    public static final ForgeConfigSpec.ConfigValue<String> DISCORD_BY, DISCORD_SERVER_OPENED, DISCORD_SERVER_OPENED_DESC,
             DISCORD_SERVER_CLOSED, DISCORD_TEST_TITLE, DISCORD_TEST_DESC, DISCORD_TEST_SENDING, DISCORD_TEST_OK,
             DISCORD_TEST_FAIL, DISCORD_NOT_SET, DISCORD_BAD_URL, DISCORD_ERR_INVALID_URL, DISCORD_ERR_QUEUE_FULL,
             DISCORD_ERR_GONE, DISCORD_ERR_REFUSED, DISCORD_ERR_HTTP, DISCORD_ERR_RATE, DISCORD_ERR_NETWORK;
 
-    public static final ModConfigSpec.ConfigValue<String> HISTORY_T_SHEET, SHEET_F_NAME, SHEET_F_AGE, SHEET_F_RACE,
+    public static final ForgeConfigSpec.ConfigValue<String> HISTORY_T_SHEET, SHEET_F_NAME, SHEET_F_AGE, SHEET_F_RACE,
             SHEET_F_LANGUAGES, SHEET_F_APPEARANCE, SHEET_F_DESCRIPTION, SHEET_F_LORE, SHEET_SAVED, SHEET_NO_CHANGE,
             SHEET_DISABLED;
 
@@ -2204,14 +2204,14 @@ public class MessagesConfig {
      * @param configValue the config entry
      * @param replacements alternating key/value pairs
      */
-    public static String get(ModConfigSpec.ConfigValue<String> configValue, String... replacements) {
+    public static String get(ForgeConfigSpec.ConfigValue<String> configValue, String... replacements) {
         return ServerLang.get(null, configValue, replacements);
     }
 
     /**
      * Retrieves a message with no placeholder substitution.
      */
-    public static String get(ModConfigSpec.ConfigValue<String> configValue) {
+    public static String get(ForgeConfigSpec.ConfigValue<String> configValue) {
         return ServerLang.get(null, configValue);
     }
 

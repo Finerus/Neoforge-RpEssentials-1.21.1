@@ -1,6 +1,6 @@
 package net.rp.rpessentials.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 import java.util.Arrays;
 import java.util.List;
@@ -11,96 +11,96 @@ import java.util.List;
  */
 public class RpConfig {
 
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    public static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    public static final ForgeConfigSpec SPEC;
 
-    public static final ModConfigSpec.BooleanValue SHEET_ENABLED;
-    public static final ModConfigSpec.BooleanValue SHEET_NAME;
-    public static final ModConfigSpec.BooleanValue SHEET_AGE;
-    public static final ModConfigSpec.BooleanValue SHEET_RACE;
-    public static final ModConfigSpec.BooleanValue SHEET_LANGUAGES;
-    public static final ModConfigSpec.BooleanValue SHEET_APPEARANCE;
-    public static final ModConfigSpec.BooleanValue SHEET_DESCRIPTION;
-    public static final ModConfigSpec.BooleanValue SHEET_LORE;
-    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> SHEET_CUSTOM_FIELDS;
-    public static final ModConfigSpec.IntValue SHEET_MAX_TEXT_LENGTH;
+    public static final ForgeConfigSpec.BooleanValue SHEET_ENABLED;
+    public static final ForgeConfigSpec.BooleanValue SHEET_NAME;
+    public static final ForgeConfigSpec.BooleanValue SHEET_AGE;
+    public static final ForgeConfigSpec.BooleanValue SHEET_RACE;
+    public static final ForgeConfigSpec.BooleanValue SHEET_LANGUAGES;
+    public static final ForgeConfigSpec.BooleanValue SHEET_APPEARANCE;
+    public static final ForgeConfigSpec.BooleanValue SHEET_DESCRIPTION;
+    public static final ForgeConfigSpec.BooleanValue SHEET_LORE;
+    public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> SHEET_CUSTOM_FIELDS;
+    public static final ForgeConfigSpec.IntValue SHEET_MAX_TEXT_LENGTH;
 
     // =========================================================================
     // AFK
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<String> AFK_DIMENSION;
-    public static final ModConfigSpec.DoubleValue         AFK_X;
-    public static final ModConfigSpec.DoubleValue         AFK_Y;
-    public static final ModConfigSpec.DoubleValue         AFK_Z;
-    public static final ModConfigSpec.DoubleValue         AFK_YAW;
-    public static final ModConfigSpec.DoubleValue         AFK_PITCH;
-    public static final ModConfigSpec.IntValue AFK_COOLDOWN_SECONDS;
-    public static final ModConfigSpec.IntValue AFK_COMBAT_BLOCK_SECONDS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> AFK_COMMANDS;
+    public static final ForgeConfigSpec.ConfigValue<String> AFK_DIMENSION;
+    public static final ForgeConfigSpec.DoubleValue         AFK_X;
+    public static final ForgeConfigSpec.DoubleValue         AFK_Y;
+    public static final ForgeConfigSpec.DoubleValue         AFK_Z;
+    public static final ForgeConfigSpec.DoubleValue         AFK_YAW;
+    public static final ForgeConfigSpec.DoubleValue         AFK_PITCH;
+    public static final ForgeConfigSpec.IntValue AFK_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.IntValue AFK_COMBAT_BLOCK_SECONDS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> AFK_COMMANDS;
 
     // =========================================================================
     // SPAWN
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue        ENABLE_SPAWN_COMMAND;
-    public static final ModConfigSpec.IntValue            SPAWN_WARMUP_SECONDS;
-    public static final ModConfigSpec.IntValue            AFK_WARMUP_SECONDS;
-    public static final ModConfigSpec.BooleanValue        TELEPORT_CANCEL_ON_MOVE;
-    public static final ModConfigSpec.BooleanValue        TELEPORT_CANCEL_ON_DAMAGE;
-    public static final ModConfigSpec.BooleanValue        SPAWN_USE_WORLD_SPAWN;
-    public static final ModConfigSpec.ConfigValue<String> SPAWN_DIMENSION;
-    public static final ModConfigSpec.DoubleValue         SPAWN_X;
-    public static final ModConfigSpec.DoubleValue         SPAWN_Y;
-    public static final ModConfigSpec.DoubleValue         SPAWN_Z;
-    public static final ModConfigSpec.DoubleValue         SPAWN_YAW;
-    public static final ModConfigSpec.DoubleValue         SPAWN_PITCH;
-    public static final ModConfigSpec.IntValue            SPAWN_COOLDOWN_SECONDS;
-    public static final ModConfigSpec.IntValue            SPAWN_COMBAT_BLOCK_SECONDS;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> SPAWN_COMMANDS;
+    public static final ForgeConfigSpec.BooleanValue        ENABLE_SPAWN_COMMAND;
+    public static final ForgeConfigSpec.IntValue            SPAWN_WARMUP_SECONDS;
+    public static final ForgeConfigSpec.IntValue            AFK_WARMUP_SECONDS;
+    public static final ForgeConfigSpec.BooleanValue        TELEPORT_CANCEL_ON_MOVE;
+    public static final ForgeConfigSpec.BooleanValue        TELEPORT_CANCEL_ON_DAMAGE;
+    public static final ForgeConfigSpec.BooleanValue        SPAWN_USE_WORLD_SPAWN;
+    public static final ForgeConfigSpec.ConfigValue<String> SPAWN_DIMENSION;
+    public static final ForgeConfigSpec.DoubleValue         SPAWN_X;
+    public static final ForgeConfigSpec.DoubleValue         SPAWN_Y;
+    public static final ForgeConfigSpec.DoubleValue         SPAWN_Z;
+    public static final ForgeConfigSpec.DoubleValue         SPAWN_YAW;
+    public static final ForgeConfigSpec.DoubleValue         SPAWN_PITCH;
+    public static final ForgeConfigSpec.IntValue            SPAWN_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.IntValue            SPAWN_COMBAT_BLOCK_SECONDS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> SPAWN_COMMANDS;
 
     // =========================================================================
     // ACTION / ME
     // =========================================================================
-    public static final ModConfigSpec.IntValue ACTION_DISTANCE;
+    public static final ForgeConfigSpec.IntValue ACTION_DISTANCE;
 
     // =========================================================================
     // ANNONCE
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue        ANNONCE_PLAY_SOUND;
-    public static final ModConfigSpec.ConfigValue<String> ANNONCE_SOUND;
+    public static final ForgeConfigSpec.BooleanValue        ANNONCE_PLAY_SOUND;
+    public static final ForgeConfigSpec.ConfigValue<String> ANNONCE_SOUND;
 
     // =========================================================================
     // DICE SYSTEM
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue                          ENABLE_DICE_SYSTEM;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>>   DICE_TYPES;
-    public static final ModConfigSpec.IntValue                              DICE_ROLL_DISTANCE;
+    public static final ForgeConfigSpec.BooleanValue                          ENABLE_DICE_SYSTEM;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>>   DICE_TYPES;
+    public static final ForgeConfigSpec.IntValue                              DICE_ROLL_DISTANCE;
 
     // =========================================================================
     // COOLDOWN
     // =========================================================================
-    public static final ModConfigSpec.IntValue ACTION_COOLDOWN_SECONDS;
-    public static final ModConfigSpec.IntValue COMMERCE_COOLDOWN_SECONDS;
-    public static final ModConfigSpec.IntValue INCOGNITO_COOLDOWN_SECONDS;
-    public static final ModConfigSpec.IntValue DICE_COOLDOWN_SECONDS;
-    public static final ModConfigSpec.BooleanValue DICE_ALLOW_EXPRESSIONS;
-    public static final ModConfigSpec.BooleanValue DICE_ALLOW_SECRET;
-    public static final ModConfigSpec.IntValue DICE_MAX_COUNT;
-    public static final ModConfigSpec.IntValue DICE_MAX_SIDES;
+    public static final ForgeConfigSpec.IntValue ACTION_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.IntValue COMMERCE_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.IntValue INCOGNITO_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.IntValue DICE_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.BooleanValue DICE_ALLOW_EXPRESSIONS;
+    public static final ForgeConfigSpec.BooleanValue DICE_ALLOW_SECRET;
+    public static final ForgeConfigSpec.IntValue DICE_MAX_COUNT;
+    public static final ForgeConfigSpec.IntValue DICE_MAX_SIDES;
 
     // =========================================================================
     // SELF NICK
     // =========================================================================
-    public static final ModConfigSpec.BooleanValue ENABLE_SELF_NICK;
-    public static final ModConfigSpec.IntValue     SELF_NICK_COOLDOWN_SECONDS;
-    public static final ModConfigSpec.BooleanValue SELF_NICK_ALLOW_COLORS;
-    public static final ModConfigSpec.IntValue     SELF_NICK_MAX_LENGTH;
-    public static final ModConfigSpec.BooleanValue NICK_UNIQUE;
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> NICK_BLACKLIST;
+    public static final ForgeConfigSpec.BooleanValue ENABLE_SELF_NICK;
+    public static final ForgeConfigSpec.IntValue     SELF_NICK_COOLDOWN_SECONDS;
+    public static final ForgeConfigSpec.BooleanValue SELF_NICK_ALLOW_COLORS;
+    public static final ForgeConfigSpec.IntValue     SELF_NICK_MAX_LENGTH;
+    public static final ForgeConfigSpec.BooleanValue NICK_UNIQUE;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> NICK_BLACKLIST;
 
     // =========================================================================
     // IMMERSIVE PRESETS
     // =========================================================================
-    public static final ModConfigSpec.ConfigValue<List<? extends String>> IMMERSIVE_PRESETS;
+    public static final ForgeConfigSpec.ConfigValue<List<? extends String>> IMMERSIVE_PRESETS;
 
     static {
 
@@ -122,7 +122,7 @@ public class RpConfig {
                 .comment("Commands run after /rp afk, as the player: @s is the player, ~ ~ ~ is the destination,",
                         "{player} is the Minecraft name. They run with OP level 4 and their output is hidden.",
                         "Example: [\"effect give @s minecraft:resistance 30 4 true\", \"playsound minecraft:block.bell.use master @s\"]")
-                .defineList("afkCommands", List.of(), obj -> obj instanceof String);
+                .defineListAllowEmpty("afkCommands", List.of(), obj -> obj instanceof String);
         BUILDER.pop();
 
         // ── SPAWN ─────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ public class RpConfig {
         SPAWN_COMMANDS = BUILDER
                 .comment("Commands run after /rp spawn, as the player: @s is the player, ~ ~ ~ is the destination,",
                         "{player} is the Minecraft name. They run with OP level 4 and their output is hidden.")
-                .defineList("spawnCommands", List.of(), obj -> obj instanceof String);
+                .defineListAllowEmpty("spawnCommands", List.of(), obj -> obj instanceof String);
         BUILDER.pop();
 
         // ── ACTION / ME ───────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ public class RpConfig {
                 .comment("Available dice types.",
                         "Format: name;maxValue  (e.g. d6;6)",
                         "Or custom faces: name;face1,face2,face3 (e.g. coin;Heads,Tails)")
-                .defineList("diceTypes",
+                .defineListAllowEmpty("diceTypes",
                         Arrays.asList("d4;4","d6;6","d8;8","d10;10","d12;12","d20;20","d100;100"),
                         obj -> obj instanceof String && ((String)obj).contains(";"));
         DICE_ROLL_DISTANCE   = BUILDER.comment("Radius (-1 = global).").defineInRange("diceRollDistance", 12, -1, 256);
@@ -199,7 +199,7 @@ public class RpConfig {
                 .define("nicknamesUnique", false);
         NICK_BLACKLIST = BUILDER
                 .comment("Words forbidden in nicknames (case and colors ignored). Staff are not affected.")
-                .defineList("nicknameBlacklist", List.of(), obj -> obj instanceof String);
+                .defineListAllowEmpty("nicknameBlacklist", List.of(), obj -> obj instanceof String);
         BUILDER.pop();
 
         // ── ANNONCE ───────────────────────────────────────────────────────────
@@ -230,7 +230,7 @@ public class RpConfig {
                         "  hrp     — 4s, fade 0.5s in/out  → HRP hours notification",
                         "  title   — 5s, fade 1s in/out    → announcements"
                 )
-                .defineList("presets",
+                .defineListAllowEmpty("presets",
                         Arrays.asList(
                                 "default;3.0;0.5;0.5",
                                 "death;5.0;0.5;0.5",
@@ -287,7 +287,7 @@ public class RpConfig {
                         "  LINE = one line (for example a faction or a rank), TEXT = several lines with the text editor.",
                         "  The id is a lowercase word (letters, digits, _); changing it loses what was written in that field.",
                         "Example: [\"faction;Faction;LINE\", \"religion;Religion;LINE\", \"secrets;Secrets;TEXT\"]")
-                .defineList("customFields", java.util.List.of(), o -> o instanceof String s && s.split(";").length >= 2);
+                .defineListAllowEmpty("customFields", java.util.List.of(), o -> o instanceof String s && s.split(";").length >= 2);
         SHEET_MAX_TEXT_LENGTH = BUILDER
                 .comment("Maximum length of a several-lines field. One-line fields are limited to 128 characters.")
                 .defineInRange("maxTextLength", 4000, 100, 20000);

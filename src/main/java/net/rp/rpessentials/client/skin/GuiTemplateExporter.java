@@ -10,10 +10,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.client.event.ScreenEvent;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.client.RpKeyBindings;
 
@@ -59,7 +59,7 @@ public final class GuiTemplateExporter {
      * (the key is not even registered).
      */
     public static boolean enabled() {
-        return !net.neoforged.fml.loading.FMLEnvironment.production || Boolean.getBoolean("rpessentials.guiExport");
+        return !net.minecraftforge.fml.loading.FMLEnvironment.production || Boolean.getBoolean("rpessentials.guiExport");
     }
 
     /** True during the frame captured by F8. */
@@ -219,14 +219,14 @@ public final class GuiTemplateExporter {
     /** Texture used today for this element (most specific sprite found), with its nine-slice border. */
     private static Source source(String base, String id, String state) {
         for (String name : GuiSkin.candidates(base, id, state)) {
-            ResourceLocation png = ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "textures/gui/sprites/" + name + ".png");
+            ResourceLocation png = new ResourceLocation(RpEssentials.MODID, "textures/gui/sprites/" + name + ".png");
             Optional<Resource> res = Minecraft.getInstance().getResourceManager().getResource(png);
             if (res.isEmpty()) continue;
             try (InputStream in = res.get().open()) {
                 NativeImage img = NativeImage.read(in);
                 int border = -1;
                 boolean nine = false;
-                ResourceLocation meta = ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "textures/gui/sprites/" + name + ".png.mcmeta");
+                ResourceLocation meta = new ResourceLocation(RpEssentials.MODID, "textures/gui/sprites/" + name + ".png.mcmeta");
                 Optional<Resource> m = Minecraft.getInstance().getResourceManager().getResource(meta);
                 if (m.isPresent()) {
                     try (Reader rd = m.get().openAsReader()) {
@@ -338,6 +338,6 @@ public final class GuiTemplateExporter {
         Component body = detail instanceof I18nArgs a
                 ? Component.translatable(key, a.args())
                 : Component.literal(String.valueOf(detail));
-        SystemToast.addOrUpdate(mc.getToasts(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION, title, body);
+        SystemToast.addOrUpdate(mc.getToasts(), SystemToast.SystemToastIds.PERIODIC_NOTIFICATION, title, body);
     }
 }

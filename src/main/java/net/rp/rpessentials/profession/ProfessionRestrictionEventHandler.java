@@ -12,13 +12,13 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.BlockEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.level.BlockEvent;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.util.RpEssentialsPatternUtils;
 import net.rp.rpessentials.client.ClientTooltipRestrictions;
@@ -130,7 +130,7 @@ public class ProfessionRestrictionEventHandler {
         // on it (placing a block against a chest...). Replaces the ServerPlayerGameMode mixin.
         ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(event.getPos()).getBlock());
         if (!ProfessionRestrictionManager.canOpenContainer(player, blockId)) {
-            event.setUseBlock(net.neoforged.neoforge.common.util.TriState.FALSE);
+            event.setUseBlock(net.minecraftforge.eventbus.api.Event.Result.DENY);
             ProfessionRestrictionManager.notifyBlocked(player, "container",
                     () -> ProfessionRestrictionManager.getContainerOpenBlockedMessage(player, blockId));
         }
@@ -140,14 +140,14 @@ public class ProfessionRestrictionEventHandler {
 
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
-            event.setUseItem(net.neoforged.neoforge.common.util.TriState.FALSE);
+            event.setUseItem(net.minecraftforge.eventbus.api.Event.Result.DENY);
             sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(player, itemId));
         }
     }
 
     private static void checkItemUse(net.minecraft.world.entity.Entity entity,
                                      ItemStack itemStack,
-                                     net.neoforged.bus.api.ICancellableEvent event) {
+                                     net.minecraftforge.eventbus.api.Event event) {
         if (!(entity instanceof ServerPlayer player)) return;
         if (itemStack.isEmpty()) return;
 
@@ -248,7 +248,7 @@ public class ProfessionRestrictionEventHandler {
      * Affiche les restrictions dans le tooltip des items.
      */
     public static void clearTooltipCache() {
-        if (net.neoforged.fml.loading.FMLEnvironment.dist.isClient()) ClientTooltipRestrictions.clearCache();
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) ClientTooltipRestrictions.clearCache();
     }
 
     @SubscribeEvent
@@ -259,11 +259,11 @@ public class ProfessionRestrictionEventHandler {
     }
 
     @SubscribeEvent
-    public static void onEquipmentChange(net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent event) {
+    public static void onEquipmentChange(net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (player.isCreative()) return;
         EquipmentSlot slot = event.getSlot();
-        if (slot.getType() != EquipmentSlot.Type.HUMANOID_ARMOR) return;
+        if (slot.getType() != EquipmentSlot.Type.ARMOR) return;
 
         ItemStack stack = event.getTo();
         if (stack.isEmpty()) return;

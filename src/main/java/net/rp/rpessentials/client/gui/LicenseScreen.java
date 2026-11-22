@@ -7,13 +7,11 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.language.I18n;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.client.LicenseCardRenderer;
 
@@ -36,9 +34,9 @@ public class LicenseScreen extends net.rp.rpessentials.client.skin.CanvasScreen 
         String e = null;
         boolean r = false;
 
-        CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
+        CompoundTag cd = stack.getTag();
         if (cd != null) {
-            CompoundTag tag = cd.copyTag();
+            CompoundTag tag = cd.copy();
             p = LicenseCardRenderer.shownProfession(tag);
             if (tag.contains("holderName"))  h = tag.getString("holderName");
             if (tag.contains("issueDate"))   d = tag.getString("issueDate");
@@ -120,7 +118,7 @@ public class LicenseScreen extends net.rp.rpessentials.client.skin.CanvasScreen 
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+    public void renderBackground(GuiGraphics g) {}
 
     @Override
     public boolean isPauseScreen() { return false; }
