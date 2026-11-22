@@ -5,6 +5,14 @@ import java.util.Arrays;
 import java.util.List;
 
 public class ProfessionConfig {
+
+    /** Config key of the switch, used for the confirmations (Config GUI, /rpessentials config set). */
+    public static final String ENABLE_KEY = "enableProfessionSystem";
+
+    /** True when the profession system is on (true while the config is not loaded yet). */
+    public static boolean enabled() {
+        return Cfg.get(ENABLE_PROFESSION_SYSTEM, true);
+    }
     public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
     public static final ModConfigSpec SPEC;
 
@@ -12,6 +20,8 @@ public class ProfessionConfig {
     // PROFESSION DEFINITIONS
     // ===============================================================================
     public static final ModConfigSpec.ConfigValue<List<? extends String>> PROFESSIONS;
+    /** Whole profession / license system on or off (applied live, asks for a confirmation). */
+    public static final ModConfigSpec.BooleanValue ENABLE_PROFESSION_SYSTEM;
 
     // ===============================================================================
     // GLOBAL RESTRICTIONS
@@ -64,6 +74,15 @@ public class ProfessionConfig {
                 "You may use the in-game GUI to modify this as it was built to help you.",
                 "═══════════════════════════════════════════════════════════════"
         ).push("Profession System");
+
+        ENABLE_PROFESSION_SYSTEM = BUILDER
+                .comment("",
+                        "Turns the whole profession and license system on or off.",
+                        "When off: no restriction is applied, the license commands and the license item stop working,",
+                        "the Professions and Global tabs of the editor are locked and the other options of this file are hidden.",
+                        "Professions, licenses and restrictions are kept, and come back when it is turned on again.",
+                        "Applied at once (no restart). The Config GUI and the command ask for a confirmation.")
+                .define("enableProfessionSystem", true);
 
         // -----------------------------------------------------------------------
         // PROFESSION DEFINITIONS

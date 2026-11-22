@@ -1,5 +1,8 @@
 package net.rp.rpessentials.identity;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
@@ -289,7 +292,7 @@ public class RpEssentialsChatFormatter {
 
     private static String sanitize(ServerPlayer sender, String message) {
         String mode = net.rp.rpessentials.config.ConfigRules.value(ChatConfig.PLAYER_CHAT_CODES);
-        if (mode.equalsIgnoreCase("ALL") || net.rp.rpessentials.permission.RpEssentialsPermissions.isStaff(sender)) return message;
+        if (mode.equalsIgnoreCase("ALL") || RpPerms.has(sender, RpPerm.CHAT_CODES)) return message;
         String converted = ColorHelper.translateAlternateColorCodes(message);
         if (mode.equalsIgnoreCase("NONE")) return ColorHelper.stripAll(converted);
         return OBFUSCATED.matcher(converted).replaceAll("");

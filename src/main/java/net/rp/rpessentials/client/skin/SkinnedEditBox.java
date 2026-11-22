@@ -13,9 +13,19 @@ public class SkinnedEditBox extends EditBox {
 
     /** Required field left empty when saving: red frame until something is typed in it. */
     private boolean error;
+    /** Own texture id (text_field_&lt;id&gt;), or null. */
+    private String skinId;
+    /** Built as content of the open tab: its texture is in the tab folder (see GuiSkin). */
+    private final boolean tabContent = GuiSkin.inTab();
 
     public SkinnedEditBox(Font font, int x, int y, int width, int height, Component message) {
         super(font, x, y, width, height, message);
+    }
+
+    /** Gives this field its own texture: text_field_&lt;id&gt;.png first (see GuiSkin). */
+    public SkinnedEditBox skin(String id) {
+        this.skinId = id;
+        return this;
     }
 
     /** Shows (or hides) the red frame of a field that must be filled. Typing in the field hides it. */
@@ -36,11 +46,20 @@ public class SkinnedEditBox extends EditBox {
     }
 
     private void renderField(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        if (!isBordered() || !isVisible() || !GuiSkin.active(GuiSkin.TEXT_FIELD)) {
+        boolean old = GuiSkin.setTab(tabContent);
+        try {
+            renderFieldSkinned(g, mouseX, mouseY, partialTick);
+        } finally {
+            GuiSkin.setTab(old);
+        }
+    }
+
+    private void renderFieldSkinned(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        if (!isBordered() || !isVisible()
+                || !GuiSkin.draw(g, GuiSkin.TEXT_FIELD, skinId, "", getX(), getY(), getWidth(), getHeight())) {
             super.renderWidget(g, mouseX, mouseY, partialTick);
             return;
         }
-        g.blitSprite(GuiSkin.id(GuiSkin.TEXT_FIELD), getX(), getY(), getWidth(), getHeight());
         // Draw the text the way a bordered field does (4 px inside, centered), without the vanilla frame.
         int w = getWidth();
         int dy = (getHeight() - 8) / 2;

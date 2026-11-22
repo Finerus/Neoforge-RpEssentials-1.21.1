@@ -1,6 +1,9 @@
 
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 
 import net.minecraft.network.FriendlyByteBuf;
@@ -81,7 +84,7 @@ public record SetPlayerProfilePacket(
     public static void handleOnServer(SetPlayerProfilePacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer admin)) return;
-            if (!RpEssentialsPermissions.isStaff(admin)) return;
+            if (!RpPerms.has(admin, RpPerm.PROFILE)) return;
 
             MinecraftServer server = admin.getServer();
             ServerPlayer target = server.getPlayerList().getPlayer(packet.targetUuid());
@@ -119,7 +122,7 @@ public record SetPlayerProfilePacket(
             else net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(), nick);
         }
 
-        if (!packet.role().trim().isEmpty() && RpEssentialsPermissions.canManageRoles(admin)) {
+        if (!packet.role().trim().isEmpty() && net.rp.rpessentials.permission.RpPerms.has(admin, net.rp.rpessentials.permission.RpPerm.ROLES_SET)) {
             PendingProfileManager.setRole(packet.targetUuid(), packet.role().trim());
         }
 
@@ -190,7 +193,7 @@ public record SetPlayerProfilePacket(
 
         // ── 1. Nickname ───────────────────────────────────────────────────────
         if (packet.resetNickname()) {
-            NicknameManager.removeNickname(target.getUUID());
+            NicknameManager.removeNickname(target.getUUID(), admin.getGameProfile().getName());
             report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_NICK_RESET));
         } else {
             String nick = packet.nickname().trim().replace("&", "§");
@@ -200,7 +203,7 @@ public record SetPlayerProfilePacket(
                 if (err != null) {
                     admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(err));
                 } else {
-                    NicknameManager.setNickname(target.getUUID(), nick);
+                    NicknameManager.setNickname(target.getUUID(), nick, admin.getGameProfile().getName());
                     report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_NICK, "nick", nick));
                 }
             }
@@ -209,7 +212,7 @@ public record SetPlayerProfilePacket(
         // ── 2. Rôle ───────────────────────────────────────────────────────────
         String role = packet.role().trim();
         if (!role.isEmpty()) {
-            if (!RpEssentialsPermissions.canManageRoles(admin)) {
+            if (!net.rp.rpessentials.permission.RpPerms.has(admin, net.rp.rpessentials.permission.RpPerm.ROLES_SET)) {
                 admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
             } else if (applyRole(server, target, role)) {
                 report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_ROLE, "role", role));
@@ -291,8 +294,7 @@ public record SetPlayerProfilePacket(
             server.getCommands().performPrefixedCommand(silentSource, "tag " + targetName + " add " + roleId);
             server.getCommands().performPrefixedCommand(silentSource, "lp user " + targetName + " parent set " + lpGroup);
 
-            RpEssentialsRoleManager.invalidate(target.getUUID());
-            RpEssentialsPermissions.invalidateCache(target.getUUID());
+            net.rp.rpessentials.permission.RpPerms.refresh(target);
             ProfessionSyncHelper.syncToPlayer(target);
             SyncNametagDataPacket.broadcastDelayed(target);
             RpEssentialsScheduleManager.enforceOnlineDelayed(server);

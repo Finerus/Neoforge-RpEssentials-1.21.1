@@ -1,5 +1,8 @@
 package net.rp.rpessentials.mixin;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,7 +29,7 @@ public abstract class MixinCommandSourceStack {
         CommandSourceStack src = (CommandSourceStack) (Object) this;
         boolean vanish = VanishManager.anyVanished() && VanishManager.hides(VanishManager.Aspect.SELECTORS);
         boolean hideReal = false;
-        if (Cfg.ready(ChatConfig.SPEC)) { hideReal = ChatConfig.HIDE_REAL_NAMES.get() && !RpEssentialsPermissions.isStaffSource(src); }
+        if (Cfg.ready(ChatConfig.SPEC)) { hideReal = ChatConfig.HIDE_REAL_NAMES.get() && !RpPerms.has(src, RpPerm.SEE_REALNAMES); }
         if (!vanish && !hideReal) return;
 
         Set<String> hidden = new HashSet<>();

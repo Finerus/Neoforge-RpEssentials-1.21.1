@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.commands.CommandToggles;
 import net.neoforged.neoforge.common.ModConfigSpec;
@@ -56,7 +59,7 @@ public class RpManageCommands {
     }
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
-        var node = Commands.literal("manage").requires(RpEssentialsPermissions::isStaffSource);
+        var node = Commands.literal("manage").requires(RpPerms::anyManage);
 
         node.then(Commands.literal("confirm").executes(RpManageCommands::confirm));
         node.then(Commands.literal("cancel").executes(ctx -> {
@@ -70,6 +73,7 @@ public class RpManageCommands {
                 .then(Commands.argument("action", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             Arrays.stream(ManageService.Action.values())
+                                    .filter(a -> a.available() && RpPerms.has(ctx.getSource(), RpPerm.manage(a)))
                                     .forEach(a -> builder.suggest(a.name().toLowerCase()));
                             return builder.buildFuture();
                         })

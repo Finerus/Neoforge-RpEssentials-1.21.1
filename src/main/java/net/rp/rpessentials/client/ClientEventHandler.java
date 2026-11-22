@@ -18,6 +18,8 @@ public class ClientEventHandler {
     public static void onClientDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
         ClientNametagCache.reset();
         ClientNametagConfig.reset();
+        ClientPerms.clear();
+        ClientFeatures.reset();
         ClientProfessionRestrictions.clear();
         ProfessionRestrictionEventHandler.clearTooltipCache();
         ClientTooltipRestrictions.clear();

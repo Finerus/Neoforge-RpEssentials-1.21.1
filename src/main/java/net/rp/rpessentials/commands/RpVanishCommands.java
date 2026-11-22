@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.Msg;
@@ -31,7 +34,7 @@ public class RpVanishCommands {
 
     private static LiteralArgumentBuilder<CommandSourceStack> node() {
         return Commands.literal("vanish")
-                .requires(RpEssentialsPermissions::isStaffSource)
+                .requires(RpPerms.cmd(RpPerm.VANISH))
                 .executes(ctx -> run(ctx, ctx.getSource().getPlayerOrException(), -1))
                 .then(Commands.literal("list").executes(RpVanishCommands::list))
                 .then(Commands.argument("level", IntegerArgumentType.integer(0, 4))

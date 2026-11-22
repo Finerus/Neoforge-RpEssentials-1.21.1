@@ -1,5 +1,8 @@
 package net.rp.rpessentials.util;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
@@ -42,7 +45,7 @@ public final class GuiFeedback {
 
         if (alertOtherStaff && actor.getServer() != null) {
             for (ServerPlayer p : actor.getServer().getPlayerList().getPlayers()) {
-                if (!p.getUUID().equals(actor.getUUID()) && RpEssentialsPermissions.isStaff(p)) {
+                if (!p.getUUID().equals(actor.getUUID()) && RpPerms.has(p, RpPerm.NOTIFY)) {
                     p.sendSystemMessage(build(p, title.apply(p), details.apply(p)));
                 }
             }

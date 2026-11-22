@@ -34,6 +34,28 @@ public class NetworkHandler {
                 )
         );
 
+        // ── Systems turned on / off on the server ────────────────────────────
+        registrar.playToClient(
+                SyncFeaturesPacket.TYPE,
+                SyncFeaturesPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        (packet, ctx) -> ctx.enqueueWork(() ->
+                                net.rp.rpessentials.client.ClientFeatures.set(packet.professionsEnabled())),
+                        null
+                )
+        );
+
+        // ── Permission nodes of the local player (GUI buttons) ───────────────
+        registrar.playToClient(
+                SyncPermissionsPacket.TYPE,
+                SyncPermissionsPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(
+                        (packet, ctx) -> ctx.enqueueWork(() ->
+                                net.rp.rpessentials.client.ClientPerms.set(packet.granted())),
+                        null
+                )
+        );
+
         // ── Profession restrictions ───────────────────────────────────────────
         registrar.playToClient(
                 SyncProfessionRestrictionsPacket.TYPE,

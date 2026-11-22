@@ -1,5 +1,8 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.api.event.DiceRollEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -322,7 +325,7 @@ public class DiceManager {
             String shown = result + (replaced ? "" : detail(p, roll));
             boolean self = p.getUUID().equals(player.getUUID());
             if (req.secret()) {
-                if (self || RpEssentialsPermissions.isStaff(p)) {
+                if (self || RpPerms.has(p, RpPerm.NOTIFY_DICE)) {
                     p.sendSystemMessage(ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.DICE_ROLL_SECRET_FORMAT,
                             "player", playerName, "dice", shownDice, "result", shown)));
                     audience.add(p);
@@ -333,7 +336,7 @@ public class DiceManager {
                 p.sendSystemMessage(ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.DICE_ROLL_FORMAT,
                         "player", playerName, "dice", shownDice, "result", shown)));
                 audience.add(p);
-            } else if (RpEssentialsPermissions.isStaff(p)) {
+            } else if (RpPerms.has(p, RpPerm.NOTIFY_DICE)) {
                 p.sendSystemMessage(ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.DICE_ROLL_SPY_FORMAT,
                         "player", playerName, "dice", shownDice, "result", shown)));
             }

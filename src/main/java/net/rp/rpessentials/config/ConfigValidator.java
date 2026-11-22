@@ -1,5 +1,8 @@
 package net.rp.rpessentials.config;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -22,9 +25,6 @@ public final class ConfigValidator {
 
     private static final Pattern ITEM = Pattern.compile("#?[a-z0-9_.\\-/*:]+(\\|(dim|zone)=[A-Za-z0-9_.\\-/:]+)*");
     private static final Pattern SLOT = Pattern.compile("([01]\\d|2[0-3]):[0-5]\\d-([01]\\d|2[0-3]):[0-5]\\d");
-    private static final Set<String> PERMS = Set.of("isstaff", "tabwhitelist", "schedulewhitelist",
-            "professionwhitelist", "seenicknames", "seeall", "bypassworldborder", "spymessages",
-            "bypassautounwhitelist", "bypassdeathrpwhitelist");
 
     private ConfigValidator() {}
 
@@ -155,7 +155,7 @@ public final class ConfigValidator {
                 }
                 if (p.length >= 3) {
                     for (String perm : p[2].split(",")) {
-                        if (!perm.isBlank() && !PERMS.contains(perm.trim().toLowerCase()))
+                        if (!perm.isBlank() && net.rp.rpessentials.permission.RpEssentialsRoleManager.normalize(perm) == null)
                             add(out, v, MessagesConfig.CFG_V_UNKNOWN_PERM, "option", "roles", "value", perm.trim(), "line", r);
                     }
                 }
@@ -188,7 +188,7 @@ public final class ConfigValidator {
 
     /** Tells a staff member about the wrong config values, if any (on join and after a reload). */
     public static void warnStaff(ServerPlayer staff) {
-        if (!net.rp.rpessentials.permission.RpEssentialsPermissions.isStaff(staff)) return;
+        if (!RpPerms.has(staff, RpPerm.NOTIFY)) return;
         List<String> lines = invalidValues(staff);
         if (lines.isEmpty()) return;
         staff.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(

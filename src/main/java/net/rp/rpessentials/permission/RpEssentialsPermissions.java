@@ -1,97 +1,54 @@
 package net.rp.rpessentials.permission;
 
-import net.rp.rpessentials.config.Cfg;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.RpEssentialsConfig;
 
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Shortcuts kept for the code and the API: each one is now a permission node (see {@link RpPerm}).
+ */
 public class RpEssentialsPermissions {
 
-    private static final Map<UUID, CacheEntry> staffCache = new ConcurrentHashMap<>();
-    private static final long CACHE_DURATION = 30000; // 30 secondes
-
-    private static class CacheEntry {
-        boolean isStaff;
-        long timestamp;
-
-        CacheEntry(boolean isStaff) {
-            this.isStaff = isStaff;
-            this.timestamp = System.currentTimeMillis();
-        }
-
-        boolean isValid() {
-            return System.currentTimeMillis() - timestamp < CACHE_DURATION;
-        }
-    }
-
-    public static void clearExpiredCache() {
-        staffCache.entrySet().removeIf(entry -> !entry.getValue().isValid());
+    /** Staff member: node rpessentials.staff (role, LuckPerms, or opLevelBypass). */
+    public static boolean isStaff(ServerPlayer player) {
+        return RpPerms.has(player, RpPerm.STAFF);
     }
 
     public static boolean isStaffSource(CommandSourceStack src) {
-        if (src.getEntity() instanceof ServerPlayer p) return isStaff(p);
-        return src.hasPermission(2);
+        return RpPerms.has(src, RpPerm.STAFF);
     }
 
+    /** OP level of the sensitive actions: opLevelBypass, or 4 when it is 0. */
     public static int sensitiveLevel() {
         if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             int level = RpEssentialsConfig.OP_LEVEL_BYPASS.get();
             return level > 0 ? level : 4;
-        } else {
-            return 4;
         }
+        return 4;
     }
 
+    /** OP check only (also used on the client, which has no permission nodes). */
     public static boolean hasSensitiveLevel(net.minecraft.world.entity.player.Player p) {
         return p.hasPermissions(sensitiveLevel());
     }
 
-    public static boolean canManageRoles(ServerPlayer p) { return hasSensitiveLevel(p); }
+    public static boolean canManageRoles(ServerPlayer p) { return RpPerms.has(p, RpPerm.ROLES_MANAGE); }
 
-    public static boolean canEditSensitiveConfig(ServerPlayer p) { return hasSensitiveLevel(p); }
+    public static boolean canEditSensitiveConfig(ServerPlayer p) { return RpPerms.has(p, RpPerm.CONFIG_SENSITIVE); }
 
-    /**
-     * Vérifie si un joueur est staff.
-     * Hiérarchie : Tags vanilla → Niveau OP → Groupes LuckPerms (optionnel)
-     */
-    public static boolean isStaff(ServerPlayer player) {
-        if (player == null) return false;
-
-        CacheEntry cached = staffCache.get(player.getUUID());
-        if (cached != null && cached.isValid()) return cached.isStaff;
-
-        boolean result = RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.IS_STAFF)
-                || checkOpLevelBypass(player);
-        staffCache.put(player.getUUID(), new CacheEntry(result));
-        return result;
-    }
-
-    private static boolean checkOpLevelBypass(ServerPlayer player) {
-        if (Cfg.ready(RpEssentialsConfig.SPEC)) {
-            int opLevel = RpEssentialsConfig.OP_LEVEL_BYPASS.get();
-            return opLevel > 0 && player.hasPermissions(opLevel);
-        } else {
-            return false;
-        }
-    }
-
-    // -----------
-
-    /**
-     * Invalide le cache pour un joueur (appeler à la déconnexion).
-     */
+    /** Forgets the cached roles of a player (logout, role change). */
     public static void invalidateCache(UUID playerUUID) {
-        staffCache.remove(playerUUID);
+        RpEssentialsRoleManager.invalidate(playerUUID);
     }
 
-    /**
-     * Vide tout le cache (appeler lors d'un reload de config).
-     */
     public static void clearCache() {
-        staffCache.clear();
+        RpEssentialsRoleManager.clearAll();
+    }
+
+    public static void clearExpiredCache() {
+        RpEssentialsRoleManager.clearExpired();
     }
 }

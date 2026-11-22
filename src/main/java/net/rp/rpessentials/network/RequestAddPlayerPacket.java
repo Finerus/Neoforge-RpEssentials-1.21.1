@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import com.mojang.authlib.GameProfile;
@@ -36,7 +39,7 @@ public record RequestAddPlayerPacket(String playerName) implements CustomPacketP
     public static void handleOnServer(RequestAddPlayerPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer admin)) return;
-            if (!RpEssentialsPermissions.isStaff(admin)) return;
+            if (!RpPerms.has(admin, RpPerm.PROFILE)) return;
 
             String name = packet.playerName().trim();
             if (name.isEmpty()) return;

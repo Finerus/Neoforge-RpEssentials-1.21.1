@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
@@ -35,7 +38,7 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
     public static void handleOnServer(DeleteProfessionPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
-            if (!RpEssentialsPermissions.isStaff(player)) return;
+            if (!RpPerms.has(player, RpPerm.PROFESSIONS_EDIT)) return;
 
             String cleanId = packet.id().toLowerCase().trim();
             if (cleanId.isEmpty()) return;

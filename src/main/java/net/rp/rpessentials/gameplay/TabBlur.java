@@ -1,5 +1,8 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
@@ -112,7 +115,7 @@ public final class TabBlur {
 
     public static boolean seesAll(ServerPlayer receiver, Settings s) {
         if (s.debug()) return false;
-        return RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_ALL)
+        return RpPerms.has(receiver, RpPerm.SEE_ALL)
                 || s.whitelist().contains(receiver.getGameProfile().getName())
                 || (s.opsSeeAll() && receiver.hasPermissions(2));
     }
@@ -121,7 +124,7 @@ public final class TabBlur {
         String realName = target.getGameProfile().getName();
         if (TabListCache.isBlacklisted(realName)) return false;
         if (seesAll || TabListCache.isAlwaysVisible(realName)
-                || RpEssentialsRoleManager.has(target, RpEssentialsRoleManager.Permission.TAB_WHITELIST)) return true;
+                || RpPerms.has(target, RpPerm.TAB_ALWAYS_VISIBLE)) return true;
         double maxSq = (s.sneakStealth() && target.isCrouching()) ? s.sneakDistSq() : s.maxDistSq();
         boolean blur = s.debug()
                 || receiver.level() != target.level()

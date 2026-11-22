@@ -227,6 +227,10 @@ public final class ConfigSetCommand {
             value = String.join("\n", value.split(";"));
         }
         String old = o.entry().currentValue();
+        if (o.entry().key().equals(net.rp.rpessentials.config.ProfessionConfig.ENABLE_KEY)
+                && !needsNoConfirm(src, old, value)) {
+            return 0;
+        }
         int applied = ConfigInspector.applyAndSave(o.fileId(), Map.of(o.entry().fullPath(), value));
         if (applied <= 0) {
             src.sendFailure(Msg.c(src, MessagesConfig.STAFF_CFG_INVALID_VALUE, "option", o.name(), "value", value,
@@ -238,6 +242,37 @@ public final class ConfigSetCommand {
         src.sendSuccess(() -> Msg.c(src, MessagesConfig.STAFF_CFG_VALUE_CHANGED, "file", o.fileId(), "name", o.name(),
                 "old", old == null ? "" : old.replace("\n", "; "), "value", shown), true);
         return 1;
+    }
+
+    /** Pending "turn the profession system on / off" per command source: value and time. */
+    private static final Map<String, Long> professionConfirm = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long CONFIRM_MS = 30_000L;
+
+    /**
+     * Turning the profession system on or off changes how the whole mod behaves: the same command must be typed
+     * twice within 30 seconds. Returns true when the change can be applied now.
+     */
+    private static boolean needsNoConfirm(CommandSourceStack src, String old, String value) {
+        boolean target = Boolean.parseBoolean(value.trim());
+        if (!value.trim().equalsIgnoreCase("true") && !value.trim().equalsIgnoreCase("false")) return true; // invalid: normal error
+        if (String.valueOf(target).equalsIgnoreCase(old == null ? "" : old.trim())) return true; // no change
+        String key = src.getTextName() + "|" + target;
+        Long at = professionConfirm.get(key);
+        long now = System.currentTimeMillis();
+        if (at != null && now - at <= CONFIRM_MS) {
+            professionConfirm.remove(key);
+            return true;
+        }
+        professionConfirm.put(key, now);
+        String k = target ? "rpessentials.professions.confirm_enable" : "rpessentials.professions.confirm_disable";
+        src.sendSystemMessage(net.minecraft.network.chat.Component.translatableWithFallback(k, target
+                        ? "⚠ This turns the profession system back on: restrictions, license commands and the license item work again."
+                        : "⚠ This turns off the whole profession system: no more restrictions, license commands or license item. Professions and licenses are kept.")
+                .withStyle(net.minecraft.ChatFormatting.GOLD));
+        src.sendSystemMessage(net.minecraft.network.chat.Component.translatableWithFallback(
+                "rpessentials.professions.confirm_again", "Type the same command again within 30 seconds to confirm.")
+                .withStyle(net.minecraft.ChatFormatting.YELLOW));
+        return false;
     }
 
     /** What the option accepts, for the error message. */

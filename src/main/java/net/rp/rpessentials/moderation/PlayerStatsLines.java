@@ -111,8 +111,11 @@ public final class PlayerStatsLines {
 
         // ── Access ───────────────────────────────────────────────────────────
         out.add(ServerLang.get(v, MessagesConfig.STATS_SECTION_ACCESS));
-        out.add(ServerLang.get(v, MessagesConfig.STATS_WHITELIST, "value",
-                ServerLang.get(v, server.getPlayerList().isWhiteListed(profile) ? MessagesConfig.STATS_YES : MessagesConfig.STATS_NO)));
+        // PlayerList#isWhiteListed is always true while the whitelist is off: ask the list itself.
+        String listed = ServerLang.get(v, server.getPlayerList().getWhiteList().isWhiteListed(profile)
+                ? MessagesConfig.STATS_YES : MessagesConfig.STATS_NO);
+        out.add(ServerLang.get(v, MessagesConfig.STATS_WHITELIST, "value", server.getPlayerList().isUsingWhitelist()
+                ? listed : ServerLang.get(v, MessagesConfig.STATS_WHITELIST_OFF, "listed", listed)));
         out.add(ServerLang.get(v, MessagesConfig.STATS_OP, "level", String.valueOf(server.getProfilePermissions(profile))));
         if (online != null) {
             String role = RpPlaceholders.roleId(online);

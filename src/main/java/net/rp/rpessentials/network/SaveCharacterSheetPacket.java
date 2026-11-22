@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -59,7 +62,7 @@ public record SaveCharacterSheetPacket(UUID targetUuid, String targetName, Map<S
     public static void handleOnServer(SaveCharacterSheetPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer staff)) return;
-            if (!RpEssentialsPermissions.isStaff(staff)) return;
+            if (!RpPerms.has(staff, RpPerm.SHEET)) return;
             if (!CharacterSheetManager.enabled()) {
                 staff.sendSystemMessage(ColorHelper.parseSection(ServerLang.get(staff, MessagesConfig.SHEET_DISABLED)));
                 return;

@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 
 import net.rp.rpessentials.config.MessagesConfig;
@@ -74,7 +77,7 @@ public record SaveProfessionPacket(
     public static void handleOnServer(SaveProfessionPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
-            if (!RpEssentialsPermissions.isStaff(player)) return;
+            if (!RpPerms.has(player, RpPerm.PROFESSIONS_EDIT)) return;
 
             String cleanId = packet.id().toLowerCase().trim().replaceAll("[^a-z0-9_]", "_");
             if (cleanId.isEmpty() || packet.displayName().trim().isEmpty()) {
@@ -86,7 +89,8 @@ public record SaveProfessionPacket(
                 return;
             }
             String cleanName = packet.displayName().trim().replace("&", "§").replace(";", "");
-            if (cleanName.length() > 48) cleanName = cleanName.substring(0, 48);
+            // 96: room for a gradient chosen in the palette (<grad:#RRGGBB:#RRGGBB>name</grad>).
+            if (cleanName.length() > 96) cleanName = cleanName.substring(0, 96);
             String cleanColor = packet.color().trim().replace("&", "§");
             if (!cleanColor.matches("(§[0-9a-f]|§#[0-9a-fA-F]{6})?")) cleanColor = "";
             List<String> crafts = PacketValidation.cleanItems(packet.allowedCrafts());

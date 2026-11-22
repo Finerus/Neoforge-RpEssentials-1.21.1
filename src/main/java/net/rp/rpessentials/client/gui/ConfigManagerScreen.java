@@ -44,7 +44,7 @@ import java.util.*;
  * "Apply" sends SaveConfigEntriesPacket; server responds with updated entries.
  */
 @OnlyIn(Dist.CLIENT)
-public class ConfigManagerScreen extends Screen {
+public class ConfigManagerScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
     // =========================================================================
     // LAYOUT CONSTANTS
@@ -53,6 +53,8 @@ public class ConfigManagerScreen extends Screen {
     private static final int MARGIN       = 6;
     private static final int PANEL_TOP    = 16;
     private static final int FOOTER_H     = 30;
+    /** Left edge of the right panel content, inside the frame (7 px border of the textures). */
+    private static final int FORM_X       = FILE_PANEL_W + MARGIN * 3 + 6;
 
     /** Pixel height of each row of the entries list. */
     private static final int ENTRY_H   = 22;
@@ -82,10 +84,19 @@ public class ConfigManagerScreen extends Screen {
 
     /** "Loading…" state while waiting for server response. */
     private boolean loading = false;
+    /** When the current file was last asked to the server, and how many times: the request is sent again until it answers. */
+    private long requestSentAt = 0L;
+    private int requestAttempts = 0;
+    /** The server did not answer after every attempt: the Refresh button asks again. */
+    private boolean loadFailed = false;
+    private static final long RETRY_DELAY_MS = 1500L;
+    private static final int MAX_ATTEMPTS = 5;
 
     private boolean pendingRebuild = false;
     private int pendingRemoveIdx = -1;
     private Button applyButton;
+    /** Apply clicked once while the profession system switch is changed: the next click applies. */
+    private boolean confirmProfessionToggle = false;
     /** Close was clicked once with unapplied changes: the next click (or Escape) closes. */
     private boolean confirmClose = false;
     /** File clicked once while changes are not applied: clicking it again opens it (changes dropped). */
@@ -136,6 +147,7 @@ public class ConfigManagerScreen extends Screen {
         selectedFileId  = packet.fileId();
         currentEntries  = packet.entries();
         loading         = false;
+        loadFailed      = false;
         if (entriesList != null) entriesList.setScrollAmount(0);
         // Preserve editBox values for entries that were already being edited
         // (happens on refresh after apply — keep any unsaved changes)
@@ -154,7 +166,7 @@ public class ConfigManagerScreen extends Screen {
     // =========================================================================
 
     @Override
-    protected void init() {
+    protected void initContent() {
         addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
 
         buildSearchBox();
@@ -171,7 +183,7 @@ public class ConfigManagerScreen extends Screen {
     private void buildFilePanel() {
         modHeaders.clear();
         if (fileList == null) fileList = new ButtonRowList(Minecraft.getInstance(), 18);
-        fileList.layout(MARGIN - 2, PANEL_TOP + 14, FILE_PANEL_W + 12, this.height - 10 - (PANEL_TOP + 14));
+        fileList.layout(MARGIN - 4, PANEL_TOP + 20, FILE_PANEL_W + 5, this.height - 13 - (PANEL_TOP + 20));
         int rw = fileList.rowWidth();
         List<ButtonRowList.Row> rows = new ArrayList<>();
         String lastMod = null;
@@ -208,7 +220,7 @@ public class ConfigManagerScreen extends Screen {
                         requestFile(fid);
                     })
                     .tooltip(armed ? Tooltip.create(Component.translatable("rpessentials.gui.unsaved.discard_switch_tooltip")) : null)
-                    .size(rw, 16).build(SkinnedButton.row(selected)), 0));
+                    .size(rw, 16).build(SkinnedButton.row(selected, "files")), 0));
         }
         fileList.setRows(rows);
         addRenderableWidget(fileList);
@@ -221,14 +233,14 @@ public class ConfigManagerScreen extends Screen {
 
     // ── Loading placeholder ────────────────────────────────────────────────
     private void buildLoadingPanel() {
-        int cx = (FILE_PANEL_W + MARGIN * 3 + this.width) / 2;
+        int cx = (FORM_X + this.width) / 2;
         int cy = this.height / 2;
-        // No widget needed — text drawn in render()
-        // Just add a cancel button
+        // Text drawn in render(); the request is sent again by tick(). Refresh only shows once every attempt failed.
+        if (!loadFailed) return;
         addRenderableWidget(Button.builder(
                         Component.translatable("rpessentials.gui.config.btn_refresh"),
                         btn -> refreshFile())
-                .pos(cx - 30, cy + 20).size(60, 18).build(SkinnedButton::new));
+                .pos(cx - 30, cy + 10).size(60, 18).build(SkinnedButton.named("retry")));
     }
 
     // ── Entries panel (right side, scrollable) ─────────────────────────────
@@ -236,11 +248,11 @@ public class ConfigManagerScreen extends Screen {
     private void buildEntriesPanel() {
         if (currentEntries == null || currentEntries.isEmpty()) return;
 
-        int formX  = FILE_PANEL_W + MARGIN * 3;
+        int formX  = FORM_X;
         int formW  = this.width - formX - MARGIN * 2;
-        int startY = PANEL_TOP + 20;
+        int startY = PANEL_TOP + 30;
         if (entriesList == null) entriesList = new ButtonRowList(Minecraft.getInstance(), ENTRY_H);
-        entriesList.layout(formX - 6, startY, formW + 12, this.height - FOOTER_H - 4 - startY);
+        entriesList.layout(formX - 7, startY, formW + 8, this.height - FOOTER_H - 10 - startY);
         int rw = entriesList.rowWidth();
 
         List<ButtonRowList.Row> rows = new ArrayList<>();
@@ -326,7 +338,7 @@ public class ConfigManagerScreen extends Screen {
                     String newVal = cur ? "false" : "true";
                     markChange(entry.fullPath(), newVal, entry.currentValue());
                     rebuild();
-                }).pos(formX + formW - BOOL_W - 2, widgetY).size(BOOL_W, 16).build(SkinnedButton::new));
+                }).pos(formX + formW - BOOL_W - 2, widgetY).size(BOOL_W, 16).build(SkinnedButton.named("bool")));
             }
 
             case INT, LONG, DOUBLE -> {
@@ -334,7 +346,7 @@ public class ConfigManagerScreen extends Screen {
                 int w = Math.min(NUMERIC_W, formW / 3);
                 EditBox box = new SkinnedEditBox(this.font,
                         formX + formW - w - 2, widgetY, w, 16,
-                        Component.literal(entry.key()));
+                        Component.literal(entry.key())).skin("number");
                 box.setMaxLength(32);
                 box.setValue(currentEdit);
                 box.setTextColor(textColor(entry, currentEdit));
@@ -352,7 +364,7 @@ public class ConfigManagerScreen extends Screen {
                 w = Math.max(w, 80);
                 EditBox box = new SkinnedEditBox(this.font,
                         formX + formW - w - 2, widgetY, w, 16,
-                        Component.literal(entry.key()));
+                        Component.literal(entry.key())).skin("text");
                 box.setMaxLength(512);
                 box.setValue(currentEdit);
                 box.setTextColor(textColor(entry, currentEdit));
@@ -369,7 +381,7 @@ public class ConfigManagerScreen extends Screen {
                 int boxW = Math.max(formW - labelWidth(entry.key()) - btnW - 16, 80);
                 int boxX = formX + formW - boxW - btnW - 4;
 
-                EditBox box = new SkinnedEditBox(this.font, boxX, widgetY, boxW, 16, Component.literal(entry.key()));
+                EditBox box = new SkinnedEditBox(this.font, boxX, widgetY, boxW, 16, Component.literal(entry.key())).skin("list");
                 box.setMaxLength(8192);
                 box.setValue(currentEdit.replace("\n", " | "));
                 box.setEditable(false);
@@ -382,7 +394,7 @@ public class ConfigManagerScreen extends Screen {
                 out.add(Button.builder(Component.literal(
                                         I18n.get("rpessentials.gui.config.edit_list")),
                                 btn -> openListEditor(path, entryKey, currentEdit, original))
-                        .pos(boxX + boxW + 2, widgetY).size(btnW, 16).build(SkinnedButton::new));
+                        .pos(boxX + boxW + 2, widgetY).size(btnW, 16).build(SkinnedButton.named("edit_list")));
             }
 
             default -> {
@@ -390,7 +402,7 @@ public class ConfigManagerScreen extends Screen {
                 int w = Math.min(STRING_W, formW / 2);
                 EditBox box = new SkinnedEditBox(this.font,
                         formX + formW - w - 2, widgetY, w, 16,
-                        Component.literal(entry.key()));
+                        Component.literal(entry.key())).skin("value");
                 box.setMaxLength(512);
                 box.setValue(currentEdit);
                 box.setTextColor(textColor(entry, currentEdit));
@@ -427,7 +439,7 @@ public class ConfigManagerScreen extends Screen {
                     .pos(formX + 2, y + 2).size(14, 16)
                     .tooltip(Tooltip.create(Component.translatable(armed
                             ? "rpessentials.gui.config.reset_confirm" : "rpessentials.gui.config.reset_tooltip", def)))
-                    .build(SkinnedButton::new));
+                    .build(SkinnedButton.named("reset")));
         }
     }
 
@@ -438,8 +450,8 @@ public class ConfigManagerScreen extends Screen {
     // ── Footer (Apply / Discard buttons) ──────────────────────────────────
 
     private void buildFooter() {
-        int y     = this.height - FOOTER_H + 3;
-        int formX = FILE_PANEL_W + MARGIN * 3;
+        int y     = this.height - FOOTER_H - 4;
+        int formX = FORM_X;
         int formW = this.width - formX - MARGIN * 2;
         int closeW = 52;
         // Apply | Discard | Refresh ............ Close
@@ -447,8 +459,22 @@ public class ConfigManagerScreen extends Screen {
 
         // Apply button
         applyButton = Button.builder(Component.literal(""), btn -> {
-            if (!pendingChanges.isEmpty()) applyChanges();
-        }).pos(r[0], y).size(r[1], 20).build(SkinnedButton::new);
+            if (pendingChanges.isEmpty()) return;
+            // Turning the profession system on / off changes the whole mod: asks once more.
+            if (professionTogglePending() != null && !confirmProfessionToggle) {
+                confirmProfessionToggle = true;
+                rebuild();
+                return;
+            }
+            confirmProfessionToggle = false;
+            applyChanges();
+        }).pos(r[0], y).size(r[1], 20)
+                .tooltip(confirmProfessionToggle && professionTogglePending() != null
+                        ? Tooltip.create(Component.translatable("true".equals(professionTogglePending())
+                                ? "rpessentials.gui.config.professions_enable_tooltip"
+                                : "rpessentials.gui.config.professions_disable_tooltip"))
+                        : null)
+                .build(SkinnedButton.named("apply"));
         applyButton.active = !pendingChanges.isEmpty();
         addRenderableWidget(applyButton);
 
@@ -468,14 +494,11 @@ public class ConfigManagerScreen extends Screen {
             rebuild();
         }).pos(r[2], y).size(r[3], 20)
                 .tooltip(confirmDiscard ? Tooltip.create(Component.translatable("rpessentials.gui.config.btn_discard_confirm_tooltip")) : null)
-                .build(SkinnedButton::new);
+                .build(SkinnedButton.named("discard"));
         discardButton.active = !pendingChanges.isEmpty();
         addRenderableWidget(discardButton);
 
-        addRenderableWidget(Button.builder(Component.literal("§e↻"), btn -> refreshFile())
-                .pos(r[4], y).size(r[5], 20)
-                .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
-                .build(SkinnedButton::new));
+        addRenderableWidget(net.rp.rpessentials.client.skin.IconButton.refresh(r[4], y, r[5], 20, btn -> refreshFile()));
 
         // Close (asks again when changes are not applied)
         String closeLabel = SaveUi.closeLabel(confirmClose, "rpessentials.gui.config.btn_close");
@@ -483,7 +506,7 @@ public class ConfigManagerScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(closeLabel), btn -> onClose())
                 .pos(formX + formW - cw, y).size(cw, 20)
                 .tooltip(SaveUi.closeTooltip(confirmClose))
-                .build(SkinnedButton::new));
+                .build(SkinnedButton.named("close")));
     }
 
     // =========================================================================
@@ -491,7 +514,7 @@ public class ConfigManagerScreen extends Screen {
     // =========================================================================
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float delta) {
         boolean hasChanges = !pendingChanges.isEmpty();
         if (applyButton != null) applyButton.active = hasChanges;
         if (discardButton != null) discardButton.active = hasChanges;
@@ -504,38 +527,47 @@ public class ConfigManagerScreen extends Screen {
 
         // ── File panel background ────────────────────────────────────────────
         int panelRight = FILE_PANEL_W + MARGIN * 2;
-        GuiSkin.panel(g, MARGIN - 2, PANEL_TOP, panelRight + 2, this.height - 6, 0xBB111111);
+        GuiSkin.panel(g, "files", MARGIN - 2, PANEL_TOP, panelRight + 2, this.height - 6, 0xBB111111);
         GuiSkin.accent(g, MARGIN - 2, PANEL_TOP, panelRight + 2, PANEL_TOP + 2, modBarColor());
         g.drawString(this.font, UiLayout.fit(this.font, I18n.get("rpessentials.gui.config.files_header"), FILE_PANEL_W + 6),
-                MARGIN + 2, PANEL_TOP + 4, 0xFFD700, false);
+                MARGIN + 6, PANEL_TOP + 9, 0xFFD700, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         for (ModHeader h : modHeaders) {
             g.drawString(this.font, this.font.plainSubstrByWidth(h.name(), FILE_PANEL_W),
-                    MARGIN + 2, h.y() + 2, h.color(), false);
+                    MARGIN + 6, h.y() + 2, h.color(), net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         }
 
         // ── Entries panel background ─────────────────────────────────────────
-        int formX = FILE_PANEL_W + MARGIN * 3;
-        GuiSkin.panel(g, formX - 2, PANEL_TOP, this.width - MARGIN + 2, this.height - 6, 0xBB111111);
-        GuiSkin.accent(g, formX - 2, PANEL_TOP, this.width - MARGIN + 2, PANEL_TOP + 2, accentColor());
+        int formX = FORM_X;
+        GuiSkin.panel(g, "content", formX - 8, PANEL_TOP, this.width - MARGIN + 2, this.height - 6, 0xBB111111);
+        GuiSkin.accent(g, formX - 8, PANEL_TOP, this.width - MARGIN + 2, PANEL_TOP + 2, accentColor());
 
         // Title + file name
         String title = selectedFileId != null
                 ? I18n.get("rpessentials.gui.config.title_with_file", selectedFileId)
                 : I18n.get("rpessentials.gui.config.title");
         int titleW = (searchBox != null ? searchBox.getX() : this.width - MARGIN) - formX - UiLayout.GAP;
-        g.drawString(this.font, UiLayout.fit(this.font, title, titleW), formX, PANEL_TOP + 5, titleColor(), false);
+        g.drawString(this.font, UiLayout.fit(this.font, title, titleW), formX, PANEL_TOP + 10, titleColor(), net.rp.rpessentials.client.skin.GuiSkin.textShadow());
 
         // Pending indicator
         if (!pendingChanges.isEmpty()) {
             g.drawString(this.font, I18n.get("rpessentials.gui.config.unsaved", pendingChanges.size()),
-                    formX, PANEL_TOP + 14, 0xFFDD44, false);
+                    formX, PANEL_TOP + 20, 0xFFDD44, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         }
 
         // ── Entries ──────────────────────────────────────────────────────────
 
         if (loading) {
-            g.drawCenteredString(this.font, I18n.get("rpessentials.gui.config.loading"),
-                    (formX + this.width) / 2, this.height / 2 - 10, 0x888888);
+            if (loadFailed) {
+                g.drawCenteredString(this.font, I18n.get("rpessentials.gui.config.load_failed"),
+                        (formX + this.width) / 2, this.height / 2 - 10, 0xFF6666);
+            } else {
+                String dots = ".".repeat((int) (net.minecraft.Util.getMillis() / 400 % 4));
+                g.drawCenteredString(this.font, I18n.get("rpessentials.gui.config.loading") + dots,
+                        (formX + this.width) / 2, this.height / 2 - 10, 0x888888);
+            }
+        } else if (currentEntries != null && currentEntries.isEmpty()) {
+            g.drawCenteredString(this.font, I18n.get("rpessentials.gui.config.empty_file"),
+                    (formX + this.width) / 2, this.height / 2, 0x666666);
         } else if (currentEntries != null) {
             // Entries: list widget, drawn with the other widgets.
         } else {
@@ -544,12 +576,17 @@ public class ConfigManagerScreen extends Screen {
         }
 
         // Footer separator
-        GuiSkin.separator(g, formX - 2, this.height - FOOTER_H, this.width - MARGIN + 2,
-                this.height - FOOTER_H + 1, 0xFF444444);
+        GuiSkin.separator(g, "footer", formX - 1, this.height - FOOTER_H - 7, this.width - MARGIN - 7,
+                this.height - FOOTER_H - 6, 0xFF444444);
 
+        if (confirmProfessionToggle && professionTogglePending() == null) { confirmProfessionToggle = false; rebuild(); }
         if (applyButton != null) {
             // Bold when there is something to apply, like every save button.
-            String applyLabel = !pendingChanges.isEmpty()
+            String applyLabel = confirmProfessionToggle && professionTogglePending() != null
+                    ? "§c§l" + I18n.get("true".equals(professionTogglePending())
+                            ? "rpessentials.gui.config.professions_enable_confirm"
+                            : "rpessentials.gui.config.professions_disable_confirm")
+                    : !pendingChanges.isEmpty()
                     ? "§l" + I18n.get("rpessentials.gui.config.btn_apply", pendingChanges.size())
                     : I18n.get("rpessentials.gui.config.btn_no_change");
             if (!applyButton.getMessage().getString().equals(applyLabel)) applyButton.setMessage(Component.literal(applyLabel));
@@ -559,7 +596,7 @@ public class ConfigManagerScreen extends Screen {
         if (confirmDiscard && pendingChanges.isEmpty()) { confirmDiscard = false; rebuild(); }
 
         // Render all widgets (EditBox, Button…)
-        super.render(g, mouseX, mouseY, delta);
+        renderScreen(g, mouseX, mouseY, delta);
 
     }
 
@@ -585,14 +622,6 @@ public class ConfigManagerScreen extends Screen {
     // MOUSE WHEEL SCROLL
     // =========================================================================
 
-    @Override
-    public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
-        int formX = FILE_PANEL_W + MARGIN * 3;
-        
-        
-        return super.mouseScrolled(mx, my, scrollX, scrollY);
-    }
-
     // =========================================================================
     // ACTIONS
     // =========================================================================
@@ -604,10 +633,10 @@ public class ConfigManagerScreen extends Screen {
 
     private void buildSearchBox() {
         int searchW = Math.min(150, (this.width - FILE_PANEL_W - MARGIN * 5) / 2);
-        int x = this.width - MARGIN - 2 - searchW;
+        int x = this.width - MARGIN - 8 - searchW;
         if (searchBox == null) {
-            searchBox = new net.rp.rpessentials.client.skin.SkinnedEditBox(this.font, x, PANEL_TOP + 3, searchW, 14,
-                    Component.translatable("rpessentials.gui.config.search_hint"));
+            searchBox = new net.rp.rpessentials.client.skin.SkinnedEditBox(this.font, x, PANEL_TOP + 8, searchW, 14,
+                    Component.translatable("rpessentials.gui.config.search_hint")).skin("search");
             searchBox.setHint(Component.literal(UiLayout.fit(this.font, "§7" + I18n.get("rpessentials.gui.config.search_hint"), searchW - 8)));
             searchBox.setTooltip(Tooltip.create(Component.translatable("rpessentials.gui.config.search_tooltip")));
             searchBox.setMaxLength(64);
@@ -676,12 +705,45 @@ public class ConfigManagerScreen extends Screen {
         if (fileId.equals(selectedFileId) && currentEntries != null) return;
         selectedFileId  = fileId;
         currentEntries  = null;
-        loading         = true;
         if (entriesList != null) entriesList.setScrollAmount(0);
         pendingChanges.clear();
         editBoxValues.clear();
-        PacketDistributor.sendToServer(new RequestConfigFilePacket(fileId));
+        List<ConfigFileEntriesPacket.EntryTransfer> cached = fileCache.get(fileId);
+        if (cached != null) {
+            // Already received (search prefetch): shown at once.
+            currentEntries = cached;
+            loading = false;
+            loadFailed = false;
+            rebuild();
+            return;
+        }
+        sendRequest(fileId);
         rebuild();
+    }
+
+    /** Asks the server for a file; tick() sends it again while no answer came. */
+    private void sendRequest(String fileId) {
+        loading = true;
+        loadFailed = false;
+        requestAttempts = 1;
+        requestSentAt = net.minecraft.Util.getMillis();
+        PacketDistributor.sendToServer(new RequestConfigFilePacket(fileId));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (!loading || loadFailed || selectedFileId == null) return;
+        long now = net.minecraft.Util.getMillis();
+        if (now - requestSentAt < RETRY_DELAY_MS) return;
+        if (requestAttempts >= MAX_ATTEMPTS) {
+            loadFailed = true;
+            rebuild();
+            return;
+        }
+        requestAttempts++;
+        requestSentAt = now;
+        PacketDistributor.sendToServer(new RequestConfigFilePacket(selectedFileId));
     }
 
     private void markChange(String fullPath, String newValue, String originalValue) {
@@ -722,6 +784,18 @@ public class ConfigManagerScreen extends Screen {
 
     private static int textColor(ConfigFileEntriesPacket.EntryTransfer e, String value) {
         return problemOf(e, value) != null ? 0xFF5555 : 0xE0E0E0;
+    }
+
+    /** New value ("true" / "false") of the profession system switch when it is changed, null otherwise. */
+    private String professionTogglePending() {
+        if (!"professions".equals(selectedFileId) || currentEntries == null) return null;
+        for (ConfigFileEntriesPacket.EntryTransfer e : currentEntries) {
+            if (e.key().equals(net.rp.rpessentials.config.ProfessionConfig.ENABLE_KEY)) {
+                String v = pendingChanges.get(e.fullPath());
+                return v == null ? null : v.trim().toLowerCase(java.util.Locale.ROOT);
+            }
+        }
+        return null;
     }
 
     private void applyChanges() {
@@ -793,24 +867,6 @@ public class ConfigManagerScreen extends Screen {
      * Computes which entry indices are visible given the available pixel height.
      * Returns {firstVisible, lastVisible}.
      */
-    @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        
-        return super.mouseClicked(mx, my, button);
-    }
-
-    @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        
-        return super.mouseDragged(mx, my, button, dx, dy);
-    }
-
-    @Override
-    public boolean mouseReleased(double mx, double my, int button) {
-        
-        return super.mouseReleased(mx, my, button);
-    }
-
     private int labelWidth(String key) {
         return this.font.width(formatKeyName(key)) + 20;
     }
@@ -896,7 +952,7 @@ public class ConfigManagerScreen extends Screen {
      * Each line = one list element. The user can add, remove, and reorder entries.
      */
     @OnlyIn(Dist.CLIENT)
-    private static class ListEditorSubScreen extends Screen {
+    private static class ListEditorSubScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
         private final ConfigManagerScreen parent;
         private final String              fullPath;
@@ -925,7 +981,7 @@ public class ConfigManagerScreen extends Screen {
         }
 
         @Override
-        protected void init() {
+        protected void initContent() {
             int midX = this.width / 2;
             int startY = 40;
             int rowH = 22;
@@ -940,7 +996,7 @@ public class ConfigManagerScreen extends Screen {
                 ButtonRowList.Row row = new ButtonRowList.Row();
                 listRows.add(row);
 
-                EditBox box = new SkinnedEditBox(this.font, midX - 160, rowY, 290, 18, Component.empty());
+                EditBox box = new SkinnedEditBox(this.font, midX - 160, rowY, 290, 18, Component.empty()).skin("list_value");
                 box.setMaxLength(512);
                 box.setValue(items.get(i));
                 box.setResponder(val -> items.set(idx, val));
@@ -957,7 +1013,7 @@ public class ConfigManagerScreen extends Screen {
                                     }
                                     rebuild();
                                 })
-                        .pos(midX + 134, rowY).size(16, 18).build(SkinnedButton::new));
+                        .pos(midX + 134, rowY).size(16, 18).build(SkinnedButton.named("remove")));
 
                 if (i > 0)
                     rowAdd(row, midX - 160, Button.builder(Component.literal("▲"),
@@ -966,7 +1022,7 @@ public class ConfigManagerScreen extends Screen {
                                         Collections.swap(items, idx, idx - 1);
                                         rebuild();
                                     })
-                            .pos(midX + 152, rowY).size(14, 8).build(SkinnedButton::new));
+                            .pos(midX + 152, rowY).size(14, 8).build(SkinnedButton.named("move_up")));
 
                 if (i < items.size() - 1)
                     rowAdd(row, midX - 160, Button.builder(Component.literal("▼"),
@@ -975,7 +1031,7 @@ public class ConfigManagerScreen extends Screen {
                                         Collections.swap(items, idx, idx + 1);
                                         rebuild();
                                     })
-                            .pos(midX + 152, rowY + 10).size(14, 8).build(SkinnedButton::new));
+                            .pos(midX + 152, rowY + 10).size(14, 8).build(SkinnedButton.named("move_down")));
             }
 
             list.setRows(listRows);
@@ -989,28 +1045,33 @@ public class ConfigManagerScreen extends Screen {
                                 items.add("");
                                 rebuild();
                             })
-                    .pos(midX - 170, btnY).size(110, 20).build(SkinnedButton::new));
+                    .pos(midX - 170, btnY).size(110, 20).build(SkinnedButton.named("add")));
 
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_save"), btn -> {
                 items.removeIf(String::isBlank);
                 parent.onListEdited(fullPath, String.join("\n", items), originalComma);
-            }).pos(midX - 55, btnY).size(110, 20).build(SkinnedButton::new));
+            }).pos(midX - 55, btnY).size(110, 20).build(SkinnedButton.named("save")));
 
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.config.list.btn_cancel"),
                             btn -> net.minecraft.client.Minecraft.getInstance().setScreen(parent))
-                    .pos(midX + 59, btnY).size(70, 20).build(SkinnedButton::new));
+                    .pos(midX + 59, btnY).size(70, 20).build(SkinnedButton.named("cancel")));
         }
 
         private void rebuild() { if (this.minecraft == null) return; /* not shown yet: init() will run when it opens */ clearWidgets(); init(); }
 
         @Override
-        public void render(GuiGraphics g, int mx, int my, float delta) {
-            renderBackground(g, mx, my, delta);
-            super.render(g, mx, my, delta);
+        protected void renderContent(GuiGraphics g, int mx, int my, float delta) {
+            renderScreen(g, mx, my, delta);
             g.drawCenteredString(this.font, this.title, this.width / 2, 14, 0xFFD700);
             g.drawCenteredString(this.font,
                     I18n.get("rpessentials.gui.config.list.entries", items.size()),
                     this.width / 2, 26, 0x666666);
+        }
+
+        /** Vanilla background in the legacy look; on the canvas the window is already darkened. */
+        @Override
+        public void renderBackground(GuiGraphics g, int mx, int my, float partial) {
+            if (!canvasActive()) super.renderBackground(g, mx, my, partial);
         }
 
         @Override
@@ -1020,11 +1081,11 @@ public class ConfigManagerScreen extends Screen {
     private void refreshFile() {
         if (selectedFileId == null) return;
         currentEntries = null;
-        loading = true;
+        fileCache.remove(selectedFileId);
         if (entriesList != null) entriesList.setScrollAmount(0);
         pendingChanges.clear();
         editBoxValues.clear();
-        PacketDistributor.sendToServer(new RequestConfigFilePacket(selectedFileId));
+        sendRequest(selectedFileId);
         rebuild();
     }
 }

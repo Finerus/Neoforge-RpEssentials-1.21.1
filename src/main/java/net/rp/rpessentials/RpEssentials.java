@@ -82,6 +82,8 @@ public class RpEssentials {
     private final java.util.concurrent.atomic.AtomicBoolean refreshPending = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     public RpEssentials(IEventBus modEventBus, ModContainer modContainer) {
+        // Old Fabric API shipped by TxniLib on a NeoForge where it disconnects every player: clear error.
+        net.rp.rpessentials.core.FabricApiCheck.run();
         // Old config layouts are updated before NeoForge reads (and corrects) the files.
         net.rp.rpessentials.core.ConfigMigration.run();
 

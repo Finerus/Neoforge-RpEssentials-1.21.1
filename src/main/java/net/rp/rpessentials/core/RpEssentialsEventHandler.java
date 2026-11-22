@@ -1,5 +1,8 @@
 package net.rp.rpessentials.core;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -51,7 +54,7 @@ public class RpEssentialsEventHandler {
             if (Cfg.ready(ScheduleConfig.SPEC)) {
                 if (ScheduleConfig.NOTIFY_REFUSED_JOIN.get()) {
                     for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                        if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(Component.literal(ServerLang.get(p,
+                        if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(Component.literal(ServerLang.get(p,
                                 MessagesConfig.LOGIN_REFUSED_NOTICE, "player", player.getName().getString())));
                     }
                 }
@@ -64,6 +67,7 @@ public class RpEssentialsEventHandler {
         AbsenceManager.onLogin(player.getUUID());
         PlaytimeManager.onLogin(player.getUUID());
         ProfessionSyncHelper.syncToPlayer(player);
+        net.rp.rpessentials.gameplay.ModNotices.onLogin(player);
 
         if (VanishManager.isVanished(player.getUUID()) && VanishManager.reminderEnabled()) {
             player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.LOGIN_VANISH_REMINDER,
@@ -133,7 +137,7 @@ public class RpEssentialsEventHandler {
 
         sendJoinLeaveMessage(server, player, true);
 
-        if (RpEssentialsPermissions.isStaff(player)) {
+        if (RpPerms.has(player, RpPerm.NOTIFY)) {
             if (Cfg.ready(ScheduleConfig.SPEC)) {
                 if ("FORCE_CLOSED".equals(ScheduleConfig.FORCE_STATE.get())) {
                     player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.LOGIN_FORCE_CLOSED)));
@@ -202,6 +206,8 @@ public class RpEssentialsEventHandler {
             boolean hideNametags = RpEssentialsConfig.HIDE_NAMETAGS.get();
             PacketDistributor.sendToPlayer(player, new HideNametagsPacket(hideNametags));
         }
+        PacketDistributor.sendToPlayer(player, new net.rp.rpessentials.network.SyncPermissionsPacket(
+                net.rp.rpessentials.permission.RpPerms.granted(player)));
 
         if (Cfg.ready(ScheduleConfig.SPEC)) {
             String soundId = ScheduleConfig.WELCOME_SOUND.get();
@@ -292,6 +298,9 @@ public class RpEssentialsEventHandler {
                 MuteManager.getAllMutes().size(),
                 dataFolder);
         AfkPlatformInitializer.tryPlace(event.getServer());
+        net.rp.rpessentials.gameplay.ModNotices.onServerStarted(event.getServer());
+        // Roles first: old permission names are converted to nodes before LuckPerms compares its groups.
+        net.rp.rpessentials.permission.RpEssentialsRoleManager.reload();
         LuckPermsSync.start(event.getServer());
 
         for (String problem : net.rp.rpessentials.config.ConfigValidator.validate()) {

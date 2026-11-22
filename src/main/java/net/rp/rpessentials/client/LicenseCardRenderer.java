@@ -55,11 +55,18 @@ public class LicenseCardRenderer {
         return mode.equals("NAME_ONLY") ? name : name + " §8(" + id + ")";
     }
 
+    /** First person: always lit (readable in the dark, like before). */
     public static void renderCard(PoseStack poseStack, MultiBufferSource bufferSource,
                                   ItemStack stack, int combinedLight) {
+        renderCard(poseStack, bufferSource, stack, combinedLight, false);
+    }
+
+    /** {@code worldLight}: use the light of the place (card held by a player seen in the world). */
+    public static void renderCard(PoseStack poseStack, MultiBufferSource bufferSource,
+                                  ItemStack stack, int combinedLight, boolean worldLight) {
 
         Font font = Minecraft.getInstance().font;
-        int light = LightTexture.FULL_BRIGHT;
+        int light = worldLight ? combinedLight : LightTexture.FULL_BRIGHT;
 
         String profId = "", holder = "?", issueDate = "?";
         String expiryDate = null;
@@ -87,6 +94,8 @@ public class LicenseCardRenderer {
         vc.addVertex(poseStack.last(),  HALF_W,  HALF_H, 0f).setColor(255, 255, 255, 255).setUv(1f, 1f).setLight(light);
         vc.addVertex(poseStack.last(),  HALF_W, -HALF_H, 0f).setColor(255, 255, 255, 255).setUv(1f, 0f).setLight(light);
         vc.addVertex(poseStack.last(), -HALF_W, -HALF_H, 0f).setColor(255, 255, 255, 255).setUv(0f, 0f).setLight(light);
+
+        drawThickness(vc, poseStack, light);
 
         poseStack.translate(0f, 0f, -0.2f);
 
@@ -116,9 +125,67 @@ public class LicenseCardRenderer {
         poseStack.popPose();
     }
 
+    /** Text of the card; scrambled (obfuscated) while the profession system is turned off on the server. */
+    private static FormattedCharSequence cardText(String text) {
+        net.minecraft.network.chat.MutableComponent c = ColorHelper.parseColors(text).copy();
+        if (!ClientFeatures.professionsEnabled()) c = net.minecraft.network.chat.Component.empty()
+                .withStyle(st -> st.withObfuscated(true)).append(c);
+        return c.getVisualOrderText();
+    }
+
+    /** Thickness of the card, in card pixels (128 x 92 card): the back and the edges give it volume. */
+    private static final float THICKNESS = 4f;
+    /** Texture point used for the edges (the border of the card). */
+    private static final float EDGE_U = 0.006f, EDGE_V = 0.5f;
+
+    /**
+     * Back face (the card picture, mirrored and darker, without text) and the four edges, behind the
+     * front face (z = 0, text toward -z). Drawn on both sides so they show whatever the culling.
+     */
+    private static void drawThickness(com.mojang.blaze3d.vertex.VertexConsumer vc, PoseStack ps, int light) {
+        var m = ps.last();
+        float t = THICKNESS;
+        int back = 170, edge = 140;
+        // Back: mirrored picture.
+        quad(vc, m, light, back,
+                -HALF_W, HALF_H, t, 1f, 1f,
+                HALF_W, HALF_H, t, 0f, 1f,
+                HALF_W, -HALF_H, t, 0f, 0f,
+                -HALF_W, -HALF_H, t, 1f, 0f);
+        // Edges: border color.
+        float[][] sides = {
+                {-HALF_W, -HALF_H, HALF_W, -HALF_H},
+                {HALF_W, -HALF_H, HALF_W, HALF_H},
+                {HALF_W, HALF_H, -HALF_W, HALF_H},
+                {-HALF_W, HALF_H, -HALF_W, -HALF_H}};
+        for (float[] e : sides) {
+            quad(vc, m, light, edge,
+                    e[0], e[1], 0f, EDGE_U, EDGE_V,
+                    e[2], e[3], 0f, EDGE_U, EDGE_V,
+                    e[2], e[3], t, EDGE_U, EDGE_V,
+                    e[0], e[1], t, EDGE_U, EDGE_V);
+        }
+    }
+
+    /** One quad, emitted in both windings (seen from both sides). */
+    private static void quad(com.mojang.blaze3d.vertex.VertexConsumer vc, PoseStack.Pose m, int light, int shade,
+                             float x1, float y1, float z1, float u1, float v1,
+                             float x2, float y2, float z2, float u2, float v2,
+                             float x3, float y3, float z3, float u3, float v3,
+                             float x4, float y4, float z4, float u4, float v4) {
+        float[][] p = {{x1, y1, z1, u1, v1}, {x2, y2, z2, u2, v2}, {x3, y3, z3, u3, v3}, {x4, y4, z4, u4, v4}};
+        int[][] orders = {{0, 1, 2, 3}, {3, 2, 1, 0}};
+        for (int[] o : orders) {
+            for (int i : o) {
+                vc.addVertex(m, p[i][0], p[i][1], p[i][2]).setColor(shade, shade, shade, 255)
+                        .setUv(p[i][3], p[i][4]).setLight(light);
+            }
+        }
+    }
+
     private static void drawCentered(Font font, MultiBufferSource buffer, PoseStack ps, String text,
                                      float x, float y, int light, float scale, float maxWidth) {
-        FormattedCharSequence seq = ColorHelper.parseColors(text).getVisualOrderText();
+        FormattedCharSequence seq = cardText(text);
         float w = font.width(seq) * scale;
         float s = w > maxWidth ? scale * maxWidth / w : scale;
         ps.pushPose();
@@ -131,7 +198,7 @@ public class LicenseCardRenderer {
 
     private static void drawLeft(Font font, MultiBufferSource buffer, PoseStack ps, String text,
                                  float x, float y, int light, float scale, float maxWidth) {
-        FormattedCharSequence seq = ColorHelper.parseColors(text).getVisualOrderText();
+        FormattedCharSequence seq = cardText(text);
         float w = font.width(seq) * scale;
         float s = w > maxWidth ? scale * maxWidth / w : scale;
         ps.pushPose();

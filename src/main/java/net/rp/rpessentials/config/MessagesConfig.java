@@ -276,6 +276,7 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> STAFF_BLUR_ALREADY, STAFF_BLUR_ADDED, STAFF_BLUR_NOT_IN, STAFF_BLUR_REMOVED,
             STAFF_BLUR_EMPTY, STAFF_BLUR_CONTENT;
 
+    public static final ModConfigSpec.ConfigValue<String> MANAGE_NO_PERMISSION;
     public static final ModConfigSpec.ConfigValue<String> MANAGE_NEED_SENSITIVE, MANAGE_NOT_ONLINE, MANAGE_WL_ADDED, MANAGE_WL_REMOVED,
             MANAGE_KICK_SELF, MANAGE_KICKED, MANAGE_BAN_SELF, MANAGE_ALREADY_BANNED, MANAGE_BANNED, MANAGE_NOT_BANNED, MANAGE_PARDONED,
             MANAGE_OP_TOO_HIGH, MANAGE_OP_LOWER_SELF, MANAGE_OP_SET, MANAGE_DEOP_SELF, MANAGE_NOT_OP, MANAGE_DEOP_HIGHER, MANAGE_DEOPPED,
@@ -665,6 +666,7 @@ public class MessagesConfig {
     public static final ModConfigSpec.ConfigValue<String> STATS_WHITELIST;
     public static final ModConfigSpec.ConfigValue<String> STATS_YES;
     public static final ModConfigSpec.ConfigValue<String> STATS_NO;
+    public static final ModConfigSpec.ConfigValue<String> STATS_WHITELIST_OFF;
     public static final ModConfigSpec.ConfigValue<String> STATS_OP;
     public static final ModConfigSpec.ConfigValue<String> STATS_ROLE;
     public static final ModConfigSpec.ConfigValue<String> STATS_ROLE_OFFLINE;
@@ -1529,6 +1531,8 @@ public class MessagesConfig {
         BUILDER.pop();
 
         BUILDER.push("Staff Manage");
+        MANAGE_NO_PERMISSION = BUILDER.comment("Action not allowed by the permission nodes. Placeholder: {node}")
+                .define("noPermission", "§c[Manage] You are not allowed to do this action (§7{node}§c).");
         MANAGE_NEED_SENSITIVE = BUILDER.comment("Action reserved to the opLevelBypass level.").define("needSensitiveLevel", "§c[Manage] This action requires the OP level set in opLevelBypass.");
         MANAGE_NOT_ONLINE = BUILDER.comment("Placeholder: {player}").define("notOnline", "§c[Manage] {player} is not online.");
         MANAGE_WL_ADDED = BUILDER.comment("Placeholder: {player}").define("whitelistAdded", "§a[Manage] {player} added to the whitelist.");
@@ -2091,6 +2095,8 @@ public class MessagesConfig {
         STATS_WHITELIST = BUILDER.comment("Placeholder: {value}").define("whitelist", "§7Whitelisted: {value}");
         STATS_YES = BUILDER.define("yes", "§ayes");
         STATS_NO = BUILDER.define("no", "§cno");
+        STATS_WHITELIST_OFF = BUILDER.comment("Shown instead of yes / no when the server whitelist is turned off. Placeholder: {listed}")
+                .define("whitelistOff", "§8whitelist disabled §7(listed: {listed}§7)");
         STATS_OP = BUILDER.comment("Placeholder: {level}").define("opLevel", "§7OP level: §f{level}");
         STATS_ROLE = BUILDER.comment("Placeholders: {role} {group}").define("role", "§7Role: §f{role} §8(LuckPerms: {group})");
         STATS_ROLE_OFFLINE = BUILDER.define("roleOffline", "§7Role: §8visible when the player is online");

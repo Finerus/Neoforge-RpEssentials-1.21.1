@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.lang.Msg;
@@ -27,7 +30,7 @@ public class RpLastConnectionCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         var lastConnNode = Commands.literal("lastconnection")
-                .requires(RpEssentialsPermissions::isStaffSource);
+                .requires(RpPerms.cmd(RpPerm.LASTCONNECTION));
 
         lastConnNode.then(Commands.argument("player", StringArgumentType.word())
                 .executes(RpLastConnectionCommands::lastConnectionPlayer));

@@ -1,5 +1,8 @@
 package net.rp.rpessentials.identity;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.EventPriority;
@@ -102,7 +105,7 @@ public final class RpChatEvents {
 
         if (!Cfg.get(ChatConfig.ENABLE_PROXIMITY_SPY, false)) return;
         for (ServerPlayer p : player.getServer().getPlayerList().getPlayers()) {
-            if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
+            if (!RpPerms.has(p, RpPerm.CHAT_SPY)) continue;
             if (p.getUUID().equals(player.getUUID())) continue;
             if (p.level() == player.level() && p.distanceToSqr(player) <= distSq) continue;
             p.sendSystemMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(

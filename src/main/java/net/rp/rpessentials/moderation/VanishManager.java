@@ -1,5 +1,8 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
@@ -350,7 +353,7 @@ public final class VanishManager {
         String name = player.getName().getString();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (p.getUUID().equals(player.getUUID())) continue;
-            if (RpEssentialsPermissions.isStaff(p) && !isHiddenFrom(p, player.getUUID())) {
+            if (RpPerms.has(p, RpPerm.NOTIFY) && !isHiddenFrom(p, player.getUUID())) {
                 p.sendSystemMessage(Component.literal(ServerLang.get(p, key, "player", name)));
             }
         }

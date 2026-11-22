@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -23,7 +26,7 @@ public class RpZoneCommands {
     };
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
-        var node = Commands.literal("zone").requires(RpEssentialsPermissions::isStaffSource);
+        var node = Commands.literal("zone").requires(RpPerms.cmd(RpPerm.ZONE));
         node.then(Commands.literal("list").executes(RpZoneCommands::list));
         node.then(Commands.literal("show")
                 .then(Commands.argument("name", StringArgumentType.greedyString())

@@ -79,7 +79,9 @@ public class ConfigInspector {
     // =========================================================================
     public static List<FileInfo> getFileInfos() {
         return all().stream()
-                .map(c -> new FileInfo(c.id(), c.displayName(), c.color(), c.mod(), c.modColor(), c.theme()))
+                .map(c -> new FileInfo(c.id(), c.displayName(),
+                        // Professions turned off: the file is greyed out.
+                        isDisabledProfessions(c.id()) ? 0x666666 : c.color(), c.mod(), c.modColor(), c.theme()))
                 .toList();
     }
 
@@ -446,8 +448,25 @@ public class ConfigInspector {
             "useLuckPermsGroups", "roles", "luckPermsSync", "luckPermsImportAllGroups",
             "discordWebhookUrl");
 
+    /** True for the professions file while the profession system is turned off. */
+    private static boolean isDisabledProfessions(String fileId) {
+        return "professions".equals(fileId) && !ProfessionConfig.enabled();
+    }
+
     public static List<EntryData> getEntries(String fileId, boolean includeSensitive) {
         List<EntryData> all = getEntries(fileId);
+        if (isDisabledProfessions(fileId)) {
+            // Only the switch is left (with its section), so the system can be turned on again.
+            List<EntryData> out = new ArrayList<>();
+            EntryData section = null;
+            for (EntryData e : all) {
+                if (e.isSection()) { section = e; continue; }
+                if (!e.key().equals(ProfessionConfig.ENABLE_KEY)) continue;
+                if (section != null) out.add(section);
+                out.add(e);
+            }
+            return out;
+        }
         if (includeSensitive) return all;
         return all.stream().filter(e -> e.isSection() || !SENSITIVE_KEYS.contains(e.key())).toList();
     }

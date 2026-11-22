@@ -115,18 +115,24 @@ public class NicknameManager {
      * Définit un nickname pour un joueur
      */
     /** Adds the nickname change to the player history (only when it really changes). */
-    private static void recordChange(UUID playerUUID, String newNick) {
+    private static void recordChange(UUID playerUUID, String newNick, String actor) {
         String old = nicknames.get(playerUUID);
         String n = newNick == null || newNick.isEmpty() ? null : newNick;
         if (Objects.equals(old, n)) return;
         net.rp.rpessentials.moderation.HistoryManager.record(playerUUID, null,
-                net.rp.rpessentials.moderation.HistoryManager.NICK, "-",
+                net.rp.rpessentials.moderation.HistoryManager.NICK, actor,
                 (old == null ? "-" : old) + " §7→ §f" + (n == null ? "-" : n));
     }
 
+    /** Sets a nickname; the history shows the System as the author. */
     public static void setNickname(UUID playerUUID, String nickname) {
+        setNickname(playerUUID, nickname, null);
+    }
+
+    /** Sets a nickname; {@code actor} (who changed it) is written in the history, null for the System. */
+    public static void setNickname(UUID playerUUID, String nickname, String actor) {
         ensureInitialized();
-        recordChange(playerUUID, nickname);
+        recordChange(playerUUID, nickname, actor);
 
         if (nickname == null || nickname.isEmpty()) {
             nicknames.remove(playerUUID);
@@ -194,8 +200,13 @@ public class NicknameManager {
      * Supprime le nickname d'un joueur
      */
     public static void removeNickname(UUID playerUUID) {
+        removeNickname(playerUUID, null);
+    }
+
+    /** Removes a nickname; {@code actor} (who removed it) is written in the history, null for the System. */
+    public static void removeNickname(UUID playerUUID, String actor) {
         ensureInitialized();
-        recordChange(playerUUID, null);
+        recordChange(playerUUID, null, actor);
         nicknames.remove(playerUUID);
         saveToFile();
         refreshOnline(playerUUID);

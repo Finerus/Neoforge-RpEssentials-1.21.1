@@ -22,7 +22,7 @@ import java.util.function.Consumer;
  * Several-lines text of a character sheet: Minecraft text area (automatic line wrap), color palette
  * and format buttons that insert {@code &} codes or markdown at the cursor, and a live preview.
  */
-public class SheetTextEditorScreen extends Screen {
+public class SheetTextEditorScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
     private static final String K = "rpessentials.gui.sheet.editor.";
     private static final int SWATCH = 12;
@@ -51,7 +51,7 @@ public class SheetTextEditorScreen extends Screen {
     }
 
     @Override
-    protected void init() {
+    protected void initContent() {
         addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
         int margin = 12;
         int areaW = this.width - margin * 2;
@@ -69,13 +69,15 @@ public class SheetTextEditorScreen extends Screen {
                                 b -> Minecraft.getInstance().setScreen(new CustomColorsScreen(this)))
                         .pos(x, y).size(SWATCH, SWATCH)
                         .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.color.add_tooltip")))
-                        .build(SkinnedButton::new));
+                        .build(SkinnedButton.named("color_add")));
             } else {
                 final String code = ColorPalette.code(i);
-                addRenderableWidget(Button.builder(ColorPalette.label(i, false, null), b -> insert(code))
+                final boolean grad = ColorPalette.get(i).gradient();
+                addRenderableWidget(Button.builder(ColorPalette.label(i, false, null),
+                                b -> { if (grad) wrap(code, ColorPalette.GRAD_END); else insert(code); })
                         .pos(x, y).size(SWATCH, SWATCH)
                         .tooltip(Tooltip.create(ColorPalette.tooltip(i)))
-                        .build(SkinnedButton::new));
+                        .build(SkinnedButton.named("color")));
             }
             x += SWATCH + 1;
         }
@@ -122,7 +124,7 @@ public class SheetTextEditorScreen extends Screen {
                     onDone.accept(value);
                     Minecraft.getInstance().setScreen(back);
                 })
-                .pos(this.width / 2 - 124, btnY).size(120, 20).build(SkinnedButton::new);
+                .pos(this.width / 2 - 124, btnY).size(120, 20).build(SkinnedButton.named("done"));
         SaveUi.refresh(doneButton, I18n.get(K + "done"), !value.equals(original));
         addRenderableWidget(doneButton);
         addRenderableWidget(Button.builder(Component.literal(confirmCancel
@@ -130,14 +132,14 @@ public class SheetTextEditorScreen extends Screen {
                         b -> onClose())
                 .pos(this.width / 2 + 4, btnY).size(120, 20)
                 .tooltip(SaveUi.closeTooltip(confirmCancel))
-                .build(SkinnedButton::new));
+                .build(SkinnedButton.named("cancel")));
     }
 
     private Button tool(String label, String key, int w, Runnable action, int x, int y) {
         return Button.builder(Component.literal(label), b -> action.run())
                 .pos(x, y).size(w, SWATCH)
                 .tooltip(Tooltip.create(Component.translatable(K + "tool." + key)))
-                .build(SkinnedButton::new);
+                .build(SkinnedButton.named("tool_" + key));
     }
 
     /** Types {@code text} at the cursor of the text area, as if it was typed on the keyboard. */
@@ -145,6 +147,12 @@ public class SheetTextEditorScreen extends Screen {
         setFocused(editor);
         editor.setFocused(true);
         for (char c : text.toCharArray()) editor.charTyped(c, 0);
+    }
+
+    /** Inserts {@code open + close} and puts the cursor between them (gradient tags). */
+    private void wrap(String open, String close) {
+        insert(open + close);
+        for (int i = 0; i < close.length(); i++) editor.keyPressed(GLFW.GLFW_KEY_LEFT, 0, 0);
     }
 
     /** Inserts an empty markdown span ({@code ****}) and puts the cursor inside it. */
@@ -178,12 +186,12 @@ public class SheetTextEditorScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float delta) {
         GuiSkin.background(g, this.width, this.height, 0xAA000000);
-        super.render(g, mouseX, mouseY, delta);
+        renderScreen(g, mouseX, mouseY, delta);
         g.drawCenteredString(this.font, "§6" + I18n.get(K + "title", fieldName), this.width / 2, 10, 0xFFD700);
         if (preview != null) {
-            g.drawString(this.font, "§8" + I18n.get(K + "preview"), preview.getX() + 6, preview.getY() - 9, 0x888888, false);
+            g.drawString(this.font, "§8" + I18n.get(K + "preview"), preview.getX() + 6, preview.getY() - 9, 0x888888, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         }
         // The character count is drawn by the Minecraft text area itself (under it, on the right).
     }

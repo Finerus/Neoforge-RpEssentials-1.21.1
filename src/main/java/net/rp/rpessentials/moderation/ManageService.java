@@ -1,5 +1,8 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
@@ -56,6 +59,11 @@ public final class ManageService {
 
         public boolean queueable() {
             return this == CLEAR_INVENTORY || this == CLEAR_ENDER || this == CLEAR_ROLE;
+        }
+
+        /** False for the profession action while the profession system is turned off. */
+        public boolean available() {
+            return this != CLEAR_PROFESSION || net.rp.rpessentials.config.ProfessionConfig.enabled();
         }
 
         public boolean selfBlocked() {
@@ -136,8 +144,9 @@ public final class ManageService {
     public static Result execute(MinecraftServer server, ServerPlayer admin, UUID uuid,
                                  Action action, String text, int number) {
         String adminName = admin != null ? admin.getName().getString() : ServerLang.get(null, MessagesConfig.UI_CONSOLE);
-        if (action.sensitive() && admin != null && !RpEssentialsPermissions.hasSensitiveLevel(admin)) {
-            return fail(admin, MessagesConfig.MANAGE_NEED_SENSITIVE);
+        // One node per action (rpessentials.manage.<action>); the steps of "reset all" were allowed with it.
+        if (!bulk && admin != null && !RpPerms.has(admin, RpPerm.manage(action))) {
+            return fail(admin, MessagesConfig.MANAGE_NO_PERMISSION, "node", RpPerm.manage(action).node());
         }
 
         PlayerList pl = server.getPlayerList();
@@ -236,7 +245,7 @@ public final class ManageService {
                     : fail(admin, MessagesConfig.MANAGE_NO_ABSENCE, "player", name);
             case CLEAR_NICKNAME -> {
                 boolean had = NicknameManager.hasNickname(uuid);
-                if (had) NicknameManager.removeNickname(uuid);
+                if (had) NicknameManager.removeNickname(uuid, adminName);
                 if (PendingProfileManager.hasPending(uuid)) {
                     PendingProfileManager.setNickname(uuid, "");
                     had = true;
@@ -257,6 +266,7 @@ public final class ManageService {
                         : fail(admin, MessagesConfig.MANAGE_ROLES_UNAVAILABLE);
             }
             case CLEAR_PROFESSION -> {
+                if (!action.available()) yield fail(admin, MessagesConfig.MANAGE_NO_PROF, "player", name);
                 int n = clearProfessions(server, uuid, online, name, adminName);
                 yield n > 0 ? ok(admin, MessagesConfig.MANAGE_PROF_CLEARED, "count", String.valueOf(n), "player", name)
                         : fail(admin, MessagesConfig.MANAGE_NO_PROF, "player", name);
@@ -391,7 +401,7 @@ public final class ManageService {
             return false;
         }
         server.getCommands().performPrefixedCommand(silent, "lp user " + name + " parent set default");
-        RpEssentialsRoleManager.invalidate(target.getUUID());
+        net.rp.rpessentials.permission.RpPerms.refresh(target);
         RpEssentialsPermissions.invalidateCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
         SyncNametagDataPacket.broadcastDelayed(target);
@@ -434,7 +444,7 @@ public final class ManageService {
                                    String actionName, String targetName, String reason) {
         String suffix = reason.isEmpty() ? "" : " (" + reason + ")";
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(p) && (admin == null || !p.getUUID().equals(admin.getUUID()))) {
+            if (RpPerms.has(p, RpPerm.NOTIFY) && (admin == null || !p.getUUID().equals(admin.getUUID()))) {
                 p.sendSystemMessage(ColorHelper.parseSection(ServerLang.get(p, MessagesConfig.MANAGE_ALERT,
                         "admin", adminName, "action", actionName, "player", targetName, "reason", suffix)));
             }

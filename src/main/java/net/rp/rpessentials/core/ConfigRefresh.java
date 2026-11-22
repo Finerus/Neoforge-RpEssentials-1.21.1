@@ -45,6 +45,7 @@ public final class ConfigRefresh {
             WorldBorderManager.reloadConfig();
             RpEssentials.clearMetaCache();
             LuckPermsSync.pushAll();
+            net.rp.rpessentials.permission.RpPerms.refreshAll(server);
         }
         if (core || schedule) {
             RpEssentialsScheduleManager.reload();
@@ -66,6 +67,6 @@ public final class ConfigRefresh {
             if (core) PacketDistributor.sendToPlayer(p, new HideNametagsPacket(hide));
             if (core || professions) ProfessionSyncHelper.syncToPlayer(p);
         }
-        if (core || rp) CommandToggles.resend(server);
+        if (core || rp || professions) CommandToggles.resend(server);
     }
 }

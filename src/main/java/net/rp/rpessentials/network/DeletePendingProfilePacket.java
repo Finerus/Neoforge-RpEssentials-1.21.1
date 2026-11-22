@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
@@ -42,7 +45,7 @@ public record DeletePendingProfilePacket(UUID targetUuid) implements CustomPacke
     public static void handleOnServer(DeletePendingProfilePacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer admin)) return;
-            if (!RpEssentialsPermissions.isStaff(admin)) return;
+            if (!RpPerms.has(admin, RpPerm.PROFILE)) return;
 
             if (!PendingProfileManager.hasPending(packet.targetUuid())) return;
             String name = PendingProfileManager.getMcName(packet.targetUuid());

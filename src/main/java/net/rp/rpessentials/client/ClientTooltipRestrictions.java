@@ -76,6 +76,7 @@ public final class ClientTooltipRestrictions {
     }
 
     public static List<Component> lines(Item item) {
+        if (!ClientFeatures.professionsEnabled()) return List.of();
         List<Component> cached = cache.get(item);
         if (cached != null) return cached;
         Built b = build(item);
@@ -150,6 +151,7 @@ public final class ClientTooltipRestrictions {
      * locally too and no ghost animation plays. The server still receives the action and stays the authority.
      */
     public static boolean isUseBlocked(Item item) {
+        if (!ClientFeatures.professionsEnabled()) return false;
         if (exempt || blocked.size() < 5 || allowed.size() < 4) return false;
         String id = BuiltInRegistries.ITEM.getKey(item).toString();
         boolean active = false;

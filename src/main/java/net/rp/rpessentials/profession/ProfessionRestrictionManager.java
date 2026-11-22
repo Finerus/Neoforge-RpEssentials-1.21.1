@@ -1,5 +1,8 @@
 package net.rp.rpessentials.profession;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -252,7 +255,9 @@ public class ProfessionRestrictionManager {
     // EXEMPTION WHITELIST
     // =========================================================================
     public static boolean isExemptFromProfessionRestrictions(ServerPlayer player) {
-        if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.PROFESSION_WHITELIST))
+        // System turned off: nothing is restricted.
+        if (!ProfessionConfig.enabled()) return true;
+        if (RpPerms.has(player, RpPerm.BYPASS_PROFESSION))
             return true;
         try {
             if (RpEssentialsConfig.WHITELIST_EXEMPT_PROFESSIONS != null

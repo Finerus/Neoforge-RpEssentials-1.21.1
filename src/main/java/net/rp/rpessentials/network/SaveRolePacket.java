@@ -30,9 +30,6 @@ public record SaveRolePacket(
         boolean isNew
 ) implements CustomPacketPayload {
 
-    private static final java.util.Set<String> KNOWN_PERMS = java.util.Set.of(
-            "isStaff", "tabWhitelist", "scheduleWhitelist", "professionWhitelist", "seeNicknames",
-            "seeAll", "bypassWorldBorder", "spyMessages", "bypassAutoUnwhitelist", "bypassDeathRpWhitelist");
 
     public static final Type<SaveRolePacket> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(RpEssentials.MODID, "save_role"));
@@ -64,8 +61,7 @@ public record SaveRolePacket(
     public static void handleOnServer(SaveRolePacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
-            if (!RpEssentialsPermissions.isStaff(player)) return;
-            if (!RpEssentialsPermissions.canManageRoles(player)) {
+                        if (!RpEssentialsPermissions.canManageRoles(player)) {
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
                 return;
             }
@@ -82,7 +78,8 @@ public record SaveRolePacket(
 
             if (Cfg.ready(RpEssentialsConfig.SPEC)) {
                 String lpGroup = packet.lpGroup().trim().replaceAll("[^A-Za-z0-9_.-]", "");
-                List<String> newPerms = packet.permissions().stream().filter(KNOWN_PERMS::contains).distinct().toList();
+                // Nodes of this mod only ("rpessentials.x", "rpessentials.x.*", "-rpessentials.x"), old names converted.
+                List<String> newPerms = new ArrayList<>(RpEssentialsRoleManager.parseEntries(String.join(",", packet.permissions())));
                 String newLine = cleanId + ";" + lpGroup + ";" + String.join(",", newPerms);
 
                 List<String> updated = new ArrayList<>();
@@ -103,6 +100,7 @@ public record SaveRolePacket(
                 RpEssentialsRoleManager.reload();
                 RpEssentialsPermissions.clearCache();
                 RpEssentialsScheduleManager.enforceOnlineDelayed(player.getServer());
+                net.rp.rpessentials.permission.RpPerms.refreshAll(player.getServer());
                 LuckPermsSync.pushRole(lpGroup.isBlank() ? cleanId : lpGroup, newPerms);
 
                 final String previous = oldLine;

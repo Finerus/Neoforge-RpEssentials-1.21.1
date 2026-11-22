@@ -1,5 +1,8 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -284,7 +287,7 @@ public class WorldBorderManager {
     // DISTANCE + TELEPORT
     // =========================================================================
     private static void checkPlayerDistance(MinecraftServer server, ServerPlayer player) {
-        if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.BYPASS_WORLD_BORDER))
+        if (RpPerms.has(player, RpPerm.BYPASS_WORLDBORDER))
             return;
 
         String dimId = player.level().dimension().location().toString();

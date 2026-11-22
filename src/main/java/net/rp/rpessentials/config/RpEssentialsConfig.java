@@ -202,36 +202,24 @@ public class RpEssentialsConfig {
                 .define("useLuckPermsGroups", true);
 
         ROLES = BUILDER
-                .comment("Role definitions with their associated permissions (replace the old staffTags and luckPermsStaffGroups).",
-                        "A player has a role when they have the vanilla tag of its id, or the LuckPerms group of its id.",
-                        "Format: id;luckpermsGroup;perm1,perm2,...",
-                        "",
-                        "Available permissions:",
-                        "  isStaff                : access to staff commands",
-                        "  tabWhitelist           : always visible in the tab list, bypassing distance and obfuscation (Always Visible)",
-                        "  scheduleWhitelist      : can connect outside server hours",
-                        "  professionWhitelist    : bypasses profession restrictions",
-                        "  seeNicknames           : sees 'Nickname (RealName)' in tab",
-                        "  seeAll                 : sees all players clearly in tab regardless of range",
-                        "  bypassWorldBorder      : not teleported by world border",
-                        "  spyMessages            : receives spy messages (proximity chat, RP actions)",
-                        "  bypassAutoUnwhitelist  : never removed by auto-unwhitelist",
-                        "  bypassDeathRpWhitelist : death RP does not remove them from whitelist")
+                .comment(rolesComment())
                 .defineList("roles",
                         java.util.Arrays.asList(
-                                "admin;admin;isStaff,professionWhitelist,scheduleWhitelist,seeNicknames,seeAll,bypassWorldBorder,spyMessages,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
-                                "moderator;moderator;isStaff,scheduleWhitelist,professionWhitelist,seeNicknames,bypassWorldBorder,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
-                                "builder;builder;scheduleWhitelist,professionWhitelist,bypassWorldBorder,bypassAutoUnwhitelist,bypassDeathRpWhitelist",
+                                "admin;admin;rpessentials.*",
+                                "moderator;moderator;rpessentials.staff,rpessentials.bypass.profession,rpessentials.see.nicknames,"
+                                        + "rpessentials.bypass.worldborder,rpessentials.bypass.autounwhitelist,rpessentials.bypass.deathrpwhitelist",
+                                "builder;builder;rpessentials.bypass.schedule,rpessentials.bypass.profession,rpessentials.bypass.worldborder,"
+                                        + "rpessentials.bypass.autounwhitelist,rpessentials.bypass.deathrpwhitelist",
                                 "player;player"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";"));
 
         LP_SYNC_ENABLED = BUILDER
                 .comment("Two way sync between the roles and the LuckPerms groups.",
-                        "Each role permission is mirrored as a rpessentials.<permission> node (e.g. rpessentials.seeall)",
-                        "on the LuckPerms group of the role. Roles created here appear in LuckPerms, and groups holding",
-                        "rpessentials.* nodes appear here as roles. Nodes given directly to a player are also applied.",
-                        "Ignored if LuckPerms is absent.")
+                        "The nodes of each role are mirrored on its LuckPerms group (a refused node as a node set to false).",
+                        "Roles created here appear in LuckPerms, and groups holding rpessentials.* nodes appear here as roles.",
+                        "rpessentials.* nodes set in LuckPerms on a player or a group are also applied, even when LuckPerms",
+                        "is not the permission handler of NeoForge. Ignored if LuckPerms is absent.")
                 .define("luckPermsSync", true);
 
         LP_SYNC_IMPORT_ALL_GROUPS = BUILDER
@@ -556,5 +544,33 @@ public class RpEssentialsConfig {
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+    }
+
+    /** Comment of the roles option: format, rules, and every node with its default. */
+    private static String[] rolesComment() {
+        java.util.List<String> lines = new java.util.ArrayList<>(java.util.List.of(
+                "Roles and the permission nodes they give. A player has a role when they have the vanilla tag of its id,",
+                "or the LuckPerms group of the role (useLuckPermsGroups).",
+                "Format: id;luckpermsGroup;node1,node2,...",
+                "  rpessentials.moderation.warn    : grants the node",
+                "  rpessentials.moderation.*       : grants every node starting with rpessentials.moderation.",
+                "  rpessentials.*                  : grants every node",
+                "  -rpessentials.manage.ban        : refuses the node (the most precise entry wins, a refusal wins a tie)",
+                "Nodes only cover RpEssentials commands: vanilla commands (/kick, /ban, /op...) keep their vanilla OP checks.",
+                "With LuckPerms set as permissionHandler in neoforge-server.toml, LuckPerms can also set these nodes.",
+                "A node set nowhere uses its default, shown below: staff = given to rpessentials.staff,",
+                "OP n = from OP level n, sensitive = the level of opLevelBypass (4 when 0), everyone = every player.",
+                ""));
+        for (net.rp.rpessentials.permission.RpPerm p : net.rp.rpessentials.permission.RpPerm.all()) {
+            String def;
+            if (p.opLevel() == net.rp.rpessentials.permission.RpPerm.EVERYONE) def = "everyone";
+            else if (p.opLevel() == net.rp.rpessentials.permission.RpPerm.SENSITIVE) def = "sensitive";
+            else if (p.opLevel() <= 4) def = "OP " + p.opLevel();
+            else def = p == net.rp.rpessentials.permission.RpPerm.STAFF ? "opLevelBypass" : "";
+            if (p.staffDefault()) def = def.isEmpty() ? "staff" : "staff, " + def;
+            if (def.isEmpty()) def = "nobody";
+            lines.add(String.format("  %-38s (default: %s)", p.node(), def));
+        }
+        return lines.toArray(new String[0]);
     }
 }

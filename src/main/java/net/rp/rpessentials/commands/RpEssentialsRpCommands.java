@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -51,6 +54,7 @@ public class RpEssentialsRpCommands {
 
         // ── /me <action> — alias direct de /rp action ──────────────────────
         dispatcher.register(Commands.literal("me")
+                .requires(RpPerms.cmd(RpPerm.PLAYER_RP))
                 .then(Commands.argument("action", StringArgumentType.greedyString())
                         .executes(ctx -> executeAction(ctx,
                                 StringArgumentType.getString(ctx, "action")))));
@@ -60,11 +64,12 @@ public class RpEssentialsRpCommands {
 
         // /rp spawn
         rpRoot.then(Commands.literal("spawn")
-                .requires(src -> spawnEnabled())
+                .requires(src -> spawnEnabled() && RpPerms.has(src, RpPerm.PLAYER_SPAWN))
                 .executes(RpEssentialsRpCommands::executeSpawn));
 
         // /rp afk
         rpRoot.then(Commands.literal("afk")
+                .requires(RpPerms.cmd(RpPerm.PLAYER_RP))
                 .executes(RpEssentialsRpCommands::executeAfk));
 
         rpRoot.then(Commands.literal("help")
@@ -75,25 +80,28 @@ public class RpEssentialsRpCommands {
 
         // /rp commerce <message>
         rpRoot.then(Commands.literal("commerce")
+                .requires(RpPerms.cmd(RpPerm.PLAYER_RP))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> executeCommerce(ctx,
                                 StringArgumentType.getString(ctx, "message")))));
 
         // /rp incognito <message>
         rpRoot.then(Commands.literal("incognito")
+                .requires(RpPerms.cmd(RpPerm.PLAYER_RP))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> executeIncognito(ctx,
                                 StringArgumentType.getString(ctx, "message")))));
 
         // /rp action <action>
         rpRoot.then(Commands.literal("action")
+                .requires(RpPerms.cmd(RpPerm.PLAYER_RP))
                 .then(Commands.argument("action", StringArgumentType.greedyString())
                         .executes(ctx -> executeAction(ctx,
                                 StringArgumentType.getString(ctx, "action")))));
 
         // /rp selfnick [nickname]
         rpRoot.then(Commands.literal("selfnick")
-                .requires(src -> src.getEntity() instanceof ServerPlayer && isSelfNickEnabled())
+                .requires(src -> src.getEntity() instanceof ServerPlayer && isSelfNickEnabled() && RpPerms.has(src, RpPerm.PLAYER_SELFNICK))
                 .executes(ctx -> executeSelfNick(ctx, ""))
                 .then(Commands.argument("nickname", StringArgumentType.greedyString())
                         .executes(ctx -> executeSelfNick(ctx,
@@ -104,7 +112,7 @@ public class RpEssentialsRpCommands {
 
         // /rp annonce <title|chat> <message>
         rpRoot.then(Commands.literal("annonce")
-                .requires(RpEssentialsPermissions::isStaffSource)
+                .requires(RpPerms.cmd(RpPerm.CHAT_ANNOUNCE))
                 .then(Commands.argument("type", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             builder.suggest("title");
@@ -118,7 +126,7 @@ public class RpEssentialsRpCommands {
 
         // /roll [dice]
         dispatcher.register(Commands.literal("roll")
-                .requires(src -> src.getEntity() instanceof ServerPlayer)
+                .requires(src -> src.getEntity() instanceof ServerPlayer && RpPerms.has(src, RpPerm.PLAYER_ROLL))
                 .executes(ctx -> {
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                     if (Cfg.ready(RpConfig.SPEC)) {
@@ -356,7 +364,7 @@ public class RpEssentialsRpCommands {
         }
 
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
+            if (!RpPerms.has(p, RpPerm.CHAT_SPY)) continue;
             p.displayClientMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
                     Msg.get(p, MessagesConfig.RP_INCOGNITO_LOG, "message", message), player)), false);
         }
@@ -402,7 +410,7 @@ public class RpEssentialsRpCommands {
             }
         }
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!RpEssentialsRoleManager.has(p, RpEssentialsRoleManager.Permission.SPY_MESSAGES)) continue;
+            if (!RpPerms.has(p, RpPerm.CHAT_SPY)) continue;
             if (inRange.stream().anyMatch(r -> r.getUUID().equals(p.getUUID()))) continue;
             p.displayClientMessage(ColorHelper.parseColors(RpEssentialsChatFormatter.resolveRpPlaceholders(
                     Msg.get(p, MessagesConfig.RP_ACTION_SPY, "action", action), player)), false);
@@ -436,7 +444,7 @@ public class RpEssentialsRpCommands {
         }
 
         if (nickname.isBlank()) {
-            NicknameManager.removeNickname(player.getUUID());
+            NicknameManager.removeNickname(player.getUUID(), player.getGameProfile().getName());
             player.displayClientMessage(
                     ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_SELFNICK_RESET)), false);
             RpCooldownManager.setCooldown(player.getUUID(), "selfnick");
@@ -472,7 +480,7 @@ public class RpEssentialsRpCommands {
             return 0;
         }
 
-        NicknameManager.setNickname(player.getUUID(), finalNick);
+        NicknameManager.setNickname(player.getUUID(), finalNick, player.getGameProfile().getName());
         RpCooldownManager.setCooldown(player.getUUID(), "selfnick");
 
         String displayNick = finalNick;
@@ -494,7 +502,7 @@ public class RpEssentialsRpCommands {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         MinecraftServer server = ctx.getSource().getServer();
 
-        if (!RpEssentialsPermissions.isStaff(player)) {
+        if (!RpPerms.has(player, RpPerm.CHAT_ANNOUNCE)) {
             player.displayClientMessage(
                     ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_PERMISSION_DENIED)), false);
             return 0;

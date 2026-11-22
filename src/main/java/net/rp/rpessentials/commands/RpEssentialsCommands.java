@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -40,8 +43,10 @@ public class RpEssentialsCommands {
         // =========================================================================
         // ROOT: /rpessentials (requires OP 2)
         // =========================================================================
+        // Visible as soon as one sub command is allowed (each one checks its own node).
+        final com.mojang.brigadier.tree.CommandNode<CommandSourceStack>[] built = new com.mojang.brigadier.tree.CommandNode[1];
         var root = Commands.literal("rpessentials")
-                .requires(RpEssentialsPermissions::isStaffSource);
+                .requires(src -> built[0] == null || built[0].getChildren().stream().anyMatch(c -> c.canUse(src)));
 
         root.then(RpConfigCommands.build());
         root.then(RpStaffCommands.build());
@@ -67,7 +72,7 @@ public class RpEssentialsCommands {
         root.then(RpReportCommands.buildReports());
         root.then(RpDiscordCommands.build());
 
-        dispatcher.register(root);
+        built[0] = dispatcher.register(root);
 
         // =========================================================================
         // STANDALONE ALIASES
@@ -87,6 +92,7 @@ public class RpEssentialsCommands {
         for (String alias : new String[]{"msg", "tell", "w", "whisper"}) {
             dispatcher.getRoot().getChildren().removeIf(node -> node.getName().equals(alias));
             dispatcher.register(Commands.literal(alias)
+                    .requires(RpPerms.cmd(RpPerm.PLAYER_MSG))
                     .then(Commands.argument("target", EntityArgument.player())
                             .then(Commands.argument("message", StringArgumentType.greedyString())
                                     .executes(ctx -> {
@@ -120,6 +126,7 @@ public class RpEssentialsCommands {
                                 .executes(ctx -> opCommand(ctx, IntegerArgumentType.getInteger(ctx, "level"))))));
 
         dispatcher.register(Commands.literal("r")
+                .requires(RpPerms.cmd(RpPerm.PLAYER_MSG))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(ctx -> {
                             ServerPlayer sender = ctx.getSource().getPlayerOrException();

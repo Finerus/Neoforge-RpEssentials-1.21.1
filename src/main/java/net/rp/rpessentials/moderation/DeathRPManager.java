@@ -1,5 +1,8 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.ModerationConfig;
 import com.google.gson.Gson;
@@ -275,7 +278,7 @@ public class DeathRPManager {
         try {
             if (RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE != null
                     && RpEssentialsConfig.DEATH_RP_WHITELIST_REMOVE.get()
-                    && !RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.BYPASS_DEATH_RP_WHITELIST)) {
+                    && !RpPerms.has(player, RpPerm.BYPASS_DEATHRP_WHITELIST)) {
                 server.getPlayerList().getWhiteList()
                         .remove(new net.minecraft.server.players.UserWhiteListEntry(player.getGameProfile()));
                 LOGGER.info("[DeathRP] {} removed from whitelist.", player.getName().getString());
@@ -376,7 +379,7 @@ public class DeathRPManager {
                 ManageService.execute(server, null, id, ManageService.Action.CLEAR_NICKNAME, "", 0);
             if (RpEssentialsConfig.DEATH_RP_RESET_ROLE.get())
                 ManageService.execute(server, null, id, ManageService.Action.CLEAR_ROLE, "", 0);
-            if (RpEssentialsConfig.DEATH_RP_RESET_PROFESSIONS.get())
+            if (RpEssentialsConfig.DEATH_RP_RESET_PROFESSIONS.get() && net.rp.rpessentials.config.ProfessionConfig.enabled())
                 ManageService.execute(server, null, id, ManageService.Action.CLEAR_PROFESSION, "", 0);
         }
     }

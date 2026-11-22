@@ -82,6 +82,19 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
     protected void renderListBackground(GuiGraphics g) {}
 
     @Override
+    public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderWidget(g, mouseX, mouseY, partialTick);
+        // F8: the buttons of rows scrolled out of view are exported too.
+        if (net.rp.rpessentials.client.skin.GuiTemplateExporter.capturing()) {
+            for (Row row : children()) {
+                for (AbstractWidget w : row.widgets) {
+                    if (w instanceof net.rp.rpessentials.client.skin.SkinnedButton b) b.recordForExport();
+                }
+            }
+        }
+    }
+
+    @Override
     protected void renderListSeparators(GuiGraphics g) {}
 
     /**
@@ -96,6 +109,9 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         private final List<java.util.function.Supplier<net.minecraft.world.item.ItemStack>> items = new ArrayList<>();
         private final List<int[]> itemPos = new ArrayList<>();
         private String blockSprite;
+        private String blockId;
+        /** Built as content of the open tab: its block texture is in the tab folder (see GuiSkin). */
+        private final boolean tabContent = GuiSkin.inTab();
         private int blockColor, blockIndex, blockSize = 1;
 
         /** Adds a widget at {@code offsetX} pixels from the left of the row. */
@@ -145,6 +161,12 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
          * With the drawn interface, {@code sprite} is drawn once over the whole block; otherwise each
          * row fills its part with {@code legacyColor}.
          */
+        /** Same, with its own texture: &lt;sprite&gt;_&lt;id&gt;.png first (see GuiSkin). */
+        public Row block(String sprite, String id, int legacyColor, int index, int size) {
+            this.blockId = id;
+            return block(sprite, legacyColor, index, size);
+        }
+
         public Row block(String sprite, int legacyColor, int index, int size) {
             this.blockSprite = sprite;
             this.blockColor = legacyColor;
@@ -157,19 +179,21 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         public void render(GuiGraphics g, int index, int top, int left, int width, int height,
                            int mouseX, int mouseY, boolean hovering, float partialTick) {
             int rowH = ((ButtonRowList) list).itemHeight;
+            boolean oldTab = GuiSkin.setTab(tabContent);
             if (blockColor != 0 || blockSprite != null) {
-                boolean sprite = blockSprite != null && GuiSkin.active(blockSprite);
+                boolean sprite = blockSprite != null && GuiSkin.resolve(blockSprite, blockId, "") != null;
                 if (sprite) {
                     // Drawn once, by the first visible row of the block.
                     if (blockIndex == 0 || top < list.getY()) {
                         int blockTop = top - blockIndex * rowH;
-                        GuiSkin.draw(g, blockSprite, left, blockTop, width, blockSize * rowH - 2);
+                        GuiSkin.draw(g, blockSprite, blockId, "", left, blockTop, width, blockSize * rowH - 2);
                     }
                 } else {
                     int bottom = blockIndex == blockSize - 1 ? top + rowH - 2 : top + rowH;
                     g.fill(left, top, left + width, bottom, blockColor);
                 }
             }
+            GuiSkin.setTab(oldTab);
             for (int i = 0; i < items.size(); i++) {
                 net.minecraft.world.item.ItemStack stack = items.get(i).get();
                 if (stack != null && !stack.isEmpty()) {
@@ -178,7 +202,7 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
             }
             Font font = Minecraft.getInstance().font;
             for (int i = 0; i < texts.size(); i++) {
-                g.drawString(font, texts.get(i), left + textPos.get(i)[0], top + textPos.get(i)[1], 0xFFFFFF, false);
+                g.drawString(font, texts.get(i), left + textPos.get(i)[0], top + textPos.get(i)[1], 0xFFFFFF, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
             }
             for (int i = 0; i < widgets.size(); i++) {
                 AbstractWidget w = widgets.get(i);

@@ -26,6 +26,12 @@ public class AfkPlatformInitializer {
 
         private boolean afkPlatformPlaced = false;
         private String platformKey = "";
+        /** Last mod version this world ran with ("" before 6.1.0 or on a new world). See ModNotices. */
+        private String lastModVersion = "";
+        /** Notice shown to staff at login (welcome / update), and who already saw it. */
+        private String noticeFrom = "";
+        private String noticeTo = "";
+        private final java.util.Set<java.util.UUID> noticeSeen = new java.util.HashSet<>();
 
         public ModState() {}
 
@@ -33,6 +39,12 @@ public class AfkPlatformInitializer {
             ModState state = new ModState();
             state.afkPlatformPlaced = tag.getBoolean("afkPlatformPlaced");
             state.platformKey = tag.getString("platformKey");
+            state.lastModVersion = tag.getString("lastModVersion");
+            state.noticeFrom = tag.getString("noticeFrom");
+            state.noticeTo = tag.getString("noticeTo");
+            for (net.minecraft.nbt.Tag t : tag.getList("noticeSeen", net.minecraft.nbt.Tag.TAG_STRING)) {
+                try { state.noticeSeen.add(java.util.UUID.fromString(t.getAsString())); } catch (IllegalArgumentException ignored) {}
+            }
             return state;
         }
 
@@ -40,10 +52,41 @@ public class AfkPlatformInitializer {
         public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
             tag.putBoolean("afkPlatformPlaced", afkPlatformPlaced);
             tag.putString("platformKey", platformKey);
+            tag.putString("lastModVersion", lastModVersion);
+            tag.putString("noticeFrom", noticeFrom);
+            tag.putString("noticeTo", noticeTo);
+            net.minecraft.nbt.ListTag seen = new net.minecraft.nbt.ListTag();
+            for (java.util.UUID u : noticeSeen) seen.add(net.minecraft.nbt.StringTag.valueOf(u.toString()));
+            tag.put("noticeSeen", seen);
             return tag;
         }
 
         public String platformKey() { return platformKey; }
+
+        /** True when the mod already ran on this world (AFK platform placed) before versions were saved. */
+        public boolean usedBefore() { return afkPlatformPlaced || !platformKey.isEmpty(); }
+
+        public String lastModVersion() { return lastModVersion; }
+        public String noticeFrom() { return noticeFrom; }
+        public String noticeTo() { return noticeTo; }
+        public boolean noticeSeenBy(java.util.UUID uuid) { return noticeSeen.contains(uuid); }
+
+        /** Saves the version this world runs with, and the notice to show ("" from = first launch). */
+        public void startNotice(String from, String to) {
+            noticeFrom = from;
+            noticeTo = to;
+            noticeSeen.clear();
+            setDirty();
+        }
+
+        public void setLastModVersion(String version) {
+            lastModVersion = version;
+            setDirty();
+        }
+
+        public void markNoticeSeen(java.util.UUID uuid) {
+            if (noticeSeen.add(uuid)) setDirty();
+        }
 
         public void markPlaced(String key) {
             afkPlatformPlaced = true;
@@ -54,11 +97,15 @@ public class AfkPlatformInitializer {
 
     // =========================================================================
 
-    public static void tryPlace(MinecraftServer server) {
-        ServerLevel overworld = server.overworld();
-        ModState state = overworld.getDataStorage().computeIfAbsent(
+    /** Mod state of the server (saved with the overworld, data/rpessentials_modstate.dat). */
+    public static ModState state(MinecraftServer server) {
+        return server.overworld().getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(ModState::new, ModState::load),
                 SAVED_DATA_ID);
+    }
+
+    public static void tryPlace(MinecraftServer server) {
+        ModState state = state(server);
 
         String dimId;
         double x, y, z;

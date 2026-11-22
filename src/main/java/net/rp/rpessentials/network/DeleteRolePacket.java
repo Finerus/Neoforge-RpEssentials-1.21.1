@@ -36,8 +36,7 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
     public static void handleOnServer(DeleteRolePacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
-            if (!RpEssentialsPermissions.isStaff(player)) return;
-
+            
             if (!RpEssentialsPermissions.canManageRoles(player)) {
                 player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
                 return;
@@ -59,6 +58,7 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
                 RpEssentialsRoleManager.reload();
                 RpEssentialsPermissions.clearCache();
                 RpEssentialsScheduleManager.enforceOnlineDelayed(player.getServer());
+                net.rp.rpessentials.permission.RpPerms.refreshAll(player.getServer());
 
                 if (removed != null) {
                     String[] o = removed.split(";", 3);

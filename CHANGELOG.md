@@ -1,6 +1,62 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [6.1.0]
+
+> **Textured look (work in progress):** only the 5 tabs of the Player Profile (Stats, Notes, Manage, History, Reports) have their final textures so far; the character sheet, profile tab and the other screens keep the generic textures and will be drawn in later versions. The tabs already drawn may still change. The legacy look is unchanged.
+
+### Breaking Changes
+
+* **Vanish option renamed:** `hideNametags` of the vanish `Hidden Aspects` (moderation config) is now `hideVanishedNametag`, so `/rpessentials config set hideNametags <value>` reaches the global option of the core config without typing `core`. A value changed in an old file goes back to its default (`true`).
+* **Permission nodes:** every RpEssentials command and feature now has its own node (`rpessentials.moderation.warn`, `rpessentials.manage.kick`, `rpessentials.bypass.schedule`...), registered in the NeoForge permission API. Role permissions are now nodes, with wildcards (`rpessentials.moderation.*`) and refusals (`-rpessentials.manage.ban`); the old names (`isStaff`, `seeAll`...) are converted in `rpessentials-core.toml` and in the LuckPerms groups at startup. Without any node set, each node keeps the old behavior (staff, OP level, or every player): the full list with defaults is in the comment of the `roles` option. Nodes only cover RpEssentials commands: the vanilla `/kick`, `/ban`, `/op`... keep their vanilla OP checks.
+* **Giving a role from the Player Profile** now needs `rpessentials.roles.set` (OP 3 by default, like `/rpessentials setrole`) instead of the opLevelBypass level. Editing roles needs `rpessentials.roles.manage` (opLevelBypass level by default).
+* **Network:** new `SyncPermissionsPacket` and `SyncFeaturesPacket`. Server and clients must run the same version.
+* **Immersive Messages on NeoForge 21.1.262+: install Forgified Fabric API 0.116.15 or newer.** TxniLib (needed by Immersive Messages) ships Forgified Fabric API 0.115.6, which disconnects every player joining a world from NeoForge 21.1.262 on (`fabric:accepted_attachments_v1` could not be encoded). On those NeoForge versions the NeoForge loading screen now shows a warning saying what to install (the game can still go on); on older ones nothing is asked. Immersive Messages stays optional, and nothing is shipped inside the mod jar anymore (the jar went from 7 MB back to 1.5 MB).
+
+### Added
+
+* **Profession system can be turned off:** new `enableProfessionSystem` option (professions config). When off, nothing is restricted, the `/rpessentials license` commands and `/myprofession` disappear, `/give` and `/item` refuse the license item with a dedicated message, the license item no longer opens and the text of the card and of its tooltip is scrambled, the Professions and Global tabs of the editor are locked (the editor opens on Roles), the Player Profile and `/rpessentials inspect` / `stats` hide licenses, and the Config GUI only shows the switch in the greyed-out Professions file. Professions, licenses and restrictions are kept. Applied at once, without restart; the Config GUI (Apply clicked twice) and `/rpessentials config set enableProfessionSystem` (typed twice within 30 s) ask for a confirmation. Thanks to **HeinzMelloiTheIII** for suggesting it on CurseForge!
+* **Welcome and update notice:** on the first launch of the mod on a server, every player gets a welcome message at login (until a staff member with `config.gui` has logged in); after an update, staff members get a short list of what changed. Shown once per player, translated by the client language. The last version the server ran with is saved in the mod state (`data/rpessentials_modstate.dat`).
+* **One texture per element:** in the textured look, every button, tab, panel, list and text field of the RpEssentials screens has its own texture (`player_profile/button_apply.png`, `panel_players.png`, `list_row_players.png`, `text_field_note.png`...), falling back to the generic one when the file is missing. Textures are sorted by category: what every tab shares (player list, tab buttons, Close...) in `player_profile/`, what only exists in one tab in `player_profile/<tab>/` (`player_profile/profile/button_apply.png`). F8 exports exactly the files the game uses, in the right folder. The legacy look is unchanged.
+* **Fixed canvas (every RpEssentials screen):** in the textured look, the screens are laid out on a fixed 480x270 canvas (16:9), enlarged by a whole number of pixels (x4 in 1080p, x8 in 4K) and centered, so textures are drawn pixel for pixel without nine-slice, whatever the window size. Small windows fill the screen with a non-whole enlargement. The legacy look still uses the whole window.
+* **GUI template export (texture makers only, not in the published mod):** start the game with `-Drpessentials.guiExport=true`, then press F8 (key "Export the texture templates of the open GUI") in an RpEssentials screen to write a PNG of every element at its exact size, prefilled with the current texture and with its `.mcmeta`, into `rpessentials/gui_templates/`, plus a screenshot with every element outlined.
+* **Icons:** the Player Profile filter button shows a Steve head for each filter (online, offline, prepared, all, reported), and every refresh button uses a refresh icon instead of the `↻` character, in both looks.
+* **Color picker:** the "My colors" screen has a shade square and a hue bar with a live preview, and can save gradients between two colors. Gradients appear in every palette (nickname, profession name, character sheet).
+* **Roles editor:** the Roles tab lists every node by group, with a Default / Granted / Refused button, the default of each node and what the role really gives (wildcards and staff included), a search field and per group "grant all" / "back to default" buttons. Entries written by hand that the list does not show are kept.
+* **Manage actions:** one node per action (`rpessentials.manage.<action>`). The Manage tab greys out and `/rpessentials manage` stops suggesting the actions a staff member is not allowed to do.
+* **License in third person (work in progress):** other players (and yourself in F5) now see the real license card instead of the item icon, held like in first person: with both arms forward in front of the chest when the other hand is empty, in the raised hand otherwise. The card faces its holder (the others see its back) and has a thickness, in first person too. Position, size and look may still change.
+* **API:** `RpEssentialsAPI.isServerOpen()`, `getForceState()`, `getScheduleStatus()`, `forceOpenServer()`, `forceCloseServer()` and `resetServerForceState()`, and the `ServerScheduleEvent` events: `ForceStateChanging` (cancellable), `Opened` and `Closed`, for scheduled and forced openings and closings.
+
+### Changed
+
+* **Panel frame:** in every RpEssentials screen, the content of the panels (titles, lists and their scroll bars, bottom buttons and fields) now stays 7 px inside the panel edges, so it never covers the frame of a texture.
+* **Player Profile:** the "+" button that prepares a profile is greyed out while no name is typed.
+* **Player Profile, Manage tab:** the action buttons use one fixed-size texture per row width (`button_manage_action_1` to `_4`) instead of a stretched one.
+* **Screen background:** the textured look now uses the vanilla darkening behind the RpEssentials screens instead of a `background.png` texture.
+* **Text shadow:** in the textured look, every text of the RpEssentials screens now has a shadow, so it stays readable on textures. The legacy look is unchanged.
+* **NeoForge versions:** the mod now accepts NeoForge 21.1.219 and newer (max 21.1.266).
+* **License in hand:** the card is now drawn like a vanilla map. It goes down and up when it is taken or put away, follows the arm swing, and is held in one hand when the other hand holds something. The `ItemInHandRenderer` mixin is gone.
+* **Gradients:** a `<grad:#RRGGBB:#RRGGBB>` tag without `</grad>` now colors the text up to its end.
+* **Profession names** can be up to 96 characters, to fit a gradient picked in the palette.
+
+### Fixed
+
+* **Nickname history:** a nickname set or removed by a staff member (command, Player Profile, Manage) now records that staff member as the author, instead of no author.
+* **Player Profile notes:** the note header ("edited by ...") wraps instead of going out of the note.
+* **Player Profile:** "No player matches this filter" no longer goes out of the player list, it wraps.
+* **Config Manager stuck on "Loading…":** the server dropped any file request sent less than a second after the previous one (clicking files quickly, or the search fetching every file), so the page never loaded. The server now allows bursts, the client asks again until the file arrives (and shows a Refresh button if the server never answers), and files already fetched by the search open at once.
+* **Whitelist in the player profile:** when the server whitelist is off, the profile showed every player as whitelisted. It now says the whitelist is disabled, and whether the player is in the list.
+* **Auto-unwhitelist** no longer treats every player as whitelisted when the server whitelist is off.
+* **Offline players missing after a restart:** `lastconnection.json` (offline players of the Player Profile, playtime, last connections) was only written by `/rpessentials reload`, so every login since the last reload was lost when the server stopped. It is now written at each logout, every minute and when the server stops.
+* **Color picker:** the name hint no longer goes out of its field, and the preview text is translated.
+
+### Personnal notes
+
+Hiiii, so first things first as promised the profession system can now be disabled! Type `/rpessentials config set enableProfessionSystem` twice (one to start the process, and a second time to confirm).
+Also, I've started to draw the GUI, those are not permanent texture and may change in the future!
+And most important one, if you want to update your NeoForge version to higher than 21.1.262 you HAVE to install Forgified Fabric API 0.116.15.+2.3.6+1.21.1 or the mod will crash...
+That's pretty much it! Have a great day (it's almost midnight for me but yeaaah, I'm a night owl)
+
 ## [6.0.0]
 
 ### Breaking Changes

@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -39,16 +42,16 @@ public class RpScheduleCommands {
         return Commands.literal(name)
                 .executes(RpScheduleCommands::showSchedule)
                 .then(Commands.literal("forceopen")
-                        .requires(src -> src.hasPermission(2))
+                        .requires(RpPerms.cmd(RpPerm.SCHEDULE_FORCE))
                         .executes(RpScheduleCommands::forceOpen))
                 .then(Commands.literal("forceclose")
-                        .requires(src -> src.hasPermission(2))
+                        .requires(RpPerms.cmd(RpPerm.SCHEDULE_FORCE))
                         .executes(RpScheduleCommands::forceClose))
                 .then(Commands.literal("resetforcestate")
-                        .requires(src -> src.hasPermission(2))
+                        .requires(RpPerms.cmd(RpPerm.SCHEDULE_FORCE))
                         .executes(RpScheduleCommands::forceReset))
                 .then(Commands.literal("whitelist")
-                        .requires(src -> src.hasPermission(2))
+                        .requires(RpPerms.cmd(RpPerm.SCHEDULE_WHITELIST))
                         .then(Commands.literal("add")
                                 .then(Commands.argument("player", StringArgumentType.word())
                                         .suggests((ctx, builder) -> {
@@ -70,7 +73,7 @@ public class RpScheduleCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildSetRole() {
         return Commands.literal("setrole")
-                .requires(src -> src.hasPermission(3))
+                .requires(RpPerms.cmd(RpPerm.ROLES_SET))
                 .then(Commands.argument("player", EntityArgument.player())
                         .then(Commands.argument("role", StringArgumentType.word())
                                 .suggests((ctx, builder) -> {
@@ -262,14 +265,13 @@ public class RpScheduleCommands {
         server.getCommands().performPrefixedCommand(silent, "tag " + name + " add " + roleId);
         server.getCommands().performPrefixedCommand(silent, "lp user " + name + " parent set " + finalLpGroup);
 
-        RpEssentialsRoleManager.invalidate(target.getUUID());
-        RpEssentialsPermissions.invalidateCache(target.getUUID());
+        net.rp.rpessentials.permission.RpPerms.refresh(target);
         ProfessionSyncHelper.syncToPlayer(target);
         SyncNametagDataPacket.broadcastDelayed(target);
         RpEssentialsScheduleManager.enforceOnlineDelayed(server);
 
         for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(sp) && !sp.getUUID().equals(target.getUUID())) {
+            if (RpPerms.has(sp, RpPerm.NOTIFY) && !sp.getUUID().equals(target.getUUID())) {
                 sp.sendSystemMessage(Msg.c(sp, MessagesConfig.STAFF_SCHED_SETROLE_ALERT,
                         "staff", staffName, "player", name, "role", roleDisplay, "group", String.valueOf(finalLpGroup)));
             }
@@ -360,90 +362,20 @@ public class RpScheduleCommands {
     }
 
     private static int forceReset(CommandContext<CommandSourceStack> ctx) {
-        MinecraftServer server = ctx.getSource().getServer();
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            ScheduleConfig.FORCE_STATE.set("NONE");
-            ScheduleConfig.SPEC.save();
-        }
-
-        RpEssentialsScheduleManager.resetDailyFlags();
-
-        String staffName = ctx.getSource().getTextName();
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(p))
-                p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_SCHED_FORCE_RESET, "staff", staffName));
-        }
-
+        RpEssentialsScheduleManager.resetForceState(ctx.getSource().getServer(), ctx.getSource().getTextName(),
+                net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.COMMAND);
         return 1;
     }
 
     private static int forceOpen(CommandContext<CommandSourceStack> ctx) {
-        MinecraftServer server = ctx.getSource().getServer();
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            ScheduleConfig.FORCE_STATE.set("FORCE_OPEN");
-            ScheduleConfig.SPEC.save();
-        }
-
-        RpEssentialsScheduleManager.resetDailyFlags();
-        RpEssentialsScheduleManager.markOpenedToday();
-        net.rp.rpessentials.compat.DiscordWebhook.onServerOpened(null, null);
-
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            String msg = ScheduleConfig.MSG_SERVER_OPENED.get()
-                    .replace("{open}",  "now")
-                    .replace("{close}", "—")
-                    .replace("{day}",   RpEssentialsScheduleManager.today()
-                            .getDayOfWeek()
-                            .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH));
-            server.getPlayerList().broadcastSystemMessage(
-                    net.rp.rpessentials.util.ColorHelper.parseColors(msg), false);
-        }
-
-        // Notification staff
-        String staffName = ctx.getSource().getTextName();
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (net.rp.rpessentials.permission.RpEssentialsPermissions.isStaff(p))
-                p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_SCHED_FORCE_OPEN, "staff", staffName));
-        }
-
+        RpEssentialsScheduleManager.forceOpen(ctx.getSource().getServer(), ctx.getSource().getTextName(),
+                net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.COMMAND);
         return 1;
     }
 
     private static int forceClose(CommandContext<CommandSourceStack> ctx) {
-        MinecraftServer server = ctx.getSource().getServer();
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            ScheduleConfig.FORCE_STATE.set("FORCE_CLOSED");
-            ScheduleConfig.SPEC.save();
-        }
-
-        RpEssentialsScheduleManager.markClosedToday();
-        net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
-
-        String kickMsg;
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            kickMsg = ScheduleConfig.FORCE_CLOSED_MESSAGE.get();
-        } else {
-            kickMsg = ScheduleConfig.FORCE_CLOSED_MESSAGE.getDefault();
-        }
-        String finalKickMsg = kickMsg;
-
-        // Kick non-staff
-        java.util.List<ServerPlayer> toKick = new java.util.ArrayList<>();
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!RpEssentialsScheduleManager.isScheduleExempt(p)) toKick.add(p);
-        }
-        for (ServerPlayer p : toKick) {
-            p.connection.disconnect(net.rp.rpessentials.util.ColorHelper.parseColors(finalKickMsg));
-        }
-
-        // Notification staff
-        String staffName = ctx.getSource().getTextName();
-        String kicked = String.valueOf(toKick.size());
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(p))
-                p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_SCHED_FORCE_CLOSE, "staff", staffName, "count", kicked));
-        }
-
+        RpEssentialsScheduleManager.forceClose(ctx.getSource().getServer(), ctx.getSource().getTextName(),
+                net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.COMMAND);
         return 1;
     }
 

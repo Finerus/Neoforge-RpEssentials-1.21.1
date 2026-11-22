@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -25,7 +28,7 @@ public class RpBlurTabCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         var blurtabNode = Commands.literal("blurtab")
-                .requires(source -> source.hasPermission(2));
+                .requires(RpPerms.cmd(RpPerm.BLURTAB));
 
         var whitelistNode = Commands.literal("whitelist");
         whitelistNode.then(Commands.literal("add")

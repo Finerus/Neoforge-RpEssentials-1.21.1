@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -38,7 +41,7 @@ public record RequestPlayerStatsPacket(UUID targetUuid) implements CustomPacketP
     public static void handleOnServer(RequestPlayerStatsPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer staff)) return;
-            if (!RpEssentialsPermissions.isStaff(staff)) return;
+            if (!RpPerms.has(staff, RpPerm.STATS)) return;
             List<String> lines = net.rp.rpessentials.moderation.PlayerStatsLines.build(staff.getServer(), staff, packet.targetUuid());
             PacketDistributor.sendToPlayer(staff, new PlayerStatsPacket(packet.targetUuid(), lines));
         });

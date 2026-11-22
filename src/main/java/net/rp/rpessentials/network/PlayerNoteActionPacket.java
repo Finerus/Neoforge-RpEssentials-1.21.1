@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
@@ -58,7 +61,7 @@ public record PlayerNoteActionPacket(
     public static void handleOnServer(PlayerNoteActionPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer staff)) return;
-            if (!RpEssentialsPermissions.isStaff(staff)) return;
+            if (!RpPerms.has(staff, RpPerm.NOTE)) return;
 
             MinecraftServer server = staff.getServer();
             String target = LastConnectionManager.resolveName(server, packet.targetUuid());

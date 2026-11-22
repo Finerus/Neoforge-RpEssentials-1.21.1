@@ -1,5 +1,8 @@
 package net.rp.rpessentials.compat;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
@@ -33,13 +36,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 final class LuckPermsSyncImpl {
 
-    private static final String PREFIX = "rpessentials.";
-    private static final String[] PERMS = {
-            "isStaff", "tabWhitelist", "scheduleWhitelist", "professionWhitelist", "seeNicknames",
-            "seeAll", "bypassWorldBorder", "spyMessages", "bypassAutoUnwhitelist", "bypassDeathRpWhitelist"
-    };
-    private static final Map<String, String> BY_KEY = new HashMap<>();
-    static { for (String p : PERMS) BY_KEY.put(PREFIX + p.toLowerCase(), p); }
+    /**
+     * Role entries are permission nodes ("rpessentials.x", "rpessentials.x.*", "-rpessentials.x"): each one
+     * is mirrored on the LuckPerms group of the role (a refusal as a node set to false), and the
+     * rpessentials.* nodes of a group come back as the entries of its role.
+     */
+    private static final String PREFIX = net.rp.rpessentials.permission.RpPerms.PREFIX;
 
     private static final List<EventSubscription<?>> subs = new ArrayList<>();
     private static final Set<String> dirty = ConcurrentHashMap.newKeySet();
@@ -94,13 +96,16 @@ final class LuckPermsSyncImpl {
             UUID id = ((User) e.getTarget()).getUniqueId();
             RpEssentials.invalidateMeta(id);
             server.execute(() -> {
-                RpEssentialsRoleManager.invalidate(id);
-                RpEssentialsPermissions.invalidateCache(id);
+                ServerPlayer online = server.getPlayerList().getPlayer(id);
+                if (online != null) net.rp.rpessentials.permission.RpPerms.refresh(online);
+                else RpEssentialsRoleManager.invalidate(id);
             });
             return;
         }
         if (!e.isGroup()) return;
         RpEssentials.clearMetaCache();
+        // Any group change can change the nodes or the roles of the players (inheritance, parents...).
+        server.execute(() -> net.rp.rpessentials.permission.RpPerms.refreshAll(server));
         if (!touchesRp(e.getDataBefore()) && !touchesRp(e.getDataAfter())) return;
         mark(server, ((Group) e.getTarget()).getName());
     }
@@ -144,7 +149,7 @@ final class LuckPermsSyncImpl {
 
         String roleList = String.join("§7, §f", touched);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(Component.literal(
+            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(Component.literal(
                     net.rp.rpessentials.lang.ServerLang.get(p, net.rp.rpessentials.config.MessagesConfig.LP_ROLES_SYNCED, "roles", roleList)));
         }
         RpEssentials.LOGGER.info("[LuckPerms] Roles synced from LuckPerms: {}", touched);
@@ -171,7 +176,7 @@ final class LuckPermsSyncImpl {
 
         if (!eventDriven && !hasRp(g)) return false;
         String[] parts = roles.get(i).split(";", 3);
-        if (parse(parts.length > 2 ? parts[2] : "").equals(perms)) return false;
+        if (new HashSet<>(parse(parts.length > 2 ? parts[2] : "")).equals(new HashSet<>(perms))) return false;
         String id = parts[0].trim();
         String lpGroup = parts.length > 1 && !parts[1].isBlank() ? parts[1].trim() : id;
         roles.set(i, id + ";" + lpGroup + ";" + join(perms));
@@ -214,7 +219,7 @@ final class LuckPermsSyncImpl {
         GroupManager gm = lp.getGroupManager();
         Group existing = gm.getGroup(group);
         if (existing != null) {
-            if (granted(existing).equals(desired)) return;
+            if (new HashSet<>(granted(existing)).equals(new HashSet<>(desired))) return;
             gm.modifyGroup(group, g -> write(g, desired)).exceptionally(ex -> fail(group, ex));
             return;
         }
@@ -228,34 +233,36 @@ final class LuckPermsSyncImpl {
         return null;
     }
 
+    /** Replaces the rpessentials.* nodes (without context) of the group by the role entries. */
     private static void write(Group g, Set<String> desired) {
-        List<PermissionNode> current = new ArrayList<>(g.getNodes(NodeType.PERMISSION));
-        for (String perm : PERMS) {
-            String key = PREFIX + perm.toLowerCase();
-            boolean want = desired.contains(perm);
-            boolean has = false;
-            for (PermissionNode n : current) {
-                if (!n.getKey().equalsIgnoreCase(key) || !n.getContexts().isEmpty()) continue;
-                if (want) {
-                    if (n.getValue() && !n.hasExpiry()) has = true;
-                    else g.data().remove(n);
-                } else if (n.getValue()) {
-                    g.data().remove(n);
-                }
-            }
-            if (want && !has) g.data().add(Node.builder(key).value(true).build());
+        Map<String, Boolean> want = new HashMap<>();
+        for (String e : desired) {
+            boolean neg = e.startsWith("-");
+            want.put((neg ? e.substring(1) : e).toLowerCase(Locale.ROOT), !neg);
+        }
+        Set<String> kept = new HashSet<>();
+        for (PermissionNode n : new ArrayList<>(g.getNodes(NodeType.PERMISSION))) {
+            String key = n.getKey().toLowerCase(Locale.ROOT);
+            if (!key.startsWith(PREFIX) || !n.getContexts().isEmpty()) continue;
+            Boolean value = want.get(key);
+            if (value != null && value == n.getValue() && !n.hasExpiry() && kept.add(key)) continue;
+            g.data().remove(n);
+        }
+        for (Map.Entry<String, Boolean> w : want.entrySet()) {
+            if (!kept.contains(w.getKey())) g.data().add(Node.builder(w.getKey()).value(w.getValue()).build());
         }
     }
 
     // =========================================================================
     // UTILITAIRES
     // =========================================================================
+    /** rpessentials.* nodes of the group (without context) as role entries; unknown nodes are ignored. */
     private static Set<String> granted(Group g) {
         Set<String> out = new LinkedHashSet<>();
         for (PermissionNode n : g.getNodes(NodeType.PERMISSION)) {
-            if (!n.getValue() || !n.getContexts().isEmpty()) continue;
-            String perm = BY_KEY.get(n.getKey().toLowerCase());
-            if (perm != null) out.add(perm);
+            if (!n.getContexts().isEmpty() || !n.getKey().toLowerCase(Locale.ROOT).startsWith(PREFIX)) continue;
+            String e = RpEssentialsRoleManager.normalize((n.getValue() ? "" : "-") + n.getKey());
+            if (e != null) out.add(e);
         }
         return out;
     }
@@ -281,21 +288,10 @@ final class LuckPermsSyncImpl {
     }
 
     private static Set<String> parse(String csv) {
-        Set<String> out = new LinkedHashSet<>();
-        for (String token : csv.split(",")) {
-            String perm = BY_KEY.get(PREFIX + token.trim().toLowerCase());
-            if (perm != null) out.add(perm);
-        }
-        return out;
+        return RpEssentialsRoleManager.parseEntries(csv);
     }
 
     private static String join(Set<String> perms) {
-        StringBuilder sb = new StringBuilder();
-        for (String p : PERMS) {
-            if (!perms.contains(p)) continue;
-            if (sb.length() > 0) sb.append(",");
-            sb.append(p);
-        }
-        return sb.toString();
+        return String.join(",", perms);
     }
 }

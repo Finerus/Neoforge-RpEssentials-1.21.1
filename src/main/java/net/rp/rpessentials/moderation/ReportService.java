@@ -1,5 +1,8 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -59,7 +62,7 @@ public final class ReportService {
     private static void notifyStaff(MinecraftServer server, ReportManager.Report r) {
         if (server == null) return;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!RpEssentialsPermissions.isStaff(p)) continue;
+            if (!RpPerms.has(p, RpPerm.NOTIFY_REPORTS)) continue;
             MutableComponent line = msg(p, MessagesConfig.REPORT_STAFF_NEW, "id", String.valueOf(r.id),
                     "reporter", r.reporterName, "player", r.targetName, "reason", r.reason).copy();
             line.append(Component.literal(" ")).append(button(p, MessagesConfig.REPORT_BTN_VIEW,
@@ -71,7 +74,7 @@ public final class ReportService {
     /** Called when a staff member logs in. */
     public static void onStaffLogin(ServerPlayer staff) {
         if (!ReportManager.enabled() || !Cfg.get(ModerationConfig.REPORT_NOTIFY_ON_JOIN, true)) return;
-        if (!RpEssentialsPermissions.isStaff(staff)) return;
+        if (!RpPerms.has(staff, RpPerm.NOTIFY_REPORTS)) return;
         int open = ReportManager.countOpen();
         if (open <= 0) return;
         MutableComponent line = msg(staff, MessagesConfig.REPORT_STAFF_JOIN, "count", String.valueOf(open)).copy();
@@ -91,7 +94,7 @@ public final class ReportService {
         MinecraftServer server = staff.getServer();
         if (server != null) {
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                if (p != staff && RpEssentialsPermissions.isStaff(p)) {
+                if (p != staff && RpPerms.has(p, RpPerm.NOTIFY_REPORTS)) {
                     p.sendSystemMessage(msg(p, MessagesConfig.REPORT_CLAIMED_STAFF,
                             "id", String.valueOf(id), "staff", staff.getGameProfile().getName()));
                 }

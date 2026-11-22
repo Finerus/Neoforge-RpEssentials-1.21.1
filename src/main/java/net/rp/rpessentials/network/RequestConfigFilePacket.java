@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -34,8 +37,10 @@ public record RequestConfigFilePacket(String fileId) implements CustomPacketPayl
                     RequestConfigFilePacket::new
             );
 
-    private static final Map<UUID, Long> lastRequestTime = new java.util.concurrent.ConcurrentHashMap<>();
-    private static final long REQUEST_COOLDOWN_MS = 1000L;
+    /** Recent request times per player (sliding window): the search fetches every file at once. */
+    private static final Map<UUID, java.util.ArrayDeque<Long>> recentRequests = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long REQUEST_WINDOW_MS = 10_000L;
+    private static final int REQUEST_WINDOW_MAX = 60;
 
     @Override
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
@@ -49,21 +54,22 @@ public record RequestConfigFilePacket(String fileId) implements CustomPacketPayl
             if (!(ctx.player() instanceof ServerPlayer player)) return;
 
             // Security: only staff can access config GUI
-            if (!RpEssentialsPermissions.isStaff(player)) {
+            if (!RpPerms.has(player, RpPerm.CONFIG_GUI)) {
                 RpEssentials.LOGGER.warn("[ConfigGUI] Non-staff player {} tried to request config file '{}'",
                         player.getName().getString(), packet.fileId());
                 return;
             }
 
-            // Rate-limit : 1 requête par seconde par joueur
+            // Rate-limit : at most REQUEST_WINDOW_MAX requests per REQUEST_WINDOW_MS per player
             long now = System.currentTimeMillis();
-            Long last = lastRequestTime.get(player.getUUID());
-            if (last != null && now - last < REQUEST_COOLDOWN_MS) {
+            java.util.ArrayDeque<Long> times = recentRequests.computeIfAbsent(player.getUUID(), k -> new java.util.ArrayDeque<>());
+            while (!times.isEmpty() && now - times.peekFirst() > REQUEST_WINDOW_MS) times.pollFirst();
+            if (times.size() >= REQUEST_WINDOW_MAX) {
                 RpEssentials.LOGGER.debug("[ConfigGUI] Rate-limited config request from {}",
                         player.getName().getString());
                 return;
             }
-            lastRequestTime.put(player.getUUID(), now);
+            times.addLast(now);
 
             // Load entries for this file
             List<ConfigInspector.EntryData> entries = ConfigInspector.getEntries(
@@ -71,7 +77,7 @@ public record RequestConfigFilePacket(String fileId) implements CustomPacketPayl
 
             if (entries.isEmpty()) {
                 RpEssentials.LOGGER.warn("[ConfigGUI] No entries found for file id '{}'", packet.fileId());
-                return;
+                // Answer anyway so the client stops waiting.
             }
 
             // Send entries back to the requesting player

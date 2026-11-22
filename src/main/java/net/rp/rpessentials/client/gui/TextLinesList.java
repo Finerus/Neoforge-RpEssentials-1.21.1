@@ -124,7 +124,7 @@ public class TextLinesList extends ObjectSelectionList<TextLinesList.Row> {
         public void render(GuiGraphics g, int index, int top, int left, int width, int height,
                            int mouseX, int mouseY, boolean hovering, float partialTick) {
             if (striped && block % 2 == 0) g.fill(left, top - 1, left + width, top - 1 + ROW_H, 0x18FFFFFF); // full row height, no gap between wrapped parts
-            g.drawString(font, text, left + 3 + indent, top + 1, 0xFFFFFF, false);
+            g.drawString(font, text, left + 3 + indent, top + 1, 0xFFFFFF, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         }
 
         /** Rows are not selectable: no highlight frame on click. */

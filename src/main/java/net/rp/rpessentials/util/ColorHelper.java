@@ -19,7 +19,7 @@ public class ColorHelper {
     private static final Pattern AMP_CODE = Pattern.compile("&(?=[0-9a-fk-orA-FK-OR#])");
     private static final Pattern STRIP_CODE = Pattern.compile("(?i)§(?:#[0-9a-f]{6}|[0-9a-fk-or])");
     private static final Pattern ANY_CODE = Pattern.compile("§(?:#[0-9a-fA-F]{6}|.)");
-    private static final Pattern GRADIENT = Pattern.compile("<grad:#([0-9a-fA-F]{6}):#([0-9a-fA-F]{6})>(.*?)</grad>");
+    private static final Pattern GRADIENT = Pattern.compile("<grad:#([0-9a-fA-F]{6}):#([0-9a-fA-F]{6})>(.*?)(?:</grad>|$)");
 
     /**
      * Parse un texte avec des codes couleur et retourne un Component

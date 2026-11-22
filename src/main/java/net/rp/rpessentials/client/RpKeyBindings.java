@@ -18,6 +18,8 @@ public class RpKeyBindings {
     public static KeyMapping OPEN_PLAYER_PROFILE_GUI;
     public static KeyMapping OPEN_CONFIG_MANAGER_GUI;
     public static KeyMapping OPEN_DICE_GUI;
+    /** Inside an RpEssentials screen: writes the texture templates of that screen (see GuiTemplateExporter). */
+    public static KeyMapping EXPORT_GUI_TEMPLATES;
 
     public static final String CATEGORY = "key.categories.rpessentials";
 
@@ -50,10 +52,19 @@ public class RpKeyBindings {
                 CATEGORY
         );
 
+        EXPORT_GUI_TEMPLATES = new KeyMapping(
+                "key.rpessentials.export_gui_templates",
+                InputConstants.Type.KEYSYM,
+                org.lwjgl.glfw.GLFW.GLFW_KEY_F8,
+                CATEGORY
+        );
+
         event.register(OPEN_PROFESSION_GUI);
         event.register(OPEN_PLAYER_PROFILE_GUI);
         event.register(OPEN_CONFIG_MANAGER_GUI);
         event.register(OPEN_DICE_GUI);
+        // Texture tool: only in the development environment or with -Drpessentials.guiExport=true.
+        if (net.rp.rpessentials.client.skin.GuiTemplateExporter.enabled()) event.register(EXPORT_GUI_TEMPLATES);
 
         RpEssentials.LOGGER.debug("[RpEssentials] GUI keybindings registered (including Config Manager)");
     }

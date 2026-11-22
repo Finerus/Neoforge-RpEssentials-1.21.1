@@ -361,7 +361,7 @@ public class ModerationConfig {
         VH_NOISE = vh("hideSounds", "Hide the sounds and block break particles caused by the player (steps, blocks, hits).");
         VH_GAME_EVENTS = vh("hideVibrations", "Prevent the player from triggering sculk sensors, wardens and other vibrations.");
         VH_CONTAINERS = vh("silentContainers", "Opening chests, barrels and ender chests makes no sound and plays no lid animation.");
-        VH_NAMETAG = vh("hideNametags", "Stop sending the nametag data of the player to viewers who cannot see them.");
+        VH_NAMETAG = vh("hideVanishedNametag", "Stop sending the nametag data of the player to viewers who cannot see them.");
         VH_GUI = vh("hideFromProfileGui", "Hide the player from the Player Profile GUI.");
         VH_PING = vh("hideFromServerList", "Remove the player from the player count and the sample of the server list ping.");
         VH_MOBS = vh("mobsIgnore", "Hostile mobs never target the player.");

@@ -20,7 +20,7 @@ import java.util.List;
  * S'ouvre via la touche configurable dans Options > Contrôles.
  */
 @OnlyIn(Dist.CLIENT)
-public class DiceSelectionScreen extends Screen {
+public class DiceSelectionScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
     private static final int BTN_W = 80;
     private static final int BTN_H = 20;
@@ -33,7 +33,7 @@ public class DiceSelectionScreen extends Screen {
     }
 
     @Override
-    protected void init() {
+    protected void initContent() {
         dice = DiceManager.getAvailableDice();
         if (dice.isEmpty()) {
             onClose();
@@ -61,16 +61,16 @@ public class DiceSelectionScreen extends Screen {
             addRenderableWidget(Button.builder(Component.literal(label), btn -> {
                 PacketDistributor.sendToServer(new DiceRollPacket(d.name()));
                 onClose();
-            }).pos(x, y).size(BTN_W, BTN_H).build(SkinnedButton::new));
+            }).pos(x, y).size(BTN_W, BTN_H).build(SkinnedButton.named("dice")));
         }
 
         addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.dice.cancel"), btn -> onClose())
                 .pos((this.width - 60) / 2, startY + totalH + PAD + 4)
-                .size(60, BTN_H).build(SkinnedButton::new));
+                .size(60, BTN_H).build(SkinnedButton.named("cancel")));
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float delta) {
         GuiSkin.background(g, this.width, this.height, 0x88000000);
 
         int rows = (dice.size() + COLS - 1) / COLS;
@@ -79,7 +79,7 @@ public class DiceSelectionScreen extends Screen {
                 (this.height / 2) - (rows * (BTN_H + PAD)) / 2 - 16,
                 0xFFD700);
 
-        super.render(g, mouseX, mouseY, delta);
+        renderScreen(g, mouseX, mouseY, delta);
     }
 
     @Override

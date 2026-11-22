@@ -1,5 +1,8 @@
 package net.rp.rpessentials.mixin;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
@@ -52,7 +55,7 @@ public abstract class MixinServerCommonPacketListenerImpl {
                 && !actions.contains(ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER)) return infoPacket;
 
         boolean seesAll = TabBlur.seesAll(receiver, s);
-        boolean showRealNames = RpEssentialsRoleManager.has(receiver, RpEssentialsRoleManager.Permission.SEE_NICKNAMES);
+        boolean showRealNames = RpPerms.has(receiver, RpPerm.SEE_NICKNAMES);
 
         List<ClientboundPlayerInfoUpdatePacket.Entry> originalEntries =
                 ((ClientboundPlayerInfoUpdatePacketAccessor) infoPacket).getEntries();

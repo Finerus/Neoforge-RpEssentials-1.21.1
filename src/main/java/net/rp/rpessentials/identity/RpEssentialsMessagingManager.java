@@ -1,5 +1,8 @@
 package net.rp.rpessentials.identity;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -80,8 +83,7 @@ public class RpEssentialsMessagingManager {
             if (ChatConfig.ENABLE_PM_SPY.get()) {
                 for (ServerPlayer p : sender.getServer().getPlayerList().getPlayers()) {
                     if (p == sender || p == target) continue;
-                    if (net.rp.rpessentials.permission.RpEssentialsRoleManager.has(p,
-                            net.rp.rpessentials.permission.RpEssentialsRoleManager.Permission.SPY_MESSAGES)) {
+                    if (RpPerms.has(p, RpPerm.CHAT_SPY)) {
                         p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(
                                 net.rp.rpessentials.lang.ServerLang.get(p, MessagesConfig.MP_SPY_FORMAT,
                                         "sender", sender.getName().getString(),

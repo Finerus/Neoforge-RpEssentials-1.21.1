@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -27,7 +30,7 @@ public final class RpReportCommands {
     /** Player side, added under /rp. */
     public static LiteralArgumentBuilder<CommandSourceStack> buildReport() {
         return Commands.literal("report")
-                .requires(src -> src.getEntity() instanceof ServerPlayer)
+                .requires(src -> src.getEntity() instanceof ServerPlayer && RpPerms.has(src, RpPerm.PLAYER_REPORT))
                 .then(Commands.argument("player", GameProfileArgument.gameProfile())
                         .then(Commands.argument("reason", StringArgumentType.greedyString())
                                 .executes(RpReportCommands::report)));
@@ -36,6 +39,7 @@ public final class RpReportCommands {
     /** Staff side, added under /rpessentials (which already requires staff). */
     public static LiteralArgumentBuilder<CommandSourceStack> buildReports() {
         return Commands.literal("reports")
+                .requires(RpPerms.cmd(RpPerm.REPORTS))
                 .then(Commands.literal("list").executes(ctx -> {
                     for (Component line : ReportService.listLines(viewer(ctx))) ctx.getSource().sendSystemMessage(line);
                     return 1;

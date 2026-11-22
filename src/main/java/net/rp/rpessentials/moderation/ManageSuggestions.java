@@ -1,5 +1,8 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
@@ -79,7 +82,7 @@ public class ManageSuggestions {
         };
 
         for (ServerPlayer p : pl.getPlayers()) {
-            if (!RpEssentialsPermissions.isStaff(p)) continue;
+            if (!RpPerms.has(p, RpPerm.NOTIFY)) continue;
             p.sendSystemMessage(ColorHelper.parseSection(ServerLang.get(p, header, "player", name)));
             Component[] lines = switch (kind) {
                 case UNWHITELISTED -> new Component[]{

@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
 import net.minecraft.network.FriendlyByteBuf;
@@ -59,7 +62,7 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
     public static void handleOnServer(SaveConfigEntriesPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
-            if (!RpEssentialsPermissions.isStaff(player)) {
+            if (!RpPerms.has(player, RpPerm.CONFIG_GUI)) {
                 RpEssentials.LOGGER.warn("[ConfigGUI] Non-staff {} tried to save config '{}'",
                         player.getName().getString(), packet.fileId());
                 return;

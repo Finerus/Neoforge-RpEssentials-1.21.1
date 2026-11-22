@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.lang.ServerLang;
@@ -66,7 +69,7 @@ public record SaveGlobalRestrictionsPacket(
     public static void handleOnServer(SaveGlobalRestrictionsPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
-            if (!RpEssentialsPermissions.isStaff(player)) return;
+            if (!RpPerms.has(player, RpPerm.PROFESSIONS_EDIT)) return;
 
             if (Cfg.ready(ProfessionConfig.SPEC)) {
                 List<Object[]> details = new ArrayList<>();

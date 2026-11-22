@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -41,7 +44,7 @@ public class RpConfigCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         var configNode = Commands.literal("config")
-                .requires(source -> source.hasPermission(2));
+                .requires(RpPerms.cmd(RpPerm.CONFIG));
 
         configNode.then(Commands.literal("reload").executes(RpConfigCommands::reloadConfig));
 
@@ -92,6 +95,7 @@ public class RpConfigCommands {
         RpEssentials.clearMetaCache();
         WorldBorderManager.reloadConfig();
         RpEssentialsScheduleManager.enforceOnline(ctx.getSource().getServer());
+        net.rp.rpessentials.permission.RpPerms.refreshAll(ctx.getSource().getServer());
 
         // Données persistantes (rechargement depuis fichier)
         NicknameManager.reload();

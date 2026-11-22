@@ -33,6 +33,14 @@ public class LicenseItem extends Item {
                         poseStack, arm, equipProgress, swingProgress);
                 return true;
             }
+
+            /** Third person: held like in first person (both arms forward when the other hand is empty). */
+            @Override
+            public net.minecraft.client.model.HumanoidModel.ArmPose getArmPose(net.minecraft.world.entity.LivingEntity entity,
+                                                                              net.minecraft.world.InteractionHand hand,
+                                                                              net.minecraft.world.item.ItemStack stack) {
+                return net.rp.rpessentials.client.LicenseArmPose.POSE.getValue();
+            }
         });
     }
 
@@ -59,6 +67,10 @@ public class LicenseItem extends Item {
                 tooltip.add(text(MessagesConfig.LICENSE_REVOKED_BODY, "rpessentials.license.tooltip.revoked_body")
                         .withStyle(ChatFormatting.RED, ChatFormatting.ITALIC));
             }
+        }
+        if (!net.rp.rpessentials.client.ClientFeatures.professionsEnabled()) {
+            tooltip.add(Component.translatable("rpessentials.professions.disabled.license_tooltip")
+                    .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         }
         tooltip.add(text(MessagesConfig.LICENSE_TOOLTIP_OFFICIAL, "rpessentials.license.tooltip.official")
                 .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));

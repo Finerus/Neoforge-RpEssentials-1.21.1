@@ -18,7 +18,7 @@ import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.client.LicenseCardRenderer;
 
 @OnlyIn(Dist.CLIENT)
-public class LicenseScreen extends Screen {
+public class LicenseScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
     private static final int TEX_W = 280;
     private static final int TEX_H = 200;
@@ -54,13 +54,13 @@ public class LicenseScreen extends Screen {
     }
 
     @Override
-    protected void init() {
+    protected void initContent() {
         int cx = this.width / 2;
         int cardY = this.height / 2 - TEX_H / 2;
         int btnY = Math.min(cardY + TEX_H + 6, this.height - 22);
         addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
         addRenderableWidget(Button.builder(Component.translatable("rpessentials.license.screen.close"), btn -> onClose())
-                .pos(cx - 25, btnY).size(50, 16).build(SkinnedButton::new));
+                .pos(cx - 25, btnY).size(50, 16).build(SkinnedButton.named("close")));
     }
 
     private static final int FOOTER_Y = 136;
@@ -80,7 +80,7 @@ public class LicenseScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float delta) {
         GuiSkin.background(g, this.width, this.height, 0xAA000000);
 
         int cx = this.width  / 2;
@@ -100,7 +100,7 @@ public class LicenseScreen extends Screen {
                 cx, y, 0xFFFFFF);
         y += 18;
 
-        GuiSkin.separator(g, cardX + 14, y, cardX + TEX_W - 14, y + 1, 0x88FFFFFF);
+        GuiSkin.separator(g, "header", cardX + 14, y, cardX + TEX_W - 14, y + 1, 0x88FFFFFF);
         y += 10;
 
         y = field(g, "rpessentials.license.card.profession", profId, pad, y);
@@ -109,14 +109,14 @@ public class LicenseScreen extends Screen {
         if (expiryDate != null) field(g, "rpessentials.license.card.until", expiryDate, pad, y);
 
         int footerY = cardY + FOOTER_Y;
-        GuiSkin.separator(g, cardX + 14, footerY, cardX + TEX_W - 14, footerY + 1, 0x88FFFFFF);
+        GuiSkin.separator(g, "footer", cardX + 14, footerY, cardX + TEX_W - 14, footerY + 1, 0x88FFFFFF);
         g.drawCenteredString(this.font,
                 revoked
                         ? "§c" + I18n.get("rpessentials.license.card.invalid")
                         : "§a" + I18n.get("rpessentials.license.card.valid"),
                 cx, footerY + 10, 0xFFFFFF);
 
-        super.render(g, mouseX, mouseY, delta);
+        renderScreen(g, mouseX, mouseY, delta);
     }
 
     @Override

@@ -95,6 +95,7 @@
   "Staff BlurTab.listEmpty": "§e[RpEssentials] {label} est vide.",
   "Staff BlurTab.listContent": "§e[RpEssentials] {label} : §f{list}",
 
+  "Staff Manage.noPermission": "§c[Manage] Tu n'as pas le droit de faire cette action (§7{node}§c).",
   "Staff Manage.needSensitiveLevel": "§c[Manage] Cette action demande le niveau OP défini dans opLevelBypass.",
   "Staff Manage.notOnline": "§c[Manage] {player} n'est pas en ligne.",
   "Staff Manage.whitelistAdded": "§a[Manage] {player} ajouté à la whitelist.",
@@ -581,6 +582,7 @@
   "Player Stats.disabled": "§cdésactivée",
   "Player Stats.whitelist": "§7Dans la whitelist : {value}",
   "Player Stats.yes": "§aoui",
+  "Player Stats.whitelistOff": "§8whitelist désactivée §7(dans la liste : {listed}§7)",
   "Player Stats.no": "§cnon",
   "Player Stats.opLevel": "§7Niveau d'OP : §f{level}",
   "Player Stats.role": "§7Rôle : §f{role} §8(LuckPerms : {group})",

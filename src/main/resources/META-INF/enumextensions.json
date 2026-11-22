@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
+      "name": "RPESSENTIALS_LICENSE",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "parameters": {
+        "class": "net/rp/rpessentials/client/LicenseArmPose",
+        "field": "POSE"
+      }
+    }
+  ]
+}

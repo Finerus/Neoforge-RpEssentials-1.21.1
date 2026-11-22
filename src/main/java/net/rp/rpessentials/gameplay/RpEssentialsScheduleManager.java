@@ -1,5 +1,8 @@
 package net.rp.rpessentials.gameplay;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -24,6 +27,8 @@ import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.util.TimeHelper;
+import net.neoforged.neoforge.common.NeoForge;
+import net.rp.rpessentials.api.event.ServerScheduleEvent;
 
 public class RpEssentialsScheduleManager {
 
@@ -174,7 +179,7 @@ public class RpEssentialsScheduleManager {
             net.minecraft.server.MinecraftServer srv = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
             if (srv != null) {
                 for (ServerPlayer p : srv.getPlayerList().getPlayers()) {
-                    if (!RpEssentialsPermissions.isStaff(p)) continue;
+                    if (!RpPerms.has(p, RpPerm.NOTIFY)) continue;
                     for (String w : getConfigWarnings(p)) p.sendSystemMessage(Component.literal(
                             ServerLang.get(p, MessagesConfig.SCHED_SYS_CONFIG_WARNING, "warning", w)));
                 }
@@ -246,9 +251,8 @@ public class RpEssentialsScheduleManager {
     }
 
     public static boolean isScheduleExempt(ServerPlayer player) {
-        if (RpEssentialsPermissions.isStaff(player)) return true;
+        if (RpPerms.has(player, RpPerm.BYPASS_SCHEDULE)) return true;
         if (player.getServer() != null && player.getServer().isSingleplayerOwner(player.getGameProfile())) return true;
-        if (RpEssentialsRoleManager.has(player, RpEssentialsRoleManager.Permission.SCHEDULE_WHITELIST)) return true;
         if (Cfg.ready(ScheduleConfig.SPEC)) {
             return ScheduleConfig.SCHEDULE_WHITELIST.get().contains(player.getGameProfile().getName());
         } else {
@@ -491,21 +495,100 @@ public class RpEssentialsScheduleManager {
                     .replace("{day}", RpEssentialsScheduleManager.getDayName(
                             RpEssentialsScheduleManager.today().getDayOfWeek()));
             for (ServerPlayer p : server.getPlayerList().getPlayers())
-                if (RpEssentialsPermissions.isStaff(p))
+                if (RpPerms.has(p, RpPerm.NOTIFY))
                     p.sendSystemMessage(ColorHelper.parseColors(msg));
         }
         net.rp.rpessentials.compat.DiscordWebhook.onServerOpened(s.open().format(FMT), s.close().format(FMT));
+        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, ServerScheduleEvent.Cause.SCHEDULE,
+                s.open().format(FMT), s.close().format(FMT)));
+    }
+
+    // =========================================================================
+    // FORCED STATE (/schedule forceopen, forceclose, resetforcestate and RpEssentialsAPI)
+    // =========================================================================
+
+    /** Forced state of the schedule config; NONE when the config is not loaded or the value is unknown. */
+    public static ServerScheduleEvent.ForceState getForceState() {
+        if (!Cfg.ready(ScheduleConfig.SPEC)) return ServerScheduleEvent.ForceState.NONE;
+        try {
+            return ServerScheduleEvent.ForceState.valueOf(ScheduleConfig.FORCE_STATE.get());
+        } catch (IllegalArgumentException e) {
+            return ServerScheduleEvent.ForceState.NONE;
+        }
+    }
+
+    /** Posts ForceStateChanging and saves the new state. False when another mod cancelled it. */
+    private static boolean setForceState(MinecraftServer server, ServerScheduleEvent.ForceState state, String actor,
+                                         ServerScheduleEvent.Cause cause) {
+        var ev = new ServerScheduleEvent.ForceStateChanging(server, cause, getForceState(), state, actor);
+        if (NeoForge.EVENT_BUS.post(ev).isCanceled()) return false;
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
+            ScheduleConfig.FORCE_STATE.set(state.name());
+            ScheduleConfig.SPEC.save();
+        }
+        return true;
+    }
+
+    private static void notifyStaff(MinecraftServer server, net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key,
+                                    String... args) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(net.rp.rpessentials.lang.Msg.c(p, key, args));
+        }
+    }
+
+    /** Back to the normal schedule. False when cancelled by another mod. */
+    public static boolean resetForceState(MinecraftServer server, String actor, ServerScheduleEvent.Cause cause) {
+        if (!setForceState(server, ServerScheduleEvent.ForceState.NONE, actor, cause)) return false;
+        resetDailyFlags();
+        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_RESET, "staff", actor);
+        return true;
+    }
+
+    /** Opens the server now, whatever the schedule says. False when cancelled by another mod. */
+    public static boolean forceOpen(MinecraftServer server, String actor, ServerScheduleEvent.Cause cause) {
+        if (!setForceState(server, ServerScheduleEvent.ForceState.FORCE_OPEN, actor, cause)) return false;
+        resetDailyFlags();
+        markOpenedToday();
+        net.rp.rpessentials.compat.DiscordWebhook.onServerOpened(null, null);
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
+            String msg = ScheduleConfig.MSG_SERVER_OPENED.get()
+                    .replace("{open}", "now")
+                    .replace("{close}", "—")
+                    .replace("{day}", today().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH));
+            server.getPlayerList().broadcastSystemMessage(ColorHelper.parseColors(msg), false);
+        }
+        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_OPEN, "staff", actor);
+        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, cause, null, null));
+        return true;
+    }
+
+    /** Closes the server now and kicks the players who are not exempt. False when cancelled by another mod. */
+    public static boolean forceClose(MinecraftServer server, String actor, ServerScheduleEvent.Cause cause) {
+        if (!setForceState(server, ServerScheduleEvent.ForceState.FORCE_CLOSED, actor, cause)) return false;
+        markClosedToday();
+        net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
+        String kickMsg = Cfg.ready(ScheduleConfig.SPEC)
+                ? ScheduleConfig.FORCE_CLOSED_MESSAGE.get() : ScheduleConfig.FORCE_CLOSED_MESSAGE.getDefault();
+        List<ServerPlayer> toKick = new ArrayList<>();
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (!isScheduleExempt(p)) toKick.add(p);
+        }
+        for (ServerPlayer p : toKick) p.connection.disconnect(ColorHelper.parseColors(kickMsg));
+        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_CLOSE, "staff", actor, "count", String.valueOf(toKick.size()));
+        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, cause, toKick.size()));
+        return true;
     }
 
 
-    public static void closeServer(MinecraftServer server) { closeServer(server, true); }
+    public static int closeServer(MinecraftServer server) { return closeServer(server, true); }
 
-    public static void closeServer(MinecraftServer server, boolean announceToStaff) {
+    /** Kicks the players who are not exempt (if kickNonStaff). Returns how many were kicked. */
+    public static int closeServer(MinecraftServer server, boolean announceToStaff) {
         if (Cfg.ready(ScheduleConfig.SPEC)) {
-            if ("FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) return;
-            if (!ScheduleConfig.KICK_NON_STAFF.get()) return;
+            if ("FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) return 0;
+            if (!ScheduleConfig.KICK_NON_STAFF.get()) return 0;
         } else {
-            return;
+            return 0;
         }
         DaySchedule next = getNextOpenSchedule();
         String open  = next != null ? next.open().format(FMT)  : "?";
@@ -526,7 +609,7 @@ public class RpEssentialsScheduleManager {
         List<ServerPlayer> toKick = new ArrayList<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (!isScheduleExempt(p)) toKick.add(p);
-            else if (announce && RpEssentialsPermissions.isStaff(p))
+            else if (announce && RpPerms.has(p, RpPerm.NOTIFY))
                 p.sendSystemMessage(Component.literal(ServerLang.get(p, MessagesConfig.SCHED_SYS_STAFF_CLOSED)));
         }
         if (announce) closeNoticeSent = true;
@@ -538,6 +621,7 @@ public class RpEssentialsScheduleManager {
             sentWarnings.clear();
             RpEssentials.LOGGER.info("[Schedule] Server closed, kicked {} player(s).", toKick.size());
         }
+        return toKick.size();
     }
 
     public static void tickDeathHoursNotifications(MinecraftServer server, LocalTime now) {
@@ -692,8 +776,9 @@ public class RpEssentialsScheduleManager {
             if (active != null) checkWarnings(server, now, active);
             if (!hasClosedToday() && active == null && !"FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) {
                 markClosedToday();
-                closeServer(server);
+                int kicked = closeServer(server);
                 net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
+                NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, ServerScheduleEvent.Cause.SCHEDULE, kicked));
             }
         }
         tickDeathHoursNotifications(server, now);

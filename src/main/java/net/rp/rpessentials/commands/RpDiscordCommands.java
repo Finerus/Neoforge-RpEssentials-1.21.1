@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -16,6 +19,7 @@ public final class RpDiscordCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return Commands.literal("discord")
+                .requires(RpPerms.cmd(RpPerm.DISCORD))
                 .then(Commands.literal("test").executes(ctx -> {
                     CommandSourceStack src = ctx.getSource();
                     ServerPlayer viewer = src.getEntity() instanceof ServerPlayer p ? p : null;

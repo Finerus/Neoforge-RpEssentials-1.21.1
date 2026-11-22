@@ -28,7 +28,7 @@ import java.util.UUID;
  * Character sheet of a player (staff only), opened from the Profile tab of the player profile GUI.
  * One-line fields are edited here; several-lines fields open {@link SheetTextEditorScreen}.
  */
-public class CharacterSheetScreen extends Screen {
+public class CharacterSheetScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
     private static final int ROW_H = 24;
     private static final int LABEL_W = 110;
@@ -101,7 +101,7 @@ public class CharacterSheetScreen extends Screen {
     }
 
     @Override
-    protected void init() {
+    protected void initContent() {
         if (!requested) {
             requested = true;
             PacketDistributor.sendToServer(new RequestCharacterSheetPacket(target));
@@ -134,7 +134,7 @@ public class CharacterSheetScreen extends Screen {
                             })
                             .size(20, 18)
                             .tooltip(Tooltip.create(Component.translatable(K + "use_as_nick_tooltip")))
-                            .build(SkinnedButton::new);
+                            .build(SkinnedButton.named("use_as_nick"));
                     row.add(useAsNickButton, widgetX + widgetW - 20, 3);
                     refreshNickButton();
                 } else {
@@ -149,18 +149,18 @@ public class CharacterSheetScreen extends Screen {
 
         int btnY = this.height - 30;
         saveButton = Button.builder(Component.translatable(K + "btn_save"), btn -> save())
-                .pos(this.width / 2 - 124, btnY).size(120, 20).build(SkinnedButton::new);
+                .pos(this.width / 2 - 124, btnY).size(120, 20).build(SkinnedButton.named("save"));
         refreshSaveButton();
         addRenderableWidget(saveButton);
         addRenderableWidget(Button.builder(Component.literal(SaveUi.closeLabel(confirmDiscard, K + "btn_close")),
                         btn -> close())
                 .pos(this.width / 2 + 4, btnY).size(120, 20)
                 .tooltip(SaveUi.closeTooltip(confirmDiscard))
-                .build(SkinnedButton::new));
+                .build(SkinnedButton.named("close")));
     }
 
     private EditBox lineBox(CharacterSheetManager.Field f, int width) {
-        EditBox box = new SkinnedEditBox(this.font, 0, 0, width, 18, Component.literal(fieldLabel(f)));
+        EditBox box = new SkinnedEditBox(this.font, 0, 0, width, 18, Component.literal(fieldLabel(f))).skin("line");
         box.setMaxLength(CharacterSheetManager.MAX_LINE_LENGTH);
         box.setValue(values.getOrDefault(f.id(), ""));
         String hintKey = K + "hint." + f.id();
@@ -188,7 +188,7 @@ public class CharacterSheetScreen extends Screen {
                 .size(width, 20)
                 .tooltip(value.isEmpty() ? null : Tooltip.create(net.rp.rpessentials.util.RpText.toComponent(
                         value.length() > 600 ? value.substring(0, 600) + "…" : value)))
-                .build(SkinnedButton::new);
+                .build(SkinnedButton.named("edit_text"));
     }
 
     /** Enables Save as soon as something changed, without rebuilding (the focused field keeps its cursor). */
@@ -215,9 +215,9 @@ public class CharacterSheetScreen extends Screen {
     public void onClose() { close(); }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float delta) {
         GuiSkin.background(g, this.width, this.height, 0xAA000000);
-        super.render(g, mouseX, mouseY, delta);
+        renderScreen(g, mouseX, mouseY, delta);
         g.drawCenteredString(this.font, this.title, this.width / 2, 12, 0xFFD700);
         String status = !loaded ? I18n.get(K + "loading")
                 : !enabled ? I18n.get(K + "disabled")

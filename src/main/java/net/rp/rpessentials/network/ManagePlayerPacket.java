@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -45,7 +48,7 @@ public record ManagePlayerPacket(UUID target, ManageService.Action action, Strin
     public static void handleOnServer(ManagePlayerPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer admin)) return;
-            if (!RpEssentialsPermissions.isStaff(admin)) return;
+            if (!RpPerms.has(admin, RpPerm.PROFILE)) return;
             ManageService.Result r = ManageService.execute(admin.getServer(), admin,
                     packet.target(), packet.action(), packet.text(), packet.number());
             admin.sendSystemMessage(Component.literal(r.message()));

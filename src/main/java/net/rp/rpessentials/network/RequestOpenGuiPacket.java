@@ -1,5 +1,8 @@
 package net.rp.rpessentials.network;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -56,7 +59,13 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
     public static void handleOnServer(RequestOpenGuiPacket packet, IPayloadContext ctx) {
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
-            if (!RpEssentialsPermissions.isStaff(player)) return;
+            boolean allowed = switch (packet.guiType()) {
+                case PROFESSION -> RpPerms.has(player, RpPerm.PROFESSIONS_EDIT) || RpPerms.has(player, RpPerm.ROLES_MANAGE);
+                case PLAYER_PROFILE -> RpPerms.has(player, RpPerm.PROFILE);
+                case CONFIG_MANAGER -> RpPerms.has(player, RpPerm.CONFIG_GUI);
+                case ROLES -> RpPerms.has(player, RpPerm.ROLES_MANAGE);
+            };
+            if (!allowed) return;
 
             switch (packet.guiType()) {
                 case PROFESSION      -> handleProfessionGui(player);
@@ -181,7 +190,8 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         }
 
         List<String> professionIds = new ArrayList<>();
-        if (Cfg.ready(ProfessionConfig.SPEC)) {
+        // Profession system turned off: no license part in the profile.
+        if (Cfg.ready(ProfessionConfig.SPEC) && ProfessionConfig.enabled()) {
             for (String line : ProfessionConfig.PROFESSIONS.get()) {
                 String[] parts = line.split(";", 2);
                 if (parts.length >= 1 && !parts[0].trim().isEmpty())

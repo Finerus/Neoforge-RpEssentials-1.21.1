@@ -126,6 +126,40 @@ public final class RpEssentialsAPI {
         net.rp.rpessentials.identity.CharacterSheetManager.registerField(id, label, multiline);
     }
 
+    // ── Server schedule (opening / closing) ──────────────────────────────────
+    /** True when players can join now (schedule, forced state and enableSchedule taken into account). */
+    public static boolean isServerOpen() { return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.isServerOpen(); }
+
+    /** Forced state set by /schedule forceopen / forceclose (NONE = the schedule decides). */
+    public static net.rp.rpessentials.api.event.ServerScheduleEvent.ForceState getForceState() {
+        return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.getForceState();
+    }
+
+    /** Short status in English ("Open: closing in 2h05"...). */
+    public static String getScheduleStatus() { return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.getTimeUntilNextEvent(); }
+
+    /**
+     * Opens the server now, like /schedule forceopen (message, staff notice, Discord, ServerScheduleEvent).
+     * @param actor name shown to staff
+     * @return false when another mod cancelled ServerScheduleEvent.ForceStateChanging
+     */
+    public static boolean forceOpenServer(MinecraftServer server, String actor) {
+        return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.forceOpen(server, actor,
+                net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.API);
+    }
+
+    /** Closes the server now and kicks the players who are not exempt, like /schedule forceclose. */
+    public static boolean forceCloseServer(MinecraftServer server, String actor) {
+        return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.forceClose(server, actor,
+                net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.API);
+    }
+
+    /** Back to the normal schedule, like /schedule resetforcestate. */
+    public static boolean resetServerForceState(MinecraftServer server, String actor) {
+        return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.resetForceState(server, actor,
+                net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.API);
+    }
+
     public static void registerConfig(String mod, int modColor, String id, String displayName, int color,
                                       ConfigInspector.Theme theme, Class<?> clazz, ModConfigSpec spec,
                                       Consumer<MinecraftServer> onApplied) {

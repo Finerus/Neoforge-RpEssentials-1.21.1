@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -53,9 +56,10 @@ public class RpStaffCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         var staffNode = Commands.literal("staff")
-                .requires(RpEssentialsPermissions::isStaffSource);
+                .requires(RpPerms.any(RpPerm.STAFF_GAMEMODE, RpPerm.STAFF_TP, RpPerm.STAFF_EFFECT, RpPerm.STAFF_PLATFORM, RpPerm.STAFF_BROADCAST, RpPerm.STAFF_PROXIMITYSPY));
 
         staffNode.then(Commands.literal("gamemode")
+                .requires(RpPerms.cmd(RpPerm.STAFF_GAMEMODE))
                 .then(Commands.argument("mode", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             builder.suggest("survival").suggest("creative").suggest("adventure").suggest("spectator");
@@ -66,10 +70,12 @@ public class RpStaffCommands {
                                 .executes(RpStaffCommands::silentGamemodeTarget))));
 
         staffNode.then(Commands.literal("tp")
+                .requires(RpPerms.cmd(RpPerm.STAFF_TP))
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(RpStaffCommands::silentTeleport)));
 
         staffNode.then(Commands.literal("effect")
+                .requires(RpPerms.cmd(RpPerm.STAFF_EFFECT))
                 .then(Commands.argument("target", EntityArgument.player())
                         .then(Commands.argument("effect", ResourceLocationArgument.id())
                                 .suggests((ctx, builder) -> {
@@ -81,6 +87,7 @@ public class RpStaffCommands {
                                                 .executes(RpStaffCommands::silentEffect))))));
 
         staffNode.then(Commands.literal("platform")
+                .requires(RpPerms.cmd(RpPerm.STAFF_PLATFORM))
                 .executes(RpStaffCommands::platformSelf)
                 .then(Commands.argument("target", EntityArgument.player())
                         .executes(RpStaffCommands::platformTarget)
@@ -89,10 +96,12 @@ public class RpStaffCommands {
                                 .executes(RpStaffCommands::platformTargetSpecific))));
 
         staffNode.then(Commands.literal("broadcast")
+                .requires(RpPerms.cmd(RpPerm.STAFF_BROADCAST))
                 .then(Commands.argument("message", StringArgumentType.greedyString())
                         .executes(RpStaffCommands::staffBroadcast)));
 
         staffNode.then(Commands.literal("proximityspy")
+                .requires(RpPerms.cmd(RpPerm.STAFF_PROXIMITYSPY))
                 .then(Commands.argument("value", BoolArgumentType.bool())
                         .executes(ctx -> {
                             boolean newVal = BoolArgumentType.getBool(ctx, "value");
@@ -113,7 +122,7 @@ public class RpStaffCommands {
     /** Registers /setplatform and /platform as standalone aliases */
     public static void registerAliases(com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("setplatform")
-                .requires(source -> source.hasPermission(2))
+                .requires(RpPerms.cmd(RpPerm.STAFF_SETPLATFORM))
                 .then(Commands.argument("platform_name", StringArgumentType.word())
                         .then(Commands.argument("dimension", ResourceLocationArgument.id())
                                 .suggests((ctx, builder) -> {
@@ -145,7 +154,7 @@ public class RpStaffCommands {
                                                         .executes(RpStaffCommands::setPlatform)))))));
 
         dispatcher.register(Commands.literal("platform")
-                .requires(RpEssentialsPermissions::isStaffSource)
+                .requires(RpPerms.cmd(RpPerm.STAFF_PLATFORM))
                 .executes(RpStaffCommands::platformSelf)
                 .then(Commands.argument("platform_id", StringArgumentType.word())
                         .suggests(PLATFORM_SUGGESTIONS)
@@ -157,7 +166,7 @@ public class RpStaffCommands {
     /** /rpessentials stats */
     public static LiteralArgumentBuilder<CommandSourceStack> buildStats() {
         return Commands.literal("stats")
-                .requires(RpEssentialsPermissions::isStaffSource)
+                .requires(RpPerms.cmd(RpPerm.STATS))
                 .executes(RpStaffCommands::showStats);
     }
 
@@ -378,10 +387,12 @@ public class RpStaffCommands {
                         RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_NICKNAMES), "§f" + NicknameManager.count()),
                         RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_SCHEDULE), schedule)));
 
-        sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_S_PROFESSIONS)).append("\n")
-                .append(RpChatUi.row(
-                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_HOLDERS), Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_V_HOLDERS, "count", String.valueOf(licenses.size()), "licenses", String.valueOf(licenseCount))),
-                        RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_EXPIRING), "§f" + expiringSoon)));
+        if (net.rp.rpessentials.config.ProfessionConfig.enabled()) {
+            sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_S_PROFESSIONS)).append("\n")
+                    .append(RpChatUi.row(
+                            RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_HOLDERS), Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_V_HOLDERS, "count", String.valueOf(licenses.size()), "licenses", String.valueOf(licenseCount))),
+                            RpChatUi.kv(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_L_EXPIRING), "§f" + expiringSoon)));
+        }
 
         sb.append(Msg.get(ctx.getSource(), MessagesConfig.STAFF_STATS_S_MODERATION)).append("\n")
                 .append(RpChatUi.row(
@@ -421,7 +432,7 @@ public class RpStaffCommands {
     static void logToStaff(CommandSourceStack source, String msg) {
         if (ModerationConfig.LOG_TO_STAFF.get()) {
             source.getServer().getPlayerList().getPlayers().forEach(p -> {
-                if (RpEssentialsPermissions.isStaff(p))
+                if (RpPerms.has(p, RpPerm.NOTIFY))
                     p.sendSystemMessage(Msg.c(p, MessagesConfig.STAFF_TOOLSX_STAFF_LOG, "message", msg));
             });
         }
@@ -432,7 +443,7 @@ public class RpStaffCommands {
     static void broadcastToStaff(MinecraftServer server, String message) {
         if (message == null || message.isEmpty()) return;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpEssentialsPermissions.isStaff(p)) p.sendSystemMessage(Component.literal(message));
+            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(Component.literal(message));
         }
     }
 

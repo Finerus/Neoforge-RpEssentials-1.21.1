@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -30,9 +33,12 @@ public class RpLicenseCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
         var licenseNode = Commands.literal("license")
-                .requires(source -> source.hasPermission(2));
+                // Hidden while the profession system is turned off (the command tree is sent again when it changes).
+                .requires(src -> net.rp.rpessentials.config.ProfessionConfig.enabled()
+                        && RpPerms.any(RpPerm.LICENSE_GIVE, RpPerm.LICENSE_TEMP, RpPerm.LICENSE_REVOKE, RpPerm.LICENSE_REISSUE, RpPerm.LICENSE_LIST, RpPerm.LICENSE_AUDIT).test(src));
 
         licenseNode.then(Commands.literal("give")
+                .requires(RpPerms.cmd(RpPerm.LICENSE_GIVE))
                 .then(Commands.argument("player", EntityArgument.player())
                         .then(Commands.argument("profession", StringArgumentType.word())
                                 .suggests((ctx, builder) -> {
@@ -50,6 +56,7 @@ public class RpLicenseCommands {
                                 .executes(RpLicenseCommands::giveLicense))));
 
         licenseNode.then(Commands.literal("revoke")
+                .requires(RpPerms.cmd(RpPerm.LICENSE_REVOKE))
                 .then(Commands.argument("player", EntityArgument.player())
                         .then(Commands.argument("profession", StringArgumentType.word())
                                 .suggests((ctx, builder) -> {
@@ -64,11 +71,13 @@ public class RpLicenseCommands {
                                 .executes(RpLicenseCommands::revokeLicense))));
 
         licenseNode.then(Commands.literal("list")
+                .requires(RpPerms.cmd(RpPerm.LICENSE_LIST))
                 .executes(RpLicenseCommands::listAllLicenses)
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(RpLicenseCommands::listLicenses)));
 
         licenseNode.then(Commands.literal("tempgive")
+                .requires(RpPerms.cmd(RpPerm.LICENSE_TEMP))
                 .then(Commands.argument("player", EntityArgument.player())
                         .then(Commands.argument("profession", StringArgumentType.word())
                                 .suggests((ctx, builder) -> {
@@ -87,6 +96,7 @@ public class RpLicenseCommands {
                                         .executes(RpLicenseCommands::giveTempLicense)))));
 
         licenseNode.then(Commands.literal("reissue")
+                .requires(RpPerms.cmd(RpPerm.LICENSE_REISSUE))
                 .then(Commands.argument("player", EntityArgument.player())
                         .then(Commands.argument("profession", StringArgumentType.word())
                                 .suggests((ctx, builder) -> {
@@ -101,6 +111,7 @@ public class RpLicenseCommands {
                                 .executes(RpLicenseCommands::reissueLicense))));
 
         licenseNode.then(Commands.literal("audit")
+                .requires(RpPerms.cmd(RpPerm.LICENSE_AUDIT))
                 .executes(ctx -> licenseAudit(ctx, null, 20))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
@@ -120,10 +131,12 @@ public class RpLicenseCommands {
     /** Registers /myprofession and /myjob standalone commands */
     public static void registerAliases(com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("myprofession")
-                .requires(src -> src.getEntity() instanceof ServerPlayer)
+                .requires(src -> net.rp.rpessentials.config.ProfessionConfig.enabled()
+                        && src.getEntity() instanceof ServerPlayer && RpPerms.has(src, RpPerm.PLAYER_MYPROFESSION))
                 .executes(RpLicenseCommands::myProfession));
         dispatcher.register(Commands.literal("myjob")
-                .requires(src -> src.getEntity() instanceof ServerPlayer)
+                .requires(src -> net.rp.rpessentials.config.ProfessionConfig.enabled()
+                        && src.getEntity() instanceof ServerPlayer && RpPerms.has(src, RpPerm.PLAYER_MYPROFESSION))
                 .executes(RpLicenseCommands::myProfession));
     }
 

@@ -1,31 +1,28 @@
-# Rp Essentials
+# RpEssentials
 
-**Rp Essentials** is a comprehensive utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It covers identity obfuscation, nicknames and character sheets, professions and licenses, roles and permissions, moderation, chat formatting, server scheduling, Death RP, world border and zones, and more, all configurable in real time without restarts, from the config files or from in game staff screens.
+**Rp Essentials** is a comprehensive server side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It covers identity obfuscation, professions and licenses, moderation, chat formatting, server scheduling, Death RP, world border and zones, and more, all configurable in real time without restarts.
 
 > Current version: **6.0.0**. Full changelog on [Modrinth](https://modrinth.com/mod/rp-essentials/changelog).
 
 Full documentation, configuration reference and setup guides now live on the **[GitHub Wiki](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki)**.
 
-
 ---
 
 ## Feature overview
 
-| Feature                                                                          | Wiki page                                                                                                                   |
-|:---------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------|
-| Name obfuscation, nicknames, nametags, character sheets                          | [Identity System](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/02.-Identity-System)                         |
-| Professions, licenses, crafting/equipment/container restrictions                 | [Profession & License System](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/03.-Profession-&-License-System) |
-| Warns, mutes, temp bans, reports, staff notes, player history, vanish, Discord webhook | [Moderation System](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/04.-Moderation-System)               |
-| Chat formatting, private messages, join/leave, announcements                     | [Chat System](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/06.-Chat-System)                                 |
-| Opening hours, welcome message, Death Hours, HRP Hours                           | [Server Schedule](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/05.-Server-Schedule)                         |
-| Permanent death system                                                           | [Death RP](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/07.-Death-RP)                                       |
-| Distance warnings (square or circle) and named zones                             | [World Border & Zones](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/08.-World-Border-&-Zones)               |
-| Silent commands, platforms, roles & permissions, dice, auto unwhitelist          | [Staff Tools](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/09.-Staff-Tools)                                 |
-| In game Config Manager GUI (search, value checks)                                | [Config Manager GUI](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/10.-Config-Manager-GUI)                   |
-| Full command list                                                                | [Commands](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/11.-Commands)                                       |
-| Config files and data storage                                                    | [Configuration Files](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/12.-Configuration-Files)                 |
-
-Staff also get in game screens for players (Player Profile: profile, stats, notes, reports, history, manage actions) and for professions and roles (Profession Editor). Every screen is available in English and French.
+| Feature                                                                                | Wiki page                                                                                                                   |
+|:---------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------|
+| Name obfuscation, nicknames, nametags, character sheets                                | [Identity System](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/02.-Identity-System)                         |
+| Professions, licenses, crafting/equipment/container restrictions                       | [Profession & License System](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/03.-Profession-&-License-System) |
+| Warns, mutes, temp bans, reports, staff notes, player history, vanish, Discord webhook | [Moderation System](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/04.-Moderation-System)                     |
+| Chat formatting, private messages, join/leave, announcements                           | [Chat System](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/06.-Chat-System)                                 |
+| Opening hours, welcome message, Death Hours, HRP Hours                                 | [Server Schedule](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/05.-Server-Schedule)                         |
+| Permanent death system                                                                 | [Death RP](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/07.-Death-RP)                                       |
+| Distance warnings (square or circle) and named zones                                   | [World Border & Zones](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/08.-World-Border-&-Zones)               |
+| Silent commands, platforms, roles & permissions, dice, auto unwhitelist                | [Staff Tools](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/09.-Staff-Tools)                                 |
+| In game Config Manager GUI (search, value checks)                                      | [Config Manager GUI](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/10.-Config-Manager-GUI)                   |
+| Full command list                                                                      | [Commands](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/11.-Commands)                                       |
+| Config files and data storage                                                          | [Configuration Files](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/12.-Configuration-Files)                 |
 
 ---
 
@@ -40,55 +37,54 @@ Hi, here is all you need to know about AI in this project:
   Today I'm learning to do most of the new features by myself but AI is still a good tool to help me code complex things.
   From my own perspective, AI is a great tool for coding and I will continue to use it if needed, but I will **never ever** use AI to generate visual assets.
 
+-   Even though AI was used for the development, I test the mod every time before posting a new version to be sure that there are no bugs left or no problems. This does not mean that there are not any bugs, but I try as much as I can to find and correct them ^^ And if it matters to you, I use this mod pretty often and for the moment, I never had any issue with it (or they were fixed pretty quickly)! (And if you find an issue, you can always tell it to me on the github page or in the comment section)
+
 - That's pretty much the only things I had to say, have a great day!
 
 ---
 
 ## Requirements
 
-| Dependency                                                              | Version                | Side   | Required |
-|-------------------------------------------------------------------------|------------------------|--------|----------|
-| Minecraft                                                               | 1.21.1                 | Both   | Yes      |
-| NeoForge                                                                | 21.1.219+              | Both   | Yes      |
-| [RpImmersion](https://www.curseforge.com/minecraft/mc-mods/rpimmersion) | 1.0.0                  | Both   | Optional |
-| LuckPerms                                                               | Any                    | Server | Optional |
-| ImmersiveMessages                                                       | neoforge-1.21.1:1.0.18 | Both   | Optional |
-| TxniLib                                                                 | neoforge-1.21.1:1.0.24 | Both   | Optional |
-| Curios API                                                              | 9.5.1+1.21.1           | Both   | Optional |
+| Dependency                                                                             | Version                | Side   | Required                                     |
+|----------------------------------------------------------------------------------------|------------------------|--------|----------------------------------------------|
+| Minecraft                                                                              | 1.21.1                 | Both   | Yes                                          |
+| NeoForge                                                                               | 21.1.219+              | Both   | Yes                                          |
+| [RpImmersion](https://modrinth.com/mod/rp-immersion)                                   | 1.1.1                  | Both   | Optional                                     |
+| LuckPerms                                                                              | Any                    | Server | Optional                                     |
+| ImmersiveMessages                                                                      | neoforge-1.21.1:1.0.18 | Client | Optional                                     |
+| TxniLib                                                                                | neoforge-1.21.1:1.0.24 | Client | Optional                                     |
+| [Forgified Fabric API](https://modrinth.com/mod/forgified-fabric-api/version/C4eskNuR) | 0.116.15+              | Both   | With ImmersiveMessages on NeoForge 21.1.262+ |
 
-The mod must be installed on the server **and** on every client, with the same version on both sides.
+ImmersiveMessages and TxniLib are only required client side if you use the `IMMERSIVE` display mode somewhere in the config. The server runs fine without them.
+
+> **Important: ImmersiveMessages on NeoForge 21.1.262 or newer.** TxniLib (needed by ImmersiveMessages) ships
+> Forgified Fabric API 0.115.6, which disconnects every player joining a world from NeoForge 21.1.262 on.
+> If you use ImmersiveMessages on those NeoForge versions, also install **Forgified Fabric API 0.116.15 or newer**
+> (the newest version is kept automatically). RpEssentials checks it at startup and shows a warning on the
+> NeoForge loading screen when the old version is found. On older NeoForge versions, or without
+> ImmersiveMessages, nothing is needed.
 
 ---
 
 ## Installation
 
 1. Download the latest `rpessentials-X.X.X.jar` from the releases page.
-2. Place the JAR in the `mods/` folder of your server and of every client.
-3. Optionally install [LuckPerms](https://luckperms.net/) for prefixes/suffixes and a two way sync between the RpEssentials roles and the LuckPerms groups.
+2. Place the JAR in your server's `mods/` folder.
+3. Optionally install [LuckPerms](https://luckperms.net/) for prefix/suffix and group based staff permissions.
 4. Start the server, all config files are generated automatically under `config/rpessentials/`.
 5. Reload in game with `/rpessentials config reload` after editing, or restart the server.
 
 See the [Installation](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki/01.-Installation) wiki page for details.
 
-### Updating to 6.0.0
-
-- Config files from older versions are updated automatically at startup. Each changed file is first copied to `<name>.bak-migration`, and every change is written in the server log with `[Migration]`.
-- The `Roles` section moved into `Permissions System`, and `staffTags` / `luckPermsStaffGroups` are replaced by roles with the `isStaff` permission (converted automatically, the same players stay staff).
-- `worldBorderShape` defaults to `SQUARE`: set it to `CIRCLE` to keep the previous circular limit.
-- Update the server and the clients together.
-
-See the full changelog for every change.
-
 ---
 
 ## Technical Information
 
-| Field      | Value             |
-|:-----------|:------------------|
-| Mod ID     | `rpessentials`    |
-| Group ID   | `net.rpessentials`|
-| Version    | 6.0.0             |
-| MC Version | 1.21.1            |
-| NeoForge   | 21.1.219+         |
-| Java       | 21                |
-| Build      | ModDevGradle      |
+| Field      | Value                 |
+|:-----------|:----------------------|
+| Mod ID     | `rpessentials`        |
+| Group ID   | `net.rp.rpessentials` |
+| Version    | 6.0.0                 |
+| MC Version | 1.21.1                |
+| NeoForge   | 21.1.219+             |
+| Java       | 21                    |

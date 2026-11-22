@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.Msg;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -30,7 +33,7 @@ public class RpNicknameCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildNick() {
         var nickNode = Commands.literal("nick")
-                .requires(source -> source.hasPermission(2));
+                .requires(RpPerms.cmd(RpPerm.NICK_OTHERS));
 
         nickNode.then(Commands.argument("player", EntityArgument.player())
                 .then(Commands.argument("nickname", StringArgumentType.greedyString())
@@ -46,7 +49,7 @@ public class RpNicknameCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildWhois() {
         return Commands.literal("whois")
-                .requires(source -> source.hasPermission(2))
+                .requires(RpPerms.cmd(RpPerm.WHOIS))
                 .then(Commands.argument("nickname", StringArgumentType.greedyString())
                         .suggests((ctx, builder) -> {
                             NicknameManager.getAllNicknames().values().stream()
@@ -62,7 +65,7 @@ public class RpNicknameCommands {
     /** Registers /whois, /list, /colors standalone aliases */
     public static void registerAliases(com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("whois")
-                .requires(source -> source.hasPermission(2))
+                .requires(RpPerms.cmd(RpPerm.WHOIS))
                 .then(Commands.argument("nickname", StringArgumentType.greedyString())
                         .suggests((ctx, builder) -> {
                             NicknameManager.getAllNicknames().values().stream()
@@ -89,6 +92,7 @@ public class RpNicknameCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildHelp() {
         return Commands.literal("help")
+                .requires(RpPerms.cmd(RpPerm.STAFF))
                 .executes(ctx -> {
                     boolean isStaff = RpEssentialsPermissions.isStaff(ctx.getSource().getPlayer());
                     return showHelpPublic(ctx, isStaff);
@@ -110,7 +114,7 @@ public class RpNicknameCommands {
                 return 0;
             }
 
-            NicknameManager.setNickname(target.getUUID(), formattedNickname);
+            NicknameManager.setNickname(target.getUUID(), formattedNickname, ctx.getSource().getTextName());
             target.getServer().getPlayerList().broadcastAll(
                     new ClientboundPlayerInfoUpdatePacket(
                             EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),
@@ -129,7 +133,7 @@ public class RpNicknameCommands {
     private static int resetNickname(CommandContext<CommandSourceStack> ctx) {
         try {
             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
-            NicknameManager.removeNickname(target.getUUID());
+            NicknameManager.removeNickname(target.getUUID(), ctx.getSource().getTextName());
             target.getServer().getPlayerList().broadcastAll(
                     new ClientboundPlayerInfoUpdatePacket(
                             EnumSet.of(ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME),
@@ -227,7 +231,7 @@ public class RpNicknameCommands {
                 .toList();
         StringBuilder sb = new StringBuilder();
         boolean hideReal = false;
-        if (Cfg.ready(ChatConfig.SPEC)) { hideReal = ChatConfig.HIDE_REAL_NAMES.get() && !RpEssentialsPermissions.isStaffSource(src); }
+        if (Cfg.ready(ChatConfig.SPEC)) { hideReal = ChatConfig.HIDE_REAL_NAMES.get() && !RpPerms.has(src, RpPerm.SEE_REALNAMES); }
         sb.append(Msg.get(ctx.getSource(), MessagesConfig.PLAYERLIST_HEADER, "count", String.valueOf(players.size())));
         for (int i = 0; i < players.size(); i++) {
             ServerPlayer p = players.get(i);

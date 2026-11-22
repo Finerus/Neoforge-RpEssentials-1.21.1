@@ -1,5 +1,8 @@
 package net.rp.rpessentials.moderation;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.lang.ServerLang;
 import com.google.gson.Gson;
@@ -184,7 +187,7 @@ public class LastConnectionManager {
             ConnectionEntry entry = e.getValue();
             if (entry.lastLogin == null || entry.mcName == null) continue;
             if (server.getPlayerList().getPlayer(uuid) != null) continue;
-            if (!server.getPlayerList().isWhiteListed(new com.mojang.authlib.GameProfile(uuid, entry.mcName))) continue;
+            if (!server.getPlayerList().getWhiteList().isWhiteListed(new com.mojang.authlib.GameProfile(uuid, entry.mcName))) continue;
 
             long lastLoginMs = loginMillis(entry, sdf);
             if (lastLoginMs == Long.MIN_VALUE) continue;
@@ -204,7 +207,7 @@ public class LastConnectionManager {
                 ManageSuggestions.propose(server, uuid, playerName, ManageSuggestions.Kind.UNWHITELISTED);
 
                 for (ServerPlayer staff : server.getPlayerList().getPlayers()) {
-                    if (!RpEssentialsPermissions.isStaff(staff)) continue;
+                    if (!RpPerms.has(staff, RpPerm.NOTIFY)) continue;
                     net.minecraft.network.chat.MutableComponent msg = net.minecraft.network.chat.Component.literal(
                             ServerLang.get(staff, MessagesConfig.AUTO_UNWHITELIST_STAFF_NOTIFY,
                                     "player", playerName, "days", String.valueOf(inactiveDays)));
@@ -234,24 +237,22 @@ public class LastConnectionManager {
         try {
             net.luckperms.api.LuckPermsProvider.get().getUserManager().loadUser(uuid)
                     .whenComplete((user, err) ->
-                            callback.accept(err == null && user != null && hasBypass(user.getPrimaryGroup(), roles)));
+                            callback.accept(err == null && user != null && hasBypass(user)));
         } catch (NoClassDefFoundError | IllegalStateException ex) {
             callback.accept(false);
         }
     }
 
-    private static boolean hasBypass(String primaryGroup, List<String> roles) {
-        String primary = primaryGroup.toLowerCase();
-        for (String entry : roles) {
-            String[] parts = entry.split(";", 3);
-            if (!parts[0].trim().equalsIgnoreCase(primary)) continue;
-            if (parts.length < 3) return false;
-            for (String p : parts[2].split(",")) {
-                if (p.trim().equalsIgnoreCase("bypassAutoUnwhitelist")) return true;
-            }
-            return false;
-        }
-        return false;
+    /** Node rpessentials.bypass.autounwhitelist of an offline player: LuckPerms, then the roles of their groups. */
+    private static boolean hasBypass(net.luckperms.api.model.user.User user) {
+        String node = RpPerm.BYPASS_AUTOUNWHITELIST.node();
+        net.luckperms.api.util.Tristate t = user.getCachedData().getPermissionData().checkPermission(node);
+        if (t != net.luckperms.api.util.Tristate.UNDEFINED) return t.asBoolean();
+        java.util.Set<String> groups = new java.util.LinkedHashSet<>();
+        groups.add(user.getPrimaryGroup());
+        for (net.luckperms.api.model.group.Group g : user.getInheritedGroups(user.getQueryOptions())) groups.add(g.getName());
+        Boolean v = net.rp.rpessentials.permission.RpEssentialsRoleManager.roleValueForRoles(groups, RpPerm.BYPASS_AUTOUNWHITELIST);
+        return v != null && v;
     }
 
     // =========================================================================
@@ -405,8 +406,12 @@ public class LastConnectionManager {
         dirty.set(true);
     }
 
+    /**
+     * Writes lastconnection.json now if something changed. Called at each logout, by the periodic
+     * playtime flush and when the server stops (so the offline players of the GUI survive a restart).
+     */
     public static void flushToDisk() {
-        if (dirty.getAndSet(false)) markDirty();;
+        if (dataFile != null && dirty.getAndSet(false)) saveToFile(true);
     }
 
     /**

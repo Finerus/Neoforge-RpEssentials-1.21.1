@@ -32,7 +32,14 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @OnlyIn(Dist.CLIENT)
-public class ProfessionEditorScreen extends Screen {
+public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.CanvasScreen implements net.rp.rpessentials.client.skin.SkinScope {
+
+    private static final String[] MAIN_TAB_KEYS = { "professions", "roles", "global" };
+
+    /** Textures of the open tab: sprites/profession_editor/<tab>/ (see GuiSkin). */
+    @Override
+    public String skinTab() { return MAIN_TAB_KEYS[Math.max(0, Math.min(mainTab, MAIN_TAB_KEYS.length - 1))]; }
+
 
 
     private static final Map<String, List<ItemStack>> ICON_CACHE = new HashMap<>();
@@ -108,10 +115,9 @@ public class ProfessionEditorScreen extends Screen {
             "crafts", "blocks", "items", "equipment", "containers"
     };
 
-    private static final String[] ALL_PERMISSIONS = {
-            "isStaff", "tabWhitelist", "scheduleWhitelist", "professionWhitelist", "seeNicknames",
-            "seeAll", "bypassWorldBorder", "spyMessages", "bypassAutoUnwhitelist", "bypassDeathRpWhitelist"
-    };
+    /** Permission list of the Roles tab (scrollable), and its search. */
+    private ButtonRowList permList;
+    private String permSearch = "";
 
     private static final char[]   COLOR_CHARS = ColorPalette.CHARS;
     private static final String[] COLOR_KEYS  = ColorPalette.KEYS;
@@ -237,21 +243,100 @@ public class ProfessionEditorScreen extends Screen {
         return l.get((int) ((System.currentTimeMillis() / 1000L) % l.size()));
     }
 
-    private String permLabel(String permId) {
-        return I18n.get("rpessentials.gui.roles.perm." + permId);
+    private static final String PERM_UI = "rpessentials.perm.ui.";
+    private static final String ALL_NODE = net.rp.rpessentials.permission.RpPerms.PREFIX + "*";
+
+    /** Label of a node (a manage node uses the label of its action). */
+    private static String permLabel(net.rp.rpessentials.permission.RpPerm p) {
+        if (p.category() == net.rp.rpessentials.permission.RpPerm.Category.MANAGE) {
+            for (net.rp.rpessentials.moderation.ManageService.Action a : net.rp.rpessentials.moderation.ManageService.Action.values()) {
+                if (net.rp.rpessentials.permission.RpPerm.manage(a) == p) {
+                    return I18n.get(PERM_UI + "manage_prefix",
+                            I18n.get("rpessentials.gui.player_profile.manage.action." + a.name().toLowerCase(java.util.Locale.ROOT)));
+                }
+            }
+        }
+        return I18n.get("rpessentials.perm.node." + p.key());
+    }
+
+    private static String permDescription(net.rp.rpessentials.permission.RpPerm p) {
+        String k = "rpessentials.perm.node." + p.key() + ".desc";
+        return I18n.exists(k) ? I18n.get(k) : "";
+    }
+
+    /** "staff", "OP 2", "every player"... */
+    private static String permDefault(net.rp.rpessentials.permission.RpPerm p) {
+        List<String> parts = new ArrayList<>();
+        if (p.staffDefault()) parts.add(I18n.get(PERM_UI + "default.staff"));
+        if (p.opLevel() == net.rp.rpessentials.permission.RpPerm.EVERYONE) parts.add(I18n.get(PERM_UI + "default.everyone"));
+        else if (p.opLevel() == net.rp.rpessentials.permission.RpPerm.SENSITIVE) parts.add(I18n.get(PERM_UI + "default.sensitive"));
+        else if (p.opLevel() <= 4) parts.add(I18n.get(PERM_UI + "default.op", p.opLevel()));
+        else if (p == net.rp.rpessentials.permission.RpPerm.STAFF) parts.add(I18n.get(PERM_UI + "default.oplevelbypass"));
+        if (parts.isEmpty()) parts.add(I18n.get(PERM_UI + "default.nobody"));
+        return String.join(" / ", parts);
+    }
+
+    /** 1 granted, -1 refused, 0 default (not written in the role). */
+    private int permState(String node) {
+        if (roleStatePerms.contains(node)) return 1;
+        if (roleStatePerms.contains("-" + node)) return -1;
+        return 0;
+    }
+
+    private void setPermState(String node, int state) {
+        roleStatePerms.remove(node);
+        roleStatePerms.remove("-" + node);
+        if (state > 0) roleStatePerms.add(node);
+        else if (state < 0) roleStatePerms.add("-" + node);
+        roleDirty = true;
+        roleDirtyPerms.add(node);
+    }
+
+    /** What the role gives to a node: its entries (wildcards included), then staff for the staff nodes. */
+    private boolean permEffective(net.rp.rpessentials.permission.RpPerm p) {
+        Boolean v = net.rp.rpessentials.permission.RpEssentialsRoleManager.evaluate(roleStatePerms, p.node());
+        if (v != null) return v;
+        if (p.staffDefault() && p != net.rp.rpessentials.permission.RpPerm.STAFF) {
+            Boolean staff = net.rp.rpessentials.permission.RpEssentialsRoleManager.evaluate(roleStatePerms,
+                    net.rp.rpessentials.permission.RpPerm.STAFF.node());
+            return staff != null && staff;
+        }
+        return p.opLevel() == net.rp.rpessentials.permission.RpPerm.EVERYONE;
     }
 
     // =========================================================================
     // INIT
     // =========================================================================
     @Override
-    protected void init() {
+    protected void initContent() {
         addRenderableWidget(GuiSkin.toggleButton(this.width, this::rebuildWidgets));
-        
+        // Profession system turned off on the server: only the Roles tab can be used.
+        if (!professionsEnabled()) mainTab = 1;
+
         buildMainTabs();
-        if      (mainTab == 0) initProfessions();
-        else if (mainTab == 1) initRoles();
-        else                   initGlobalRestrictions();
+        // Content of the open tab: its textures are in profession_editor/<tab>/ (the rest is shared).
+        GuiSkin.beginTab();
+        try {
+            if      (mainTab == 0) initProfessions();
+            else if (mainTab == 1) initRoles();
+            else                   initGlobalRestrictions();
+        } finally {
+            GuiSkin.endTab();
+        }
+    }
+
+    private static boolean professionsEnabled() {
+        return net.rp.rpessentials.client.ClientFeatures.professionsEnabled();
+    }
+
+    /** Professions / Global tab: greyed out with a tooltip while the profession system is turned off. */
+    private static Button lockIfDisabled(Button tab) {
+        if (!professionsEnabled()) {
+            tab.active = false;
+            tab.setTooltip(net.minecraft.client.gui.components.Tooltip.create(
+                    Component.translatable("rpessentials.gui.profession_editor.disabled_tooltip")));
+        }
+        return tab;
     }
 
     private void buildMainTabs() {
@@ -261,35 +346,36 @@ public class ProfessionEditorScreen extends Screen {
         int x     = (this.width - total) / 2;
         int y     = 2;
 
-        String profLabel = mainTab == 0
+        boolean on = professionsEnabled();
+        String profLabel = !on ? "§8" + I18n.get("rpessentials.gui.roles.tab_main_professions")
+                : mainTab == 0
                 ? "§e§l" + I18n.get("rpessentials.gui.roles.tab_main_professions")
                 : "§7" + I18n.get("rpessentials.gui.roles.tab_main_professions");
-        addRenderableWidget(Button.builder(Component.literal(profLabel),
+        addRenderableWidget(lockIfDisabled(Button.builder(Component.literal(profLabel),
                         btn -> { mainTab = 0; resetRestrictionView(); rebuild(); })
-                .pos(x, y).size(tabW, 13).build(SkinnedButton.tab(mainTab == 0)));
+                .pos(x, y).size(tabW, 13).build(SkinnedButton.tab(mainTab == 0, MAIN_TAB_KEYS[0]))));
 
         String roleLabel = mainTab == 1
                 ? "§9§l" + I18n.get("rpessentials.gui.roles.tab_main_roles")
                 : "§7" + I18n.get("rpessentials.gui.roles.tab_main_roles");
         addRenderableWidget(Button.builder(Component.literal(roleLabel),
                         btn -> { mainTab = 1; resetRestrictionView(); rebuild(); })
-                .pos(x + tabW + gap, y).size(tabW, 13).build(SkinnedButton.tab(mainTab == 1)));
+                .pos(x + tabW + gap, y).size(tabW, 13).build(SkinnedButton.tab(mainTab == 1, MAIN_TAB_KEYS[1])));
 
-        String globalLabel = mainTab == 2
+        String globalLabel = !on ? "§8" + I18n.get("rpessentials.gui.roles.tab_main_global")
+                : mainTab == 2
                 ? "§c§l" + I18n.get("rpessentials.gui.roles.tab_main_global")
                 : "§7" + I18n.get("rpessentials.gui.roles.tab_main_global");
-        addRenderableWidget(Button.builder(Component.literal(globalLabel),
+        addRenderableWidget(lockIfDisabled(Button.builder(Component.literal(globalLabel),
                         btn -> { mainTab = 2; resetRestrictionView(); rebuild(); })
-                .pos(x + (tabW + gap) * 2, y).size(tabW, 13).build(SkinnedButton.tab(mainTab == 2)));
+                .pos(x + (tabW + gap) * 2, y).size(tabW, 13).build(SkinnedButton.tab(mainTab == 2, MAIN_TAB_KEYS[2]))));
 
-        addRenderableWidget(Button.builder(Component.literal("§7↻"), btn -> {
+        // Left of the interface style button (16 px wide at width - 18).
+        addRenderableWidget(net.rp.rpessentials.client.skin.IconButton.refresh(
+                this.width - 18 - UiLayout.GAP - 18, 2, 18, 13, btn -> {
                     ClientGuiOpener.requestedTab = mainTab;
                     PacketDistributor.sendToServer(new RequestOpenGuiPacket(RequestOpenGuiPacket.GuiType.PROFESSION));
-                })
-                // Left of the interface style button (16 px wide at width - 18).
-                .pos(this.width - 18 - UiLayout.GAP - 18, 2).size(18, 13)
-                .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.refresh_tooltip")))
-                .build(SkinnedButton::new));
+                }));
     }
 
     // =========================================================================
@@ -311,7 +397,7 @@ public class ProfessionEditorScreen extends Screen {
                                      List<String> pool, String emptyKey) {
         // Minecraft list widget: delete button, item icon, value. Kept between rebuilds (scroll position).
         if (restrictList == null) restrictList = new ButtonRowList(Minecraft.getInstance(), 18);
-        restrictList.layout(formX - 6, top, Math.min(formW, 38 + 320 + 6) + 12, bottom - top);
+        restrictList.layout(formX - 7, top, Math.min(formW, 38 + 320 + 6) + 11, bottom - top);
         int rw = restrictList.rowWidth();
         List<ButtonRowList.Row> rows = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
@@ -331,7 +417,7 @@ public class ProfessionEditorScreen extends Screen {
                     .tooltip(Tooltip.create(Component.translatable(pending
                             ? "rpessentials.gui.restriction_list.confirm_delete_tooltip"
                             : "rpessentials.gui.restriction_list.delete_tooltip")))
-                    .build(SkinnedButton::new);
+                    .build(SkinnedButton.named("restriction_delete"));
             String color = dirty.contains(value) ? "§e§o" : "§7";
             Warning warn = warnings != null ? warnings.apply(value) : null;
             Button val = valueButton(color, value, pool, this, Math.max(40, rw - 38 - (warn != null ? 18 : 0)), 16);
@@ -358,7 +444,7 @@ public class ProfessionEditorScreen extends Screen {
                         Component.literal(I18n.get("rpessentials.gui.restriction_list.manage", list.size())),
                         btn -> Minecraft.getInstance().setScreen(new RestrictionListSubScreen(
                                 this, list, dirty, pool, hint, onChange, onRemove, onSave, emptyKey, warnings, unsaved)))
-                .pos(formX, y).size(Math.min(formW - 4, 200), 18).build(SkinnedButton::new));
+                .pos(formX, y).size(Math.min(formW - 4, 200), 18).build(SkinnedButton.named("restriction_manage")));
     }
 
     // =========================================================================
@@ -390,7 +476,7 @@ public class ProfessionEditorScreen extends Screen {
         int y     = PANEL_TOP + 14;
 
         EditBox idBox = new SkinnedEditBox(this.font, formX, y + 16, r.fieldW(), 18,
-                Component.translatable("rpessentials.gui.profession_editor.id_label"));
+                Component.translatable("rpessentials.gui.profession_editor.id_label")).skin("profession_id");
         idBox.setHint(Component.translatable("rpessentials.gui.profession_editor.id_hint"));
         idBox.setMaxLength(32);
         idBox.setValue(profStateId);
@@ -400,7 +486,7 @@ public class ProfessionEditorScreen extends Screen {
         addRenderableWidget(idBox);
 
         EditBox nameBox = new SkinnedEditBox(this.font, r.nameX(), r.nameY() + 16, r.fieldW(), 18,
-                Component.translatable("rpessentials.gui.profession_editor.name_label"));
+                Component.translatable("rpessentials.gui.profession_editor.name_label")).skin("profession_name");
         nameBox.setHint(Component.translatable("rpessentials.gui.profession_editor.name_hint"));
         nameBox.setMaxLength(64);
         nameBox.setValue(profStateName);
@@ -422,13 +508,13 @@ public class ProfessionEditorScreen extends Screen {
                     : "§7" + I18n.get("rpessentials.gui.profession_editor.tab." + PROF_TAB_KEYS[i]);
             addRenderableWidget(Button.builder(Component.literal(label),
                             btn -> { profActiveTab = ti; resetRestrictionView(); rebuild(); })
-                    .pos(UiLayout.cellX(formX, formW, PROF_TAB_KEYS.length, UiLayout.TAB_GAP, i), y).size(tabW, 16).build(SkinnedButton.tab(ti == profActiveTab)));
+                    .pos(UiLayout.cellX(formX, formW, PROF_TAB_KEYS.length, UiLayout.TAB_GAP, i), y).size(tabW, 16).build(SkinnedButton.tab(ti == profActiveTab, PROF_TAB_KEYS[ti])));
         }
         y = r.manageY();
 
         // Preview of the entries of the active tab, like the global restrictions; the Manage button
         // goes right above Save. On short windows (no room for a list) only the button is shown.
-        int listBottom = this.height - 35 - UiLayout.GAP - 18 - 2;
+        int listBottom = this.height - 38 - UiLayout.GAP - 18 - 2;
         if (listBottom - y >= 36) {
             y = buildRestrictionList(formX, formW, y, listBottom, getProfActiveList(), profDirtyEntries,
                     (idx, value) -> {
@@ -446,40 +532,20 @@ public class ProfessionEditorScreen extends Screen {
                 this::saveProfession, "rpessentials.gui.empty.prof." + PROF_TAB_KEYS[profActiveTab],
                 profWarnings(profActiveTab), () -> profDirty);
 
-        int btnY = this.height - 35;
+        int btnY = this.height - 38;
         liveSave(Button.builder(Component.translatable("rpessentials.gui.profession_editor.btn_save"),
                         btn -> saveProfession())
-                .pos(formX, btnY).size(160, 20).build(SkinnedButton::new),
+                .pos(formX, btnY).size(160, 20).build(SkinnedButton.named("profession_save")),
                 "rpessentials.gui.profession_editor.btn_save", () -> profDirty);
         addCloseButton(btnY);
 
         buildProfessionList();
     }
 
-    /** Rows of the left list that fit between the top arrow and the "new" button. */
-    
-
-    @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        
-        return super.mouseClicked(mx, my, button);
-    }
-
-    @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        
-        return super.mouseDragged(mx, my, button, dx, dy);
-    }
-
-    @Override
-    public boolean mouseReleased(double mx, double my, int button) {
-        
-        return super.mouseReleased(mx, my, button);
-    }
 
     private void buildProfessionList() {
         if (profList == null) profList = new ButtonRowList(Minecraft.getInstance(), ROW_H);
-        profList.layout(MARGIN - 2, PANEL_TOP + 14, LIST_W + 4, this.height - 39 - (PANEL_TOP + 14));
+        profList.layout(MARGIN - 3, PANEL_TOP + 22, LIST_W - 2, this.height - 42 - (PANEL_TOP + 22));
         int rw = profList.rowWidth();
         List<ButtonRowList.Row> rows = new ArrayList<>();
 
@@ -505,7 +571,7 @@ public class ProfessionEditorScreen extends Screen {
                             btn -> guardedSwitch(target, profDirty, () -> loadProfEntry(idx)))
                     .size(rw - 18, ROW_H - 2)
                     .tooltip(switchTooltip(target))
-                    .build(SkinnedButton.row(i == profSelectedIndex));
+                    .build(SkinnedButton.row(i == profSelectedIndex, "professions"));
             Button side = isPendingDelete
                     ? Button.builder(Component.literal("§c!"),
                                     btn -> {
@@ -518,12 +584,12 @@ public class ProfessionEditorScreen extends Screen {
                             .size(16, ROW_H - 2)
                             .tooltip(Tooltip.create(Component.translatable(
                                     "rpessentials.gui.profession_editor.confirm_delete_tooltip")))
-                            .build(SkinnedButton::new)
+                            .build(SkinnedButton.named("profession_delete_confirm"))
                     : Button.builder(Component.literal("§7x"), btn -> { profPendingDelete = id; rebuild(); })
                             .size(16, ROW_H - 2)
                             .tooltip(Tooltip.create(Component.translatable(
                                     "rpessentials.gui.profession_editor.delete_tooltip")))
-                            .build(SkinnedButton::new);
+                            .build(SkinnedButton.named("profession_delete"));
             rows.add(new ButtonRowList.Row().add(main, 0).add(side, rw - 16));
         }
 
@@ -532,7 +598,7 @@ public class ProfessionEditorScreen extends Screen {
             profInCreationButton = Button.builder(
                             Component.literal("§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")"),
                             btn -> {})
-                    .size(rw - 18, ROW_H - 2).build(SkinnedButton::new);
+                    .size(rw - 18, ROW_H - 2).build(SkinnedButton.named("in_creation"));
             rows.add(new ButtonRowList.Row().add(profInCreationButton, 0));
         } else {
             profInCreationButton = null;
@@ -544,16 +610,16 @@ public class ProfessionEditorScreen extends Screen {
                         Component.literal(switchLabel("prof:new",
                                 tabColorCode() + I18n.get("rpessentials.gui.profession_editor.btn_new"), LIST_W)),
                         btn -> guardedSwitch("prof:new", profDirty, this::resetProfForm))
-                .pos(MARGIN, this.height - 35).size(LIST_W, 20)
+                .pos(MARGIN + 6, this.height - 38).size(LIST_W - 12, 20)
                 .tooltip(switchTooltip("prof:new"))
-                .build(SkinnedButton::new));
+                .build(SkinnedButton.named("profession_new")));
     }
 
     // =========================================================================
     // ONGLET ROLES
     // =========================================================================
     /** Positions of the role form, shared by init() and render(). */
-    private record RoleRows(int fieldW, int lpX, int lpY, int permY, int permCols, int permRows, int permW) {}
+    private record RoleRows(int fieldW, int lpX, int lpY, int searchY, int listTop) {}
 
     private RoleRows roleRows(int formX, int formW) {
         int y = PANEL_TOP + 14;
@@ -561,14 +627,8 @@ public class ProfessionEditorScreen extends Screen {
         int fieldW = side ? Math.min(160, (formW - UiLayout.GAP) / 2) : Math.min(formW, 160);
         int lpX = side ? formX + fieldW + UiLayout.GAP : formX;
         int lpY = side ? y : y + 38;
-        int permY = lpY + 38 + 14; // room for the "Permissions" title
-        // Permissions in as many columns as needed to stay above the footer buttons.
-        int n = ALL_PERMISSIONS.length;
-        int rowsFit = Math.max(1, (this.height - 35 - 4 - permY) / 18);
-        int maxCols = Math.max(1, (formW + UiLayout.GAP) / (110 + UiLayout.GAP));
-        int cols = Math.max(1, Math.min(maxCols, (n + rowsFit - 1) / rowsFit));
-        int rows = (n + cols - 1) / cols;
-        return new RoleRows(fieldW, lpX, lpY, permY, cols, rows, UiLayout.cellW(formW, cols, UiLayout.GAP));
+        int searchY = lpY + 38 + 12; // room for the "Permissions" title
+        return new RoleRows(fieldW, lpX, lpY, searchY, searchY + 20);
     }
 
     private void initRoles() {
@@ -576,9 +636,10 @@ public class ProfessionEditorScreen extends Screen {
         int formW = this.width - formX - MARGIN * 2;
         RoleRows r = roleRows(formX, formW);
         int y     = PANEL_TOP + 14;
+        boolean canEdit = canManageRoles();
 
         EditBox idBox = new SkinnedEditBox(this.font, formX, y + 16, r.fieldW(), 18,
-                Component.translatable("rpessentials.gui.roles.id_label"));
+                Component.translatable("rpessentials.gui.roles.id_label")).skin("role_id");
         idBox.setHint(Component.translatable("rpessentials.gui.roles.id_hint"));
         idBox.setMaxLength(32);
         idBox.setValue(roleStateId);
@@ -588,48 +649,151 @@ public class ProfessionEditorScreen extends Screen {
         addRenderableWidget(idBox);
 
         EditBox lpBox = new SkinnedEditBox(this.font, r.lpX(), r.lpY() + 16, r.fieldW(), 18,
-                Component.translatable("rpessentials.gui.roles.lp_label"));
+                Component.translatable("rpessentials.gui.roles.lp_label")).skin("role_group");
         lpBox.setHint(Component.translatable("rpessentials.gui.roles.lp_hint"));
         lpBox.setMaxLength(64);
         lpBox.setValue(roleStateLp);
-        lpBox.setEditable(canManageRoles());
+        lpBox.setEditable(canEdit);
         lpBox.setResponder(val -> { roleStateLp = val; roleDirty = true; });
         addRenderableWidget(lpBox);
-        y = r.permY();
 
-        for (int i = 0; i < ALL_PERMISSIONS.length; i++) {
-            final String perm = ALL_PERMISSIONS[i];
-            boolean checked   = roleStatePerms.contains(perm);
-            boolean modified  = roleDirtyPerms.contains(perm);
-            String base       = checked ? "§a[✔] " : "§c[X] ";
-            String textColor  = modified ? "§e§o" : "§f";
-            int col = i / r.permRows(), row = i % r.permRows();
-            Button permBtn = Button.builder(Component.literal(base + textColor + permLabel(perm)), btn -> {
-                if (roleStatePerms.contains(perm)) roleStatePerms.remove(perm);
-                else roleStatePerms.add(perm);
-                roleDirty = true;
-                roleDirtyPerms.add(perm);
-                rebuild();
-            }).pos(UiLayout.cellX(formX, formW, r.permCols(), UiLayout.GAP, col), y + row * 18)
-                    .size(r.permW(), 16).build(SkinnedButton::new);
-            permBtn.active = canManageRoles();
-            addRenderableWidget(permBtn);
-        }
+        // ── Search ───────────────────────────────────────────────────────────
+        int searchW = Math.min(200, formW / 2);
+        EditBox search = new SkinnedEditBox(this.font, formX, r.searchY(), searchW, 16,
+                Component.translatable(PERM_UI + "search_hint")).skin("role_search");
+        search.setHint(Component.literal("§8" + I18n.get(PERM_UI + "search_hint")));
+        search.setMaxLength(48);
+        search.setValue(permSearch);
+        search.setResponder(val -> {
+            permSearch = val;
+            if (permList != null) permList.setScrollAmount(0);
+            buildPermRows(formX, formW, canEdit);
+        });
+        addRenderableWidget(search);
 
-        int btnY = this.height - 35;
+        // ── Permissions ──────────────────────────────────────────────────────
+        if (permList == null) permList = new ButtonRowList(Minecraft.getInstance(), 18);
+        permList.layout(formX - 3, r.listTop(), formW + 3, this.height - 42 - r.listTop());
+        buildPermRows(formX, formW, canEdit);
+        addRenderableWidget(permList);
+
+        int btnY = this.height - 38;
         liveSave(Button.builder(Component.translatable("rpessentials.gui.roles.btn_save"), btn -> saveRole())
-                .pos(formX, btnY).size(120, 20).build(SkinnedButton::new),
+                .pos(formX, btnY).size(120, 20).build(SkinnedButton.named("role_save")),
                 "rpessentials.gui.roles.btn_save",
-                () -> roleDirty && Minecraft.getInstance().player != null
-                        && Minecraft.getInstance().player.hasPermissions(3));
+                () -> roleDirty && canManageRoles());
         addCloseButton(btnY);
 
         buildRoleList();
     }
 
+    /** Rows of the permission list: a note, then each group with its nodes, then the entries not shown. */
+    private void buildPermRows(int formX, int formW, boolean canEdit) {
+        int rw = permList.rowWidth();
+        int stateW = 64;
+        String query = permSearch.trim().toLowerCase(java.util.Locale.ROOT);
+        List<ButtonRowList.Row> rows = new ArrayList<>();
+        rows.add(new ButtonRowList.Row().text("§8" + UiLayout.fit(this.font, I18n.get(PERM_UI + "vanilla_note"), rw - 4), 2, 5));
+        if (!canEdit) rows.add(new ButtonRowList.Row().text("§c" + UiLayout.fit(this.font, I18n.get(PERM_UI + "no_rights"), rw - 4), 2, 5));
+
+        for (net.rp.rpessentials.permission.RpPerm.Category cat : net.rp.rpessentials.permission.RpPerm.Category.values()) {
+            List<net.rp.rpessentials.permission.RpPerm> perms = new ArrayList<>();
+            for (net.rp.rpessentials.permission.RpPerm p : net.rp.rpessentials.permission.RpPerm.all()) {
+                if (p.category() != cat) continue;
+                if (!query.isEmpty() && !permLabel(p).toLowerCase(java.util.Locale.ROOT).contains(query)
+                        && !p.node().contains(query)) continue;
+                perms.add(p);
+            }
+            boolean showAll = cat == net.rp.rpessentials.permission.RpPerm.Category.GENERAL
+                    && (query.isEmpty() || I18n.get("rpessentials.perm.node.*").toLowerCase(java.util.Locale.ROOT).contains(query)
+                    || ALL_NODE.contains(query));
+            if (perms.isEmpty() && !showAll) continue;
+
+            // Group header: name, "grant all", "back to default".
+            Button grantAll = Button.builder(Component.literal("§a" + I18n.get(PERM_UI + "cat_grant")), b -> {
+                        for (net.rp.rpessentials.permission.RpPerm p : perms) setPermState(p.node(), 1);
+                        rebuild();
+                    })
+                    .size(48, 14)
+                    .tooltip(Tooltip.create(Component.translatable(PERM_UI + "cat_grant_tooltip")))
+                    .build(SkinnedButton.named("perm_grant_all"));
+            Button reset = Button.builder(Component.literal("§7" + I18n.get(PERM_UI + "cat_reset")), b -> {
+                        for (net.rp.rpessentials.permission.RpPerm p : perms) setPermState(p.node(), 0);
+                        rebuild();
+                    })
+                    .size(18, 14)
+                    .tooltip(Tooltip.create(Component.translatable(PERM_UI + "cat_reset_tooltip")))
+                    .build(SkinnedButton.named("perm_reset"));
+            grantAll.active = canEdit && !perms.isEmpty();
+            reset.active = canEdit && !perms.isEmpty();
+            rows.add(new ButtonRowList.Row()
+                    .text(tabColorCode() + "§l" + I18n.get("rpessentials.perm.cat." + cat.name().toLowerCase(java.util.Locale.ROOT)), 2, 5)
+                    .add(grantAll, rw - 48 - 2 - 18)
+                    .add(reset, rw - 18));
+
+            if (showAll) rows.add(permRow(null, rw, stateW, canEdit));
+            for (net.rp.rpessentials.permission.RpPerm p : perms) rows.add(permRow(p, rw, stateW, canEdit));
+        }
+
+        // Entries no row shows (hand-written wildcards, nodes of a newer version...): kept, removable at once.
+        List<String> others = new ArrayList<>();
+        for (String e : roleStatePerms) {
+            String node = e.startsWith("-") ? e.substring(1) : e;
+            if (node.equals(ALL_NODE)) continue;
+            String key = node.startsWith(net.rp.rpessentials.permission.RpPerms.PREFIX)
+                    ? node.substring(net.rp.rpessentials.permission.RpPerms.PREFIX.length()) : node;
+            if (net.rp.rpessentials.permission.RpPerm.byKey(key) == null) others.add(e);
+        }
+        if (!others.isEmpty() && query.isEmpty()) {
+            Button clear = Button.builder(Component.literal("§c✗"), b -> {
+                        roleStatePerms.removeAll(others);
+                        roleDirty = true;
+                        rebuild();
+                    })
+                    .size(16, 14)
+                    .tooltip(Tooltip.create(Component.translatable(PERM_UI + "other_remove_tooltip")))
+                    .build(SkinnedButton.named("perm_other_remove"));
+            clear.active = canEdit;
+            rows.add(new ButtonRowList.Row().add(clear, 0)
+                    .text("§7" + UiLayout.fit(this.font, I18n.get(PERM_UI + "other_entries", String.join(", ", others)), rw - 22), 20, 5));
+        }
+        permList.setRows(rows);
+    }
+
+    /** One node: state button (Default / Granted / Refused) and its label. {@code p} null = rpessentials.*. */
+    private ButtonRowList.Row permRow(net.rp.rpessentials.permission.RpPerm p, int rw, int stateW, boolean canEdit) {
+        String node = p == null ? ALL_NODE : p.node();
+        int state = permState(node);
+        boolean effective = p == null ? state > 0 : permEffective(p);
+        String stateText = switch (state) {
+            case 1 -> "§a✔ " + I18n.get(PERM_UI + "state.grant");
+            case -1 -> "§c✗ " + I18n.get(PERM_UI + "state.deny");
+            default -> effective ? "§2• " + I18n.get(PERM_UI + "state.default_on") : "§7• " + I18n.get(PERM_UI + "state.default");
+        };
+        net.minecraft.network.chat.MutableComponent tip = Component.literal("§7" + node);
+        String desc = p == null ? I18n.get("rpessentials.perm.node.*.desc") : permDescription(p);
+        if (!desc.isEmpty()) tip.append("\n§f" + desc);
+        if (p != null) tip.append("\n§8" + I18n.get(PERM_UI + "default_is", permDefault(p)));
+        if (p != null) tip.append("\n" + (effective ? "§a" + I18n.get(PERM_UI + "effective_on") : "§7" + I18n.get(PERM_UI + "effective_off")));
+        tip.append("\n§e" + I18n.get(PERM_UI + "state_tooltip"));
+        Button btn = Button.builder(Component.literal(stateText), b -> {
+                    setPermState(node, state == 0 ? 1 : state == 1 ? -1 : 0);
+                    rebuild();
+                })
+                .size(stateW, 16)
+                .tooltip(Tooltip.create(tip))
+                .build(SkinnedButton.named("perm_state"));
+        btn.active = canEdit;
+        String label = p == null ? I18n.get("rpessentials.perm.node.*") : permLabel(p);
+        String color = roleDirtyPerms.contains(node) ? "§e§o" : "§f";
+        String hint = p == null ? "" : "  §8" + permDefault(p);
+        return new ButtonRowList.Row().add(btn, 0)
+                .text(UiLayout.fit(this.font, color + label + hint, rw - stateW - 6), stateW + 4, 4);
+    }
+
     private void buildRoleList() {
         if (roleList == null) roleList = new ButtonRowList(Minecraft.getInstance(), ROW_H);
-        roleList.layout(MARGIN - 2, PANEL_TOP + 14, LIST_W + 4, this.height - 39 - (PANEL_TOP + 14));
+        roleList.layout(MARGIN - 3, PANEL_TOP + 22, LIST_W - 2, this.height - 42 - (PANEL_TOP + 22));
         int rw = roleList.rowWidth();
         List<ButtonRowList.Row> rows = new ArrayList<>();
 
@@ -650,7 +814,7 @@ public class ProfessionEditorScreen extends Screen {
                             btn -> guardedSwitch(target, roleDirty, () -> loadRoleEntry(idx)))
                     .size(rw - 18, ROW_H - 2)
                     .tooltip(switchTooltip(target))
-                    .build(SkinnedButton.row(i == roleSelectedIndex));
+                    .build(SkinnedButton.row(i == roleSelectedIndex, "roles"));
             Button side = isPendingDelete
                     ? Button.builder(Component.literal("§c!"), btn -> {
                                 PacketDistributor.sendToServer(new DeleteRolePacket(id));
@@ -661,11 +825,11 @@ public class ProfessionEditorScreen extends Screen {
                             })
                             .size(16, ROW_H - 2)
                             .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.roles.confirm_delete_tooltip")))
-                            .build(SkinnedButton::new)
+                            .build(SkinnedButton.named("role_delete_confirm"))
                     : Button.builder(Component.literal("§7x"), btn -> { rolePendingDelete = id; rebuild(); })
                             .size(16, ROW_H - 2)
                             .tooltip(Tooltip.create(Component.translatable("rpessentials.gui.roles.delete_tooltip")))
-                            .build(SkinnedButton::new);
+                            .build(SkinnedButton.named("role_delete"));
             side.active = canManageRoles();
             rows.add(new ButtonRowList.Row().add(main, 0).add(side, rw - 16));
         }
@@ -675,7 +839,7 @@ public class ProfessionEditorScreen extends Screen {
             roleInCreationButton = Button.builder(
                             Component.literal("§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")"),
                             btn -> {})
-                    .size(rw - 18, ROW_H - 2).build(SkinnedButton::new);
+                    .size(rw - 18, ROW_H - 2).build(SkinnedButton.named("in_creation"));
             rows.add(new ButtonRowList.Row().add(roleInCreationButton, 0));
         } else {
             roleInCreationButton = null;
@@ -686,14 +850,13 @@ public class ProfessionEditorScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(switchLabel("role:new",
                                 tabColorCode() + I18n.get("rpessentials.gui.roles.btn_new"), LIST_W)),
                         btn -> guardedSwitch("role:new", roleDirty, this::resetRoleForm))
-                .pos(MARGIN, this.height - 35).size(LIST_W, 20)
+                .pos(MARGIN + 6, this.height - 38).size(LIST_W - 12, 20)
                 .tooltip(switchTooltip("role:new"))
-                .build(SkinnedButton::new));
+                .build(SkinnedButton.named("role_new")));
     }
 
     private boolean canManageRoles() {
-        return Minecraft.getInstance().player != null
-                && net.rp.rpessentials.permission.RpEssentialsPermissions.hasSensitiveLevel(Minecraft.getInstance().player);
+        return net.rp.rpessentials.client.ClientPerms.has(net.rp.rpessentials.permission.RpPerm.ROLES_MANAGE);
     }
 
     // =========================================================================
@@ -709,7 +872,7 @@ public class ProfessionEditorScreen extends Screen {
 
         java.util.function.Function<String, Warning> warnings = globalWarnings(globalActiveCategory);
         // The list stops so that the Manage button (18 px) sits right above Save (y = height - 35).
-        int listEnd = buildRestrictionList(formX, formW, PANEL_TOP + 18, this.height - 35 - UiLayout.GAP - 18 - 2, list,
+        int listEnd = buildRestrictionList(formX, formW, PANEL_TOP + 18, this.height - 38 - UiLayout.GAP - 18 - 2, list,
                 globalDirtyEntries, this::removeGlobalRestriction, warnings,
                 globalActiveCategory == 4 ? null : poolFor(globalActiveCategory), null);
         if (globalActiveCategory == 4) {
@@ -719,7 +882,7 @@ public class ProfessionEditorScreen extends Screen {
                                     this, list, globalDirtyEntries,
                                     existingProfessions,
                                     this::onGlobalEntryRemoved, this::saveGlobalRestrictions)))
-                    .pos(formX, listEnd).size(Math.min(formW - 4, 200), 18).build(SkinnedButton::new));
+                    .pos(formX, listEnd).size(Math.min(formW - 4, 200), 18).build(SkinnedButton.named("container_manage")));
         } else {
             addManageButton(formX, formW, listEnd, list, globalDirtyEntries, pool, hint,
                     () -> {}, this::onGlobalEntryRemoved, this::saveGlobalRestrictions,
@@ -727,10 +890,10 @@ public class ProfessionEditorScreen extends Screen {
                     this::globalDirty);
         }
 
-        int btnY = this.height - 35;
+        int btnY = this.height - 38;
         liveSave(Button.builder(Component.translatable("rpessentials.gui.global.btn_save"),
                         btn -> saveGlobalRestrictions())
-                .pos(formX, btnY).size(160, 20).build(SkinnedButton::new),
+                .pos(formX, btnY).size(160, 20).build(SkinnedButton.named("global_save")),
                 "rpessentials.gui.global.btn_save", this::globalDirty);
         addCloseButton(btnY);
 
@@ -775,7 +938,7 @@ public class ProfessionEditorScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal(label), btn -> onClose())
                 .pos(this.width - MARGIN * 2 - w, btnY).size(w, 20)
                 .tooltip(SaveUi.closeTooltip(confirmClose))
-                .build(SkinnedButton::new));
+                .build(SkinnedButton.named("close")));
     }
 
     /** Global lists differ from what the server has. */
@@ -805,7 +968,7 @@ public class ProfessionEditorScreen extends Screen {
                     + I18n.get("rpessentials.gui.global." + GLOBAL_CATEGORY_KEYS[i]);
             addRenderableWidget(Button.builder(Component.literal(label),
                             btn -> { globalActiveCategory = ci; resetRestrictionView(); rebuild(); })
-                    .pos(MARGIN, PANEL_TOP + 14 + i * ROW_H).size(LIST_W, ROW_H - 2).build(SkinnedButton.row(selected)));
+                    .pos(MARGIN + 6, PANEL_TOP + 22 + i * ROW_H).size(LIST_W - 12, ROW_H - 2).build(SkinnedButton.row(selected, "categories")));
         }
     }
 
@@ -871,7 +1034,7 @@ public class ProfessionEditorScreen extends Screen {
         return Button.builder(Component.literal("§6⚠"), btn -> { w.fix().run(); refresh.run(); })
                 .size(16, height)
                 .tooltip(Tooltip.create(w.tooltip()))
-                .build(SkinnedButton::new);
+                .build(SkinnedButton.named("warning"));
     }
 
     /**
@@ -887,7 +1050,7 @@ public class ProfessionEditorScreen extends Screen {
                 .size(width, height);
         if (pattern) b.tooltip(Tooltip.create(Component.translatable("rpessentials.gui.pattern_contents.open_tooltip",
                 RestrictionCoverage.expand(value, pool).size())));
-        return b.build(SkinnedButton::new);
+        return b.build(SkinnedButton.named("restriction_entry"));
     }
 
     private static List<String> poolFor(int category) {
@@ -1031,41 +1194,46 @@ public class ProfessionEditorScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    protected void renderContent(GuiGraphics g, int mouseX, int mouseY, float delta) {
         if (liveSaveKey != null) SaveUi.refresh(liveSaveButton, I18n.get(liveSaveKey), liveDirty.getAsBoolean());
         if (confirmClose && !anyDirty()) { confirmClose = false; rebuild(); }
         if (confirmSwitch != null && !anyDirty()) { confirmSwitch = null; rebuild(); }
         GuiSkin.background(g, this.width, this.height, 0x99000000);
 
-        GuiSkin.panel(g, MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
+        GuiSkin.panel(g, "list", MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, this.height - 10, 0xBB111111);
         GuiSkin.accent(g, MARGIN - 2, PANEL_TOP, MARGIN + LIST_W + 2, PANEL_TOP + 2, tabLineColor());
 
         if (mainTab == 0) {
             g.drawString(this.font,
                     I18n.get("rpessentials.gui.profession_editor.professions_header", existingProfessions.size()),
-                    MARGIN + 3, PANEL_TOP + 4, tabLineColor(), false);
+                    MARGIN + 6, PANEL_TOP + 10, tabLineColor(), net.rp.rpessentials.client.skin.GuiSkin.textShadow());
             if (existingProfessions.isEmpty())
                 g.drawString(this.font, "§8" + I18n.get("rpessentials.gui.profession_editor.no_profession"),
-                        MARGIN + 8, PANEL_TOP + 24, 0x666666, false);
+                        MARGIN + 6, PANEL_TOP + 26, 0x666666, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         } else if (mainTab == 1) {
             g.drawString(this.font, I18n.get("rpessentials.gui.roles.header", existingRoles.size()),
-                    MARGIN + 3, PANEL_TOP + 4, tabLineColor(), false);
+                    MARGIN + 6, PANEL_TOP + 10, tabLineColor(), net.rp.rpessentials.client.skin.GuiSkin.textShadow());
             if (existingRoles.isEmpty())
                 g.drawString(this.font, "§8" + I18n.get("rpessentials.gui.roles.no_roles"),
-                        MARGIN + 8, PANEL_TOP + 24, 0x666666, false);
+                        MARGIN + 6, PANEL_TOP + 26, 0x666666, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         } else {
             g.drawString(this.font, I18n.get("rpessentials.gui.global.categories_header"),
-                    MARGIN + 3, PANEL_TOP + 4, tabLineColor(), false);
+                    MARGIN + 6, PANEL_TOP + 10, tabLineColor(), net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         }
 
         int formX = LIST_W + MARGIN * 3;
-        GuiSkin.panel(g, LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, this.height - 10, 0xBB111111);
+        GuiSkin.panel(g, "content", LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, this.height - 10, 0xBB111111);
         GuiSkin.accent(g, LIST_W + MARGIN * 2, PANEL_TOP, this.width - MARGIN, PANEL_TOP + 2, tabLineColor());
 
         
-        if (mainTab == 0) renderProfessionsOverlay(g, formX);
-        else if (mainTab == 1) renderRolesOverlay(g, formX);
-        else renderGlobalRestrictionsOverlay(g, formX);
+        GuiSkin.beginTab();
+        try {
+            if (mainTab == 0) renderProfessionsOverlay(g, formX);
+            else if (mainTab == 1) renderRolesOverlay(g, formX);
+            else renderGlobalRestrictionsOverlay(g, formX);
+        } finally {
+            GuiSkin.endTab();
+        }
 
         if (profInCreationButton != null) {
             String shown = profStateId.isEmpty() ? "?" : profStateId;
@@ -1078,7 +1246,7 @@ public class ProfessionEditorScreen extends Screen {
                     "§e§o" + shown + " §7(" + I18n.get("rpessentials.gui.in_creation") + ")"));
         }
 
-        super.render(g, mouseX, mouseY, delta);
+        renderScreen(g, mouseX, mouseY, delta);
 
     }
 
@@ -1086,10 +1254,10 @@ public class ProfessionEditorScreen extends Screen {
         g.drawString(this.font,
                 tabColorCode() + I18n.get("rpessentials.gui.global.title") + " §8- §e"
                         + I18n.get("rpessentials.gui.global." + GLOBAL_CATEGORY_KEYS[globalActiveCategory]),
-                formX, PANEL_TOP + 5, 0xFFFFFF, false);
+                formX, PANEL_TOP + 5, 0xFFFFFF, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         if (getGlobalActiveList().isEmpty()) {
             g.drawString(this.font, "§8" + I18n.get("rpessentials.gui.global.no_entries"),
-                    formX, PANEL_TOP + 20, 0x666666, false);
+                    formX, PANEL_TOP + 20, 0x666666, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         }
     }
 
@@ -1097,22 +1265,22 @@ public class ProfessionEditorScreen extends Screen {
         String modeLabel = profStateIsNew
                 ? tabColorCode() + I18n.get("rpessentials.gui.profession_editor.mode_new")
                 : tabColorCode() + I18n.get("rpessentials.gui.profession_editor.mode_edit", profStateId);
-        g.drawString(this.font, modeLabel, formX, PANEL_TOP + 5, 0xFFFFFF, false);
+        g.drawString(this.font, modeLabel, formX, PANEL_TOP + 5, 0xFFFFFF, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
 
         int formW = this.width - formX - MARGIN * 2;
         ProfRows r = profRows(formX, formW);
         int y = PANEL_TOP + 14;
         int idLabelW = r.nameX() > formX ? r.nameX() - formX - UiLayout.GAP : formW;
         g.drawString(this.font, UiLayout.fit(this.font, I18n.get("rpessentials.gui.profession_editor.id_label_draw"), idLabelW),
-                formX, y + 6, 0x888888, false);
+                formX, y + 6, 0x888888, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         String nameLabel = I18n.get("rpessentials.gui.profession_editor.name_label_draw");
-        g.drawString(this.font, nameLabel, r.nameX(), r.nameY() + 6, 0x888888, false);
+        g.drawString(this.font, nameLabel, r.nameX(), r.nameY() + 6, 0x888888, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
         // Same preview as the nickname of the Player Profile: real colors, hex and gradients included.
         ColorPalette.drawPreview(g, this.font, nameLabel, profStateName, profColorIndex, r.nameX(), r.nameY() + 6);
         y = r.colorY();
 
         g.drawString(this.font, I18n.get("rpessentials.gui.profession_editor.color_label"),
-                formX, y + 4, 0x888888, false);
+                formX, y + 4, 0x888888, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
 
         ColorPalette.drawSelection(g, ColorPalette.dims(formW, this.height), formX, y + 14, profColorIndex);
     }
@@ -1121,30 +1289,28 @@ public class ProfessionEditorScreen extends Screen {
         String modeLabel = roleStateIsNew
                 ? tabColorCode() + I18n.get("rpessentials.gui.roles.mode_new")
                 : tabColorCode() + I18n.get("rpessentials.gui.roles.mode_edit", roleStateId);
-        g.drawString(this.font, modeLabel, formX, PANEL_TOP + 5, 0xFFFFFF, false);
+        g.drawString(this.font, modeLabel, formX, PANEL_TOP + 5, 0xFFFFFF, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
 
         int formW = this.width - formX - MARGIN * 2;
         RoleRows r = roleRows(formX, formW);
         int y = PANEL_TOP + 14;
         int idLabelW = r.lpX() > formX ? r.lpX() - formX - UiLayout.GAP : formW;
         g.drawString(this.font, UiLayout.fit(this.font, I18n.get("rpessentials.gui.roles.id_label"), idLabelW),
-                formX, y + 6, 0x888888, false);
-        g.drawString(this.font, I18n.get("rpessentials.gui.roles.lp_label"), r.lpX(), r.lpY() + 6, 0x888888, false);
-        y = r.permY();
-
-        GuiSkin.separator(g, formX, y - 3, formX + formW, y - 2, 0xFF333333);
-        g.drawString(this.font, I18n.get("rpessentials.gui.roles.permissions_header"), formX, y - 13, 0xFFD700, false);
+                formX, y + 6, 0x888888, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
+        g.drawString(this.font, I18n.get("rpessentials.gui.roles.lp_label"), r.lpX(), r.lpY() + 6, 0x888888, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
+        y = r.searchY();
+        GuiSkin.separator(g, "permissions", formX, y - 3, formX + formW, y - 2, 0xFF333333);
+        g.drawString(this.font, I18n.get("rpessentials.gui.roles.permissions_header"), formX, y - 12, 0xFFD700, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
+        int granted = 0, refused = 0;
+        for (String e : roleStatePerms) { if (e.startsWith("-")) refused++; else granted++; }
+        String summary = I18n.get(PERM_UI + "summary", granted, refused);
+        int searchW = Math.min(200, formW / 2);
+        g.drawString(this.font, "§7" + UiLayout.fit(this.font, summary, formW - searchW - 8),
+                formX + searchW + 8, y + 4, 0xAAAAAA, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
     }
 
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {}
-
-    @Override
-    public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-        if (mx < LIST_W + MARGIN * 2) return super.mouseScrolled(mx, my, sx, sy); // list widgets
-        
-        return super.mouseScrolled(mx, my, sx, sy);
-    }
 
     // =========================================================================
     // LOGIQUE PROFESSIONS
@@ -1182,6 +1348,10 @@ public class ProfessionEditorScreen extends Screen {
         }
 
         String colorCode = ColorPalette.code(profColorIndex);
+        if (ColorPalette.get(profColorIndex).gradient()) {
+            name = ColorPalette.apply(profColorIndex, name);
+            colorCode = "";
+        }
         PacketDistributor.sendToServer(new SaveProfessionPacket(id, name, colorCode,
                 new ArrayList<>(allowedCrafts), new ArrayList<>(allowedBlocks),
                 new ArrayList<>(allowedItems), new ArrayList<>(allowedEquipment), profStateIsNew));
@@ -1215,6 +1385,14 @@ public class ProfessionEditorScreen extends Screen {
         profStateId   = e.id();
         profStateName = e.displayName();
         profColorIndex = ColorPalette.ensure(ColorPalette.leadingCode(e.color()));
+        if (profColorIndex == 0) {
+            // A gradient chosen in the palette is saved in the name: show it as the selected color again.
+            ColorPalette.Split nameSplit = ColorPalette.split(e.displayName());
+            if (ColorPalette.get(nameSplit.index()).gradient()) {
+                profColorIndex = nameSplit.index();
+                profStateName = nameSplit.text();
+            }
+        }
         allowedCrafts    = new ArrayList<>(e.allowedCrafts());
         allowedBlocks    = new ArrayList<>(e.allowedBlocks());
         allowedItems     = new ArrayList<>(e.allowedItems());
@@ -1327,7 +1505,7 @@ public class ProfessionEditorScreen extends Screen {
     // SOUS-ECRAN DE GESTION DES ENTREES
     // =========================================================================
     @OnlyIn(Dist.CLIENT)
-    private static class RestrictionListSubScreen extends Screen {
+    private static class RestrictionListSubScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
         private static final int SUG_H = 14;
         private static final int SUG_MAX = 8;
@@ -1375,7 +1553,7 @@ public class ProfessionEditorScreen extends Screen {
         }
 
         @Override
-        protected void init() {
+        protected void initContent() {
             int midX   = this.width / 2;
             int startY = 46;
             // Minecraft list widget: delete button, item icon, value.
@@ -1394,7 +1572,7 @@ public class ProfessionEditorScreen extends Screen {
                         .tooltip(Tooltip.create(Component.translatable(pendingRemove
                                 ? "rpessentials.gui.restriction_list.confirm_delete_tooltip"
                                 : "rpessentials.gui.restriction_list.delete_tooltip")))
-                        .build(SkinnedButton::new);
+                        .build(SkinnedButton.named("entry_delete"));
                 Warning warn = warnings != null ? warnings.apply(value) : null;
                 Button val = valueButton(color, value, pool, this, rw - 38 - (warn != null ? 18 : 0), 18);
                 ButtonRowList.Row row = new ButtonRowList.Row().add(del, 0).item(() -> iconFor(value), 19, 1).add(val, 38);
@@ -1407,7 +1585,7 @@ public class ProfessionEditorScreen extends Screen {
             boxX = midX - 170;
             boxY = this.height - 60;
             boxW = 300;
-            inputBox = new SkinnedEditBox(this.font, boxX, boxY, boxW, 18, Component.translatable("rpessentials.gui.field.entry"));
+            inputBox = new SkinnedEditBox(this.font, boxX, boxY, boxW, 18, Component.translatable("rpessentials.gui.field.entry")).skin("entry");
             inputBox.setHint(Component.literal(hint));
             inputBox.setMaxLength(256);
             inputBox.setValue(input);
@@ -1420,17 +1598,17 @@ public class ProfessionEditorScreen extends Screen {
             });
             addRenderableWidget(inputBox);
             addRenderableWidget(Button.builder(Component.literal("§a+"), btn -> addEntry())
-                    .pos(boxX + boxW + 2, boxY).size(16, 18).build(SkinnedButton::new));
+                    .pos(boxX + boxW + 2, boxY).size(16, 18).build(SkinnedButton.named("entry_add")));
 
             saveButton = Button.builder(Component.translatable("rpessentials.gui.restriction_list.save"),
                             btn -> { onSave.run(); rebuild(); })
-                    .pos(midX - 130, this.height - 30).size(120, 20).build(SkinnedButton::new);
+                    .pos(midX - 130, this.height - 30).size(120, 20).build(SkinnedButton.named("save"));
             SaveUi.refresh(saveButton, I18n.get("rpessentials.gui.restriction_list.save"), unsaved.getAsBoolean());
             addRenderableWidget(saveButton);
             addRenderableWidget(Button.builder(
                             Component.translatable("rpessentials.gui.restriction_list.close"),
                             btn -> Minecraft.getInstance().setScreen(parent))
-                    .pos(midX + 4, this.height - 30).size(80, 20).build(SkinnedButton::new));
+                    .pos(midX + 4, this.height - 30).size(80, 20).build(SkinnedButton.named("close")));
         }
 
         private void removeAt(int idx, String value) {
@@ -1551,7 +1729,7 @@ public class ProfessionEditorScreen extends Screen {
         
 
         @Override
-        public boolean mouseClicked(double mx, double my, int button) {
+        protected boolean mouseClickedCanvas(double mx, double my, int button) {
             
             if (!suggestions.isEmpty()) {
                 int idx = suggestionAt(mx, my);
@@ -1563,11 +1741,11 @@ public class ProfessionEditorScreen extends Screen {
                 boolean onBox = mx >= boxX && mx <= boxX + boxW && my >= boxY && my <= boxY + 18;
                 if (!onBox) closeSuggestions();
             }
-            return super.mouseClicked(mx, my, button);
+            return super.mouseClickedCanvas(mx, my, button);
         }
 
         @Override
-        public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        protected boolean mouseScrolledCanvas(double mx, double my, double sx, double sy) {
             if (!suggestions.isEmpty() && mx >= boxX && mx < boxX + boxW
                     && my >= dropdownTop() && my < boxY + 18) {
                 int max = Math.max(0, suggestions.size() - SUG_MAX);
@@ -1575,14 +1753,14 @@ public class ProfessionEditorScreen extends Screen {
                 return true;
             }
             
-            return super.mouseScrolled(mx, my, sx, sy);
+            return super.mouseScrolledCanvas(mx, my, sx, sy);
         }
 
         @Override
-        public void render(GuiGraphics g, int mx, int my, float delta) {
+        protected void renderContent(GuiGraphics g, int mx, int my, float delta) {
             SaveUi.refresh(saveButton, I18n.get("rpessentials.gui.restriction_list.save"), unsaved.getAsBoolean());
             GuiSkin.background(g, this.width, this.height, 0xAA000000);
-            super.render(g, mx, my, delta);
+            renderScreen(g, mx, my, delta);
             g.drawCenteredString(this.font,
                     I18n.get("rpessentials.gui.restriction_list.count", items.size()),
                     this.width / 2, 20, 0xFFD700);
@@ -1607,7 +1785,7 @@ public class ProfessionEditorScreen extends Screen {
 
             g.pose().pushPose();
             g.pose().translate(0, 0, 400);
-            if (!GuiSkin.draw(g, GuiSkin.PANEL, boxX - 1, y - 1, boxW + 2, h + 2)) {
+            if (!GuiSkin.draw(g, GuiSkin.PANEL, "suggestions", "", boxX - 1, y - 1, boxW + 2, h + 2)) {
                 g.fill(boxX - 1, y - 1, boxX + boxW + 1, y + h + 1, 0xFF555555);
                 g.fill(boxX, y, boxX + boxW, y + h, 0xF01A1A1A);
             }
@@ -1633,19 +1811,19 @@ public class ProfessionEditorScreen extends Screen {
                 int base = (sel || hov) ? 0xFFFFFF : 0xAAAAAA;
                 int at = lower.isEmpty() ? -1 : id.indexOf(lower);
                 if (at < 0) {
-                    g.drawString(this.font, id, tx, ly + 3, base, false);
+                    g.drawString(this.font, id, tx, ly + 3, base, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
                 } else {
                     String a = id.substring(0, at);
                     String b = id.substring(at, at + lower.length());
                     String c = id.substring(at + lower.length());
-                    g.drawString(this.font, a, tx, ly + 3, base, false);
+                    g.drawString(this.font, a, tx, ly + 3, base, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
                     int bx = tx + this.font.width(a);
-                    g.drawString(this.font, b, bx, ly + 3, 0xFFFF55, false);
-                    g.drawString(this.font, c, bx + this.font.width(b), ly + 3, base, false);
+                    g.drawString(this.font, b, bx, ly + 3, 0xFFFF55, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
+                    g.drawString(this.font, c, bx + this.font.width(b), ly + 3, base, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
                 }
             }
             if (suggestions.size() > SUG_MAX) {
-                g.drawString(this.font, "§8+" + (suggestions.size() - SUG_MAX), boxX + 2, y - 10, 0x777777, false);
+                g.drawString(this.font, "§8+" + (suggestions.size() - SUG_MAX), boxX + 2, y - 10, 0x777777, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
             }
             g.pose().popPose();
         }
@@ -1659,7 +1837,7 @@ public class ProfessionEditorScreen extends Screen {
 
     /** Read-only list of the items or blocks matched by a {@code *} pattern or a {@code #tag}. */
     @OnlyIn(Dist.CLIENT)
-    private static class PatternContentsSubScreen extends Screen {
+    private static class PatternContentsSubScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
         private final Screen back;
         private final String entry;
@@ -1674,7 +1852,7 @@ public class ProfessionEditorScreen extends Screen {
         }
 
         @Override
-        protected void init() {
+        protected void initContent() {
             int midX = this.width / 2;
             if (list == null) list = new ButtonRowList(Minecraft.getInstance(), 18);
             list.layout(midX - 160, 34, 320, this.height - 34 - 40);
@@ -1689,13 +1867,13 @@ public class ProfessionEditorScreen extends Screen {
             addRenderableWidget(list);
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.restriction_list.close"),
                             btn -> Minecraft.getInstance().setScreen(back))
-                    .pos(midX - 40, this.height - 30).size(80, 20).build(SkinnedButton::new));
+                    .pos(midX - 40, this.height - 30).size(80, 20).build(SkinnedButton.named("close")));
         }
 
         @Override
-        public void render(GuiGraphics g, int mx, int my, float delta) {
+        protected void renderContent(GuiGraphics g, int mx, int my, float delta) {
             GuiSkin.background(g, this.width, this.height, 0xAA000000);
-            super.render(g, mx, my, delta);
+            renderScreen(g, mx, my, delta);
             g.drawCenteredString(this.font, I18n.get("rpessentials.gui.pattern_contents.title", entry, ids.size()),
                     this.width / 2, 16, 0xFFD700);
         }
@@ -1712,7 +1890,7 @@ public class ProfessionEditorScreen extends Screen {
 
     /** Check list of the professions that will be allowed to use a globally blocked entry. */
     @OnlyIn(Dist.CLIENT)
-    private static class ProfessionPickerSubScreen extends Screen {
+    private static class ProfessionPickerSubScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
         private final Screen back;
         private final ProfessionEditorScreen editor;
@@ -1731,7 +1909,7 @@ public class ProfessionEditorScreen extends Screen {
         }
 
         @Override
-        protected void init() {
+        protected void initContent() {
             int midX = this.width / 2;
             if (list == null) list = new ButtonRowList(Minecraft.getInstance(), 20);
             list.layout(midX - 120, 44, 240, this.height - 44 - 40);
@@ -1751,7 +1929,7 @@ public class ProfessionEditorScreen extends Screen {
                                     if (!checked.remove(idx)) checked.add(idx);
                                     rebuildWidgets();
                                 })
-                        .size(rw, 18).build(SkinnedButton::new);
+                        .size(rw, 18).build(SkinnedButton.named("profession_choice"));
                 b.active = !already;
                 rows.add(new ButtonRowList.Row().add(b, 0));
             }
@@ -1764,18 +1942,18 @@ public class ProfessionEditorScreen extends Screen {
                                 for (int idx : new TreeSet<>(checked)) editor.allowForProfession(idx, category, entry);
                                 Minecraft.getInstance().setScreen(back);
                             })
-                    .pos(midX - 124, this.height - 30).size(120, 20).build(SkinnedButton::new);
+                    .pos(midX - 124, this.height - 30).size(120, 20).build(SkinnedButton.named("confirm"));
             confirm.active = !checked.isEmpty();
             addRenderableWidget(confirm);
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.restriction_list.close"),
                             btn -> Minecraft.getInstance().setScreen(back))
-                    .pos(midX + 4, this.height - 30).size(80, 20).build(SkinnedButton::new));
+                    .pos(midX + 4, this.height - 30).size(80, 20).build(SkinnedButton.named("close")));
         }
 
         @Override
-        public void render(GuiGraphics g, int mx, int my, float delta) {
+        protected void renderContent(GuiGraphics g, int mx, int my, float delta) {
             GuiSkin.background(g, this.width, this.height, 0xAA000000);
-            super.render(g, mx, my, delta);
+            renderScreen(g, mx, my, delta);
             g.drawCenteredString(this.font, I18n.get("rpessentials.gui.coverage.picker_title", entry),
                     this.width / 2, 18, 0xFFD700);
             g.drawCenteredString(this.font, "§7" + I18n.get("rpessentials.gui.coverage.picker_hint",
@@ -1791,7 +1969,7 @@ public class ProfessionEditorScreen extends Screen {
     }
 
     @OnlyIn(Dist.CLIENT)
-    private static class ContainerListSubScreen extends Screen {
+    private static class ContainerListSubScreen extends net.rp.rpessentials.client.skin.CanvasScreen {
 
         private static final int PER_PAGE = 8;
         private static final int SUG_H = 14;
@@ -1832,7 +2010,7 @@ public class ProfessionEditorScreen extends Screen {
         }
 
         @Override
-        protected void init() {
+        protected void initContent() {
             int midX = this.width / 2;
             int startY = 32;
             int rowH = 20;
@@ -1857,7 +2035,7 @@ public class ProfessionEditorScreen extends Screen {
                             }
                             rebuild();
                         })
-                        .size(16, 18).build(SkinnedButton::new);
+                        .size(16, 18).build(SkinnedButton.named("entry_delete"));
                 int sep = value.indexOf(';');
                 final String name = sep < 0 ? value : value.substring(0, sep);
                 final String profs = sep < 0 ? "" : value.substring(sep + 1);
@@ -1871,13 +2049,13 @@ public class ProfessionEditorScreen extends Screen {
                             closeSuggestions();
                             rebuild();
                         })
-                        .size(rw - 38, 18).build(SkinnedButton::new);
+                        .size(rw - 38, 18).build(SkinnedButton.named("entry"));
                 listRows.add(new ButtonRowList.Row().add(del, 0).item(() -> iconFor(name), 19, 1).add(val, 38));
             }
             list.setRows(listRows);
             addRenderableWidget(list);
 
-            blockBox = new SkinnedEditBox(this.font, boxX, boxY, boxW, 18, Component.translatable("rpessentials.gui.field.block"));
+            blockBox = new SkinnedEditBox(this.font, boxX, boxY, boxW, 18, Component.translatable("rpessentials.gui.field.block")).skin("block");
             blockBox.setHint(Component.translatable("rpessentials.gui.profession_editor.hint_block_list"));
             blockBox.setMaxLength(128);
             blockBox.setValue(block);
@@ -1904,34 +2082,34 @@ public class ProfessionEditorScreen extends Screen {
                             rebuild();
                         })
                         .pos(boxX + col * 76, boxY + 34 + row * 16).size(74, 14)
-                        .tooltip(Tooltip.create(Component.literal(e.id()))).build(SkinnedButton::new));
+                        .tooltip(Tooltip.create(Component.literal(e.id()))).build(SkinnedButton.named("profession_choice")));
             }
             if (pages > 1) {
                 addRenderableWidget(Button.builder(Component.literal("<"),
                                 btn -> { profPage = Math.max(0, profPage - 1); rebuild(); })
-                        .pos(boxX + 308, boxY + 34).size(14, 14).build(SkinnedButton::new));
+                        .pos(boxX + 308, boxY + 34).size(14, 14).build(SkinnedButton.named("page_prev")));
                 addRenderableWidget(Button.builder(Component.literal(">"),
                                 btn -> { profPage = Math.min(pages - 1, profPage + 1); rebuild(); })
-                        .pos(boxX + 308, boxY + 50).size(14, 14).build(SkinnedButton::new));
+                        .pos(boxX + 308, boxY + 50).size(14, 14).build(SkinnedButton.named("page_next")));
             }
 
             addRenderableWidget(Button.builder(Component.translatable(editing != null
                                     ? "rpessentials.gui.container_list.update"
                                     : "rpessentials.gui.container_list.add"),
                             btn -> commit())
-                    .pos(boxX, this.height - 60).size(130, 18).build(SkinnedButton::new));
+                    .pos(boxX, this.height - 60).size(130, 18).build(SkinnedButton.named("add")));
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.container_list.clear"),
                             btn -> { clearForm(); rebuild(); })
-                    .pos(boxX + 134, this.height - 60).size(100, 18).build(SkinnedButton::new));
+                    .pos(boxX + 134, this.height - 60).size(100, 18).build(SkinnedButton.named("clear")));
 
             containerSave = Button.builder(Component.translatable("rpessentials.gui.container_list.save_all"),
                             btn -> { onSave.run(); rebuild(); })
-                    .pos(midX - 130, this.height - 30).size(120, 20).build(SkinnedButton::new);
+                    .pos(midX - 130, this.height - 30).size(120, 20).build(SkinnedButton.named("save"));
             SaveUi.refresh(containerSave, I18n.get("rpessentials.gui.container_list.save_all"), parent.globalDirty());
             addRenderableWidget(containerSave);
             addRenderableWidget(Button.builder(Component.translatable("rpessentials.gui.restriction_list.close"),
                             btn -> Minecraft.getInstance().setScreen(parent))
-                    .pos(midX + 4, this.height - 30).size(80, 20).build(SkinnedButton::new));
+                    .pos(midX + 4, this.height - 30).size(80, 20).build(SkinnedButton.named("close")));
         }
 
         private void commit() {
@@ -2040,7 +2218,7 @@ public class ProfessionEditorScreen extends Screen {
         
 
         @Override
-        public boolean mouseClicked(double mx, double my, int button) {
+        protected boolean mouseClickedCanvas(double mx, double my, int button) {
             
             if (!suggestions.isEmpty()) {
                 int idx = suggestionAt(mx, my);
@@ -2052,25 +2230,25 @@ public class ProfessionEditorScreen extends Screen {
                 boolean onBox = mx >= boxX && mx <= boxX + boxW && my >= boxY && my <= boxY + 18;
                 if (!onBox) closeSuggestions();
             }
-            return super.mouseClicked(mx, my, button);
+            return super.mouseClickedCanvas(mx, my, button);
         }
 
         @Override
-        public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+        protected boolean mouseScrolledCanvas(double mx, double my, double sx, double sy) {
             if (!suggestions.isEmpty() && mx >= boxX && mx < boxX + boxW && my >= dropdownTop() && my < boxY + 18) {
                 int max = Math.max(0, suggestions.size() - SUG_MAX);
                 sugScroll = Math.max(0, Math.min(max, sugScroll - (int) Math.signum(sy)));
                 return true;
             }
             
-            return super.mouseScrolled(mx, my, sx, sy);
+            return super.mouseScrolledCanvas(mx, my, sx, sy);
         }
 
         @Override
-        public void render(GuiGraphics g, int mx, int my, float delta) {
+        protected void renderContent(GuiGraphics g, int mx, int my, float delta) {
             SaveUi.refresh(containerSave, I18n.get("rpessentials.gui.container_list.save_all"), parent.globalDirty());
             GuiSkin.background(g, this.width, this.height, 0xAA000000);
-            super.render(g, mx, my, delta);
+            renderScreen(g, mx, my, delta);
             g.drawCenteredString(this.font, I18n.get("rpessentials.gui.restriction_list.count", items.size()),
                     this.width / 2, 14, 0xFFD700);
             if (items.isEmpty()) {
@@ -2081,7 +2259,7 @@ public class ProfessionEditorScreen extends Screen {
                 }
             }
             g.drawString(this.font, I18n.get("rpessentials.gui.container_list.professions"),
-                    boxX, boxY + 22, 0xAAAAAA, false);
+                    boxX, boxY + 22, 0xAAAAAA, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
             renderDropdown(g, mx, my);
         }
 
@@ -2094,7 +2272,7 @@ public class ProfessionEditorScreen extends Screen {
 
             g.pose().pushPose();
             g.pose().translate(0, 0, 400);
-            if (!GuiSkin.draw(g, GuiSkin.PANEL, boxX - 1, y - 1, boxW + 2, h + 2)) {
+            if (!GuiSkin.draw(g, GuiSkin.PANEL, "suggestions", "", boxX - 1, y - 1, boxW + 2, h + 2)) {
                 g.fill(boxX - 1, y - 1, boxX + boxW + 1, y + h + 1, 0xFF555555);
                 g.fill(boxX, y, boxX + boxW, y + h, 0xF01A1A1A);
             }
@@ -2113,7 +2291,7 @@ public class ProfessionEditorScreen extends Screen {
                     g.renderItem(st, 0, 0);
                     g.pose().popPose();
                 }
-                g.drawString(this.font, id, boxX + 18, ly + 3, (sel || hov) ? 0xFFFFFF : 0xAAAAAA, false);
+                g.drawString(this.font, id, boxX + 18, ly + 3, (sel || hov) ? 0xFFFFFF : 0xAAAAAA, net.rp.rpessentials.client.skin.GuiSkin.textShadow());
             }
             g.pose().popPose();
         }

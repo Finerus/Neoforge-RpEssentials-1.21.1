@@ -70,6 +70,14 @@ public class ProfessionSyncHelper {
 
     public static void syncToPlayer(ServerPlayer player) {
         ProfessionRestrictionManager.invalidatePlayerCache(player.getUUID());
+        boolean enabled = ProfessionConfig.enabled();
+        PacketDistributor.sendToPlayer(player, new net.rp.rpessentials.network.SyncFeaturesPacket(enabled));
+        if (!enabled) {
+            // System turned off: no restriction and no restriction tooltip on the client.
+            PacketDistributor.sendToPlayer(player,
+                    new SyncProfessionRestrictionsPacket(new HashSet<>(), new HashSet<>()));
+            return;
+        }
         ProfessionRestrictionManager.enforceEquipment(player);
 
         if (ProfessionRestrictionManager.isExemptFromProfessionRestrictions(player)) {

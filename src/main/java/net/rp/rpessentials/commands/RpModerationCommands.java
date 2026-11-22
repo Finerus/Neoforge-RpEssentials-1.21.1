@@ -1,5 +1,8 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.moderation.HistoryManager;
 import net.rp.rpessentials.lang.Msg;
@@ -54,7 +57,7 @@ public class RpModerationCommands {
     // =========================================================================
     public static LiteralArgumentBuilder<CommandSourceStack> buildWarn() {
         var warnNode = Commands.literal("warn")
-                .requires(RpEssentialsPermissions::isStaffSource);
+                .requires(RpPerms.cmd(RpPerm.WARN));
 
         warnNode.then(Commands.literal("add")
                 .then(Commands.argument("target", EntityArgument.player())
@@ -105,7 +108,7 @@ public class RpModerationCommands {
 
     public static void registerMyWarn(com.mojang.brigadier.CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("mywarn")
-                .requires(src -> src.getEntity() instanceof ServerPlayer)
+                .requires(src -> src.getEntity() instanceof ServerPlayer && RpPerms.has(src, RpPerm.PLAYER_MYWARN))
                 .executes(RpModerationCommands::myWarn));
     }
 
@@ -114,7 +117,7 @@ public class RpModerationCommands {
     // =========================================================================
     public static LiteralArgumentBuilder<CommandSourceStack> buildMute() {
         var muteNode = Commands.literal("mute")
-                .requires(RpEssentialsPermissions::isStaffSource);
+                .requires(RpPerms.cmd(RpPerm.MUTE));
         muteNode.then(Commands.argument("player", EntityArgument.player())
                 .executes(ctx -> executeMute(ctx, -1, ServerLang.get(null, MessagesConfig.REASON_NONE)))
                 .then(Commands.argument("minutes", IntegerArgumentType.integer(0))
@@ -127,7 +130,7 @@ public class RpModerationCommands {
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildUnmute() {
         return Commands.literal("unmute")
-                .requires(RpEssentialsPermissions::isStaffSource)
+                .requires(RpPerms.cmd(RpPerm.MUTE))
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> {
                             ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
@@ -145,7 +148,7 @@ public class RpModerationCommands {
     // =========================================================================
     public static LiteralArgumentBuilder<CommandSourceStack> buildNote() {
         var noteNode = Commands.literal("note")
-                .requires(RpEssentialsPermissions::isStaffSource);
+                .requires(RpPerms.cmd(RpPerm.NOTE));
 
         noteNode.then(Commands.literal("add")
                 .then(Commands.argument("player", EntityArgument.player())
@@ -224,7 +227,7 @@ public class RpModerationCommands {
     // DEATH RP
     // =========================================================================
     public static LiteralArgumentBuilder<CommandSourceStack> buildDeathRp() {
-        var node = Commands.literal("deathrp").requires(src -> src.hasPermission(2));
+        var node = Commands.literal("deathrp").requires(RpPerms.cmd(RpPerm.DEATHRP));
 
         node.then(Commands.literal("history")
                 .executes(ctx -> showDeathHistory(ctx, null))
@@ -257,7 +260,7 @@ public class RpModerationCommands {
     // =========================================================================
     public static LiteralArgumentBuilder<CommandSourceStack> buildInspect() {
         return Commands.literal("inspect")
-                .requires(RpEssentialsPermissions::isStaffSource)
+                .requires(RpPerms.cmd(RpPerm.INSPECT))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             Set<String> names = new LinkedHashSet<>();
@@ -273,7 +276,7 @@ public class RpModerationCommands {
     }
 
     public static LiteralArgumentBuilder<CommandSourceStack> buildAbsence() {
-        var node = Commands.literal("absence").requires(RpEssentialsPermissions::isStaffSource);
+        var node = Commands.literal("absence").requires(RpPerms.cmd(RpPerm.ABSENCE));
 
         node.then(Commands.literal("add")
                 .then(Commands.argument("player", StringArgumentType.word())
@@ -375,7 +378,7 @@ public class RpModerationCommands {
                     String autoReason = ServerLang.get(null, MessagesConfig.MUTE_AUTO_REASON, "count", String.valueOf(count));
                     MuteManager.mute(target.getUUID(), target.getName().getString(), null, "System", autoReason, duration);
                     for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                        if (!RpEssentialsPermissions.isStaff(p)) continue;
+                        if (!RpPerms.has(p, RpPerm.NOTIFY)) continue;
                         String d = duration == 0 ? ServerLang.get(p, MessagesConfig.TIME_PERMANENT) : MessagesConfig.formatDuration(p, duration);
                         p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(ServerLang.get(p, MessagesConfig.MUTE_AUTO_NOTIFY,
                                 "player", target.getName().getString(), "count", String.valueOf(count), "duration", d)));
@@ -735,7 +738,9 @@ public class RpModerationCommands {
                 if (i < licenses.size() - 1) lic.append("§7, ");
             }
         }
-        sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_LICENSES, "count", String.valueOf(licenses.size()), "list", lic.toString())).append("\n");
+        if (net.rp.rpessentials.config.ProfessionConfig.enabled()) {
+            sb.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_LICENSES, "count", String.valueOf(licenses.size()), "list", lic.toString())).append("\n");
+        }
 
         StringBuilder warnList = new StringBuilder();
         if (warns.isEmpty()) warnList.append(Msg.get(src, MessagesConfig.STAFF_INSPECT_NONE_GREEN));
@@ -780,7 +785,7 @@ public class RpModerationCommands {
     // /rpessentials history <player> [page] | purge
     // =========================================================================
     public static LiteralArgumentBuilder<CommandSourceStack> buildHistory() {
-        var node = Commands.literal("history");
+        var node = Commands.literal("history").requires(RpPerms.cmd(RpPerm.HISTORY));
         node.then(Commands.literal("purge").executes(ctx -> {
             if (!HistoryManager.enabled()) { ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.HISTORY_DISABLED)); return 0; }
             int n = HistoryManager.purge();

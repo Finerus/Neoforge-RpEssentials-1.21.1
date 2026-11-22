@@ -15,7 +15,6 @@ group = mod_group_id
 repositories {
     mavenCentral()
     maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
-    flatDir { dirs 'libs' }
     maven { url "https://maven.su5ed.dev/releases" }
     maven { url "https://api.modrinth.com/maven" }
     maven {
@@ -94,8 +93,11 @@ dependencies {
     compileOnly 'net.luckperms:api:5.4'
 
 
-    implementation files('libs/immersivemessages-neoforge-1.0.18-1.21.1.jar')
-    implementation "maven.modrinth:txnilib:neoforge-1.21.1-1.0.24"
+    // Immersive Messages (and its library TxniLib): optional, only used for the IMMERSIVE display mode.
+    // Not shipped in the jar; without it the message falls back to the action bar.
+    compileOnly "maven.modrinth:immersive-messages-api:neoforge-1.21.1-1.0.18"
+    compileOnly "maven.modrinth:txnilib:neoforge-1.21.1-1.0.24"
+    // Forgified Fabric API is not shipped either: the old one of TxniLib is checked in core/FabricApiCheck.
 
     compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
     runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
@@ -110,6 +112,7 @@ tasks.withType(ProcessResources).configureEach {
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,
             neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
