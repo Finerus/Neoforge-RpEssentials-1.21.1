@@ -132,8 +132,16 @@ public abstract class CanvasScreen extends Screen {
     /** Draws the screen (former render()), in canvas coordinates. */
     protected abstract void renderContent(GuiGraphics g, int mouseX, int mouseY, float partialTick);
 
+    //#if forge
+    //? /** Vanilla render: background then every widget (1.20.1 does not draw the background in Screen.render). */
+    //#else
     /** Vanilla render: background then every widget. */
+    //#endif
     protected void renderScreen(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        //#if forge
+        //? renderBackground(g);
+        //#else
+        //#endif
         super.render(g, mouseX, mouseY, partialTick);
     }
 
@@ -162,8 +170,14 @@ public abstract class CanvasScreen extends Screen {
     }
 
     @Override
+    //#if forge
+    //? public final boolean mouseScrolled(double mx, double my, double delta) {
+        //? // 1.20.1 has a single (vertical) wheel delta.
+        //? return mouseScrolledCanvas(toCanvasX(mx), toCanvasY(my), 0, delta);
+    //#else
     public final boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
         return mouseScrolledCanvas(toCanvasX(mx), toCanvasY(my), scrollX, scrollY);
+    //#endif
     }
 
     @Override
@@ -189,7 +203,11 @@ public abstract class CanvasScreen extends Screen {
     }
 
     protected boolean mouseScrolledCanvas(double mx, double my, double scrollX, double scrollY) {
+        //#if forge
+        //? return super.mouseScrolled(mx, my, scrollY);
+        //#else
         return super.mouseScrolled(mx, my, scrollX, scrollY);
+        //#endif
     }
 
     protected void mouseMovedCanvas(double mx, double my) {

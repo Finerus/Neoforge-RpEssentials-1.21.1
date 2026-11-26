@@ -1,8 +1,8 @@
 # RpEssentials
 
-**Rp Essentials** is a comprehensive server side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge. It covers identity obfuscation, professions and licenses, moderation, chat formatting, server scheduling, Death RP, world border and zones, and more, all configurable in real time without restarts.
+**Rp Essentials** is a comprehensive both client & server side utility mod built for immersive Roleplay servers running Minecraft 1.21.1 on NeoForge or Minecraft 1.20.1 on Forge and NeoForge. It covers identity obfuscation, professions and licenses, moderation, chat formatting, server scheduling, Death RP, world border and zones, and more, all configurable in real time without restarts.
 
-> Current version: **6.1.0**. Full changelog on [Modrinth](https://modrinth.com/mod/rp-essentials/changelog).
+> Current version: **6.2.0**. Full changelog on [Modrinth](https://modrinth.com/mod/rp-essentials/changelog).
 
 Full documentation, configuration reference and setup guides now live on the **[GitHub Wiki](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/wiki)**.
 
@@ -47,8 +47,9 @@ Hi, here is all you need to know about AI in this project:
 
 | Dependency                                                                             | Version                | Side   | Required                                     |
 |----------------------------------------------------------------------------------------|------------------------|--------|----------------------------------------------|
-| Minecraft                                                                              | 1.21.1                 | Both   | Yes                                          |
-| NeoForge                                                                               | 21.1.219+              | Both   | Yes                                          |
+| Minecraft                                                                              | 1.21.1 or 1.20.1       | Both   | Yes                                          |
+| NeoForge                                                                               | 21.1.219+              | Both   | With Minecraft 1.21.1                        |
+| Forge (or NeoForge 47.1.x for 1.20.1)                                                  | 47.1+                  | Both   | With Minecraft 1.20.1                        |
 | [RpImmersion](https://modrinth.com/mod/rp-immersion)                                   | 1.1.1                  | Both   | Optional                                     |
 | LuckPerms                                                                              | Any                    | Server | Optional                                     |
 | ImmersiveMessages                                                                      | neoforge-1.21.1:1.0.18 | Client | Optional                                     |
@@ -68,7 +69,7 @@ ImmersiveMessages and TxniLib are only required client side if you use the `IMME
 
 ## Installation
 
-1. Download the latest `rpessentials-X.X.X.jar` from the releases page.
+1. Download the latest `rpessentials-X.X.X.jar` (NeoForge 1.21.1) or `rpessentials-X.X.X+forge-1.20.1.jar` (Forge or NeoForge 1.20.1) from the releases page.
 2. Place the JAR in your server's `mods/` folder.
 3. Optionally install [LuckPerms](https://luckperms.net/) for prefix/suffix and group based staff permissions.
 4. Start the server, all config files are generated automatically under `config/rpessentials/`.
@@ -84,7 +85,8 @@ See the [Installation](https://github.com/Finerus/Neoforge-RpEssentials-1.21.1/w
 |:-----------|:----------------------|
 | Mod ID     | `rpessentials`        |
 | Group ID   | `net.rp.rpessentials` |
-| Version    | 6.1.0                 |
-| MC Version | 1.21.1                |
-| NeoForge   | 21.1.219+             |
-| Java       | 21                    |
+| Version    | 6.2.0                 |
+| MC Version | 1.21.1 / 1.20.1       |
+| NeoForge   | 21.1.219+ (MC 1.21.1) |
+| Forge      | 47.1+ (MC 1.20.1)     |
+| Java       | 21 / 17 (MC 1.20.1)   |

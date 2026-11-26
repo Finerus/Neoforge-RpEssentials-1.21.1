@@ -15,6 +15,21 @@ public abstract class MixinMinecraftServerStatus {
     private void rpessentials$filterStatus(CallbackInfoReturnable<ServerStatus> cir) {
         ServerStatus status = cir.getReturnValue();
         if (status == null) return;
-        cir.setReturnValue(VanishManager.filterStatus((MinecraftServer) (Object) this, status));
+        ServerStatus filtered = VanishManager.filterStatus((MinecraftServer) (Object) this, status);
+        // Schedule: lines above the player names.
+        java.util.List<com.mojang.authlib.GameProfile> lines = net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.serverListLines();
+        if (!lines.isEmpty() && filtered.players().isPresent()) {
+            ServerStatus.Players p = filtered.players().get();
+            java.util.List<com.mojang.authlib.GameProfile> sample = new java.util.ArrayList<>(lines);
+            sample.addAll(p.sample());
+            filtered = new ServerStatus(filtered.description(),
+                    java.util.Optional.of(new ServerStatus.Players(p.max(), p.online(), sample)),
+                    //#if forge
+                    //? filtered.version(), filtered.favicon(), filtered.enforcesSecureChat(), filtered.forgeData());
+                    //#else
+                    filtered.version(), filtered.favicon(), filtered.enforcesSecureChat(), filtered.isModded());
+                    //#endif
+        }
+        cir.setReturnValue(filtered);
     }
 }

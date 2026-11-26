@@ -32,12 +32,19 @@ public final class ServerLang {
     }
 
     public static String lang(ServerPlayer p) {
+        //#if forge
+        //? return normalize(p.getLanguage());
+        //#else
         return normalize(p.clientInformation().language());
+        //#endif
     }
 
     private static boolean modSource() {
         if (Cfg.ready(MessagesConfig.SPEC)) { return "MOD".equalsIgnoreCase(net.rp.rpessentials.config.ConfigRules.value(MessagesConfig.MESSAGE_SOURCE)); } else { return false; }
     }
+
+    /** messageSource = MOD: the texts of the mod, in the language of each player. */
+    public static boolean fromMod() { return modSource(); }
 
     private static String serverLang() {
         if (Cfg.ready(MessagesConfig.SPEC)) { return normalize(MessagesConfig.SERVER_LANGUAGE.get()); } else { return "en_us"; }

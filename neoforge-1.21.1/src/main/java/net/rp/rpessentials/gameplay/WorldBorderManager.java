@@ -113,7 +113,8 @@ public class WorldBorderManager {
             if (a.enter() != enter || !a.zone().equalsIgnoreCase(zone)) continue;
             server.getCommands().performPrefixedCommand(
                     server.createCommandSourceStack().withSuppressedOutput().withPermission(4),
-                    a.command().replace("{player}", player.getGameProfile().getName()));
+                    a.command().replace("{player}", net.rp.rpessentials.commands.PlayerCommands.safeName(
+                            player.getGameProfile().getName(), player.getUUID())));
         }
     }
 
@@ -264,9 +265,16 @@ public class WorldBorderManager {
     // TICK PRINCIPAL
     // =========================================================================
     public static void tick(MinecraftServer server) {
+        boolean border, zones;
         try {
-            if (RpEssentialsConfig.ENABLE_WORLD_BORDER_WARNING == null) return;
-            if (!RpEssentialsConfig.ENABLE_WORLD_BORDER_WARNING.get()) return;
+            border = RpEssentialsConfig.ENABLE_WORLD_BORDER.get();
+            zones = RpEssentialsConfig.ENABLE_NAMED_ZONES.get();
+            if (!border) {
+                hasBeenPrewarned.clear();
+                hasBeenWarned.clear();
+            }
+            if (!zones) playerZoneState.clear();
+            if (!border && !zones) return;
             if (!systemInitialized) {
                 systemInitialized = true;
                 RpEssentials.LOGGER.info("[RpEssentials] System initialized. Hi, have a great day! - Finerus");
@@ -275,8 +283,8 @@ public class WorldBorderManager {
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             try {
-                checkPlayerDistance(server, player);
-                checkNamedZones(player);
+                if (border) checkPlayerDistance(server, player);
+                if (zones) checkNamedZones(player);
             } catch (Exception e) {
                 RpEssentials.LOGGER.error("[WorldBorder] Error checking player {}", player.getName().getString(), e);
             }

@@ -19,8 +19,12 @@ public abstract class MixinPlayerListSound {
     @Inject(
             method = "broadcast(Lnet/minecraft/world/entity/player/Player;DDDDLnet/minecraft/resources/ResourceKey;Lnet/minecraft/network/protocol/Packet;)V",
             at = @At("HEAD"),
+            //#if forge
+            //? cancellable = true
+            //#else
             cancellable = true,
             remap = false
+            //#endif
     )
     private void rpessentials$vanishNoise(@Nullable Player except, double x, double y, double z, double radius,
                                           ResourceKey<Level> dimension, Packet<?> packet, CallbackInfo ci) {

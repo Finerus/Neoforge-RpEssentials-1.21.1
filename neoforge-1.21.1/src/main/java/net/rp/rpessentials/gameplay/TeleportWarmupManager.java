@@ -9,7 +9,11 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+//#if forge
+//? import net.minecraftforge.event.TickEvent;
+//#else
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+//#endif
 import net.rp.rpessentials.api.event.RpTeleportEvent;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpConfig;
@@ -88,7 +92,11 @@ public final class TeleportWarmupManager {
         Vec3 dest = new Vec3(x, y, z);
         RpTeleportEvent.Warmup warmup = new RpTeleportEvent.Warmup(player, kind, level, dest, Math.max(0, seconds) * 20,
                 opt(RpConfig.TELEPORT_CANCEL_ON_MOVE, true), opt(RpConfig.TELEPORT_CANCEL_ON_DAMAGE, true));
+        //#if forge
+        //? if (MinecraftForge.EVENT_BUS.post(warmup)) return false;
+        //#else
         if (NeoForge.EVENT_BUS.post(warmup).isCanceled()) return false;
+        //#endif
 
         Pending old = PENDING.remove(player.getUUID());
         if (old != null) NeoForge.EVENT_BUS.post(new RpTeleportEvent.Cancelled(player, old.kind, old.level, old.destination,
@@ -131,7 +139,11 @@ public final class TeleportWarmupManager {
     }
 
     private static void finish(ServerPlayer player, Pending p) {
+        //#if forge
+        //? if (MinecraftForge.EVENT_BUS.post(new RpTeleportEvent.Pre(player, p.kind, p.level, p.destination))) return;
+        //#else
         if (NeoForge.EVENT_BUS.post(new RpTeleportEvent.Pre(player, p.kind, p.level, p.destination)).isCanceled()) return;
+        //#endif
         ServerLevel fromLevel = player.serverLevel();
         Vec3 from = player.position();
         player.teleportTo(p.level, p.destination.x, p.destination.y, p.destination.z, java.util.Set.of(), p.yaw, p.pitch);
@@ -140,7 +152,12 @@ public final class TeleportWarmupManager {
     }
 
     @SubscribeEvent
+    //#if forge
+    //? public static void onServerTick(TickEvent.ServerTickEvent event) {
+        //? if (event.phase != TickEvent.Phase.END) return;
+    //#else
     public static void onServerTick(ServerTickEvent.Post event) {
+    //#endif
         if (PENDING.isEmpty()) return;
         for (Iterator<Map.Entry<UUID, Pending>> it = PENDING.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<UUID, Pending> e = it.next();
@@ -166,10 +183,18 @@ public final class TeleportWarmupManager {
     }
 
     @SubscribeEvent
+    //#if forge
+    //? public static void onDamage(LivingDamageEvent event) {
+    //#else
     public static void onDamage(LivingDamageEvent.Post event) {
+    //#endif
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         Pending p = PENDING.get(player.getUUID());
+        //#if forge
+        //? if (p != null && p.cancelOnDamage && event.getAmount() > 0) abort(player, p, RpTeleportEvent.Cancelled.Reason.DAMAGED);
+        //#else
         if (p != null && p.cancelOnDamage && event.getNewDamage() > 0) abort(player, p, RpTeleportEvent.Cancelled.Reason.DAMAGED);
+        //#endif
     }
 
     @SubscribeEvent

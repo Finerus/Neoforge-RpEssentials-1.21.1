@@ -1,0 +1,56 @@
+// The Forge 1.20.1 version is made from the NeoForge 1.21.1 code: see SHARED_CODE.md.
+//
+// For each NeoForge file:
+//   - the names that only changed between the two loaders are replaced (list below);
+//   - between "//#if forge" and "//#else", the lines written "//? ..." are the Forge code (the "//? " is removed);
+//   - between "//#else" and "//#endif", the NeoForge code is dropped;
+//   - a file with a "//#neoforge-only" line is left out.
+
+// In this order: the longest names first.
+ext.forgeNames = [
+        ['net.neoforged.neoforge.common.ModConfigSpec', 'net.minecraftforge.common.ForgeConfigSpec'],
+        ['ModConfigSpec', 'ForgeConfigSpec'],
+        ['net.neoforged.neoforge.network.PacketDistributor', 'net.rp.rpessentials.network.compat.PacketDistributor'],
+        ['net.neoforged.neoforge.network.handling.IPayloadHandler', 'net.rp.rpessentials.network.compat.IPayloadHandler'],
+        ['net.neoforged.neoforge.network.handling.IPayloadContext', 'net.rp.rpessentials.network.compat.IPayloadContext'],
+        ['net.minecraft.network.codec.StreamCodec', 'net.rp.rpessentials.network.compat.StreamCodec'],
+        ['net.minecraft.network.codec.ByteBufCodecs', 'net.rp.rpessentials.network.compat.ByteBufCodecs'],
+        ['net.minecraft.network.protocol.common.custom.CustomPacketPayload', 'net.rp.rpessentials.network.compat.CustomPacketPayload'],
+        ['net.neoforged.fml.common.EventBusSubscriber', 'net.minecraftforge.fml.common.Mod.EventBusSubscriber'],
+        ['net.neoforged.neoforge.common.NeoForge.EVENT_BUS', 'net.minecraftforge.common.MinecraftForge.EVENT_BUS'],
+        ['NeoForge.EVENT_BUS', 'MinecraftForge.EVENT_BUS'],
+        ['net.neoforged.neoforge.common.NeoForge', 'net.minecraftforge.common.MinecraftForge'],
+        ['net.neoforged.bus.api', 'net.minecraftforge.eventbus.api'],
+        ['net.neoforged.fml', 'net.minecraftforge.fml'],
+        ['net.neoforged.api.distmarker', 'net.minecraftforge.api.distmarker'],
+        ['net.neoforged.neoforge', 'net.minecraftforge'],
+        ['ResourceLocation.fromNamespaceAndPath(', 'new ResourceLocation('],
+        ['ResourceLocation.withDefaultNamespace(', 'new ResourceLocation('],
+        ['ResourceLocation.parse(', 'new ResourceLocation('],
+        [', remap = false', ''],
+        ['remap = false, ', '']
+]
+
+/** Applies the rules above to the .java files of a copy (Sync or Copy task). */
+ext.toForge = { CopySpec spec ->
+    def names = forgeNames
+    spec.filteringCharset = 'UTF-8'
+    spec.eachFile { FileCopyDetails file ->
+        if (!file.name.endsWith('.java')) return
+        if (file.file.readLines('UTF-8').any { it.trim().startsWith('//#neoforge-only') }) {
+            file.exclude()
+            return
+        }
+        String mode = null // null, 'forge' or 'neoforge', for this file only
+        file.filter { String line ->
+            String t = line.trim()
+            if (t == '//#if forge') { mode = 'forge'; return null }
+            if (t == '//#else' && mode != null) { mode = 'neoforge'; return null }
+            if (t == '//#endif' && mode != null) { mode = null; return null }
+            if (mode == 'forge') return line.replaceFirst(/^(\s*)\/\/\? ?/, '$1')
+            if (mode == 'neoforge') return null
+            names.each { n -> line = line.replace(n[0], n[1]) }
+            return line
+        }
+    }
+}

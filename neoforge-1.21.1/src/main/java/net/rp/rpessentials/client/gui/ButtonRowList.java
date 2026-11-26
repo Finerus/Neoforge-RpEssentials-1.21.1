@@ -29,15 +29,27 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
     private boolean scrollToEnd;
 
     public ButtonRowList(Minecraft mc, int rowHeight) {
+        //#if forge
+        //? super(mc, 100, 100, 0, 100, rowHeight);
+        //? setRenderBackground(false);
+        //? setRenderTopAndBottom(false);
+        //#else
         super(mc, 100, 100, 0, rowHeight);
+        //#endif
     }
 
     /** Places the list. */
     public void layout(int x, int y, int w, int h) {
+        //#if forge
+        //? updateSize(w, h, y, y + h);
+        //? setLeftPos(x);
+        //? setScrollAmount(getScrollAmount()); // clamps to the new size
+        //#else
         // Not updateSizeAndPosition(): in 1.21.1 it also moves the list back to x = 0.
         setSize(w, h);
         setPosition(x, y);
         clampScrollAmount();
+        //#endif
     }
 
     /** Width available for the widgets of a row. */
@@ -70,7 +82,11 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
     /** Same as the hit area of the vanilla list, so what is drawn is what is clicked. */
     @Override
     public int getRowLeft() {
+        //#if forge
+        //? return getLeft() + getWidth() / 2 - getRowWidth() / 2;
+        //#else
         return getX() + getWidth() / 2 - getRowWidth() / 2;
+        //#endif
     }
 
     @Override
@@ -78,12 +94,20 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         return getRight() - SIDE;
     }
 
+    //#if forge
+    //#else
     @Override
     protected void renderListBackground(GuiGraphics g) {}
+    //#endif
 
     @Override
+    //#if forge
+    //? public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        //? super.render(g, mouseX, mouseY, partialTick);
+    //#else
     public void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderWidget(g, mouseX, mouseY, partialTick);
+    //#endif
         // F8: the buttons of rows scrolled out of view are exported too.
         if (net.rp.rpessentials.client.skin.GuiTemplateExporter.capturing()) {
             for (Row row : children()) {
@@ -94,8 +118,11 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
         }
     }
 
+    //#if forge
+    //#else
     @Override
     protected void renderListSeparators(GuiGraphics g) {}
+    //#endif
 
     /**
      * One line of the list: widgets and texts placed at an offset from the top left corner of the row,
@@ -184,7 +211,11 @@ public class ButtonRowList extends ContainerObjectSelectionList<ButtonRowList.Ro
                 boolean sprite = blockSprite != null && GuiSkin.resolve(blockSprite, blockId, "") != null;
                 if (sprite) {
                     // Drawn once, by the first visible row of the block.
+                    //#if forge
+                    //? if (blockIndex == 0 || top < list.getTop()) {
+                    //#else
                     if (blockIndex == 0 || top < list.getY()) {
+                    //#endif
                         int blockTop = top - blockIndex * rowH;
                         GuiSkin.draw(g, blockSprite, blockId, "", left, blockTop, width, blockSize * rowH - 2);
                     }

@@ -218,7 +218,8 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
 
         PacketDistributor.sendToPlayer(admin,
                 new OpenPlayerProfileGuiPacket(players, professionIds, roleIds, platformIds,
-                        net.rp.rpessentials.moderation.ReportManager.openCountsByTarget()));
+                        RpPerms.has(admin, RpPerm.REPORTS)
+                                ? net.rp.rpessentials.moderation.ReportManager.openCountsByTarget() : java.util.Map.of()));
     }
 
     /**
@@ -248,7 +249,8 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         long playtimeMs = PlaytimeManager.getTotalPlaytimeMs(uuid);
 
         List<NoteManager.NoteEntry> rawNotes = new ArrayList<>();
-        try { rawNotes = NoteManager.getNotes(uuid); } catch (Exception ignored) {}
+        // The notes are only sent to those who may read them.
+        if (RpPerms.has(admin, RpPerm.NOTE)) try { rawNotes = NoteManager.getNotes(uuid); } catch (Exception ignored) {}
         int noteCount = rawNotes.size();
         List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> noteEntries = rawNotes.stream()
                 .map(n -> new OpenPlayerProfileGuiPacket.PlayerData.NoteEntry(n.id, n.text, n.displayAuthor(), n.timestamp))
@@ -293,7 +295,8 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
         long sessionMs  = PlaytimeManager.getCurrentSessionMs(uuid);
 
         List<NoteManager.NoteEntry> rawNotes = new ArrayList<>();
-        try { rawNotes = NoteManager.getNotes(uuid); } catch (Exception ignored) {}
+        // The notes are only sent to those who may read them.
+        if (RpPerms.has(admin, RpPerm.NOTE)) try { rawNotes = NoteManager.getNotes(uuid); } catch (Exception ignored) {}
         int noteCount = rawNotes.size();
 
         List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> noteEntries = rawNotes.stream()
@@ -323,7 +326,9 @@ public record RequestOpenGuiPacket(GuiType guiType) implements CustomPacketPaylo
     // ── GUI Config Manager ─────────────────────────────────────────────────────
     private static void handleConfigManagerGui(ServerPlayer player) {
         List<ConfigInspector.FileInfo> fileInfos = ConfigInspector.getFileInfos();
+        // A file with nothing this staff member may change is not listed.
         List<ConfigGuiFilesPacket.FileEntry> entries = fileInfos.stream()
+                .filter(fi -> ConfigInspector.anyVisible(fi.id(), p -> RpPerms.has(player, p)))
                 .map(fi -> new ConfigGuiFilesPacket.FileEntry(fi.id(), fi.displayName(), fi.color(), fi.mod(), fi.modColor(),
                         fi.theme().accent(), fi.theme().section(), fi.theme().title()))
                 .toList();

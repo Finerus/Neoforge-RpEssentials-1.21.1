@@ -85,7 +85,7 @@ public record SaveGlobalRestrictionsPacket(
                         PacketValidation.cleanContainers(packet.containerRestrictions()));
 
                 if (details.isEmpty()) {
-                    player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_GLOBAL_NO_CHANGE)));
+                    player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_GLOBAL_NO_CHANGE)));
                     return;
                 }
 
@@ -108,7 +108,7 @@ public record SaveGlobalRestrictionsPacket(
                 }, true);
 
             } else {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });
     }

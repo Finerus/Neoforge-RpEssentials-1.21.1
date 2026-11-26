@@ -20,8 +20,12 @@ public abstract class MixinEntity {
 
     @Inject(
             method = "saveWithoutId",
+            //#if forge
+            //? at = @At("HEAD")
+            //#else
             at = @At("HEAD"),
             remap = false
+            //#endif
     )
     private void rpessentials$beginSave(CompoundTag tag, CallbackInfoReturnable<CompoundTag> cir) {
         rpessentials$saving.set(true);
@@ -29,11 +33,23 @@ public abstract class MixinEntity {
 
     @Inject(
             method = "saveWithoutId",
+            //#if forge
+            //? at = @At("RETURN")
+            //#else
             at = @At("RETURN"),
             remap = false
+            //#endif
     )
     private void rpessentials$endSave(CompoundTag tag, CallbackInfoReturnable<CompoundTag> cir) {
         rpessentials$saving.set(false);
+    }
+
+    /** Every way to change a tag (/tag, functions, other mods): a role takes effect at once. */
+    @Inject(method = {"addTag", "removeTag"}, at = @At("RETURN"), remap = false)
+    private void rpessentials$roleTag(String tag, CallbackInfoReturnable<Boolean> cir) {
+        if (cir.getReturnValueZ() && (Object) this instanceof ServerPlayer p) {
+            net.rp.rpessentials.permission.AccessRefresh.onTag(p, tag);
+        }
     }
 
     @Inject(method = "isIgnoringBlockTriggers", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
@@ -47,8 +63,12 @@ public abstract class MixinEntity {
     @Inject(
             method = "getCustomName",
             at = @At("HEAD"),
+            //#if forge
+            //? cancellable = true
+            //#else
             cancellable = true,
             remap = false
+            //#endif
     )
     private void onGetCustomName(CallbackInfoReturnable<Component> cir) {
         if (!((Object) this instanceof ServerPlayer serverPlayer)) return;

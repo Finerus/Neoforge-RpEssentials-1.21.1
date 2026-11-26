@@ -51,18 +51,13 @@ public class RpEssentialsEventHandler {
         Component canJoin = RpEssentialsScheduleManager.canPlayerJoin(player);
         if (canJoin != null) {
             refusedJoins.add(player.getUUID());
-            if (Cfg.ready(ScheduleConfig.SPEC)) {
-                if (ScheduleConfig.NOTIFY_REFUSED_JOIN.get()) {
-                    for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                        if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(Component.literal(ServerLang.get(p,
-                                MessagesConfig.LOGIN_REFUSED_NOTICE, "player", player.getName().getString())));
-                    }
-                }
-            }
+            RpEssentialsScheduleManager.notifyRefused(server, player.getGameProfile().getName());
             player.connection.disconnect(canJoin);
             return;
         }
 
+        net.rp.rpessentials.util.PlayerRefs.joined(player.getGameProfile());
+        boolean cameBefore = LastConnectionManager.getEntry(player.getUUID()) != null;
         LastConnectionManager.recordLogin(player);
         AbsenceManager.onLogin(player.getUUID());
         PlaytimeManager.onLogin(player.getUUID());
@@ -70,7 +65,7 @@ public class RpEssentialsEventHandler {
         net.rp.rpessentials.gameplay.ModNotices.onLogin(player);
 
         if (VanishManager.isVanished(player.getUUID()) && VanishManager.reminderEnabled()) {
-            player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.LOGIN_VANISH_REMINDER,
+            player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.LOGIN_VANISH_REMINDER,
                     "level", String.valueOf(VanishManager.getLevel(player.getUUID())))));
         }
 
@@ -131,7 +126,10 @@ public class RpEssentialsEventHandler {
             if (logSummary.length() > 0) {
                 RpEssentials.LOGGER.info("[RPEssentials] Applied prepared profile for {}: {}",
                         player.getName().getString(), logSummary);
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.PROFILE_PREPARED)));
+                // A role given while they were away is not a prepared profile.
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(cameBefore && pending.role != null && !pending.role.isEmpty()
+                        ? ServerLang.get(player, MessagesConfig.SETROLE_SUCCESS_PLAYER, "role", pending.role.toUpperCase(java.util.Locale.ROOT))
+                        : ServerLang.get(player, MessagesConfig.PROFILE_PREPARED)));
             }
         }
 
@@ -139,12 +137,15 @@ public class RpEssentialsEventHandler {
 
         if (RpPerms.has(player, RpPerm.NOTIFY)) {
             if (Cfg.ready(ScheduleConfig.SPEC)) {
-                if ("FORCE_CLOSED".equals(ScheduleConfig.FORCE_STATE.get())) {
-                    player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.LOGIN_FORCE_CLOSED)));
+                var force = RpEssentialsScheduleManager.getForceState();
+                if (force != net.rp.rpessentials.api.event.ServerScheduleEvent.ForceState.NONE) {
+                    boolean closed = force == net.rp.rpessentials.api.event.ServerScheduleEvent.ForceState.FORCE_CLOSED;
+                    player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player,
+                            closed ? MessagesConfig.LOGIN_FORCE_CLOSED : MessagesConfig.LOGIN_FORCE_OPEN) + RpEssentialsScheduleManager.forceDetails(player)));
                 }
             }
             for (String w : RpEssentialsScheduleManager.getConfigWarnings(player)) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.SCHED_SYS_CONFIG_WARNING, "warning", w)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.SCHED_SYS_CONFIG_WARNING, "warning", w)));
             }
         }
 
@@ -162,6 +163,8 @@ public class RpEssentialsEventHandler {
 
         java.util.concurrent.CompletableFuture.runAsync(
                 () -> server.execute(() -> {
+                    // Already gone: the other clients must not keep their data.
+                    if (server.getPlayerList().getPlayer(player.getUUID()) != player) return;
                     SyncNametagDataPacket.broadcastForPlayer(player);
                     SyncNametagDataPacket.sendAllTo(player);
                 }),
@@ -206,8 +209,7 @@ public class RpEssentialsEventHandler {
             boolean hideNametags = RpEssentialsConfig.HIDE_NAMETAGS.get();
             PacketDistributor.sendToPlayer(player, new HideNametagsPacket(hideNametags));
         }
-        PacketDistributor.sendToPlayer(player, new net.rp.rpessentials.network.SyncPermissionsPacket(
-                net.rp.rpessentials.permission.RpPerms.granted(player)));
+        net.rp.rpessentials.permission.AccessRefresh.onLogin(player);
 
         if (Cfg.ready(ScheduleConfig.SPEC)) {
             String soundId = ScheduleConfig.WELCOME_SOUND.get();
@@ -234,6 +236,7 @@ public class RpEssentialsEventHandler {
 
         RpEssentialsRoleManager.invalidate(id);
         RpEssentialsPermissions.invalidateCache(id);
+        net.rp.rpessentials.permission.AccessRefresh.onLogout(id);
         RpEssentialsMessagingManager.clearCache(id);
         RpCooldownManager.clearExpired(id);
         ProximityChatSpyManager.onLogout(id);
@@ -242,6 +245,7 @@ public class RpEssentialsEventHandler {
         WorldBorderManager.clearCache(id);
         TabBlur.onLogout(id);
         RpEssentials.invalidateMeta(id);
+        net.rp.rpessentials.network.PacketGuard.onLogout(id);
 
         if (refusedJoins.remove(id)) return;
 
@@ -297,8 +301,9 @@ public class RpEssentialsEventHandler {
                 WarnManager.getAll().size(),
                 MuteManager.getAllMutes().size(),
                 dataFolder);
-        AfkPlatformInitializer.tryPlace(event.getServer());
+        // Before the AFK platform: once it is placed, a new server looks like one where the mod already ran.
         net.rp.rpessentials.gameplay.ModNotices.onServerStarted(event.getServer());
+        AfkPlatformInitializer.tryPlace(event.getServer());
         // Roles first: old permission names are converted to nodes before LuckPerms compares its groups.
         net.rp.rpessentials.permission.RpEssentialsRoleManager.reload();
         LuckPermsSync.start(event.getServer());

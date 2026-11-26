@@ -55,15 +55,15 @@ public final class GuiFeedback {
     }
 
     private static MutableComponent build(ServerPlayer viewer, String title, List<String> details) {
-        MutableComponent msg = Component.literal(title);
+        MutableComponent msg = ColorHelper.parseSection(title);
         int shown = 0;
         for (String d : details) {
             if (shown >= MAX_LINES) {
-                msg.append(withTooltip(viewer, Component.literal("\n  " + ServerLang.get(viewer, MessagesConfig.GUI_MORE,
+                msg.append(withTooltip(viewer, ColorHelper.parseSection("\n  " + ServerLang.get(viewer, MessagesConfig.GUI_MORE,
                         "count", String.valueOf(details.size() - shown))), details));
                 break;
             }
-            msg.append(Component.literal("\n  " + d));
+            msg.append(ColorHelper.parseSection("\n  " + d));
             shown++;
         }
         return msg;
@@ -86,7 +86,7 @@ public final class GuiFeedback {
         }
         final String tip = sb.toString();
         return component.withStyle(s -> s.withHoverEvent(
-                new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(tip))));
+                new HoverEvent(HoverEvent.Action.SHOW_TEXT, ColorHelper.parseSection(tip))));
     }
 
     public static List<String> diff(Collection<String> before, Collection<String> after) {
@@ -97,6 +97,6 @@ public final class GuiFeedback {
     }
 
     public static String strip(String s) {
-        return s.replaceAll("§.", "");
+        return ColorHelper.stripAll(s);
     }
 }

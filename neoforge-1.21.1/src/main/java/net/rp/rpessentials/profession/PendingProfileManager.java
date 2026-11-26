@@ -53,7 +53,7 @@ public class PendingProfileManager {
 
     private static void loadFromFile() {
         if (dataFile == null || !dataFile.exists()) return;
-        try (FileReader reader = new FileReader(dataFile)) {
+        try (FileReader reader = new FileReader(dataFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, PendingEntry>>(){}.getType();
             Map<String, PendingEntry> data = GSON.fromJson(reader, type);
             if (data != null) {
@@ -114,6 +114,13 @@ public class PendingProfileManager {
         if (e == null) return;
         e.nickname = nickname;
         saveToFile();
+    }
+
+    /** Role waiting for this player, null or empty when none. */
+    public static String getRole(UUID uuid) {
+        ensureInitialized();
+        PendingEntry e = entries.get(uuid);
+        return e != null ? e.role : null;
     }
 
     public static void setRole(UUID uuid, String role) {

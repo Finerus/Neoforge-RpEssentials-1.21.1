@@ -18,8 +18,9 @@ import java.util.Set;
 /**
  * Updates config files written by older versions, once, before NeoForge loads them (NeoForge drops the
  * options it does not know, so their values would be lost). Runs from the mod constructor on
- * {@code config/rpessentials} and {@code defaultconfigs/rpessentials}. A file is copied to
- * {@code <name>.bak-migration} before its first change. Running it again changes nothing.
+ * {@code config/rpessentials}, {@code defaultconfigs/rpessentials} and the {@code serverconfig/rpessentials} folder
+ * of the worlds (where Forge 1.20.1 keeps the server configs, and where NeoForge reads overrides). A file is copied
+ * to {@code <name>.bak-migration} before its first change. Running it again changes nothing.
  * <p>
  * Steps (each one only when the old layout is found):
  * <ol>
@@ -29,6 +30,9 @@ import java.util.Set;
  *       {@code isStaff} permission through a role of the same name (added to the role when it exists,
  *       otherwise a role {@code name;name;isStaff} is created), so the same players stay staff.
  *       {@code luckPermsStaffGroups} only counted when {@code useLuckPermsGroups} was true.</li>
+ *   <li><b>World border</b> (6.2.0): the section "World Border Warning" becomes "World Border", and {@code enableWorldBorderWarning} becomes {@code enableWorldBorder}. It also
+ *       turned the named zones off, so {@code false} is written in the new {@code enableNamedZones} too.</li>
+ *   <li><b>Closed message</b> (6.2.0): {@code msgServerClosed} gets the time left when it was never changed.</li>
  *   <li><b>Dice messages</b> (4.1.x): {@code diceRollFormat} and {@code diceRollSpyFormat} moved from the
  *       RP file ("Dice System") to the messages file ("Dice").</li>
  * </ol>
@@ -37,20 +41,108 @@ public final class ConfigMigration {
 
     private static final String PERMS = "Permissions System";
     private static final String ROLES = "Roles";
+    private static final String OLD_BORDER = "World Border Warning";
+    private static final String BORDER = "World Border";
 
     private ConfigMigration() {}
 
     public static void run() {
-        for (Path dir : List.of(FMLPaths.CONFIGDIR.get().resolve("rpessentials"),
-                FMLPaths.GAMEDIR.get().resolve("defaultconfigs").resolve("rpessentials"))) {
+        for (Path dir : folders()) {
             if (!Files.isDirectory(dir)) continue;
             try {
-                migrateRoles(dir.resolve("rpessentials-core.toml"));
-                migrateDice(dir.resolve("rpessentials-rp.toml"), dir.resolve("rpessentials-messages.toml"));
+                migrate(dir);
             } catch (Exception e) {
                 // Never block the start: the file is left as it was.
                 RpEssentials.LOGGER.error("[Migration] Could not update the config files in {}", dir, e);
             }
+        }
+    }
+
+    static void migrate(Path dir) throws Exception {
+        migrateRoles(dir.resolve("rpessentials-core.toml"));
+        migrateWorldBorder(dir.resolve("rpessentials-core.toml"));
+        migrateClosedMessage(dir.resolve("rpessentials-schedule.toml"));
+        migrateDice(dir.resolve("rpessentials-rp.toml"), dir.resolve("rpessentials-messages.toml"));
+    }
+
+    /** Every folder that may hold the config files of the mod. */
+    private static List<Path> folders() {
+        Path game = FMLPaths.GAMEDIR.get();
+        List<Path> out = new ArrayList<>();
+        out.add(FMLPaths.CONFIGDIR.get().resolve("rpessentials"));
+        out.add(game.resolve("defaultconfigs").resolve("rpessentials"));
+        Set<Path> worlds = new LinkedHashSet<>();
+        // Dedicated server: the world of server.properties.
+        Path properties = game.resolve("server.properties");
+        if (Files.isRegularFile(properties)) {
+            java.util.Properties p = new java.util.Properties();
+            try (java.io.Reader in = Files.newBufferedReader(properties)) {
+                p.load(in);
+                worlds.add(game.resolve(p.getProperty("level-name", "world").trim()));
+            } catch (Exception e) {
+                RpEssentials.LOGGER.warn("[Migration] Could not read server.properties: {}", e.toString());
+            }
+        }
+        // Singleplayer: every world.
+        Path saves = game.resolve("saves");
+        if (Files.isDirectory(saves)) {
+            try (java.util.stream.Stream<Path> list = Files.list(saves)) {
+                list.filter(Files::isDirectory).forEach(worlds::add);
+            } catch (Exception e) {
+                RpEssentials.LOGGER.warn("[Migration] Could not list the worlds: {}", e.toString());
+            }
+        }
+        for (Path world : worlds) out.add(world.resolve("serverconfig").resolve("rpessentials"));
+        return out;
+    }
+
+    // =========================================================================
+    // WORLD BORDER (6.2.0)
+    // =========================================================================
+    private static void migrateWorldBorder(Path file) throws Exception {
+        if (!Files.isRegularFile(file)) return;
+        try (CommentedFileConfig cfg = open(file)) {
+            if (!(cfg.get(List.of(OLD_BORDER)) instanceof CommentedConfig old)) return;
+            backup(file);
+
+            // 1. The old switch turned the border and the named zones off. A value already written with the new name wins.
+            List<String> zones = List.of(BORDER, "enableNamedZones");
+            if (old.contains("enableWorldBorderWarning")) {
+                boolean off = Boolean.FALSE.equals(old.get("enableWorldBorderWarning"));
+                if (!old.contains("enableWorldBorder") && !cfg.contains(List.of(BORDER, "enableWorldBorder")))
+                    cfg.set(List.of(BORDER, "enableWorldBorder"), !off);
+                if (off && !old.contains("enableNamedZones") && !cfg.contains(zones)) cfg.set(zones, false);
+                old.remove("enableWorldBorderWarning");
+                RpEssentials.LOGGER.info("[Migration] {}: 'enableWorldBorderWarning' is now 'enableWorldBorder' ({}){}", file,
+                        !off, off ? ", named zones kept off (enableNamedZones)" : "");
+            }
+
+            // 2. Every other option of the section (values already in the new one win).
+            for (CommentedConfig.Entry e : new ArrayList<>(old.entrySet())) {
+                List<String> to = List.of(BORDER, e.getKey());
+                if (cfg.contains(to)) continue;
+                cfg.set(to, e.getValue());
+                if (e.getComment() != null) cfg.setComment(to, e.getComment());
+            }
+            cfg.remove(List.of(OLD_BORDER));
+            cfg.save();
+            RpEssentials.LOGGER.info("[Migration] {}: section '{}' renamed '{}'", file, OLD_BORDER, BORDER);
+        }
+    }
+
+    // =========================================================================
+    // CLOSED MESSAGE (6.2.0)
+    // =========================================================================
+    private static void migrateClosedMessage(Path file) throws Exception {
+        if (!Files.isRegularFile(file)) return;
+        List<String> path = List.of("Schedule Messages", "msgServerClosed");
+        try (CommentedFileConfig cfg = open(file)) {
+            // Only the old default: a message written by the admin is kept as it is.
+            if (!"§c§lThe server is now closed. See you on {day} at {open}!".equals(cfg.get(path))) return;
+            backup(file);
+            cfg.set(path, net.rp.rpessentials.config.ScheduleConfig.MSG_SERVER_CLOSED.getDefault());
+            cfg.save();
+            RpEssentials.LOGGER.info("[Migration] {}: 'msgServerClosed' now shows the time left before the opening", file);
         }
     }
 

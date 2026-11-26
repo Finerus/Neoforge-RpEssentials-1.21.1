@@ -51,7 +51,7 @@ public record DeletePendingProfilePacket(UUID targetUuid) implements CustomPacke
             String name = PendingProfileManager.getMcName(packet.targetUuid());
             PendingProfileManager.consumePending(packet.targetUuid());
 
-            admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_PENDING_DELETED, "player", name)));
+            admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_PENDING_DELETED, "player", name)));
             RpEssentials.LOGGER.info("[RpEssentials] Prepared profile for {} deleted by {}",
                     name, admin.getGameProfile().getName());
 

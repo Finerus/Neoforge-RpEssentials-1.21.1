@@ -164,6 +164,33 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         if (!existingRoles.isEmpty()) loadRoleEntry(0, false);
     }
 
+    /**
+     * The server sent the data again (refresh): same tab, same profession / role and same scroll positions as the
+     * screen it replaces. The list widgets keep their scroll when their rows change.
+     */
+    public ProfessionEditorScreen keepView(ProfessionEditorScreen old) {
+        mainTab              = old.mainTab;
+        globalActiveCategory = old.globalActiveCategory;
+        permSearch           = old.permSearch;
+        for (int i = 0; i < existingProfessions.size(); i++) {
+            if (!existingProfessions.get(i).id().equals(old.profStateId)) continue;
+            loadProfEntry(i, false);
+            profActiveTab = old.profActiveTab;
+            restrictList  = old.restrictList;
+            break;
+        }
+        for (int i = 0; i < existingRoles.size(); i++) {
+            if (!existingRoles.get(i).id().equals(old.roleStateId)) continue;
+            loadRoleEntry(i, false);
+            permList = old.permList;
+            break;
+        }
+        if (mainTab == 2) restrictList = old.restrictList;
+        profList = old.profList;
+        roleList = old.roleList;
+        return this;
+    }
+
     private static void buildRegistryCache() {
         if (allItemIds == null)
             allItemIds = BuiltInRegistries.ITEM.keySet().stream()
@@ -181,8 +208,12 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
                 || b instanceof DispenserBlock || b instanceof CraftingTableBlock || b instanceof AnvilBlock
                 || b instanceof GrindstoneBlock || b instanceof StonecutterBlock || b instanceof LoomBlock
                 || b instanceof CartographyTableBlock || b instanceof SmithingTableBlock
+                //#if forge
+                //? || b instanceof EnchantmentTableBlock || b instanceof BeaconBlock || b instanceof LecternBlock) return true;
+                //#else
                 || b instanceof EnchantingTableBlock || b instanceof BeaconBlock || b instanceof LecternBlock
                 || b instanceof CrafterBlock) return true;
+                //#endif
         return b instanceof BaseEntityBlock && !id.getNamespace().equals("minecraft");
     }
 
@@ -1310,7 +1341,11 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
     }
 
     @Override
+    //#if forge
+    //? public void renderBackground(GuiGraphics g) {}
+    //#else
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {}
+    //#endif
 
     // =========================================================================
     // LOGIQUE PROFESSIONS
@@ -1829,7 +1864,11 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         }
 
         @Override
+        //#if forge
+        //? public void renderBackground(GuiGraphics g) {}
+        //#else
         public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+        //#endif
 
         @Override
         public boolean isPauseScreen() { return false; }
@@ -1882,7 +1921,11 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         public void onClose() { Minecraft.getInstance().setScreen(back); }
 
         @Override
+        //#if forge
+        //? public void renderBackground(GuiGraphics g) {}
+        //#else
         public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+        //#endif
 
         @Override
         public boolean isPauseScreen() { return false; }
@@ -1962,7 +2005,11 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         }
 
         @Override
+        //#if forge
+        //? public void renderBackground(GuiGraphics g) {}
+        //#else
         public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+        //#endif
 
         @Override
         public boolean isPauseScreen() { return false; }
@@ -2297,7 +2344,11 @@ public class ProfessionEditorScreen extends net.rp.rpessentials.client.skin.Canv
         }
 
         @Override
+        //#if forge
+        //? public void renderBackground(GuiGraphics g) {}
+        //#else
         public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+        //#endif
 
         @Override
         public boolean isPauseScreen() { return false; }

@@ -25,7 +25,6 @@ import net.rp.rpessentials.network.RequestPlayerReportsPacket;
 import net.rp.rpessentials.network.PlayerNoteActionPacket;
 import net.rp.rpessentials.network.SetPlayerProfilePacket;
 import net.minecraft.client.Minecraft;
-import java.time.LocalDate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,7 +84,8 @@ public class PlayerProfileScreen extends net.rp.rpessentials.client.skin.CanvasS
     private String stateNoteInput = "";
     private String stateAddPlayerName = "";
     private int stateEditingNoteId = -1;
-    private int tempNoteIdCounter  = -1;
+    /** Field of the Notes tab, focused again after a note is sent so several can be typed in a row. */
+    private EditBox noteBox;
     private static int filterMode = 0;
     private int sortButtonX, sortButtonY;
     private static final String[] FILTER_KEYS = { "online", "offline", "prepared", "all", "reported" };
@@ -166,6 +166,28 @@ public class PlayerProfileScreen extends net.rp.rpessentials.client.skin.CanvasS
         this.availableRoles         = availableRoles;
         this.availablePlatforms     = availablePlatforms;
         if (!players.isEmpty()) loadPlayerState(0);
+    }
+
+    /**
+     * The server sent the players again (refresh, profile prepared or deleted): same tab, same player and same
+     * scroll positions as the screen it replaces. The list widgets keep their scroll when their rows change.
+     */
+    public PlayerProfileScreen keepView(PlayerProfileScreen old) {
+        playerList = old.playerList;
+        activeTab  = old.activeTab;
+        if (old.players.isEmpty()) return this;
+        java.util.UUID selected = old.selectedData().uuid();
+        for (int i = 0; i < players.size(); i++) {
+            if (!players.get(i).uuid().equals(selected)) continue;
+            loadPlayerState(i);
+            notesList   = old.notesList;
+            manageList  = old.manageList;
+            reportsList = old.reportsList;
+            historyList = old.historyList;
+            statsList   = old.statsList;
+            break;
+        }
+        return this;
     }
 
     // =========================================================================
@@ -603,47 +625,44 @@ public class PlayerProfileScreen extends net.rp.rpessentials.client.skin.CanvasS
         for (int ni = 0; ni < notes.size(); ni++) {
             final OpenPlayerProfileGuiPacket.PlayerData.NoteEntry note = notes.get(ni);
             boolean isEd = stateEditingNoteId == note.id();
-            boolean isPending = note.id() < 0;
-            int color = isEd ? 0x33FFFF00 : isPending ? 0x1100FFFF : (ni % 2 == 0 ? 0x22FFFFFF : 0x14FFFFFF);
+            int color = isEd ? 0x33FFFF00 : (ni % 2 == 0 ? 0x22FFFFFF : 0x14FFFFFF);
             List<FormattedCharSequence> wrapped = this.font.split(Component.literal("§f" + note.text()), Math.max(40, rw - textX - 4));
             String by = I18n.get("rpessentials.gui.player_profile.notes.by");
-            String meta = (isPending ? "" : "§e#" + note.id() + " ") + "§8[" + note.timestamp() + "] §7" + by + " §f" + note.authorName();
+            String meta = "§e#" + note.id() + " §8[" + note.timestamp() + "] §7" + by + " §f" + note.authorName();
             // The header ("edited by ..." included) wraps instead of going out of the note.
             List<FormattedCharSequence> metaLines = this.font.split(
                     net.rp.rpessentials.util.ColorHelper.parseSection(meta), Math.max(40, rw - textX - 4));
             if (metaLines.isEmpty()) metaLines = List.of(FormattedCharSequence.EMPTY);
             int size = metaLines.size() + Math.max(1, wrapped.size());
             ButtonRowList.Row first = new ButtonRowList.Row().block(GuiSkin.NOTE_ROW, "notes", color, 0, size).text(metaLines.get(0), textX, 2);
-            if (!isPending) {
-                boolean confirmDelete = pendingDeleteNoteId == note.id();
-                first.add(Button.builder(Component.literal(confirmDelete ? "§c!" : "§c✗"),
-                                btn -> {
-                                    if (pendingDeleteNoteId == note.id()) {
-                                        pendingDeleteNoteId = -1;
-                                        deleteNote(note.id());
-                                    } else {
-                                        pendingDeleteNoteId = note.id();
-                                        rebuild();
-                                    }
-                                })
-                        .size(14, 12)
-                        .tooltip(Tooltip.create(Component.translatable(confirmDelete
-                                ? "rpessentials.gui.player_profile.notes.confirm_delete"
-                                : "rpessentials.gui.player_profile.notes.delete_tooltip")))
-                        .build(SkinnedButton.named("note_delete")), 1, 0);
-                first.add(Button.builder(Component.literal(isEd ? "§e§l✎" : "§e✎"),
-                                btn -> {
-                                    if (stateEditingNoteId == note.id()) {
-                                        stateEditingNoteId = -1;
-                                        stateNoteInput = "";
-                                    } else {
-                                        stateEditingNoteId = note.id();
-                                        stateNoteInput = note.text();
-                                    }
+            boolean confirmDelete = pendingDeleteNoteId == note.id();
+            first.add(Button.builder(Component.literal(confirmDelete ? "§c!" : "§c✗"),
+                            btn -> {
+                                if (pendingDeleteNoteId == note.id()) {
+                                    pendingDeleteNoteId = -1;
+                                    deleteNote(note.id());
+                                } else {
+                                    pendingDeleteNoteId = note.id();
                                     rebuild();
-                                })
-                        .size(14, 12).build(SkinnedButton.named("note_edit")), 16, 0);
-            }
+                                }
+                            })
+                    .size(14, 12)
+                    .tooltip(Tooltip.create(Component.translatable(confirmDelete
+                            ? "rpessentials.gui.player_profile.notes.confirm_delete"
+                            : "rpessentials.gui.player_profile.notes.delete_tooltip")))
+                    .build(SkinnedButton.named("note_delete")), 1, 0);
+            first.add(Button.builder(Component.literal(isEd ? "§e§l✎" : "§e✎"),
+                            btn -> {
+                                if (stateEditingNoteId == note.id()) {
+                                    stateEditingNoteId = -1;
+                                    stateNoteInput = "";
+                                } else {
+                                    stateEditingNoteId = note.id();
+                                    stateNoteInput = note.text();
+                                }
+                                rebuild();
+                            })
+                    .size(14, 12).build(SkinnedButton.named("note_edit")), 16, 0);
             rows.add(first);
             int m = metaLines.size();
             for (int mi = 1; mi < m; mi++) {
@@ -662,7 +681,7 @@ public class PlayerProfileScreen extends net.rp.rpessentials.client.skin.CanvasS
         int buttonsW = 44 + UiLayout.GAP + (stateEditingNoteId != -1 ? 46 + UiLayout.GAP : 0);
         int addBoxW = Math.max(60, closeButtonX() - UiLayout.GAP - buttonsW - formX);
 
-        EditBox noteBox = new SkinnedEditBox(this.font, formX, addBoxY, addBoxW, 20,
+        noteBox = new SkinnedEditBox(this.font, formX, addBoxY, addBoxW, 20,
                 Component.translatable("rpessentials.gui.field.note")).skin("note");
         noteBox.setHint(Component.literal(stateEditingNoteId != -1
                 ? I18n.get("rpessentials.gui.player_profile.notes.edit_hint")
@@ -712,6 +731,7 @@ public class PlayerProfileScreen extends net.rp.rpessentials.client.skin.CanvasS
         if (players.isEmpty()) return;
         String note = action == ReportActionPacket.Action.CLOSE ? stateReportNote.trim() : "";
         PacketDistributor.sendToServer(new ReportActionPacket(selectedData().uuid(), id, action, note));
+        historyRequested.clear(); // the action is written in the history: asked again when the tab is opened
         if (action == ReportActionPacket.Action.CLOSE) stateReportNote = "";
         pendingDeleteReportId = -1;
     }
@@ -1289,7 +1309,11 @@ public class PlayerProfileScreen extends net.rp.rpessentials.client.skin.CanvasS
     }
 
     @Override
+    //#if forge
+    //? public void renderBackground(GuiGraphics g) {}
+    //#else
     public void renderBackground(GuiGraphics g, int mx, int my, float partial) {}
+    //#endif
 
     // =========================================================================
     // SCROLL MOLETTE
@@ -1418,69 +1442,49 @@ public class PlayerProfileScreen extends net.rp.rpessentials.client.skin.CanvasS
         rebuild();
     }
 
+    /** Adds a note, or saves the one being edited. The list changes when the server answers (setNotes). */
     private void addNote() {
         if (players.isEmpty() || stateNoteInput.trim().isEmpty()) return;
-        OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
-        String text   = stateNoteInput.trim();
-        String author = Minecraft.getInstance().player != null
-                ? Minecraft.getInstance().player.getName().getString() : "you";
-        String now    = LocalDate.now().toString();
-
-        if (stateEditingNoteId != -1) {
-            int oldId = stateEditingNoteId;
-            PacketDistributor.sendToServer(new PlayerNoteActionPacket(target.uuid(), false, oldId, text));
-
-            List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> updated = new ArrayList<>();
-            for (OpenPlayerProfileGuiPacket.PlayerData.NoteEntry n : target.notes()) {
-                if (n.id() == oldId)
-                    updated.add(new OpenPlayerProfileGuiPacket.PlayerData.NoteEntry(
-                            tempNoteIdCounter--, text, author, now));
-                else
-                    updated.add(n);
-            }
-            players.set(stateSelectedPlayer, new OpenPlayerProfileGuiPacket.PlayerData(
-                    target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
-                    target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
-                    target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
-                    target.noteCount(), target.isOnline(), updated, target.isPrepared()));
-            stateEditingNoteId = -1;
-        } else {
-            PacketDistributor.sendToServer(new PlayerNoteActionPacket(target.uuid(), false, 0, text));
-
-            List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> updated = new ArrayList<>(target.notes());
-            updated.add(new OpenPlayerProfileGuiPacket.PlayerData.NoteEntry(
-                    tempNoteIdCounter--, text, author, now));
-            players.set(stateSelectedPlayer, new OpenPlayerProfileGuiPacket.PlayerData(
-                    target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
-                    target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
-                    target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
-                    target.noteCount() + 1, target.isOnline(), updated, target.isPrepared()));
-            if (notesList != null) notesList.scrollToEndOnce();
-        }
-
+        PacketDistributor.sendToServer(new PlayerNoteActionPacket(selectedData().uuid(), false,
+                Math.max(0, stateEditingNoteId), stateNoteInput.trim()));
+        stateEditingNoteId = -1;
         stateNoteInput = "";
         rebuild();
+        if (noteBox != null) setFocused(noteBox);
     }
 
     private void deleteNote(int noteId) {
         if (players.isEmpty()) return;
-        OpenPlayerProfileGuiPacket.PlayerData target = selectedData();
-        PacketDistributor.sendToServer(new PlayerNoteActionPacket(
-                target.uuid(), true, noteId, ""));
-
-        List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> updated = new ArrayList<>();
-        for (OpenPlayerProfileGuiPacket.PlayerData.NoteEntry n : target.notes()) {
-            if (n.id() != noteId) updated.add(n);
+        if (stateEditingNoteId == noteId) {
+            stateEditingNoteId = -1;
+            stateNoteInput = "";
         }
-        players.set(stateSelectedPlayer, new OpenPlayerProfileGuiPacket.PlayerData(
-                target.uuid(), target.mcName(), target.currentNick(), target.currentRole(),
-                target.currentLicenses(), target.activeWarnCount(), target.isMuted(),
-                target.muteExpiry(), target.playtimeMs(), target.sessionMs(),
-                Math.max(0, target.noteCount() - 1), target.isOnline(), updated, target.isPrepared()));
+        PacketDistributor.sendToServer(new PlayerNoteActionPacket(selectedData().uuid(), true, noteId, ""));
         rebuild();
     }
 
-
+    /** Called when the server sends the notes of a player, after a note was added, edited or deleted. */
+    public void setNotes(java.util.UUID uuid, List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> notes) {
+        for (int i = 0; i < players.size(); i++) {
+            OpenPlayerProfileGuiPacket.PlayerData p = players.get(i);
+            if (!p.uuid().equals(uuid)) continue;
+            List<OpenPlayerProfileGuiPacket.PlayerData.NoteEntry> old = p.notes();
+            // A new note takes the first free number: go to the end only when it is really the last one.
+            boolean newLast = !notes.isEmpty() && notes.size() > old.size()
+                    && (old.isEmpty() || notes.get(notes.size() - 1).id() > old.get(old.size() - 1).id());
+            players.set(i, new OpenPlayerProfileGuiPacket.PlayerData(
+                    p.uuid(), p.mcName(), p.currentNick(), p.currentRole(), p.currentLicenses(), p.activeWarnCount(),
+                    p.isMuted(), p.muteExpiry(), p.playtimeMs(), p.sessionMs(), notes.size(), p.isOnline(),
+                    notes, p.isPrepared()));
+            historyRequested.remove(uuid); // the change is written in the history: asked again when the tab is opened
+            if (i == stateSelectedPlayer && newLast && notesList != null) notesList.scrollToEndOnce();
+            break;
+        }
+        if (activeTab != 1 && activeTab != 2) return; // only the Stats and Notes tabs show them
+        boolean typing = noteBox != null && getFocused() == noteBox;
+        rebuild();
+        if (typing && noteBox != null && children().contains(noteBox)) setFocused(noteBox);
+    }
 
     @Override public boolean isPauseScreen() { return false; }
 }

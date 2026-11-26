@@ -16,16 +16,27 @@ public final class PlayerCommands {
 
     private PlayerCommands() {}
 
+
     public static List<? extends String> get(ModConfigSpec.ConfigValue<List<? extends String>> cv) {
         return Cfg.get(cv, List.of());
+    }
+
+    private static final java.util.regex.Pattern PLAIN_NAME = java.util.regex.Pattern.compile("[A-Za-z0-9_.+-]{1,32}");
+
+    /**
+     * Name written in a command run by the server, or the UUID when the name could mean something else there
+     * (offline-mode servers accept names such as "@a").
+     */
+    public static String safeName(String name, java.util.UUID uuid) {
+        return name != null && PLAIN_NAME.matcher(name).matches() ? name : uuid.toString();
     }
 
     public static void runAs(ServerPlayer player, List<? extends String> commands) {
         if (commands == null || commands.isEmpty()) return;
         MinecraftServer server = player.getServer();
         if (server == null) return;
-        CommandSourceStack src = player.createCommandSourceStack().withPermission(4).withSuppressedOutput();
-        String name = player.getGameProfile().getName();
+        CommandSourceStack src = player.createCommandSourceStack().withSource(server).withPermission(4).withSuppressedOutput();
+        String name = safeName(player.getGameProfile().getName(), player.getUUID());
         for (String raw : commands) {
             if (raw == null) continue;
             String cmd = raw.trim();

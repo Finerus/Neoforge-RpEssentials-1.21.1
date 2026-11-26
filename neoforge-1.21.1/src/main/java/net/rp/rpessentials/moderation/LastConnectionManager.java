@@ -202,29 +202,31 @@ public class LastConnectionManager {
 
             Runnable remove = () -> {
                 AutoUnwhitelistHistory.record(playerName, uuid.toString(), lastLogin, totalPlaytimeMs, licenses, inactiveDays);
-                server.getCommands().performPrefixedCommand(
-                        server.createCommandSourceStack(), "whitelist remove " + playerName);
+                // Not through a command: the name comes from a data file.
+                server.getPlayerList().getWhiteList().remove(new net.minecraft.server.players.UserWhiteListEntry(
+                        new com.mojang.authlib.GameProfile(uuid, playerName)));
                 ManageSuggestions.propose(server, uuid, playerName, ManageSuggestions.Kind.UNWHITELISTED);
 
                 for (ServerPlayer staff : server.getPlayerList().getPlayers()) {
                     if (!RpPerms.has(staff, RpPerm.NOTIFY)) continue;
-                    net.minecraft.network.chat.MutableComponent msg = net.minecraft.network.chat.Component.literal(
+                    net.minecraft.network.chat.MutableComponent msg = net.rp.rpessentials.util.ColorHelper.parseSection(
                             ServerLang.get(staff, MessagesConfig.AUTO_UNWHITELIST_STAFF_NOTIFY,
                                     "player", playerName, "days", String.valueOf(inactiveDays)));
                     net.minecraft.network.chat.MutableComponent undo =
-                            net.minecraft.network.chat.Component.literal(ServerLang.get(staff, MessagesConfig.UNWHITELIST_UNDO))
+                            net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(staff, MessagesConfig.UNWHITELIST_UNDO))
                                     .withStyle(s -> s
                                             .withClickEvent(new net.minecraft.network.chat.ClickEvent(
                                                     net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND,
                                                     "/whitelist add " + playerName))
                                             .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
                                                     net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
-                                                    net.minecraft.network.chat.Component.literal(ServerLang.get(staff, MessagesConfig.UNWHITELIST_UNDO_HOVER, "player", playerName)))));
+                                                    net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(staff, MessagesConfig.UNWHITELIST_UNDO_HOVER, "player", playerName)))));
                     staff.sendSystemMessage(msg.append(undo));
                 }
                 for (String cmd : extraCmds) {
                     server.getCommands().performPrefixedCommand(server.createCommandSourceStack(),
-                            cmd.replace("{player}", playerName).replace("{uuid}", uuid.toString()));
+                            cmd.replace("{player}", net.rp.rpessentials.commands.PlayerCommands.safeName(playerName, uuid))
+                                    .replace("{uuid}", uuid.toString()));
                 }
                 RpEssentials.LOGGER.info("[AutoUnwhitelist] Removed {} (inactive {} days)", playerName, inactiveDays);
             };
@@ -237,7 +239,8 @@ public class LastConnectionManager {
         try {
             net.luckperms.api.LuckPermsProvider.get().getUserManager().loadUser(uuid)
                     .whenComplete((user, err) ->
-                            callback.accept(err == null && user != null && hasBypass(user)));
+                            // LuckPerms could not answer: nobody is removed, the next sweep tries again.
+                            callback.accept(err != null || user == null || hasBypass(user)));
         } catch (NoClassDefFoundError | IllegalStateException ex) {
             callback.accept(false);
         }
@@ -260,7 +263,7 @@ public class LastConnectionManager {
     // =========================================================================
     private static void loadFromFile() {
         if (dataFile == null || !dataFile.exists()) return;
-        try (FileReader reader = new FileReader(dataFile)) {
+        try (FileReader reader = new FileReader(dataFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, ConnectionEntry>>(){}.getType();
             Map<String, ConnectionEntry> data = GSON.fromJson(reader, type);
             if (data != null) {
@@ -284,7 +287,7 @@ public class LastConnectionManager {
     // =========================================================================
     // SAVE (async)
     // =========================================================================
-    private static void saveToFile(boolean sync) {
+    private static void saveToFile() {
         ensureInitialized();
         if (dataFile == null) return;
 
@@ -303,8 +306,7 @@ public class LastConnectionManager {
         }
 
         File targetFile = dataFile;
-        if (sync) RpEssentialsIO.writeJsonNow(targetFile, data, GSON);
-        else RpEssentialsIO.saveJson(targetFile, data, GSON);
+        RpEssentialsIO.saveJson(targetFile, data, GSON);
     }
 
     private static void markDirty() {
@@ -407,11 +409,12 @@ public class LastConnectionManager {
     }
 
     /**
-     * Writes lastconnection.json now if something changed. Called at each logout, by the periodic
-     * playtime flush and when the server stops (so the offline players of the GUI survive a restart).
+     * Writes lastconnection.json if something changed. Called at each logout, by the periodic playtime flush
+     * and when the server stops (so the offline players of the GUI survive a restart). Written on the IO
+     * thread: RpEssentialsIO.shutdown() waits for it when the server stops.
      */
     public static void flushToDisk() {
-        if (dataFile != null && dirty.getAndSet(false)) saveToFile(true);
+        if (dataFile != null && dirty.getAndSet(false)) saveToFile();
     }
 
     /**
@@ -478,7 +481,8 @@ public class LastConnectionManager {
     }
 
     public static void reload() {
-        if (dataFile != null && dirty.getAndSet(false)) saveToFile(true);
+        flushToDisk();
+        RpEssentialsIO.flushAndWait();
         dataFile = null;
         entries.clear();
         ensureInitialized();

@@ -131,7 +131,11 @@ public class ModerationConfig {
                 .comment("List of TP platforms.",
                         "Format: id;DisplayName;dimension;x;y;z",
                         "Example: spawn;The Spawn;minecraft:overworld;0;100;0")
+                //#if forge
+                //? .defineListAllowEmpty("platforms", Arrays.asList("platform1;Platform 1;minecraft:overworld;0;300;0"), obj -> obj instanceof String);
+                //#else
                 .defineList("platforms", Arrays.asList("platform1;Platform 1;minecraft:overworld;0;300;0"), obj -> obj instanceof String);
+                //#endif
 
         BUILDER.pop();
 
@@ -281,7 +285,11 @@ public class ModerationConfig {
 
         AUTO_UNWHITELIST_EXTRA_COMMANDS = BUILDER
                 .comment("Extra commands run for each removed player. Placeholders: {player} {uuid}")
+                //#if forge
+                //? .defineListAllowEmpty("autoUnwhitelistExtraCommands",
+                //#else
                 .defineList("autoUnwhitelistExtraCommands",
+                //#endif
                         java.util.Collections.emptyList(), obj -> obj instanceof String);
 
         BUILDER.pop();
@@ -378,9 +386,13 @@ public class ModerationConfig {
                 .define("historyEnabled", true);
         HISTORY_RETENTION = BUILDER
                 .comment("How many days each kind of line is kept, as TYPE=days. -1 = forever.",
-                        "Types: WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE, NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK (nickname changes), REPORT, SHEET (character sheet changes).",
+                        "Types: WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE, NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK (nickname changes), REPORT, SHEET (character sheet changes), REPORT_STAFF (reports handled by a staff member).",
                         "'*' applies to every type without its own line. Old lines are removed at startup and every hour.")
+                //#if forge
+                //? .defineListAllowEmpty("historyRetention", Arrays.asList("*=365", "NOTE=-1", "DEATH_RP=-1"), obj -> obj instanceof String);
+                //#else
                 .defineList("historyRetention", Arrays.asList("*=365", "NOTE=-1", "DEATH_RP=-1"), obj -> obj instanceof String);
+                //#endif
         HISTORY_MAX_PER_PLAYER = BUILDER
                 .comment("Maximum lines kept per player, the oldest are removed first. 0 = no limit.")
                 .defineInRange("historyMaxPerPlayer", 200, 0, 100000);
@@ -413,5 +425,9 @@ public class ModerationConfig {
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+
+        // Commands run with OP level 4.
+        ConfigAccess.sensitive(AUTO_UNWHITELIST_EXTRA_COMMANDS);
+        ConfigAccess.node(net.rp.rpessentials.permission.RpPerm.STAFF_SETPLATFORM, PLATFORMS);
     }
 }

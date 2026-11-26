@@ -4,7 +4,11 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+//#if forge
+//? import net.minecraftforge.eventbus.api.Event;
+//#else
 import net.neoforged.neoforge.common.util.TriState;
+//#endif
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.rp.rpessentials.RpEssentials;
 
@@ -27,6 +31,10 @@ public final class ClientRestrictionHandler {
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         if (!event.getLevel().isClientSide() || event.getEntity().isCreative()) return;
         if (event.getItemStack().isEmpty()) return;
+        //#if forge
+        //? if (ClientTooltipRestrictions.isUseBlocked(event.getItemStack().getItem())) event.setUseItem(Event.Result.DENY);
+        //#else
         if (ClientTooltipRestrictions.isUseBlocked(event.getItemStack().getItem())) event.setUseItem(TriState.FALSE);
+        //#endif
     }
 }

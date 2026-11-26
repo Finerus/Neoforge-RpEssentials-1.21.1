@@ -201,8 +201,6 @@ public final class ReportManager {
         r.closedAt = System.currentTimeMillis();
         r.closeNote = note == null || note.isBlank() ? null : note.strip();
         save();
-        HistoryManager.record(r.target(), r.targetName, HistoryManager.REPORT, staffName,
-                "#" + r.id + " ✔" + (r.closeNote != null ? " " + r.closeNote : ""));
         return true;
     }
 

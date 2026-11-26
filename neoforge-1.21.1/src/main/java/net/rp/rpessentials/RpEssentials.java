@@ -11,11 +11,20 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
+//#if forge
+//? import net.minecraftforge.fml.ModLoadingContext;
+//? import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+//#else
 import net.neoforged.fml.ModContainer;
+//#endif
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
+//#if forge
+//? import net.minecraftforge.event.TickEvent;
+//#else
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+//#endif
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.rp.rpessentials.client.RpKeyBindings;
 import net.rp.rpessentials.compat.LuckPermsSync;
@@ -56,7 +65,9 @@ public class RpEssentials {
      * 20 ticks = 1 second.
      */
     private final TickScheduler ticks = new TickScheduler()
+            .every(1, 0, "access refresh", net.rp.rpessentials.permission.AccessRefresh::tick)
             .every(40, 0, "tab blur", TabBlur::tick)
+            .every(100, 61, "first staff hint", net.rp.rpessentials.gameplay.ModNotices::tick)
             .every(72000, 36000, "history purge", s -> net.rp.rpessentials.moderation.HistoryManager.tick())
             .every(20, 0, "zone views", WorldBorderManager::tickZoneViews)
             .every(() -> Cfg.get(RpEssentialsConfig.WORLD_BORDER_CHECK_INTERVAL, 100), 13, "world border", WorldBorderManager::tick)
@@ -67,7 +78,6 @@ public class RpEssentials {
             })
             .every(400, 37, "schedule", RpEssentialsScheduleManager::tick)
             .every(1200, 97, "midnight sweeps", s -> {
-                RpEssentialsScheduleManager.tickMidnightSweep(s);
                 TempLicenseExpirationManager.tickMidnightSweep(s);
             })
             .every(1200, 97, "auto unwhitelist", LastConnectionManager::tickAutoUnwhitelist)
@@ -81,12 +91,20 @@ public class RpEssentials {
     private static final Map<UUID, LpMeta> lpMetaCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.atomic.AtomicBoolean refreshPending = new java.util.concurrent.atomic.AtomicBoolean(false);
 
+    //#if forge
+    //? public RpEssentials() {
+        //? IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        //? ModLoadingContext modContainer = ModLoadingContext.get();
+        //? net.rp.rpessentials.network.NetworkHandler.register();
+    //#else
     public RpEssentials(IEventBus modEventBus, ModContainer modContainer) {
         // Old Fabric API shipped by TxniLib on a NeoForge where it disconnects every player: clear error.
         net.rp.rpessentials.core.FabricApiCheck.run();
+    //#endif
         // Old config layouts are updated before NeoForge reads (and corrects) the files.
         net.rp.rpessentials.core.ConfigMigration.run();
 
+        // SERVER files are sent to each client that joins: see ConfigSyncFilter for what they really get.
         modContainer.registerConfig(ModConfig.Type.SERVER, RpEssentialsConfig.SPEC, "rpessentials/rpessentials-core.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ChatConfig.SPEC,         "rpessentials/rpessentials-chat.toml");
         modContainer.registerConfig(ModConfig.Type.SERVER, ScheduleConfig.SPEC,     "rpessentials/rpessentials-schedule.toml");
@@ -96,12 +114,28 @@ public class RpEssentials {
         modContainer.registerConfig(ModConfig.Type.SERVER, RpConfig.SPEC,           "rpessentials/rpessentials-rp.toml");
         modContainer.registerConfig(ModConfig.Type.CLIENT, net.rp.rpessentials.config.ClientConfig.SPEC, "rpessentials/rpessentials-client.toml");
 
+        //#if forge
+        //? if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
+            //? modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings);
+            //? // The license arm pose must exist before the first player model is drawn (see LicenseArmPose.init).
+            //? net.rp.rpessentials.client.LicenseArmPose.init();
+        //? }
+        //#else
         modEventBus.addListener(RpKeyBindings::onRegisterKeyMappings);
+        //#endif
         RpEssentialsItems.ITEMS.register(modEventBus);
+        //#if forge
+        //? if (net.minecraftforge.fml.ModList.get().isLoaded("curios")) {
+        //#else
         try {
+        //#endif
             CuriosCompat.register(modEventBus);
             LOGGER.info("[RpEssentials] Curios compatibility enabled.");
+        //#if forge
+        //? } else {
+        //#else
         } catch (NoClassDefFoundError e) {
+        //#endif
             LOGGER.info("[RpEssentials] Curios not found, skipping compatibility.");
         }
         NeoForge.EVENT_BUS.register(this);
@@ -138,7 +172,8 @@ public class RpEssentials {
     // =========================================================================
     // LUCKPERMS
     // =========================================================================
-    private static boolean luckPermsPresent() {
+    /** True when the LuckPerms API is there (checked once: a failed class lookup at each permission check is slow). */
+    public static boolean luckPermsPresent() {
         Boolean p = lpPresent;
         if (p == null) {
             try {
@@ -187,7 +222,12 @@ public class RpEssentials {
     // SERVER TICK
     // =========================================================================
     @SubscribeEvent
+    //#if forge
+    //? public void onServerTick(TickEvent.ServerTickEvent event) {
+        //? if (event.phase != TickEvent.Phase.END) return;
+    //#else
     public void onServerTick(ServerTickEvent.Post event) {
+    //#endif
         ticks.tick(event.getServer());
     }
 
@@ -205,9 +245,11 @@ public class RpEssentials {
         WorldBorderManager.clearAllCache();
         RpEssentialsPermissions.clearCache();
         RpEssentialsScheduleManager.reload();
+        RpEssentialsScheduleManager.onServerStopped();
         ImmersivePresetHelper.clearCache();
         PlaytimeManager.clearAll();
         TabBlur.clearAll();
+        net.rp.rpessentials.permission.AccessRefresh.clear();
         clearMetaCache();
         if (Cfg.ready(ModerationConfig.SPEC)) {
             if (net.rp.rpessentials.config.ModerationConfig.WARN_AUTO_PURGE_EXPIRED.get())

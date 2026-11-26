@@ -101,9 +101,9 @@ public class RpEssentialsCommands {
                                         if (ctx.getSource().getEntity() instanceof ServerPlayer sender) {
                                             RpEssentialsMessagingManager.sendMessage(sender, target, msg);
                                         } else {
-                                            target.sendSystemMessage(Component.literal(
+                                            target.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                                                     Msg.get(target, MessagesConfig.MP_CONSOLE_TO_PLAYER, "msg", msg)));
-                                            ctx.getSource().sendSuccess(() -> Component.literal(
+                                            ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(
                                                     Msg.get(ctx.getSource(), MessagesConfig.MP_CONSOLE_FROM_SERVER,
                                                             "target", target.getName().getString(), "msg", msg)), false);
                                         }
@@ -160,6 +160,38 @@ public class RpEssentialsCommands {
         return net.rp.rpessentials.identity.RpEssentialsChatFormatter.getColorsHelp();
     }
 
+    private record OpConfirm(String command, long at) {}
+
+    /** "/op" that lowers the one who types it, waiting to be confirmed. */
+    private static final java.util.Map<UUID, OpConfirm> opConfirm = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final long OP_CONFIRM_MS = 30_000L;
+
+    private static boolean lowersSelf(CommandSourceStack src, java.util.Collection<GameProfile> targets, int level) {
+        // Only who types it: the console, a command block or a function is never asked.
+        if (!(src.source instanceof ServerPlayer self) || src.getServer().getProfilePermissions(self.getGameProfile()) <= level) return false;
+        for (GameProfile p : targets) if (p.getId().equals(self.getUUID())) return true;
+        return false;
+    }
+
+    /** True when the same command was already typed (or the button clicked) within 30 seconds; asks for it otherwise. */
+    private static boolean confirmedOpSelf(CommandContext<CommandSourceStack> ctx, int level) {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer self = RpPerms.actor(src);
+        String command = ctx.getInput().startsWith("/") ? ctx.getInput() : "/" + ctx.getInput();
+        OpConfirm asked = opConfirm.remove(self.getUUID());
+        long now = System.currentTimeMillis();
+        if (asked != null && asked.command().equals(command) && now - asked.at() <= OP_CONFIRM_MS) return true;
+        opConfirm.put(self.getUUID(), new OpConfirm(command, now));
+        int own = src.getServer().getProfilePermissions(self.getGameProfile());
+        // A command is 256 characters at most in a click; longer ones are typed again.
+        var button = Msg.c(self, MessagesConfig.MANAGE_BTN_CONFIRM).copy();
+        if (command.length() <= 256) button.withStyle(s -> s.withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                net.minecraft.network.chat.ClickEvent.Action.RUN_COMMAND, command)));
+        self.sendSystemMessage(Msg.c(self, MessagesConfig.STAFF_TOOLSX_OP_LOWER_SELF, "old", String.valueOf(own),
+                "level", String.valueOf(level)).copy().append(Component.literal(" ")).append(button));
+        return false;
+    }
+
     private static int opCommand(CommandContext<CommandSourceStack> ctx, int requested) throws CommandSyntaxException {
         CommandSourceStack src = ctx.getSource();
         MinecraftServer server = src.getServer();
@@ -169,7 +201,9 @@ public class RpEssentialsCommands {
             return 0;
         }
         int count = 0;
-        for (GameProfile profile : GameProfileArgument.getGameProfiles(ctx, "targets")) {
+        var targets = GameProfileArgument.getGameProfiles(ctx, "targets");
+        if (lowersSelf(src, targets, level) && !confirmedOpSelf(ctx, level)) return 0;
+        for (GameProfile profile : targets) {
             PlayerList pl = server.getPlayerList();
             int current = server.getProfilePermissions(profile);
             if (pl.isOp(profile) && current == level) continue;

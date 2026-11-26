@@ -29,7 +29,7 @@ public final class TabBlur {
 
     public record Settings(boolean enabled, boolean opsSeeAll, boolean debug, boolean blurSpectators,
                            boolean sneakStealth, boolean obfPrefix, double maxDistSq, double sneakDistSq,
-                           int obfLen, Set<String> whitelist, String style, String codes, String nametagMode) {}
+                           int obfLen, String style, String codes, String nametagMode) {}
 
     /**
      * Tab-list names of one player, parsed once and shared by every viewer.
@@ -55,6 +55,12 @@ public final class TabBlur {
         states.clear();
         names.clear();
         seeAllLastTick.clear();
+    }
+
+    /** The rights of a viewer changed: every name is checked and sent to them again. */
+    public static void resendTo(UUID viewer) {
+        states.remove(viewer);
+        seeAllLastTick.remove(viewer);
     }
 
     public static void onLogout(UUID id) {
@@ -102,7 +108,6 @@ public final class TabBlur {
                     Math.pow(RpEssentialsConfig.PROXIMITY_DISTANCE.get(), 2),
                     Math.pow(RpEssentialsConfig.SNEAK_PROXIMITY_DISTANCE.get(), 2),
                     RpEssentialsConfig.OBFUSCATED_NAME_LENGTH.get(),
-                    new HashSet<>(RpEssentialsConfig.WHITELIST.get()),
                     net.rp.rpessentials.config.ConfigRules.value(RpEssentialsConfig.BLUR_STYLE),
                     RpEssentialsConfig.BLUR_CODES.get(),
                     net.rp.rpessentials.config.ConfigRules.value(RpEssentialsConfig.NAMETAG_BLUR_MODE));
@@ -116,15 +121,22 @@ public final class TabBlur {
     public static boolean seesAll(ServerPlayer receiver, Settings s) {
         if (s.debug()) return false;
         return RpPerms.has(receiver, RpPerm.SEE_ALL)
-                || s.whitelist().contains(receiver.getGameProfile().getName())
+                || net.rp.rpessentials.util.PlayerRefs.TAB_WHITELIST.contains(receiver.getGameProfile())
                 || (s.opsSeeAll() && receiver.hasPermissions(2));
     }
 
     public static boolean isClear(ServerPlayer receiver, boolean seesAll, ServerPlayer target, Settings s) {
-        String realName = target.getGameProfile().getName();
-        if (TabListCache.isBlacklisted(realName)) return false;
-        if (seesAll || TabListCache.isAlwaysVisible(realName)
-                || RpPerms.has(target, RpPerm.TAB_ALWAYS_VISIBLE)) return true;
+        return isClear(receiver, seesAll, target, s, null);
+    }
+
+    /** {@code alwaysVisible}: results of the node check already done this tick (null = check it now). */
+    private static boolean isClear(ServerPlayer receiver, boolean seesAll, ServerPlayer target, Settings s,
+                                   Map<UUID, Boolean> alwaysVisible) {
+        if (net.rp.rpessentials.util.PlayerRefs.TAB_BLACKLIST.contains(target.getGameProfile())) return false;
+        if (seesAll || net.rp.rpessentials.util.PlayerRefs.TAB_ALWAYS_VISIBLE.contains(target.getGameProfile())) return true;
+        boolean always = alwaysVisible == null ? RpPerms.has(target, RpPerm.TAB_ALWAYS_VISIBLE)
+                : alwaysVisible.computeIfAbsent(target.getUUID(), k -> RpPerms.has(target, RpPerm.TAB_ALWAYS_VISIBLE));
+        if (always) return true;
         double maxSq = (s.sneakStealth() && target.isCrouching()) ? s.sneakDistSq() : s.maxDistSq();
         boolean blur = s.debug()
                 || receiver.level() != target.level()
@@ -150,6 +162,7 @@ public final class TabBlur {
         Settings s = settings();
         if (s == null || !s.enabled()) return;
         List<ServerPlayer> players = server.getPlayerList().getPlayers();
+        Map<UUID, Boolean> alwaysVisible = new java.util.HashMap<>();
         for (ServerPlayer receiver : players) {
             boolean seesAll = seesAll(receiver, s);
             // A viewer who sees everyone keeps the same result for every target until the config
@@ -167,7 +180,7 @@ public final class TabBlur {
             for (ServerPlayer target : players) {
                 if (stable && known.containsKey(target.getUUID())) continue;
                 if (VanishManager.isHiddenFrom(receiver, target.getUUID())) continue;
-                boolean clear = isClear(receiver, seesAll, target, s);
+                boolean clear = isClear(receiver, seesAll, target, s, alwaysVisible);
                 Boolean old = known.put(target.getUUID(), clear);
                 if (old == null || old != clear) {
                     if (changed == null) changed = new ArrayList<>();

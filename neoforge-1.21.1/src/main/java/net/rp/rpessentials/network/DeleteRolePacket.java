@@ -38,7 +38,7 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
             
             if (!RpEssentialsPermissions.canManageRoles(player)) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
                 return;
             }
 
@@ -78,7 +78,7 @@ public record DeleteRolePacket(String id) implements CustomPacketPayload {
                     return details;
                 }, true);
             } else {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });
     }

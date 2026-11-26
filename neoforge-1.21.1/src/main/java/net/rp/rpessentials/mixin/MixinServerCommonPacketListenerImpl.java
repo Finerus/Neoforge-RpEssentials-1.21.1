@@ -7,7 +7,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
+//#if forge
+//#else
 import net.minecraft.server.network.ServerCommonPacketListenerImpl;
+//#endif
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
 import net.rp.rpessentials.gameplay.TabBlur;
@@ -21,15 +24,27 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+//#if forge
+//? @Mixin(ServerGamePacketListenerImpl.class)
+//#else
 @Mixin(ServerCommonPacketListenerImpl.class)
+//#endif
 public abstract class MixinServerCommonPacketListenerImpl {
 
     @ModifyVariable(
+            //#if forge
+            //? method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;)V",
+            //#else
             method = "send(Lnet/minecraft/network/protocol/Packet;)V",
+            //#endif
             at = @At("HEAD"),
+            //#if forge
+            //? argsOnly = true)
+            //#else
             argsOnly = true,
             remap = false
     )
+            //#endif
     private Packet modifyPacket(Packet packet) {
         if (!(packet instanceof ClientboundPlayerInfoUpdatePacket original)) return packet;
 

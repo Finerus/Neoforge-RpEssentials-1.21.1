@@ -8,7 +8,10 @@ import java.util.List;
 
 @Mixin(ClientboundPlayerInfoUpdatePacket.class)
 public interface ClientboundPlayerInfoUpdatePacketAccessor {
+    //#if forge
+    //#else
     // remap = false force le mixin à utiliser le nom exact "entries" sans chercher d'obfuscation
+    //#endif
     @Accessor(value = "entries", remap = false)
     List<ClientboundPlayerInfoUpdatePacket.Entry> getEntries();
 

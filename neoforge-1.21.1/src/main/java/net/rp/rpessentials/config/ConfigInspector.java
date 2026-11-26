@@ -2,6 +2,7 @@ package net.rp.rpessentials.config;
 
 import com.electronwill.nightconfig.core.UnmodifiableConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
+import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.RpEssentials;
 
 import java.lang.reflect.Field;
@@ -85,19 +86,28 @@ public class ConfigInspector {
                 .toList();
     }
 
+    private static ConfigClassInfo info(String fileId) {
+        for (ConfigClassInfo c : CONFIGS) if (c.id().equals(fileId)) return c;
+        for (ConfigClassInfo c : EXTERNAL) if (c.id().equals(fileId)) return c;
+        return null;
+    }
+
+    /** Every option, whoever looks (server side use only). */
     public static List<EntryData> getEntries(String fileId) {
-        return all().stream()
-                .filter(c -> c.id().equals(fileId))
-                .findFirst()
-                .map(ConfigInspector::inspectClass)
-                .orElse(List.of());
+        ConfigClassInfo info = info(fileId);
+        return info == null ? List.of() : inspect(info, null);
+    }
+
+    /** Spec of a file, null when unknown. */
+    public static ModConfigSpec specOf(String fileId) {
+        ConfigClassInfo info = info(fileId);
+        return info == null ? null : info.spec();
     }
 
     public static int applyAndSave(String fileId, Map<String, String> changes) {
-        Optional<ConfigClassInfo> opt = all().stream().filter(c -> c.id().equals(fileId)).findFirst();
-        if (opt.isEmpty()) return 0;
+        ConfigClassInfo info = info(fileId);
+        if (info == null) return 0;
 
-        ConfigClassInfo info = opt.get();
         Map<String, ModConfigSpec.ConfigValue<?>> valueMap = buildValueMap(info.clazz());
 
         // Pré-calcul des entryData pour la validation de range
@@ -157,38 +167,47 @@ public class ConfigInspector {
     // =========================================================================
     // INTROSPECTION
     // =========================================================================
-    private static List<EntryData> inspectClass(ConfigClassInfo info) {
+    /** What never changes in an option: read by reflection once per file. */
+    private record Option(ModConfigSpec.ConfigValue<?> value, String fullPath, String key, String section, String sectionName,
+                          String comment, String defaultValue, double[] range) {}
+
+    private static final Map<Class<?>, List<Option>> OPTIONS_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static List<Option> options(ConfigClassInfo info) {
+        return OPTIONS_CACHE.computeIfAbsent(info.clazz(), k -> {
+            // One block per section, like in the file, wherever the field of an option is declared.
+            Map<String, List<Option>> sections = new LinkedHashMap<>();
+            for (ModConfigSpec.ConfigValue<?> cv : buildValueMap(info.clazz()).values()) {
+                List<String> path = cv.getPath();
+                if (path.isEmpty()) continue;
+                Object vs = getValueSpecObj(info.spec(), path);
+                boolean inSection = path.size() > 1;
+                String section = inSection ? String.join(".", path.subList(0, path.size() - 1)) : "";
+                sections.computeIfAbsent(section, s -> new ArrayList<>()).add(new Option(cv, String.join(".", path), path.get(path.size() - 1),
+                        section,
+                        inSection ? path.get(path.size() - 2) : "",
+                        extractComment(vs), extractDefault(vs, ValueType.UNKNOWN), extractRange(cv, vs)));
+            }
+            List<Option> out = new ArrayList<>();
+            sections.values().forEach(out::addAll);
+            return List.copyOf(out);
+        });
+    }
+
+    /** Entries of a file, with their sections; {@code shown} = which options (null = all). */
+    private static List<EntryData> inspect(ConfigClassInfo info, java.util.function.Predicate<Option> shown) {
         List<EntryData> entries     = new ArrayList<>();
         String          lastSection = null;
-
-        for (ModConfigSpec.ConfigValue<?> cv : buildValueMap(info.clazz()).values()) {
-            List<String> path = cv.getPath();
-            if (path.isEmpty()) continue;
-
-            String sectionKey = path.size() > 1
-                    ? String.join(".", path.subList(0, path.size() - 1))
-                    : "";
-            if (!Objects.equals(sectionKey, lastSection)) {
-                if (!sectionKey.isEmpty()) {
-                    entries.add(EntryData.section(path.get(path.size() - 2), sectionKey));
-                }
-                lastSection = sectionKey;
+        for (Option o : options(info)) {
+            if (shown != null && !shown.test(o)) continue;
+            if (!o.section().equals(lastSection)) {
+                if (!o.section().isEmpty()) entries.add(EntryData.section(o.sectionName(), o.section()));
+                lastSection = o.section();
             }
-
-            Object vs = getValueSpecObj(info.spec(), path);
-
-            ValueType type       = detectType(cv);
-            String    currentVal = serialize(cv.get(), type);
-            String    comment    = extractComment(vs);
-            String    defaultVal = extractDefault(vs, type);
-            double[]  range      = extractRange(cv, vs);
-
-            entries.add(new EntryData(
-                    String.join(".", path), path.get(path.size() - 1),
-                    comment, type, currentVal, defaultVal,
-                    range != null, range != null ? range[0] : 0, range != null ? range[1] : 0,
-                    false
-            ));
+            ValueType type = detectType(o.value());
+            double[] range = o.range();
+            entries.add(new EntryData(o.fullPath(), o.key(), o.comment(), type, serialize(o.value().get(), type),
+                    o.defaultValue(), range != null, range != null ? range[0] : 0, range != null ? range[1] : 0, false));
         }
         return entries;
     }
@@ -387,13 +406,34 @@ public class ConfigInspector {
 
     public static String serialize(Object value) { return serialize(value, ValueType.UNKNOWN); }
 
+    //#if forge
+    //? /** Rules of an option (Forge 1.20.1 has no ConfigValue.getSpec()). */
+    //? private static ForgeConfigSpec.ValueSpec valueSpec(ForgeConfigSpec.ConfigValue<?> cv) {
+        //? try {
+            //? java.lang.reflect.Field f = ForgeConfigSpec.ConfigValue.class.getDeclaredField("spec");
+            //? f.setAccessible(true);
+            //? ForgeConfigSpec owner = (ForgeConfigSpec) f.get(cv);
+            //? if (owner == null) return null;
+            //? Object o = owner.getSpec().get(cv.getPath());
+            //? return o instanceof ForgeConfigSpec.ValueSpec v ? v : null;
+        //? } catch (ReflectiveOperationException | RuntimeException e) {
+            //? return null;
+        //? }
+    //? }
+//?
+    //#else
+    //#endif
     @SuppressWarnings("unchecked")
     public static boolean applyValue(ModConfigSpec.ConfigValue<?> cv, ValueType type, String raw) {
         try {
             Object parsed = parseValue(type, raw);
             if (parsed == null) return false;
             // The option's own rules (allowed words, list element checks...), not only the range.
+            //#if forge
+            //? ForgeConfigSpec.ValueSpec spec = valueSpec(cv);
+            //#else
             var spec = cv.getSpec();
+            //#endif
             if (spec != null && !spec.test(parsed)) {
                 RpEssentials.LOGGER.warn("[ConfigInspector] Value '{}' refused by the rules of '{}'", raw, String.join(".", cv.getPath()));
                 return false;
@@ -443,32 +483,66 @@ public class ConfigInspector {
         };
     }
 
-    private static final Set<String> SENSITIVE_KEYS = Set.of(
-            "autoUnwhitelistExtraCommands", "opLevelBypass",
-            "useLuckPermsGroups", "roles", "luckPermsSync", "luckPermsImportAllGroups",
-            "discordWebhookUrl");
+    /** The value, or stars when the option is a secret. */
+    public static String mask(String key, String value) {
+        return ConfigAccess.isSecretKey(key) && value != null && !value.isEmpty() ? "********" : value;
+    }
 
     /** True for the professions file while the profession system is turned off. */
     private static boolean isDisabledProfessions(String fileId) {
         return "professions".equals(fileId) && !ProfessionConfig.enabled();
     }
 
-    public static List<EntryData> getEntries(String fileId, boolean includeSensitive) {
-        List<EntryData> all = getEntries(fileId);
-        if (isDisabledProfessions(fileId)) {
+    /** Options of other mods that look like commands or secrets: sensitive too. */
+    private static final java.util.regex.Pattern EXTERNAL_SENSITIVE =
+            java.util.regex.Pattern.compile("(?i).*(command|token|secret|password|webhook|api_?key).*");
+
+    private static boolean externalSensitive(ConfigClassInfo info, Option o) {
+        if (CONFIGS.contains(info) || !EXTERNAL_SENSITIVE.matcher(o.key()).matches()) return false;
+        ValueType type = detectType(o.value());
+        return type == ValueType.STRING || type == ValueType.LIST_STRING;
+    }
+
+    private static boolean visible(ConfigClassInfo info, Option o, java.util.function.Predicate<RpPerm> has) {
+        if (isDisabledProfessions(info.id()) && !o.key().equals(ProfessionConfig.ENABLE_KEY)) {
             // Only the switch is left (with its section), so the system can be turned on again.
-            List<EntryData> out = new ArrayList<>();
-            EntryData section = null;
-            for (EntryData e : all) {
-                if (e.isSection()) { section = e; continue; }
-                if (!e.key().equals(ProfessionConfig.ENABLE_KEY)) continue;
-                if (section != null) out.add(section);
-                out.add(e);
-            }
-            return out;
+            return false;
         }
-        if (includeSensitive) return all;
-        return all.stream().filter(e -> e.isSection() || !SENSITIVE_KEYS.contains(e.key())).toList();
+        if (!ConfigAccess.visible(info.spec(), o.value(), has)) return false;
+        return !externalSensitive(info, o) || has.test(RpPerm.CONFIG_SENSITIVE);
+    }
+
+    /** Options of a file that someone may see and change; {@code has} = their permission nodes. */
+    public static List<EntryData> getEntries(String fileId, java.util.function.Predicate<RpPerm> has) {
+        ConfigClassInfo info = info(fileId);
+        return info == null ? List.of() : inspect(info, o -> visible(info, o, has));
+    }
+
+    /** True when someone may change at least one option of the file. */
+    public static boolean anyVisible(String fileId, java.util.function.Predicate<RpPerm> has) {
+        ConfigClassInfo info = info(fileId);
+        if (info == null) return false;
+        for (Option o : options(info)) if (visible(info, o, has)) return true;
+        return false;
+    }
+
+    /** True when not every staff member may see this option. */
+    public static boolean isRestricted(String fileId, String fullPath) {
+        ConfigClassInfo info = info(fileId);
+        if (info == null) return false;
+        for (Option o : options(info)) {
+            if (o.fullPath().equals(fullPath)) return ConfigAccess.restricted(info.spec(), o.value()) || externalSensitive(info, o);
+        }
+        return false;
+    }
+
+    /** Paths of a file that someone may see and change, without reading the values. */
+    public static Set<String> visiblePaths(String fileId, java.util.function.Predicate<RpPerm> has) {
+        ConfigClassInfo info = info(fileId);
+        if (info == null) return Set.of();
+        Set<String> out = new HashSet<>();
+        for (Option o : options(info)) if (visible(info, o, has)) out.add(o.fullPath());
+        return out;
     }
 
     // =========================================================================

@@ -191,5 +191,7 @@ public class ChatConfig {
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+
+        ConfigAccess.node(net.rp.rpessentials.permission.RpPerm.STAFF_PROXIMITYSPY, ENABLE_PROXIMITY_SPY);
     }
 }

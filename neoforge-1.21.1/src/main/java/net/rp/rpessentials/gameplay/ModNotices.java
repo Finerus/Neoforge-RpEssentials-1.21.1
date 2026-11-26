@@ -8,6 +8,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.ModList;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.permission.RpEssentialsRoleManager;
 import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
@@ -31,7 +32,7 @@ public final class ModNotices {
      * Versions that have a note (lang key {@code rpessentials.notice.version.<version>}), oldest first.
      * Add the new version here with its note in en_us / fr_fr.
      */
-    private static final List<String> VERSIONS_WITH_NOTES = List.of("6.1.0");
+    private static final List<String> VERSIONS_WITH_NOTES = List.of("6.1.0", "6.2.0");
 
     public static String currentVersion() {
         return ModList.get().getModContainerById(RpEssentials.MODID)
@@ -43,7 +44,13 @@ public final class ModNotices {
         AfkPlatformInitializer.ModState state = AfkPlatformInitializer.state(server);
         String current = currentVersion();
         String last = state.lastModVersion();
-        ROLE_HINT_SHOWN.clear();
+        CONSOLE_HINT_SHOWN.clear();
+        // First launch and nobody is staff yet: the welcome goes on after an update too.
+        boolean welcome = last.isEmpty() ? !state.usedBefore() : isWelcome(state);
+        if (welcome && server.isDedicatedServer()) {
+            RpEssentials.LOGGER.info("[RpEssentials] No staff member yet. While the player is online, type in this console: "
+                    + "rpessentials setrole <player> {}", adminRole());
+        }
         if (last.equals(current)) return;
         if (last.isEmpty()) {
             // Before 6.1.0 the version was not saved: a world where the mod already ran gets the update notes.
@@ -53,7 +60,7 @@ public final class ModNotices {
                     ? "[RpEssentials] First launch of RpEssentials {} on this server."
                     : "[RpEssentials] RpEssentials updated to {}.", current);
         } else {
-            state.startNotice(last, current);
+            state.startNotice(welcome ? "" : last, current);
             RpEssentials.LOGGER.info("[RpEssentials] RpEssentials updated from {} to {}.", last, current);
         }
         state.setLastModVersion(current);
@@ -67,11 +74,21 @@ public final class ModNotices {
     public static void onLogin(ServerPlayer player) {
         MinecraftServer server = player.getServer();
         if (server == null) return;
-        roleHint(player);
         AfkPlatformInitializer.ModState state = AfkPlatformInitializer.state(server);
+        notice(player, state);
+        roleHint(player, state);
+        consoleHint(player, state);
+    }
+
+    /** True from the first launch of the mod on the server until a staff member is online. */
+    private static boolean isWelcome(AfkPlatformInitializer.ModState state) {
+        return !state.noticeTo().isEmpty() && state.noticeFrom().isEmpty();
+    }
+
+    private static void notice(ServerPlayer player, AfkPlatformInitializer.ModState state) {
         String to = state.noticeTo();
         if (to.isEmpty()) return;
-        boolean welcome = state.noticeFrom().isEmpty();
+        boolean welcome = isWelcome(state);
         boolean staff = RpPerms.has(player, RpPerm.CONFIG_GUI);
         if (!welcome && !staff) return;
         if (!state.noticeSeenBy(player.getUUID())) {
@@ -82,17 +99,51 @@ public final class ModNotices {
         if (welcome && staff) state.startNotice("", "");
     }
 
-    /** Players who got the role hint since the server started. */
-    private static final Set<UUID> ROLE_HINT_SHOWN = ConcurrentHashMap.newKeySet();
+    /** Every 5 seconds: a player made OP while online gets the role hint too, and the first staff member ends the welcome. */
+    public static void tick(MinecraftServer server) {
+        AfkPlatformInitializer.ModState state = AfkPlatformInitializer.state(server);
+        boolean welcome = isWelcome(state);
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            roleHint(p, state);
+            if (welcome && RpPerms.has(p, RpPerm.CONFIG_GUI)) {
+                state.startNotice("", "");
+                welcome = false;
+            }
+        }
+    }
+
+    /** Players who got the console hint since the server started. */
+    private static final Set<UUID> CONSOLE_HINT_SHOWN = ConcurrentHashMap.newKeySet();
 
     /**
-     * An OP can give roles (roles.set) but gets the RpEssentials staff permissions from a role only: on a new
-     * server the first OP has none and nothing told how to get them. Shown at login (once per server start)
-     * to a player who can give roles but has no staff permission, with the command to click.
+     * Nobody is staff yet and this player cannot give roles (not OP): tells what to type in the server console
+     * (in singleplayer: to allow the commands). Once per server start, until a staff member is online.
      */
-    private static void roleHint(ServerPlayer player) {
-        if (RpPerms.has(player, RpPerm.CONFIG_GUI) || !RpPerms.has(player, RpPerm.ROLES_SET)) return;
-        if (!ROLE_HINT_SHOWN.add(player.getUUID())) return;
+    private static void consoleHint(ServerPlayer player, AfkPlatformInitializer.ModState state) {
+        if (!isWelcome(state)) return;
+        if (RpPerms.has(player, RpPerm.CONFIG_GUI) || RpPerms.has(player, RpPerm.ROLES_SET)) return;
+        if (!CONSOLE_HINT_SHOWN.add(player.getUUID())) return;
+        if (!player.getServer().isDedicatedServer()) {
+            player.sendSystemMessage(Component.translatable("rpessentials.notice.cheats_hint"));
+            return;
+        }
+        String cmd = "rpessentials setrole " + player.getGameProfile().getName() + " " + adminRole();
+        player.sendSystemMessage(Component.translatable("rpessentials.notice.console_hint"));
+        player.sendSystemMessage(Component.literal("§e" + cmd).withStyle(s -> s
+                .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, cmd))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.translatable("rpessentials.notice.console_hint_click")))));
+    }
+
+    /**
+     * An OP can give roles (roles.set) but has none on a new server, and nothing told how to get one. Shown at login
+     * or when made OP, once per player (saved), to a player who can give roles and has no role, with the command to
+     * click.
+     */
+    private static void roleHint(ServerPlayer player, AfkPlatformInitializer.ModState state) {
+        if (state.roleHintSeenBy(player.getUUID())) return;
+        if (!RpPerms.has(player, RpPerm.ROLES_SET) || RpEssentialsRoleManager.hasRole(player)) return;
+        state.markRoleHintSeen(player.getUUID());
         String cmd = "/rpessentials setrole " + player.getGameProfile().getName() + " " + adminRole();
         player.sendSystemMessage(Component.literal("§6[RpEssentials] ")
                 .append(Component.translatable("rpessentials.notice.role_hint")));
@@ -130,6 +181,8 @@ public final class ModNotices {
                 : Component.translatable("rpessentials.notice.updated", from, to)));
         for (String v : notes) {
             out.add(Component.literal("§7" + v + " §8» ").append(Component.translatable("rpessentials.notice.version." + v)));
+            // What rpessentials.* (admin role) means for the name blur.
+            if (v.equals("6.2.0")) out.add(Component.translatable("rpessentials.notice.version.6.2.0.seeall"));
         }
         out.add(Component.translatable("rpessentials.notice.changelog"));
         return out;

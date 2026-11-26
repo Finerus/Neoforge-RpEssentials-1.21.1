@@ -1,14 +1,20 @@
 package net.rp.rpessentials.profession;
 
 import net.rp.rpessentials.lang.ServerLang;
+//#if forge
+//#else
 import net.minecraft.core.component.DataComponents;
+//#endif
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
+//#if forge
+//#else
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
+//#endif
 import net.rp.rpessentials.util.ColorHelper;
 import net.rp.rpessentials.items.RpEssentialsItems;
 import net.rp.rpessentials.util.TimeHelper;
@@ -64,8 +70,12 @@ public class LicenseHelper {
         // ── Build the ItemStack ───────────────────────────────────────────────
         ItemStack license = new ItemStack(RpEssentialsItems.LICENSE.get());
         String colorPrefix = profData.colorCode.replace("&", "§");
+        //#if forge
+        //? license.setHoverName(ColorHelper.parseColors(
+        //#else
         license.set(DataComponents.CUSTOM_NAME,
                 ColorHelper.parseColors(
+        //#endif
                         colorPrefix + ServerLang.get(target, MessagesConfig.LICENSE_ITEM_NAME) + profData.displayName));
 
         List<Component> lore = new ArrayList<>();
@@ -74,7 +84,13 @@ public class LicenseHelper {
         if (expiryDate != null) {
             lore.add(ColorHelper.parseSection(ServerLang.get(target, MessagesConfig.LICENSE_LORE_VALID_UNTIL, "date", expiryDate)));
         }
+        //#if forge
+        //? net.minecraft.nbt.ListTag loreTag = new net.minecraft.nbt.ListTag();
+        //? for (Component line : lore) loreTag.add(net.minecraft.nbt.StringTag.valueOf(Component.Serializer.toJson(line)));
+        //? license.getOrCreateTagElement("display").put("Lore", loreTag);
+        //#else
         license.set(DataComponents.LORE, new ItemLore(lore));
+        //#endif
 
         CompoundTag tag = new CompoundTag();
         tag.putString("professionId", professionId);
@@ -82,7 +98,11 @@ public class LicenseHelper {
         tag.putString("holderUuid", target.getUUID().toString());
         tag.putString("issueDate", dateStr);
         if (expiryDate != null) tag.putString("expiryDate", expiryDate);
+        //#if forge
+        //? for (String k : tag.getAllKeys()) license.getOrCreateTag().put(k, tag.get(k));
+        //#else
         license.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        //#endif
 
         // ── Give to player ────────────────────────────────────────────────────
         if (!target.getInventory().add(license)) {
@@ -90,9 +110,7 @@ public class LicenseHelper {
         }
 
         if (!ProfessionRestrictionManager.isReservedTag(professionId)) {
-            server.getCommands().performPrefixedCommand(
-                    server.createCommandSourceStack().withSuppressedOutput().withPermission(4),
-                    "tag " + target.getName().getString() + " add " + professionId);
+            target.addTag(professionId);
         }
 
         // ── Cache + client sync ───────────────────────────────────────────────

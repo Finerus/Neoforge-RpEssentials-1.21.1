@@ -29,8 +29,12 @@ public class MixinArmorItemUse {
     @Inject(
             method = "use(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResultHolder;",
             at = @At("HEAD"),
+            //#if forge
+            //? cancellable = true
+            //#else
             cancellable = true,
             remap = false
+            //#endif
     )
     private void rpessentials$blockArmorUse(Level level, Player player, InteractionHand hand,
                                             CallbackInfoReturnable<InteractionResultHolder<ItemStack>> cir) {

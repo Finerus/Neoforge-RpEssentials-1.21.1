@@ -15,7 +15,6 @@ import net.rp.rpessentials.commands.CommandToggles;
 import net.rp.rpessentials.gameplay.DiceManager;
 import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
 import net.rp.rpessentials.gameplay.TabBlur;
-import net.rp.rpessentials.gameplay.TabListCache;
 import net.rp.rpessentials.gameplay.WorldBorderManager;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
@@ -40,7 +39,6 @@ public final class ConfigRefresh {
             RpEssentialsRoleManager.clearAll();
             RpEssentialsRoleManager.reload();
             RpEssentialsPermissions.clearCache();
-            TabListCache.reload();
             TabBlur.reload();
             WorldBorderManager.reloadConfig();
             RpEssentials.clearMetaCache();

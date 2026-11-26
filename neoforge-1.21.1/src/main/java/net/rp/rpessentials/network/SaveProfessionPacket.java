@@ -49,7 +49,7 @@ public record SaveProfessionPacket(
                 @Override
                 public SaveProfessionPacket decode(FriendlyByteBuf buf) {
                     return new SaveProfessionPacket(
-                            buf.readUtf(), buf.readUtf(), buf.readUtf(),
+                            buf.readUtf(256), buf.readUtf(512), buf.readUtf(64),
                             PacketValidation.readList(buf), PacketValidation.readList(buf),
                             PacketValidation.readList(buf), PacketValidation.readList(buf),
                             buf.readBoolean()
@@ -80,12 +80,14 @@ public record SaveProfessionPacket(
             if (!RpPerms.has(player, RpPerm.PROFESSIONS_EDIT)) return;
 
             String cleanId = packet.id().toLowerCase().trim().replaceAll("[^a-z0-9_]", "_");
-            if (cleanId.isEmpty() || packet.displayName().trim().isEmpty()) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_PROF_INVALID)));
+            if (cleanId.isEmpty() || cleanId.length() > 64 || packet.displayName().trim().isEmpty()) {
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_PROF_INVALID)));
                 return;
             }
-            if (packet.isNew() && ProfessionRestrictionManager.isReservedTag(cleanId)) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_PROF_RESERVED)));
+            // A new profession must not take the id of a role, whatever the client says about "new".
+            boolean exists = ProfessionRestrictionManager.getProfessionData(cleanId) != null;
+            if ((packet.isNew() || !exists) && ProfessionRestrictionManager.isReservedTag(cleanId)) {
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_PROF_RESERVED)));
                 return;
             }
             String cleanName = packet.displayName().trim().replace("&", "§").replace(";", "");
@@ -99,7 +101,7 @@ public record SaveProfessionPacket(
             List<String> equipment = PacketValidation.cleanItems(packet.allowedEquipment());
 
             if (!Cfg.ready(ProfessionConfig.SPEC)) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
                 RpEssentials.LOGGER.error("[GUI] Config not loaded when saving profession");
                 return;
             }
@@ -153,7 +155,7 @@ public record SaveProfessionPacket(
     private static Component buildConfirmation(ServerPlayer v, String id, String name, String color,
                                                List<String> crafts, List<String> blocks,
                                                List<String> items, List<String> equipment, boolean updated) {
-        MutableComponent out = Component.literal(
+        MutableComponent out = net.rp.rpessentials.util.ColorHelper.parseSection(
                 ServerLang.get(v, updated ? MessagesConfig.GUI_PROF_UPDATED : MessagesConfig.GUI_PROF_CREATED, "id", id) + "\n"
                 + ServerLang.get(v, MessagesConfig.GUI_PROF_SUMMARY, "name", name,
                         "color", "§" + color.replace("&", "").replace("§", "")));
@@ -169,11 +171,11 @@ public record SaveProfessionPacket(
         int max = 3;
         String text = "\n" + ServerLang.get(v, MessagesConfig.GUI_PROF_LINE, "label", label,
                 "items", String.join("§7, §f", items.subList(0, Math.min(items.size(), max))));
-        if (items.size() <= max) return Component.literal(text
+        if (items.size() <= max) return net.rp.rpessentials.util.ColorHelper.parseSection(text
                 + ServerLang.get(v, MessagesConfig.GUI_PROF_COUNT, "count", String.valueOf(items.size())));
         List<String> tip = items.stream().map(s -> "§f" + s).toList();
         return GuiFeedback.withTooltip(v,
-                Component.literal(text + ServerLang.get(v, MessagesConfig.GUI_PROF_MORE,
+                net.rp.rpessentials.util.ColorHelper.parseSection(text + ServerLang.get(v, MessagesConfig.GUI_PROF_MORE,
                         "count", String.valueOf(items.size() - max))), tip);
     }
 

@@ -52,7 +52,7 @@ public class AbsenceManager {
     }
 
     private static void loadFromFile() {
-        try (FileReader reader = new FileReader(dataFile)) {
+        try (FileReader reader = new FileReader(dataFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, AbsenceEntry>>(){}.getType();
             Map<String, AbsenceEntry> data = GSON.fromJson(reader, type);
             if (data != null) {

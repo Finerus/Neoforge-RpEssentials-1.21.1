@@ -58,11 +58,11 @@ public record DeleteProfessionPacket(String id) implements CustomPacketPayload {
                 ProfessionRestrictionManager.reloadCache();
                 ProfessionConfig.SPEC.save();
 
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_PROF_DELETED, "id", cleanId)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_PROF_DELETED, "id", cleanId)));
                 RpEssentials.LOGGER.info("[GUI] Profession '{}' deleted by {}",
                         cleanId, player.getGameProfile().getName());
             } else {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });
     }

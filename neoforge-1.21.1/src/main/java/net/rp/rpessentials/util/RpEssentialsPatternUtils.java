@@ -52,8 +52,13 @@ public class RpEssentialsPatternUtils {
         ResourceLocation id = ResourceLocation.tryParse(resourceId);
         ResourceLocation t = ResourceLocation.tryParse(tag);
         if (id == null || t == null) return false;
+        //#if forge
+        //? return BuiltInRegistries.ITEM.getHolder(net.minecraft.resources.ResourceKey.create(Registries.ITEM, id)).map(h -> h.is(TagKey.create(Registries.ITEM, t))).orElse(false)
+                //? || BuiltInRegistries.BLOCK.getHolder(net.minecraft.resources.ResourceKey.create(Registries.BLOCK, id)).map(h -> h.is(TagKey.create(Registries.BLOCK, t))).orElse(false);
+        //#else
         return BuiltInRegistries.ITEM.getHolder(id).map(h -> h.is(TagKey.create(Registries.ITEM, t))).orElse(false)
                 || BuiltInRegistries.BLOCK.getHolder(id).map(h -> h.is(TagKey.create(Registries.BLOCK, t))).orElse(false);
+        //#endif
     }
 
     /**

@@ -173,6 +173,14 @@ public final class RpPerm {
 
     public static RpPerm manage(ManageService.Action action) { return MANAGE.get(action); }
 
+    /**
+     * Nodes that {@code rpessentials.*} does not give: they change how a player is seen instead of what they may do.
+     * An admin must not be shown clearly to every player (name blur) only because they have every permission.
+     */
+    public static boolean explicitOnly(String node) {
+        return TAB_ALWAYS_VISIBLE.node().equals(node);
+    }
+
     /** Old role permission name (isStaff, seeAll...) to its node, or null. */
     public static RpPerm byLegacy(String name) {
         for (RpPerm p : ALL) if (p.legacy != null && p.legacy.equalsIgnoreCase(name)) return p;

@@ -1,4 +1,5 @@
 package net.rp.rpessentials.core;
+//#neoforge-only: not in the Forge 1.20.1 version
 
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.ModLoader;

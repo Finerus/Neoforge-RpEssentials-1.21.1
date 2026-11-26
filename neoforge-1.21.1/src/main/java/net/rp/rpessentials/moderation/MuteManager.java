@@ -102,7 +102,7 @@ public class MuteManager {
 
     private static void loadFromFile() {
         if (dataFile == null || !dataFile.exists()) return;
-        try (FileReader reader = new FileReader(dataFile)) {
+        try (FileReader reader = new FileReader(dataFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, MuteEntry>>(){}.getType();
             Map<String, MuteEntry> data = GSON.fromJson(reader, type);
             if (data != null) {

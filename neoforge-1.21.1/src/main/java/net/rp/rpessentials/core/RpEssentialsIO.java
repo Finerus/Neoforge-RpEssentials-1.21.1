@@ -65,6 +65,10 @@ public final class RpEssentialsIO {
         }
     }
 
+    /**
+     * @param data the data to write, a copy; or a Supplier that builds it on the IO thread when it is written
+     *             (its sources must be thread-safe), null from the Supplier = nothing is written
+     */
     public static void saveJson(File target, Object data, Gson gson) {
         String key = target.getAbsolutePath();
         PENDING.put(key, new PendingSave(target, data, gson));
@@ -75,6 +79,21 @@ public final class RpEssentialsIO {
             PendingSave p = PENDING.remove(key);
             if (p != null) writeJsonNow(p.target(), p.data(), p.gson());
         }, SAVE_DELAY_MS, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Writes every pending save and waits for it (5 seconds at most). To call before reading the files again:
+     * otherwise the changes of the last second would be lost.
+     */
+    public static void flushAndWait() {
+        if (EXECUTOR.isShutdown()) return;
+        try {
+            EXECUTOR.submit(RpEssentialsIO::flushPending).get(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            RpEssentials.LOGGER.warn("[IO] Pending saves not written yet: {}", e.toString());
+        }
     }
 
     /** Writes every pending save now. Runs on the IO thread. */
@@ -90,6 +109,10 @@ public final class RpEssentialsIO {
         // A direct write supersedes a pending grouped save of the same file.
         PENDING.remove(target.getAbsolutePath());
         try {
+            if (data instanceof java.util.function.Supplier<?> s) {
+                data = s.get();
+                if (data == null) return;
+            }
             File parent = target.getParentFile();
             if (parent != null) parent.mkdirs();
             File tmp = new File(target.getPath() + ".tmp");

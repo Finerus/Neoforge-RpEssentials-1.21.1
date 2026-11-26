@@ -122,7 +122,11 @@ public class RpConfig {
                 .comment("Commands run after /rp afk, as the player: @s is the player, ~ ~ ~ is the destination,",
                         "{player} is the Minecraft name. They run with OP level 4 and their output is hidden.",
                         "Example: [\"effect give @s minecraft:resistance 30 4 true\", \"playsound minecraft:block.bell.use master @s\"]")
+                //#if forge
+                //? .defineListAllowEmpty("afkCommands", List.of(), obj -> obj instanceof String);
+                //#else
                 .defineList("afkCommands", List.of(), obj -> obj instanceof String);
+                //#endif
         BUILDER.pop();
 
         // ── SPAWN ─────────────────────────────────────────────────────────────
@@ -149,7 +153,11 @@ public class RpConfig {
         SPAWN_COMMANDS = BUILDER
                 .comment("Commands run after /rp spawn, as the player: @s is the player, ~ ~ ~ is the destination,",
                         "{player} is the Minecraft name. They run with OP level 4 and their output is hidden.")
+                //#if forge
+                //? .defineListAllowEmpty("spawnCommands", List.of(), obj -> obj instanceof String);
+                //#else
                 .defineList("spawnCommands", List.of(), obj -> obj instanceof String);
+                //#endif
         BUILDER.pop();
 
         // ── ACTION / ME ───────────────────────────────────────────────────────
@@ -166,7 +174,11 @@ public class RpConfig {
                 .comment("Available dice types.",
                         "Format: name;maxValue  (e.g. d6;6)",
                         "Or custom faces: name;face1,face2,face3 (e.g. coin;Heads,Tails)")
+                //#if forge
+                //? .defineListAllowEmpty("diceTypes",
+                //#else
                 .defineList("diceTypes",
+                //#endif
                         Arrays.asList("d4;4","d6;6","d8;8","d10;10","d12;12","d20;20","d100;100"),
                         obj -> obj instanceof String && ((String)obj).contains(";"));
         DICE_ROLL_DISTANCE   = BUILDER.comment("Radius (-1 = global).").defineInRange("diceRollDistance", 12, -1, 256);
@@ -199,7 +211,11 @@ public class RpConfig {
                 .define("nicknamesUnique", false);
         NICK_BLACKLIST = BUILDER
                 .comment("Words forbidden in nicknames (case and colors ignored). Staff are not affected.")
+                //#if forge
+                //? .defineListAllowEmpty("nicknameBlacklist", List.of(), obj -> obj instanceof String);
+                //#else
                 .defineList("nicknameBlacklist", List.of(), obj -> obj instanceof String);
+                //#endif
         BUILDER.pop();
 
         // ── ANNONCE ───────────────────────────────────────────────────────────
@@ -230,7 +246,11 @@ public class RpConfig {
                         "  hrp     — 4s, fade 0.5s in/out  → HRP hours notification",
                         "  title   — 5s, fade 1s in/out    → announcements"
                 )
+                //#if forge
+                //? .defineListAllowEmpty("presets",
+                //#else
                 .defineList("presets",
+                //#endif
                         Arrays.asList(
                                 "default;3.0;0.5;0.5",
                                 "death;5.0;0.5;0.5",
@@ -287,12 +307,21 @@ public class RpConfig {
                         "  LINE = one line (for example a faction or a rank), TEXT = several lines with the text editor.",
                         "  The id is a lowercase word (letters, digits, _); changing it loses what was written in that field.",
                         "Example: [\"faction;Faction;LINE\", \"religion;Religion;LINE\", \"secrets;Secrets;TEXT\"]")
+                //#if forge
+                //? .defineListAllowEmpty("customFields", java.util.List.of(), o -> o instanceof String s && s.split(";").length >= 2);
+                //#else
                 .defineList("customFields", java.util.List.of(), o -> o instanceof String s && s.split(";").length >= 2);
+                //#endif
         SHEET_MAX_TEXT_LENGTH = BUILDER
                 .comment("Maximum length of a several-lines field. One-line fields are limited to 128 characters.")
                 .defineInRange("maxTextLength", 4000, 100, 20000);
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+
+        // Dice key and dice screen.
+        ConfigAccess.client(SPEC, ENABLE_DICE_SYSTEM, DICE_TYPES);
+        // Commands run with OP level 4.
+        ConfigAccess.sensitive(AFK_COMMANDS, SPAWN_COMMANDS);
     }
 }

@@ -177,7 +177,7 @@ public class DeathRPManager {
 
     private static void loadFromFile() {
         if (dataFile == null || !dataFile.exists()) return;
-        try (FileReader reader = new FileReader(dataFile)) {
+        try (FileReader reader = new FileReader(dataFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, Boolean>>(){}.getType();
             Map<String, Boolean> raw = GSON.fromJson(reader, type);
             if (raw != null) {

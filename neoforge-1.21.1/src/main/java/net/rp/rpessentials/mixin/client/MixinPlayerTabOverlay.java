@@ -40,7 +40,11 @@ public class MixinPlayerTabOverlay {
     private static boolean rpessentials$obfuscated(Component c) {
         String ins = c.getStyle().getInsertion();
         if (ins != null && ins.startsWith("rpe_blur")) return true;
+        //#if forge
+        //? return c.getContents() instanceof net.minecraft.network.chat.contents.LiteralContents lit
+        //#else
         return c.getContents() instanceof net.minecraft.network.chat.contents.PlainTextContents.LiteralContents lit
+        //#endif
                 && lit.text().contains("§k");
     }
 }

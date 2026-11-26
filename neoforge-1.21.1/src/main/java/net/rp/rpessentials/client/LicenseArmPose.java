@@ -4,14 +4,22 @@ import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
+//#if forge
+//#else
 import net.neoforged.fml.common.asm.enumextension.EnumProxy;
+//#endif
 import net.neoforged.neoforge.client.IArmPoseTransformer;
 import net.rp.rpessentials.items.LicenseItem;
 
 /**
  * Third person pose of a player holding a license, like in first person: both arms forward when the
+ //#if forge
+ //? * other hand is empty, the license arm only otherwise. Added to {@link HumanoidModel.ArmPose} with
+ //? * Forge's {@code ArmPose.create}.
+ //#else
  * other hand is empty, the license arm only otherwise. Added to {@link HumanoidModel.ArmPose} through
  * {@code META-INF/enumextensions.json}.
+ //#endif
  */
 public final class LicenseArmPose {
 
@@ -22,8 +30,22 @@ public final class LicenseArmPose {
     /** Arms turned inward so the hands meet in front of the chest. */
     private static final float ARM_INWARD = 0.42F;
 
+    //#if forge
+    //? public static final HumanoidModel.ArmPose POSE = HumanoidModel.ArmPose.create(
+            //? "RPESSENTIALS_LICENSE", true, (IArmPoseTransformer) LicenseArmPose::apply);
+//?
+    //? /**
+     //? * Creates {@link #POSE} (called from the mod constructor, client only).
+     //? * <p>
+     //? * HumanoidModel switches on the arm pose through a table sized when it is first used: a pose added
+     //? * after that (first time a license is held) is out of the table and crashes the game. Created during
+     //? * mod loading, it is in the table from the start.
+     //? */
+    //? public static void init() {}
+    //#else
     public static final EnumProxy<HumanoidModel.ArmPose> POSE = new EnumProxy<>(
             HumanoidModel.ArmPose.class, true, (IArmPoseTransformer) LicenseArmPose::apply);
+    //#endif
 
     /** True when the entity holds a license in one hand and nothing in the other (card held with both hands). */
     public static boolean bothHands(LivingEntity entity) {

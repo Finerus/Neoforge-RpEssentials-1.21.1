@@ -338,6 +338,10 @@ public final class GuiTemplateExporter {
         Component body = detail instanceof I18nArgs a
                 ? Component.translatable(key, a.args())
                 : Component.literal(String.valueOf(detail));
+        //#if forge
+        //? SystemToast.addOrUpdate(mc.getToasts(), SystemToast.SystemToastIds.PERIODIC_NOTIFICATION, title, body);
+        //#else
         SystemToast.addOrUpdate(mc.getToasts(), SystemToast.SystemToastId.PERIODIC_NOTIFICATION, title, body);
+        //#endif
     }
 }

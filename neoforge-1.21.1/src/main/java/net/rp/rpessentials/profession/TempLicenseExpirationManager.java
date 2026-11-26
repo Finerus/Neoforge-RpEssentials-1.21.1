@@ -66,10 +66,18 @@ public class TempLicenseExpirationManager {
     private static void markStackIfRevoked(ServerPlayer player, net.minecraft.world.item.ItemStack stack,
                                            List<String> activeLicenses) {
         if (stack.isEmpty() || !(stack.getItem() instanceof LicenseItem)) return;
+        //#if forge
+        //? if (!stack.hasTag()) return;
+        //#else
         if (!stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) return;
+        //#endif
 
         net.minecraft.nbt.CompoundTag tag =
+                //#if forge
+                //? stack.getTag().copy();
+                //#else
                 stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA).copyTag();
+                //#endif
         String profId = tag.getString("professionId");
         if (profId.isEmpty()) return;
 
@@ -94,8 +102,12 @@ public class TempLicenseExpirationManager {
         } else {
             return;
         }
+        //#if forge
+        //? stack.setTag(tag);
+        //#else
         stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                 net.minecraft.world.item.component.CustomData.of(tag));
+        //#endif
     }
 
     public static void tickMidnightSweep(MinecraftServer server) {
@@ -134,7 +146,7 @@ public class TempLicenseExpirationManager {
             ProfessionRestrictionManager.ProfessionData d =
                     ProfessionRestrictionManager.getProfessionData(e.profession);
             String name = d != null ? d.getFormattedName() : e.profession;
-            online.sendSystemMessage(Component.literal(
+            online.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                     ServerLang.get(online, MessagesConfig.LICENSE_EXPIRED_RP_PLAYER, "profession", name)));
         }
         LicenseManager.logActionSystem("TEMPEXPIRE", e.targetName, e.targetUUID, e.profession, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_EXPIRED_ON, "date", String.valueOf(e.expiresAt)));

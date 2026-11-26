@@ -62,60 +62,65 @@ public record PlayerNoteActionPacket(
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer staff)) return;
             if (!RpPerms.has(staff, RpPerm.NOTE)) return;
-
-            MinecraftServer server = staff.getServer();
-            String target = LastConnectionManager.resolveName(server, packet.targetUuid());
-            NoteManager.NoteEntry old = null;
-            for (NoteManager.NoteEntry n : NoteManager.getNotes(packet.targetUuid())) {
-                if (n.id == packet.noteId()) old = n;
-            }
-
-            if (packet.isDelete()) {
-                if (old == null || !NoteManager.removeNote(packet.targetUuid(), packet.noteId())) {
-                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(ServerLang.get(staff,
-                            MessagesConfig.GUI_NOTE_NOT_FOUND, "id", String.valueOf(packet.noteId()), "player", target)));
-                    return;
-                }
-                net.rp.rpessentials.moderation.HistoryManager.record(packet.targetUuid(), target,
-                        net.rp.rpessentials.moderation.HistoryManager.NOTE_REMOVE, staff.getName().getString(), "#" + packet.noteId());
-                final NoteManager.NoteEntry deleted = old;
-                GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_DELETED,
-                        new String[]{"id", String.valueOf(packet.noteId()), "player", target},
-                        v -> List.of("§c- §7" + deleted.text,
-                                ServerLang.get(v, MessagesConfig.GUI_NOTE_AUTHOR, "author", deleted.displayAuthor())), false);
-                return;
-            }
-
-            String text = packet.text().trim();
-            if (text.isEmpty()) return;
-            if (text.length() > 256) text = text.substring(0, 256);
-
-            if (packet.noteId() > 0) {
-                if (old == null || !NoteManager.editNote(packet.targetUuid(), packet.noteId(), text, staff.getName().getString())) {
-                    staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(ServerLang.get(staff,
-                            MessagesConfig.GUI_NOTE_NOT_FOUND, "id", String.valueOf(packet.noteId()), "player", target)));
-                    return;
-                }
-                final NoteManager.NoteEntry edited = old;
-                final String newText = text;
-                GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_EDITED,
-                        new String[]{"id", String.valueOf(packet.noteId()), "player", target},
-                        v -> List.of("§c- §7" + edited.text, "§a+ §7" + newText,
-                                ServerLang.get(v, MessagesConfig.GUI_NOTE_AUTHOR, "author", edited.authorName)), false);
-                return;
-            }
-
-            int newId = NoteManager.addNote(packet.targetUuid(), target,
-                    staff.getName().getString(), staff.getUUID().toString(), text);
-            if (newId < 0) {
-                staff.sendSystemMessage(net.minecraft.network.chat.Component.literal(ServerLang.get(staff,
-                        MessagesConfig.GUI_NOTE_LIMIT, "player", target)));
-                return;
-            }
-            final String addedText = text;
-            GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_ADDED,
-                    new String[]{"id", String.valueOf(newId), "player", target},
-                    v -> List.of("§a+ §7" + addedText), false);
+            apply(packet, staff);
+            // Done or refused (note limit, note already deleted...): the GUI shows what is really stored.
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(staff, PlayerNotesPacket.of(packet.targetUuid()));
         });
+    }
+
+    private static void apply(PlayerNoteActionPacket packet, ServerPlayer staff) {
+        MinecraftServer server = staff.getServer();
+        String target = LastConnectionManager.resolveName(server, packet.targetUuid());
+        NoteManager.NoteEntry old = null;
+        for (NoteManager.NoteEntry n : NoteManager.getNotes(packet.targetUuid())) {
+            if (n.id == packet.noteId()) old = n;
+        }
+
+        if (packet.isDelete()) {
+            if (old == null || !NoteManager.removeNote(packet.targetUuid(), packet.noteId())) {
+                staff.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(staff,
+                        MessagesConfig.GUI_NOTE_NOT_FOUND, "id", String.valueOf(packet.noteId()), "player", target)));
+                return;
+            }
+            net.rp.rpessentials.moderation.HistoryManager.record(packet.targetUuid(), target,
+                    net.rp.rpessentials.moderation.HistoryManager.NOTE_REMOVE, staff.getName().getString(), "#" + packet.noteId());
+            final NoteManager.NoteEntry deleted = old;
+            GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_DELETED,
+                    new String[]{"id", String.valueOf(packet.noteId()), "player", target},
+                    v -> List.of("§c- §7" + deleted.text,
+                            ServerLang.get(v, MessagesConfig.GUI_NOTE_AUTHOR, "author", deleted.displayAuthor())), false);
+            return;
+        }
+
+        String text = packet.text().trim();
+        if (text.isEmpty()) return;
+        if (text.length() > 256) text = text.substring(0, 256);
+
+        if (packet.noteId() > 0) {
+            if (old == null || !NoteManager.editNote(packet.targetUuid(), packet.noteId(), text, staff.getName().getString())) {
+                staff.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(staff,
+                        MessagesConfig.GUI_NOTE_NOT_FOUND, "id", String.valueOf(packet.noteId()), "player", target)));
+                return;
+            }
+            final NoteManager.NoteEntry edited = old;
+            final String newText = text;
+            GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_EDITED,
+                    new String[]{"id", String.valueOf(packet.noteId()), "player", target},
+                    v -> List.of("§c- §7" + edited.text, "§a+ §7" + newText,
+                            ServerLang.get(v, MessagesConfig.GUI_NOTE_AUTHOR, "author", edited.authorName)), false);
+            return;
+        }
+
+        int newId = NoteManager.addNote(packet.targetUuid(), target,
+                staff.getName().getString(), staff.getUUID().toString(), text);
+        if (newId < 0) {
+            staff.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(staff,
+                    MessagesConfig.GUI_NOTE_LIMIT, "player", target)));
+            return;
+        }
+        final String addedText = text;
+        GuiFeedback.report(staff, MessagesConfig.GUI_NOTE_ADDED,
+                new String[]{"id", String.valueOf(newId), "player", target},
+                v -> List.of("§a+ §7" + addedText), false);
     }
 }

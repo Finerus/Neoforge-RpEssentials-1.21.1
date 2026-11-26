@@ -2,7 +2,11 @@ package net.rp.rpessentials.api.event;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.Event;
+//#if forge
+//? import net.minecraftforge.eventbus.api.Cancelable;
+//#else
 import net.neoforged.bus.api.ICancellableEvent;
+//#endif
 import net.rp.rpessentials.gameplay.DiceManager;
 
 import java.util.List;
@@ -53,18 +57,32 @@ public abstract class DiceRollEvent extends Event {
     /** Faces of a custom dice, empty for a numeric dice. */
     public List<String> getFaces() { return dice.hasCustomFaces() ? dice.customFaces() : List.of(); }
 
+    //#if forge
+    //? public abstract String getRollResult();
+    //#else
     public abstract String getResult();
+    //#endif
 
     /** The result as a number, or null when it is not a number (custom face). */
     public Integer getNumericResult() {
         try {
+            //#if forge
+            //? return Integer.parseInt(getRollResult().trim());
+            //#else
             return Integer.parseInt(getResult().trim());
+            //#endif
         } catch (NumberFormatException e) {
             return null;
         }
     }
 
+    //#if forge
+    //? @Cancelable
+//?
+    //? public static class Pre extends DiceRollEvent {
+    //#else
     public static class Pre extends DiceRollEvent implements ICancellableEvent {
+    //#endif
         private String result;
 
         public Pre(ServerPlayer player, DiceManager.DiceType dice, String result, DiceManager.Roll roll) {
@@ -73,10 +91,18 @@ public abstract class DiceRollEvent extends Event {
         }
 
         @Override
+        //#if forge
+        //? public String getRollResult() { return result; }
+        //#else
         public String getResult() { return result; }
+        //#endif
 
         /** Replaces the result shown to the players (the details are then hidden). Null is ignored. */
+        //#if forge
+        //? public void setRollResult(String result) {
+        //#else
         public void setResult(String result) {
+        //#endif
             if (result != null) this.result = result;
         }
     }
@@ -93,7 +119,11 @@ public abstract class DiceRollEvent extends Event {
         }
 
         @Override
+        //#if forge
+        //? public String getRollResult() { return result; }
+        //#else
         public String getResult() { return result; }
+        //#endif
 
         /** Players who received the roll message (the roller included), staff spies excluded. */
         public List<ServerPlayer> getAudience() { return audience; }

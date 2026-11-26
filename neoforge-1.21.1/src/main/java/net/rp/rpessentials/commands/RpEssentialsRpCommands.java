@@ -131,13 +131,13 @@ public class RpEssentialsRpCommands {
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                     if (Cfg.ready(RpConfig.SPEC)) {
                         if (!RpConfig.ENABLE_DICE_SYSTEM.get()) {
-                            ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_DISABLED)));
+                            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.DICE_DISABLED)));
                             return 0;
                         }
                     } else { return 0; }
                     List<DiceManager.DiceType> dice = DiceManager.getAvailableDice();
                     if (dice.isEmpty()) {
-                        ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_NONE)));
+                        ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.DICE_NONE)));
                         return 0;
                     }
                     return diceError(player, DiceManager.rollInput(player, dice.get(0).name(), false), dice.get(0).name());
@@ -153,7 +153,7 @@ public class RpEssentialsRpCommands {
                             String diceName = StringArgumentType.getString(ctx, "dice");
                             if (Cfg.ready(RpConfig.SPEC)) {
                                 if (!RpConfig.ENABLE_DICE_SYSTEM.get()) {
-                                    ctx.getSource().sendFailure(Component.literal(ServerLang.get(player, MessagesConfig.DICE_DISABLED)));
+                                    ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.DICE_DISABLED)));
                                     return 0;
                                 }
                             } else { return 0; }
@@ -167,15 +167,15 @@ public class RpEssentialsRpCommands {
     private static int diceError(ServerPlayer player, DiceManager.Status s, String input) {
         switch (s) {
             case OK, COOLDOWN, CANCELLED -> { return s == DiceManager.Status.OK ? 1 : 0; }
-            case SECRET_DISABLED -> player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_SECRET_DISABLED)));
-            case EXPRESSIONS_DISABLED -> player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_EXPRESSIONS_DISABLED)));
+            case SECRET_DISABLED -> player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.DICE_SECRET_DISABLED)));
+            case EXPRESSIONS_DISABLED -> player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.DICE_EXPRESSIONS_DISABLED)));
             case TOO_MANY -> {
                 int count = 20, sides = 1000;
                 if (Cfg.ready(RpConfig.SPEC)) { count = RpConfig.DICE_MAX_COUNT.get(); sides = RpConfig.DICE_MAX_SIDES.get(); }
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_TOO_MANY,
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.DICE_TOO_MANY,
                         "count", String.valueOf(count), "sides", String.valueOf(sides))));
             }
-            default -> player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.DICE_UNKNOWN, "dice", input)));
+            default -> player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.DICE_UNKNOWN, "dice", input)));
         }
         return 0;
     }
@@ -192,7 +192,7 @@ public class RpEssentialsRpCommands {
             int combat = RpConfig.AFK_COMBAT_BLOCK_SECONDS.get();
             int hurt = player.getLastHurtByMobTimestamp();
             if (combat > 0 && hurt > 0 && player.tickCount - hurt < combat * 20) {
-                player.displayClientMessage(Component.literal(ServerLang.get(player, MessagesConfig.AFK_COMBAT)), true);
+                player.displayClientMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.AFK_COMBAT)), true);
                 return 0;
             }
         }
@@ -454,7 +454,7 @@ public class RpEssentialsRpCommands {
         boolean allowColors = false;
         allowColors = Cfg.get(RpConfig.SELF_NICK_ALLOW_COLORS, allowColors);
 
-        if (!allowColors && (nickname.contains("§") || nickname.contains("&"))) {
+        if (!allowColors && (nickname.contains("§") || nickname.contains("&") || nickname.contains("<grad:"))) {
             player.displayClientMessage(
                     ColorHelper.parseColors(Msg.get(ctx.getSource(), MessagesConfig.RP_SELFNICK_COLORS_DISABLED)), false);
             return 0;
@@ -568,7 +568,11 @@ public class RpEssentialsRpCommands {
             net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> holder =
                     player.level().registryAccess()
                             .registryOrThrow(Registries.SOUND_EVENT)
+                            //#if forge
+                            //? .getHolder(net.minecraft.resources.ResourceKey.create(Registries.SOUND_EVENT, loc))
+                            //#else
                             .getHolder(loc)
+                            //#endif
                             .orElse(null);
             if (holder != null) {
                 player.playNotifySound(holder.value(), SoundSource.MASTER, 1.0f, 1.0f);

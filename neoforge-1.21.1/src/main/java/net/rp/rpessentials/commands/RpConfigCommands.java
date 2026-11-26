@@ -33,7 +33,6 @@ import net.rp.rpessentials.core.BackupManager;
 import net.rp.rpessentials.core.RpEssentialsDataPaths;
 import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
 import net.rp.rpessentials.gameplay.TabBlur;
-import net.rp.rpessentials.gameplay.TabListCache;
 import net.rp.rpessentials.gameplay.WorldBorderManager;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
@@ -53,8 +52,22 @@ public class RpConfigCommands {
         configNode.then(Commands.literal("validate").executes(RpConfigCommands::validateConfig));
 
         configNode.then(Commands.literal("backup").executes(ctx -> {
-            BackupManager.run(RpEssentialsConfig.BACKUP_KEEP.get());
-            ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_CFG_BACKUP), true);
+            CommandSourceStack src = ctx.getSource();
+            src.sendSuccess(() -> Msg.c(src, MessagesConfig.STAFF_CFG_BACKUP), true);
+            BackupManager.run(RpEssentialsConfig.BACKUP_KEEP.get(), result -> src.getServer().execute(() -> {
+                if (result.file() == null) {
+                    src.sendFailure(Msg.c(src, MessagesConfig.STAFF_CFG_BACKUP_FAIL, "error", result.error()));
+                    return;
+                }
+                src.sendSuccess(() -> Msg.c(src, MessagesConfig.STAFF_CFG_BACKUP_DONE,
+                        "file", result.file().getName(), "size", result.size(), "path", result.path()).copy()
+                        .withStyle(s -> s
+                                .withClickEvent(new net.minecraft.network.chat.ClickEvent(
+                                        net.minecraft.network.chat.ClickEvent.Action.COPY_TO_CLIPBOARD, result.path()))
+                                .withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                                        net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT,
+                                        Msg.c(src, MessagesConfig.STAFF_CFG_BACKUP_COPY)))), true);
+            }));
             return 1;
         }));
 
@@ -90,14 +103,14 @@ public class RpConfigCommands {
         RpEssentialsPatternUtils.clearCache();
         ImmersivePresetHelper.clearCache();
         RpEssentialsPermissions.clearCache();
-        TabListCache.reload();
         TabBlur.reload();
         RpEssentials.clearMetaCache();
         WorldBorderManager.reloadConfig();
         RpEssentialsScheduleManager.enforceOnline(ctx.getSource().getServer());
         net.rp.rpessentials.permission.RpPerms.refreshAll(ctx.getSource().getServer());
 
-        // Données persistantes (rechargement depuis fichier)
+        // Données persistantes (rechargement depuis fichier) : ce qui n'est pas encore écrit l'est d'abord
+        net.rp.rpessentials.core.RpEssentialsIO.flushAndWait();
         NicknameManager.reload();
         LicenseManager.reload();
         MuteManager.reload();
@@ -191,7 +204,7 @@ public class RpConfigCommands {
 
         sb.append(L.apply(MessagesConfig.STAFF_CFG_S_BORDER)).append("\n")
                 .append(row(
-                        kv(L.apply(MessagesConfig.STAFF_CFG_L_ENABLED), flag(ctx.getSource(), () -> RpEssentialsConfig.ENABLE_WORLD_BORDER_WARNING.get())),
+                        kv(L.apply(MessagesConfig.STAFF_CFG_L_ENABLED), flag(ctx.getSource(), () -> RpEssentialsConfig.ENABLE_WORLD_BORDER.get())),
                         kv(L.apply(MessagesConfig.STAFF_CFG_L_DISTANCE), value(ctx.getSource(), () -> RpEssentialsConfig.WORLD_BORDER_DISTANCE.get()) + L.apply(MessagesConfig.STAFF_CFG_BLOCKS)),
                         kv(L.apply(MessagesConfig.STAFF_CFG_L_TELEPORT), flag(ctx.getSource(), () -> RpEssentialsConfig.WORLD_BORDER_TELEPORT_ENABLED.get()))))
                 .append(row(kv(L.apply(MessagesConfig.STAFF_CFG_L_NAMED_ZONES), value(ctx.getSource(), () -> RpEssentialsConfig.NAMED_ZONES.get().size()))));
@@ -274,16 +287,16 @@ public class RpConfigCommands {
         if (Cfg.ready(MessagesConfig.SPEC)) {
             String value = StringArgumentType.getString(ctx, "value");
             if (configValue == null) {
-                ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UNAVAILABLE)));
+                ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UNAVAILABLE)));
                 return 0;
             }
             configValue.set(value);
             configValue.save();
-            ctx.getSource().sendSuccess(() -> Component.literal(
+            ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(
                     Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UPDATED, "label", label, "value", value)), true);
             return 1;
         } else {
-            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_BUILT)));
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_BUILT)));
             return 0;
         }
     }
@@ -294,16 +307,16 @@ public class RpConfigCommands {
         if (Cfg.ready(MessagesConfig.SPEC)) {
             double value = DoubleArgumentType.getDouble(ctx, "value");
             if (configValue == null) {
-                ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UNAVAILABLE)));
+                ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UNAVAILABLE)));
                 return 0;
             }
             configValue.set(value);
             configValue.save();
-            ctx.getSource().sendSuccess(() -> Component.literal(
+            ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(
                     Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_UPDATED, "label", label, "value", String.valueOf(value))), true);
             return 1;
         } else {
-            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_BUILT)));
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_BUILT)));
             return 0;
         }
     }

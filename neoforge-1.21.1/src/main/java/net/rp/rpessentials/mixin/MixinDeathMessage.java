@@ -18,8 +18,12 @@ public abstract class MixinDeathMessage {
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/server/players/PlayerList;broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V"
+            //#if forge
+            //? )
+            //#else
             ),
             remap = false
+            //#endif
     )
     private void onDeathMessageBroadcast(PlayerList playerList, Component message, boolean overlay, DamageSource damageSource) {
         ServerPlayer self = (ServerPlayer) (Object) this;

@@ -38,8 +38,8 @@ public record SaveRolePacket(
             new StreamCodec<>() {
                 @Override
                 public SaveRolePacket decode(FriendlyByteBuf buf) {
-                    String id      = buf.readUtf();
-                    String lp      = buf.readUtf();
+                    String id      = buf.readUtf(256);
+                    String lp      = buf.readUtf(256);
                     List<String> p = PacketValidation.readList(buf);
                     boolean isNew  = buf.readBoolean();
                     return new SaveRolePacket(id, lp, p, isNew);
@@ -62,17 +62,19 @@ public record SaveRolePacket(
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
                         if (!RpEssentialsPermissions.canManageRoles(player)) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
                 return;
             }
 
             String cleanId = packet.id().toLowerCase().trim().replaceAll("[^a-z0-9_]", "_");
-            if (cleanId.isEmpty()) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLE_INVALID)));
+            if (cleanId.isEmpty() || cleanId.length() > 64) {
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_ROLE_INVALID)));
                 return;
             }
-            if (packet.isNew() && ProfessionRestrictionManager.getProfessionData(cleanId) != null) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_ROLE_ID_TAKEN)));
+            // A new role must not take the id of a profession, whatever the client says about "new".
+            if ((packet.isNew() || !ProfessionRestrictionManager.isReservedTag(cleanId))
+                    && ProfessionRestrictionManager.getProfessionData(cleanId) != null) {
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_ROLE_ID_TAKEN)));
                 return;
             }
 
@@ -128,7 +130,7 @@ public record SaveRolePacket(
                 }, true);
 
             } else {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NOT_LOADED)));
             }
         });
     }

@@ -124,7 +124,7 @@ public class LicenseManager {
     private static void loadFromFile() {
         if (licenseFile == null || !licenseFile.exists()) return;
 
-        try (FileReader reader = new FileReader(licenseFile)) {
+        try (FileReader reader = new FileReader(licenseFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, List<String>>>(){}.getType();
             Map<String, List<String>> data = GSON.fromJson(reader, type);
 

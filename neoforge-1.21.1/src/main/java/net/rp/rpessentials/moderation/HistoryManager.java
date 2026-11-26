@@ -38,9 +38,11 @@ public final class HistoryManager {
     public static final String NICK = "NICK";
     public static final String REPORT = "REPORT";
     public static final String SHEET = "SHEET";
+    /** History of a staff member: what they did with a report (the reported player gets a REPORT line). */
+    public static final String REPORT_STAFF = "REPORT_STAFF";
 
     public static final List<String> TYPES = List.of(WARN, WARN_REMOVE, WARN_CLEAR, MUTE, UNMUTE,
-            NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK, REPORT, SHEET);
+            NOTE, NOTE_REMOVE, MANAGE, LICENSE, DEATH_RP, NICK, REPORT, SHEET, REPORT_STAFF);
 
     public static class Entry {
         public long time;
@@ -78,7 +80,7 @@ public final class HistoryManager {
     private static final Map<UUID, List<Entry>> history = new ConcurrentHashMap<>();
     private static final Map<UUID, String> names = new ConcurrentHashMap<>();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static File dataFile = null;
+    private static volatile File dataFile = null;
 
     private HistoryManager() {}
 
@@ -150,7 +152,13 @@ public final class HistoryManager {
     }
 
     private static void save() {
-        if (dataFile == null) return;
+        File target = dataFile;
+        if (target == null) return;
+        // Built when it is written: several lines added at once copy the whole history only once, off the server thread.
+        RpEssentialsIO.saveJson(target, (java.util.function.Supplier<Object>) () -> target.equals(dataFile) ? snapshot() : null, GSON);
+    }
+
+    private static Map<String, Stored> snapshot() {
         Map<String, Stored> data = new LinkedHashMap<>();
         for (Map.Entry<UUID, List<Entry>> e : history.entrySet()) {
             Stored s = new Stored();
@@ -161,10 +169,11 @@ public final class HistoryManager {
             }
             data.put(s.uuid + (s.name != null ? " (" + s.name + ")" : ""), s);
         }
-        RpEssentialsIO.saveJson(dataFile, data, GSON);
+        return data;
     }
 
     public static synchronized void reload() {
+        RpEssentialsIO.flushAndWait();
         dataFile = null;
         history.clear();
         names.clear();
@@ -192,6 +201,12 @@ public final class HistoryManager {
      * to see the line. The level of the actor is added automatically when they are vanished.
      */
     public static void record(UUID target, String targetName, String type, String actor, String detail, int hiddenLevel) {
+        record(target, targetName, type, actor, detail, hiddenLevel, true);
+    }
+
+    /** Same, {@code discord} false = never sent to Discord. */
+    public static void record(UUID target, String targetName, String type, String actor, String detail, int hiddenLevel,
+                              boolean discord) {
         if (target == null) return;
         int hidden = Math.max(0, hiddenLevel);
         net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
@@ -201,7 +216,7 @@ public final class HistoryManager {
         }
         String name = targetName != null ? targetName : NameCache.get(target);
         // Sent even when the history itself is disabled.
-        net.rp.rpessentials.compat.DiscordWebhook.onHistory(name, type, actor != null ? actor : system(), detail, hidden);
+        if (discord) net.rp.rpessentials.compat.DiscordWebhook.onHistory(name, type, actor != null ? actor : system(), detail, hidden);
         if (!enabled()) return;
         ensureInitialized();
         if (name != null) names.put(target, name);
@@ -283,6 +298,7 @@ public final class HistoryManager {
             case NICK -> MessagesConfig.HISTORY_T_NICK;
             case REPORT -> MessagesConfig.HISTORY_T_REPORT;
             case SHEET -> MessagesConfig.HISTORY_T_SHEET;
+            case REPORT_STAFF -> MessagesConfig.HISTORY_T_REPORT_STAFF;
             default -> null;
         };
     }

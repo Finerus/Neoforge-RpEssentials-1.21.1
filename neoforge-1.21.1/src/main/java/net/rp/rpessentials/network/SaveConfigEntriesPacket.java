@@ -63,20 +63,16 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
         ctx.enqueueWork(() -> {
             if (!(ctx.player() instanceof ServerPlayer player)) return;
             if (!RpPerms.has(player, RpPerm.CONFIG_GUI)) {
-                RpEssentials.LOGGER.warn("[ConfigGUI] Non-staff {} tried to save config '{}'",
+                if (PacketGuard.every(player, "config_denied", 60_000L)) RpEssentials.LOGGER.warn("[ConfigGUI] Non-staff {} tried to save config '{}'",
                         player.getName().getString(), packet.fileId());
                 return;
             }
             if (packet.changes().isEmpty()) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NO_CHANGES)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NO_CHANGES)));
                 return;
             }
 
-            boolean sensitive = RpEssentialsPermissions.canEditSensitiveConfig(player);
-            Set<String> knownPaths = ConfigInspector.getEntries(packet.fileId(), sensitive).stream()
-                    .filter(e -> !e.isSection())
-                    .map(ConfigInspector.EntryData::fullPath)
-                    .collect(java.util.stream.Collectors.toSet());
+            Set<String> knownPaths = ConfigInspector.visiblePaths(packet.fileId(), p -> RpPerms.has(player, p));
 
             Map<String, String> validatedChanges = new java.util.LinkedHashMap<>();
             for (Map.Entry<String, String> change : packet.changes().entrySet()) {
@@ -94,7 +90,7 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
             }
 
             if (validatedChanges.isEmpty()) {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NO_VALID)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_CONFIG_NO_VALID)));
                 return;
             }
 
@@ -102,33 +98,43 @@ public record SaveConfigEntriesPacket(String fileId, Map<String, String> changes
             int applied = ConfigInspector.applyAndSave(packet.fileId(), validatedChanges);
 
             if (applied > 0) {
-                ConfigRefresh.refresh(player.getServer());
+                // Only what depends on this file.
+                ConfigRefresh.refresh(player.getServer(), ConfigInspector.specOf(packet.fileId()));
 
+                // Restricted options are only shown to the staff who may see them.
                 List<String> details = new ArrayList<>();
+                List<String> restrictedDetails = new ArrayList<>();
+                List<String> restrictedHidden = new ArrayList<>();
                 for (Map.Entry<String, String> c : validatedChanges.entrySet()) {
                     String key = simplifyKey(c.getKey());
-                    String oldVal = oldValues.getOrDefault(c.getKey(), "?");
-                    String newVal = c.getValue();
+                    // A secret (webhook URL, bot token) is never written in the chat of the staff nor in the log.
+                    String oldVal = ConfigInspector.mask(key, oldValues.getOrDefault(c.getKey(), "?"));
+                    String newVal = ConfigInspector.mask(key, c.getValue());
+                    boolean restricted = ConfigInspector.isRestricted(packet.fileId(), c.getKey());
+                    List<String> target = restricted ? restrictedDetails : details;
+                    if (restricted) restrictedHidden.add("§e" + key + " §7: ********");
                     if (oldVal.contains("\n") || newVal.contains("\n")) {
-                        details.add("§e" + key + "§7:");
-                        for (String line : GuiFeedback.diff(lines(oldVal), lines(newVal))) details.add("    " + line);
+                        target.add("§e" + key + "§7:");
+                        for (String line : GuiFeedback.diff(lines(oldVal), lines(newVal))) target.add("    " + line);
                     } else {
-                        details.add("§e" + key + " §7: §c" + shorten(oldVal) + " §7-> §a" + shorten(newVal));
+                        target.add("§e" + key + " §7: §c" + shorten(oldVal) + " §7-> §a" + shorten(newVal));
                     }
                 }
                 final int notApplied = validatedChanges.size() - applied;
                 GuiFeedback.report(player, MessagesConfig.GUI_CONFIG_APPLIED,
                         new String[]{"file", packet.fileId(), "count", String.valueOf(applied)}, v -> {
                             List<String> out = new ArrayList<>(details);
+                            boolean all = v == null || v == player || RpPerms.has(v, RpPerm.CONFIG_SENSITIVE);
+                            out.addAll(all ? restrictedDetails : restrictedHidden);
                             if (notApplied > 0) out.add(ServerLang.get(v, MessagesConfig.GUI_CONFIG_NOT_APPLIED,
                                     "count", String.valueOf(notApplied)));
                             return out;
                         }, true);
 
                 PacketDistributor.sendToPlayer(player, ConfigFileEntriesPacket.from(
-                        packet.fileId(), ConfigInspector.getEntries(packet.fileId(), sensitive)));
+                        packet.fileId(), ConfigInspector.getEntries(packet.fileId(), p -> RpPerms.has(player, p))));
             } else {
-                player.sendSystemMessage(Component.literal(ServerLang.get(player, MessagesConfig.GUI_CONFIG_FAILED)));
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(player, MessagesConfig.GUI_CONFIG_FAILED)));
             }
         });
     }

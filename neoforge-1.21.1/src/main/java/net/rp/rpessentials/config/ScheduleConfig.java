@@ -69,6 +69,9 @@ public class ScheduleConfig {
     // =========================================================================
     // FORCE CLOSE
     // =========================================================================
+    public static ModConfigSpec.ConfigValue<List<? extends String>> MONDAY_EXTRA, TUESDAY_EXTRA, WEDNESDAY_EXTRA, THURSDAY_EXTRA, FRIDAY_EXTRA, SATURDAY_EXTRA, SUNDAY_EXTRA;
+    public static ModConfigSpec.ConfigValue<String> MSG_SERVER_CLOSED_NO_OPENING;
+    public static ModConfigSpec.BooleanValue SHOW_IN_SERVER_LIST;
     public static ModConfigSpec.ConfigValue<String> FORCE_STATE;
     public static ModConfigSpec.ConfigValue<String> FORCE_CLOSED_MESSAGE;
     public static ModConfigSpec.ConfigValue<java.util.List<? extends String>> SCHEDULE_WHITELIST;
@@ -98,6 +101,15 @@ public class ScheduleConfig {
     public static ModConfigSpec.ConfigValue<String> HRP_ALLOWED_MESSAGE;
     public static ModConfigSpec.ConfigValue<String> HRP_MESSAGE_MODE;
 
+    private static ModConfigSpec.ConfigValue<List<? extends String>> extraSlots() {
+        return BUILDER.comment("Other openings the same day. Example: [\"14:00-18:00\"] with open = 20:00 and close = 23:00.")
+                //#if forge
+                //? .defineListAllowEmpty("extraSlots", List.of(), o -> o instanceof String);
+                //#else
+                .defineList("extraSlots", List.of(), o -> o instanceof String);
+                //#endif
+    }
+
     // =========================================================================
     // STATIC INITIALIZER
     // =========================================================================
@@ -119,6 +131,12 @@ public class ScheduleConfig {
                 .comment("If true, staff members are notified when a player tries to join while the server is closed.")
                 .define("notifyRefusedJoin", false);
 
+        SHOW_IN_SERVER_LIST = BUILDER
+                .comment("If true, the multiplayer list tells if the server is open or closed, and until when: when hovering the",
+                        "player count (everyone), and with a badge next to the server name (players with the mod).",
+                        "The MOTD is not changed.")
+                .define("showInServerList", true);
+
         TIMEZONE = BUILDER
                 .comment("Time zone used by the schedule, Death Hours and HRP Hours, for example Europe/Paris.",
                         "SYSTEM = time zone of the machine running the server.")
@@ -127,7 +145,11 @@ public class ScheduleConfig {
         WARNING_TIMES = BUILDER
                 .comment("Minutes before closing at which warning messages are sent.",
                         "Example: [30, 15, 5, 1]")
+                //#if forge
+                //? .defineListAllowEmpty("warningTimes", Arrays.asList(30, 15, 5, 1),
+                //#else
                 .defineList("warningTimes", Arrays.asList(30, 15, 5, 1),
+                //#endif
                         obj -> obj instanceof Integer);
 
         BUILDER.pop();
@@ -138,43 +160,50 @@ public class ScheduleConfig {
         BUILDER.push("MONDAY");
         MONDAY_ENABLED = BUILDER.comment("Is Monday an open day?").define("enabled", true);
         MONDAY_OPEN    = BUILDER.comment("Opening time (HH:MM).").define("open",  "19:00");
-        MONDAY_CLOSE   = BUILDER.comment("Closing time (HH:MM). Supports cross-midnight, e.g. 02:00.").define("close", "23:59");
+        MONDAY_CLOSE   = BUILDER.comment("Closing time (HH:MM). Supports cross-midnight, e.g. 02:00. 24:00 = midnight.").define("close", "23:59");
+        MONDAY_EXTRA   = extraSlots();
         BUILDER.pop();
 
         BUILDER.push("TUESDAY");
         TUESDAY_ENABLED = BUILDER.comment("Is Tuesday an open day?").define("enabled", true);
         TUESDAY_OPEN    = BUILDER.comment("Opening time (HH:MM).").define("open",  "19:00");
         TUESDAY_CLOSE   = BUILDER.comment("Closing time (HH:MM).").define("close", "23:59");
+        TUESDAY_EXTRA   = extraSlots();
         BUILDER.pop();
 
         BUILDER.push("WEDNESDAY");
         WEDNESDAY_ENABLED = BUILDER.comment("Is Wednesday an open day?").define("enabled", true);
         WEDNESDAY_OPEN    = BUILDER.comment("Opening time (HH:MM).").define("open",  "19:00");
         WEDNESDAY_CLOSE   = BUILDER.comment("Closing time (HH:MM).").define("close", "23:59");
+        WEDNESDAY_EXTRA   = extraSlots();
         BUILDER.pop();
 
         BUILDER.push("THURSDAY");
         THURSDAY_ENABLED = BUILDER.comment("Is Thursday an open day?").define("enabled", true);
         THURSDAY_OPEN    = BUILDER.comment("Opening time (HH:MM).").define("open",  "19:00");
         THURSDAY_CLOSE   = BUILDER.comment("Closing time (HH:MM).").define("close", "23:59");
+        THURSDAY_EXTRA   = extraSlots();
         BUILDER.pop();
 
         BUILDER.push("FRIDAY");
         FRIDAY_ENABLED = BUILDER.comment("Is Friday an open day?").define("enabled", true);
         FRIDAY_OPEN    = BUILDER.comment("Opening time (HH:MM).").define("open",  "19:00");
         FRIDAY_CLOSE   = BUILDER.comment("Closing time (HH:MM).").define("close", "23:59");
+        FRIDAY_EXTRA   = extraSlots();
         BUILDER.pop();
 
         BUILDER.push("SATURDAY");
         SATURDAY_ENABLED = BUILDER.comment("Is Saturday an open day?").define("enabled", false);
         SATURDAY_OPEN    = BUILDER.comment("Opening time (HH:MM).").define("open",  "15:00");
         SATURDAY_CLOSE   = BUILDER.comment("Closing time (HH:MM).").define("close", "23:59");
+        SATURDAY_EXTRA   = extraSlots();
         BUILDER.pop();
 
         BUILDER.push("SUNDAY");
         SUNDAY_ENABLED = BUILDER.comment("Is Sunday an open day?").define("enabled", false);
         SUNDAY_OPEN    = BUILDER.comment("Opening time (HH:MM).").define("open",  "15:00");
         SUNDAY_CLOSE   = BUILDER.comment("Closing time (HH:MM).").define("close", "23:59");
+        SUNDAY_EXTRA   = extraSlots();
         BUILDER.pop();
 
         BUILDER.pop(); // Days
@@ -184,9 +213,14 @@ public class ScheduleConfig {
 
         MSG_SERVER_CLOSED = BUILDER
                 .comment("Message sent to players when the server closes or they try to join outside hours.",
-                        "Placeholders: {open} {close} {day}")
+                        "Placeholders: {open} {close} {day}, {in} = time left before the opening (2h 15min)")
                 .define("msgServerClosed",
-                        "§c§lThe server is now closed. See you on {day} at {open}!");
+                        "§c§lThe server is now closed. See you on {day} at {open}! §r§7(opens in {in})");
+
+        MSG_SERVER_CLOSED_NO_OPENING = BUILDER
+                .comment("Same, when no opening is planned in the next 31 days.")
+                .define("msgServerClosedNoOpening",
+                        "§c§lThe server is closed. §r§7No opening is planned for now.");
 
         MSG_SERVER_OPENED = BUILDER
                 .comment("Message broadcast when the server opens.",
@@ -216,20 +250,26 @@ public class ScheduleConfig {
                         "  NONE         : follow the schedule (default)",
                         "  FORCE_OPEN   : always open",
                         "  FORCE_CLOSED : always closed",
-                        "Set by /schedule forceopen, /schedule forceclose and /schedule resetforcestate.")
+                        "Set by /schedule forceopen [duration] [reason], /schedule forceclose [duration] [reason] and /schedule resetforcestate.")
                 .define("forceState", "NONE");
         ConfigRules.oneOf(FORCE_STATE, java.util.List.of("NONE", "FORCE_OPEN", "FORCE_CLOSED"));
 
         FORCE_CLOSED_MESSAGE = BUILDER
                 .comment("Message shown to non-staff players trying to connect when the server is forcibly closed.",
+                        "The reason and the time left of /schedule forceclose are added below.",
                         "Supports & and § color codes.")
                 .define("forceClosedMessage",
                         "§c§lThe server is exceptionally closed. Please check back later.");
 
         SCHEDULE_WHITELIST = BUILDER
                 .comment("Players in this list can connect even when the server is forcibly or schedule-closed.",
-                        "Also bypasses FORCE_CLOSED. Staff members are always exempt regardless of this list.")
+                        "Also bypasses FORCE_CLOSED. Staff members are always exempt regardless of this list.",
+                        "A Minecraft name is replaced by the UUID of the player when they join: UUID (Name).")
+                //#if forge
+                //? .defineListAllowEmpty("scheduleWhitelist", java.util.List.of(), obj -> obj instanceof String);
+                //#else
                 .defineList("scheduleWhitelist", java.util.List.of(), obj -> obj instanceof String);
+                //#endif
 
         BUILDER.pop();
 
@@ -243,7 +283,11 @@ public class ScheduleConfig {
         WELCOME_LINES = BUILDER
                 .comment("Lines of the welcome message. Supports & and § color codes.",
                         "Placeholders: {player}, {nickname}")
+                //#if forge
+                //? .defineListAllowEmpty("welcomeLines",
+                //#else
                 .defineList("welcomeLines",
+                //#endif
                         java.util.Arrays.asList(
                                 "§6§m------------------------------------",
                                 "§e§lWelcome to the server, {player}!",
@@ -275,7 +319,11 @@ public class ScheduleConfig {
         DEATH_HOURS_SLOTS = BUILDER
                 .comment("Time slots during which RP death is active. Format: HH:MM-HH:MM.",
                         "Supports cross-midnight. Example: [\"22:00-23:59\", \"00:00-06:00\"]")
+                //#if forge
+                //? .defineListAllowEmpty("deathHoursSlots",
+                //#else
                 .defineList("deathHoursSlots",
+                //#endif
                         java.util.Arrays.asList("22:00-23:59"), obj -> obj instanceof String);
         BUILDER.pop();
 
@@ -287,11 +335,19 @@ public class ScheduleConfig {
                 .define("enableHrpHours", false);
         HRP_TOLERATED_SLOTS = BUILDER
                 .comment("Slots where HRP is tolerated (noted but not punished). Format: HH:MM-HH:MM.")
+                //#if forge
+                //? .defineListAllowEmpty("hrpToleratedSlots",
+                //#else
                 .defineList("hrpToleratedSlots",
+                //#endif
                         java.util.Arrays.asList("21:00-22:00"), obj -> obj instanceof String);
         HRP_ALLOWED_SLOTS = BUILDER
                 .comment("Slots where HRP is fully allowed. Format: HH:MM-HH:MM.")
+                //#if forge
+                //? .defineListAllowEmpty("hrpAllowedSlots",
+                //#else
                 .defineList("hrpAllowedSlots",
+                //#endif
                         java.util.Arrays.asList("22:00-23:59"), obj -> obj instanceof String);
         HRP_TOLERATED_MESSAGE = BUILDER
                 .comment("Message broadcast when HRP-tolerated hours begin. Placeholders: {start} {end}")
@@ -316,14 +372,21 @@ public class ScheduleConfig {
                 .comment("Special dates that replace the weekly schedule for one day. One line per date: <date>=<value>",
                         "  <date>  : year-month-day, for example 2026-12-25",
                         "  <value> : CLOSED      -> closed all day",
-                        "            OPEN        -> open all day (00:00 to 23:59)",
-                        "            HH:MM-HH:MM -> open between these hours, for example 14:00-23:00",
+                        "            OPEN        -> open all day (00:00 to 24:00)",
+                        "            HH:MM-HH:MM -> open between these hours, for example 14:00-23:00 (several: 14:00-18:00,20:00-23:00)",
                         "                           an end before the start runs past midnight: 20:00-03:00 closes at 3 am the next day",
                         "Example: [\"2026-12-24=18:00-02:00\", \"2026-12-25=CLOSED\", \"2026-07-14=OPEN\"]",
                         "Dates already passed are ignored. The next ones are listed in /schedule. A wrong line is reported to the staff.")
+                //#if forge
+                //? .defineListAllowEmpty("scheduleExceptions", List.of(), obj -> obj instanceof String);
+                //#else
                 .defineList("scheduleExceptions", List.of(), obj -> obj instanceof String);
+                //#endif
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+
+        ConfigAccess.node(net.rp.rpessentials.permission.RpPerm.SCHEDULE_FORCE, FORCE_STATE);
+        ConfigAccess.node(net.rp.rpessentials.permission.RpPerm.SCHEDULE_WHITELIST, SCHEDULE_WHITELIST);
     }
 }

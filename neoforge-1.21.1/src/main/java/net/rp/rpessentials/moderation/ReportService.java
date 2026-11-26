@@ -89,7 +89,9 @@ public final class ReportService {
         ReportManager.Report r = ReportManager.get(id);
         if (r == null) { staff.sendSystemMessage(notFound(staff, id)); return false; }
         if (!r.isOpen()) { staff.sendSystemMessage(msg(staff, MessagesConfig.REPORT_ALREADY_CLOSED, "id", String.valueOf(id))); return false; }
+        boolean already = r.status == ReportManager.Status.CLAIMED && staff.getUUID().toString().equals(r.handlerUuid);
         ReportManager.claim(id, staff);
+        if (!already) history(staff, r, MessagesConfig.REPORT_H_CLAIM, null, false);
         staff.sendSystemMessage(msg(staff, MessagesConfig.REPORT_CLAIMED, "id", String.valueOf(id)));
         MinecraftServer server = staff.getServer();
         if (server != null) {
@@ -111,6 +113,7 @@ public final class ReportService {
         String name = staff != null ? staff.getGameProfile().getName() : "Console";
         String uuid = staff != null ? staff.getUUID().toString() : null;
         ReportManager.close(id, name, uuid, note);
+        history(staff, r, MessagesConfig.REPORT_H_CLOSE, note, true);
         send(server, staff, msg(staff, MessagesConfig.REPORT_CLOSED, "id", String.valueOf(id)));
         ServerPlayer reporter = server != null ? server.getPlayerList().getPlayer(r.reporter()) : null;
         if (reporter != null) {
@@ -125,12 +128,15 @@ public final class ReportService {
         if (r == null) { send(server, staff, notFound(staff, id)); return false; }
         if (r.isOpen()) { send(server, staff, msg(staff, MessagesConfig.REPORT_NOT_CLOSED, "id", String.valueOf(id))); return false; }
         ReportManager.reopen(id);
+        history(staff, r, MessagesConfig.REPORT_H_REOPEN, null, false);
         send(server, staff, msg(staff, MessagesConfig.REPORT_REOPENED, "id", String.valueOf(id)));
         return true;
     }
 
     public static boolean delete(MinecraftServer server, ServerPlayer staff, int id) {
-        if (!ReportManager.delete(id)) { send(server, staff, notFound(staff, id)); return false; }
+        ReportManager.Report r = ReportManager.get(id);
+        if (r == null || !ReportManager.delete(id)) { send(server, staff, notFound(staff, id)); return false; }
+        history(staff, r, MessagesConfig.REPORT_H_DELETE, null, false);
         send(server, staff, msg(staff, MessagesConfig.REPORT_DELETED, "id", String.valueOf(id)));
         return true;
     }
@@ -144,7 +150,33 @@ public final class ReportService {
                 ? staff.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, dim)) : null;
         if (level == null) { staff.sendSystemMessage(msg(staff, MessagesConfig.REPORT_TP_FAILED)); return false; }
         staff.teleportTo(level, r.x + 0.5, r.y, r.z + 0.5, staff.getYRot(), staff.getXRot());
+        history(staff, r, MessagesConfig.REPORT_H_TP, null, false);
         return true;
+    }
+
+    /**
+     * Writes a staff action on a report in the history of the reported player (who reported, why) and in the one of
+     * the staff member (which player, who reported, why). {@code staff} null = console: player only.
+     * Only closing a report is sent to Discord, as before.
+     */
+    private static void history(ServerPlayer staff, ReportManager.Report r,
+                                net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> action,
+                                String note, boolean discord) {
+        String name = staff != null ? staff.getGameProfile().getName() : "Console";
+        String end = note == null || note.isBlank() ? ""
+                : ServerLang.get(null, MessagesConfig.REPORT_H_NOTE, "note", note.strip());
+        String[] args = { "id", String.valueOf(r.id), "action", ServerLang.get(null, action),
+                "player", r.targetName, "reporter", r.reporterName, "reason", r.reason, "note", end };
+        try {
+            HistoryManager.record(r.target(), r.targetName, HistoryManager.REPORT, name,
+                    ServerLang.get(null, MessagesConfig.REPORT_H_PLAYER, args), 0, discord);
+        } catch (IllegalArgumentException ignored) {
+            // Malformed UUID in a hand-edited reports.json: the staff line is still written.
+        }
+        if (staff != null) {
+            HistoryManager.record(staff.getUUID(), name, HistoryManager.REPORT_STAFF, name,
+                    ServerLang.get(null, MessagesConfig.REPORT_H_STAFF, args), 0, false);
+        }
     }
 
     // =========================================================================

@@ -46,7 +46,7 @@ public class PendingActionManager {
     }
 
     private static void loadFromFile() {
-        try (FileReader reader = new FileReader(dataFile)) {
+        try (FileReader reader = new FileReader(dataFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, Entry>>(){}.getType();
             Map<String, Entry> data = GSON.fromJson(reader, type);
             if (data != null) {
@@ -91,6 +91,15 @@ public class PendingActionManager {
         p.createdAt = System.currentTimeMillis();
         e.actions.add(p);
         saveToFile();
+    }
+
+    /** True when this action waits for the player. */
+    public static boolean has(UUID uuid, ManageService.Action action) {
+        ensureInitialized();
+        Entry e = entries.get(uuid);
+        if (e == null) return false;
+        for (PendingAction a : e.actions) if (action.name().equals(a.action)) return true;
+        return false;
     }
 
     public static void applyOnLogin(MinecraftServer server, ServerPlayer player) {

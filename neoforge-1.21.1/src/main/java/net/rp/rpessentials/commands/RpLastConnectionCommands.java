@@ -46,11 +46,11 @@ public class RpLastConnectionCommands {
     private static int lastConnectionPlayer(CommandContext<CommandSourceStack> ctx) {
         if (Cfg.ready(ModerationConfig.SPEC)) {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
-                ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_DISABLED)));
+                ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_DISABLED)));
                 return 0;
             }
         } else {
-            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }
 
@@ -64,7 +64,7 @@ public class RpLastConnectionCommands {
         }
 
         if (targetUUID == null) {
-            ctx.getSource().sendFailure(Component.literal(
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(
                     Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_PLAYER_NOT_FOUND, "player", targetName)));
             return 0;
         }
@@ -72,7 +72,7 @@ public class RpLastConnectionCommands {
         final UUID finalTargetUUID = targetUUID;
         LastConnectionManager.ConnectionEntry entry = LastConnectionManager.getEntry(finalTargetUUID);
         if (entry == null) {
-            ctx.getSource().sendFailure(Component.literal(
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(
                     Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_NO_DATA, "player", targetName)));
             return 0;
         }
@@ -90,7 +90,7 @@ public class RpLastConnectionCommands {
                         ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.STAFF_LASTCO_COPY_HOVER, "uuid", finalTargetUUID.toString()))))
                 .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, finalTargetUUID.toString())));
 
-        MutableComponent out = Component.literal(
+        MutableComponent out = net.rp.rpessentials.util.ColorHelper.parseSection(
                         Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_BOX_HEADER) + "\n" + RpChatUi.LINE + "\n"
                                 + Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_BOX_PLAYER))
                 .append(nameComp)
@@ -105,11 +105,11 @@ public class RpLastConnectionCommands {
     private static int lastConnectionList(CommandContext<CommandSourceStack> ctx, int page) {
         if (Cfg.ready(ModerationConfig.SPEC)) {
             if (!ModerationConfig.ENABLE_LAST_CONNECTION.get()) {
-                ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_DISABLED)));
+                ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_DISABLED)));
                 return 0;
             }
         } else {
-            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.SYSTEM_CONFIG_NOT_LOADED)));
             return 0;
         }
 
@@ -118,7 +118,7 @@ public class RpLastConnectionCommands {
         int total = allEntries.size();
 
         if (total == 0) {
-            ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_NO_DATA_LIST)), false);
+            ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.LASTCONN_NO_DATA_LIST)), false);
             return 1;
         }
 
@@ -147,7 +147,7 @@ public class RpLastConnectionCommands {
         }
         sb.append(RpChatUi.LINE);
 
-        MutableComponent out = Component.literal(sb.toString());
+        MutableComponent out = net.rp.rpessentials.util.ColorHelper.parseSection(sb.toString());
         if (pages > 1) {
             out.append(Component.literal("\n")).append(RpChatUi.pager(ctx.getSource(), current, pages, "/rpessentials lastconnection list"));
         }

@@ -179,7 +179,7 @@ public class ProfessionRestrictionManager {
         Long last = m.get(channel);
         if (last != null && now - last <= CRAFT_MESSAGE_COOLDOWN_MS) return;
         m.put(channel, now);
-        player.displayClientMessage(Component.literal(message.get()), true);
+        player.displayClientMessage(net.rp.rpessentials.util.ColorHelper.parseSection(message.get()), true);
     }
 
     // =========================================================================
@@ -262,9 +262,7 @@ public class ProfessionRestrictionManager {
         try {
             if (RpEssentialsConfig.WHITELIST_EXEMPT_PROFESSIONS != null
                     && RpEssentialsConfig.WHITELIST_EXEMPT_PROFESSIONS.get()) {
-                String playerName = player.getGameProfile().getName();
-                if (RpEssentialsConfig.WHITELIST != null
-                        && RpEssentialsConfig.WHITELIST.get().contains(playerName)) {
+                if (net.rp.rpessentials.util.PlayerRefs.TAB_WHITELIST.contains(player.getGameProfile())) {
                     return true;
                 }
             }

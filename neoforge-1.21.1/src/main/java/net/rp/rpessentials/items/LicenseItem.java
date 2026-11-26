@@ -39,7 +39,11 @@ public class LicenseItem extends Item {
             public net.minecraft.client.model.HumanoidModel.ArmPose getArmPose(net.minecraft.world.entity.LivingEntity entity,
                                                                               net.minecraft.world.InteractionHand hand,
                                                                               net.minecraft.world.item.ItemStack stack) {
+                //#if forge
+                //? return net.rp.rpessentials.client.LicenseArmPose.POSE;
+                //#else
                 return net.rp.rpessentials.client.LicenseArmPose.POSE.getValue();
+                //#endif
             }
         });
     }
@@ -56,11 +60,20 @@ public class LicenseItem extends Item {
     }
 
     @Override
+    //#if forge
+    //? public void appendHoverText(@NotNull ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level level,
+    //#else
     public void appendHoverText(@NotNull ItemStack stack, TooltipContext context,
+    //#endif
                                 @NotNull List<Component> tooltip, @NotNull TooltipFlag flag) {
+        //#if forge
+        //? if (stack.hasTag()) {
+            //? net.minecraft.nbt.CompoundTag tag = stack.getTag().copy();
+        //#else
         if (stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) {
             net.minecraft.nbt.CompoundTag tag = stack.get(
                     net.minecraft.core.component.DataComponents.CUSTOM_DATA).copyTag();
+        //#endif
             if (tag.getBoolean("revoked")) {
                 tooltip.add(text(MessagesConfig.LICENSE_REVOKED_TITLE, "rpessentials.license.tooltip.revoked_title")
                         .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));

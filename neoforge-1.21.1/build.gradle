@@ -37,6 +37,7 @@ publishing {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
+
 // ModDevGradle: sets up Minecraft + NeoForge, the run configurations and the IntelliJ integration.
 neoForge {
     version = project.neo_version
@@ -68,7 +69,7 @@ neoForge {
         gameTestServer {
             type = "gameTestServer"
             ideName = 'NeoForge 1.21.1 - GameTestServer'
-            gameDirectory = rootProject.file('runs/gameTestServer')
+            gameDirectory = rootProject.file("runs/tests-${project.name}")
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
     }
@@ -100,6 +101,19 @@ dependencies {
 
     compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
     runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+}
+
+// The files read by the IntelliJ run configurations (build/moddev/*RunVmArgs.txt) are written when Gradle is synced,
+// and deleted by "gradlew clean": they are written again with every build, so the launches keep working.
+if (!System.getenv('CI')) {
+    tasks.named('processResources') {
+        dependsOn tasks.matching { it.name ==~ /prepare\w*Run/ }
+    }
+}
+
+// Both versions put their jar in build/libs of the root folder.
+tasks.named('jar') {
+    destinationDirectory = rootProject.layout.buildDirectory.dir('libs')
 }
 
 processResources {
@@ -138,3 +152,7 @@ idea {
         downloadJavadoc = true
     }
 }
+
+// Tests (tests/, kept out of Git): only when the folder is there.
+def testsScript = rootProject.file('tests/tests.gradle')
+if (testsScript.exists()) apply from: testsScript

@@ -55,9 +55,9 @@ public record SetPlayerProfilePacket(
                 public SetPlayerProfilePacket decode(FriendlyByteBuf buf) {
                     return new SetPlayerProfilePacket(
                             buf.readUUID(),
-                            buf.readUtf(),
-                            buf.readUtf(),
-                            buf.readUtf(),
+                            buf.readUtf(512),
+                            buf.readUtf(256),
+                            buf.readUtf(256),
                             buf.readBoolean(),
                             buf.readBoolean(),
                             buf.readVarInt()
@@ -108,12 +108,29 @@ public record SetPlayerProfilePacket(
 
     // ── Offline path (joueur préparé mais jamais connecté) ─────────────────────
     private static void handleOffline(SetPlayerProfilePacket packet, ServerPlayer admin) {
-        if (!net.rp.rpessentials.profession.PendingProfileManager.hasPending(packet.targetUuid())) {
-            admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_PROFILE_OFFLINE)));
+        // A known player who is not connected: only their role can be prepared (like /rpessentials setrole).
+        boolean known = net.rp.rpessentials.moderation.LastConnectionManager.getEntry(packet.targetUuid()) != null;
+        if (known && !packet.role().isBlank()) {
+            if (!net.rp.rpessentials.permission.RpPerms.has(admin, RpPerm.ROLES_SET)) {
+                admin.sendSystemMessage(ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
+                return;
+            }
+            String name = net.rp.rpessentials.moderation.LastConnectionManager.resolveName(admin.getServer(), packet.targetUuid());
+            boolean given = net.rp.rpessentials.permission.OfflineRoles.give(admin.getServer(), packet.targetUuid(), name, packet.role().trim());
+            admin.sendSystemMessage(ColorHelper.parseSection(given
+                    ? ServerLang.get(admin, MessagesConfig.SETROLE_QUEUED, "role", packet.role().trim().toUpperCase(java.util.Locale.ROOT), "player", name)
+                    : ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_ROLE, "role", packet.role())));
+            if (given) RpEssentials.LOGGER.info("[SETROLE] {} assigned role '{}' to {} (at their next login)", admin.getGameProfile().getName(), packet.role(), name);
+            return;
+        }
+        if (known || !net.rp.rpessentials.profession.PendingProfileManager.hasPending(packet.targetUuid())) {
+            admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_PROFILE_OFFLINE)));
             return;
         }
 
-        if (packet.resetNickname()) {
+        if ((packet.resetNickname() || !packet.nickname().isBlank()) && refused(admin, RpPerm.NICK_OTHERS)) {
+            // Told to the staff member by refused().
+        } else if (packet.resetNickname()) {
             net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(), "");
         } else if (!packet.nickname().trim().isEmpty()) {
             String nick = packet.nickname().trim().replace("&", "§");
@@ -122,21 +139,22 @@ public record SetPlayerProfilePacket(
             else net.rp.rpessentials.profession.PendingProfileManager.setNickname(packet.targetUuid(), nick);
         }
 
-        if (!packet.role().trim().isEmpty() && net.rp.rpessentials.permission.RpPerms.has(admin, net.rp.rpessentials.permission.RpPerm.ROLES_SET)) {
+        if (!packet.role().trim().isEmpty() && ProfessionRestrictionManager.isReservedTag(packet.role().trim())
+                && net.rp.rpessentials.permission.RpPerms.has(admin, net.rp.rpessentials.permission.RpPerm.ROLES_SET)) {
             PendingProfileManager.setRole(packet.targetUuid(), packet.role().trim());
         }
 
         String licenseId = packet.licenseId().trim();
-        if (!licenseId.isEmpty()) {
+        if (!licenseId.isEmpty() && !refused(admin, packet.revokeMode() ? RpPerm.LICENSE_REVOKE : RpPerm.LICENSE_GIVE)) {
             if (packet.revokeMode()) net.rp.rpessentials.profession.PendingProfileManager.removeLicense(packet.targetUuid(), licenseId);
             else if (ProfessionRestrictionManager.getProfessionData(licenseId) == null)
-                admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_PROFESSION,
+                admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_PROFESSION,
                         "profession", licenseId)));
             else net.rp.rpessentials.profession.PendingProfileManager.addLicense(packet.targetUuid(), licenseId);
         }
 
         String name = net.rp.rpessentials.profession.PendingProfileManager.getMcName(packet.targetUuid());
-        admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_PREPARED_UPDATED, "player", name)));
+        admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_PREPARED_UPDATED, "player", name)));
     }
 
     // ── Revoke path ────────────────────────────────────────────────────────────
@@ -145,12 +163,12 @@ public record SetPlayerProfilePacket(
                                      ServerPlayer admin, MinecraftServer server,
                                      ServerPlayer target, String targetName) {
         String licenseId = packet.licenseId().trim();
-        if (licenseId.isEmpty()) return;
+        if (licenseId.isEmpty() || refused(admin, RpPerm.LICENSE_REVOKE)) return;
 
         // Verify the player actually has this license
         List<String> existing = LicenseManager.getLicenses(target.getUUID());
         if (!existing.contains(licenseId)) {
-            admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_NO_LICENSE,
+            admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_NO_LICENSE,
                     "player", targetName, "license", licenseId)));
             return;
         }
@@ -163,19 +181,17 @@ public record SetPlayerProfilePacket(
 
         // Remove vanilla tag
         if (!ProfessionRestrictionManager.isReservedTag(licenseId)) {
-            server.getCommands().performPrefixedCommand(
-                    server.createCommandSourceStack().withSuppressedOutput().withPermission(4),
-                    "tag " + targetName + " remove " + licenseId);
+            target.removeTag(licenseId);
         }
 
         ProfessionRestrictionManager.ProfessionData profData =
                 ProfessionRestrictionManager.getProfessionData(licenseId);
         String profDisplay = profData != null ? profData.getFormattedName() : licenseId;
 
-        admin.sendSystemMessage(Component.literal(
+        admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                 ServerLang.get(admin, MessagesConfig.LICENSE_REVOKE_STAFF,
                         "profession", profDisplay, "player", targetName)));
-        target.sendSystemMessage(Component.literal(
+        target.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                 ServerLang.get(target, MessagesConfig.LICENSE_REVOKE_PLAYER,
                         "profession", profDisplay)));
 
@@ -192,7 +208,9 @@ public record SetPlayerProfilePacket(
                 ServerLang.get(admin, MessagesConfig.GUI_PROFILE_UPDATED, "player", targetName));
 
         // ── 1. Nickname ───────────────────────────────────────────────────────
-        if (packet.resetNickname()) {
+        if ((packet.resetNickname() || !packet.nickname().isBlank()) && refused(admin, RpPerm.NICK_OTHERS)) {
+            // Told to the staff member by refused().
+        } else if (packet.resetNickname()) {
             NicknameManager.removeNickname(target.getUUID(), admin.getGameProfile().getName());
             report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_NICK_RESET));
         } else {
@@ -213,27 +231,27 @@ public record SetPlayerProfilePacket(
         String role = packet.role().trim();
         if (!role.isEmpty()) {
             if (!net.rp.rpessentials.permission.RpPerms.has(admin, net.rp.rpessentials.permission.RpPerm.ROLES_SET)) {
-                admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
+                admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_ROLES_NEED_LEVEL)));
             } else if (applyRole(server, target, role)) {
                 report.append(ServerLang.get(admin, MessagesConfig.GUI_REPORT_ROLE, "role", role));
             } else {
-                admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_ROLE, "role", role)));
+                admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_ROLE, "role", role)));
             }
         }
 
         // ── 3. Licence ────────────────────────────────────────────────────────
         String licenseId = packet.licenseId().trim();
-        if (!licenseId.isEmpty()) {
+        if (!licenseId.isEmpty() && !refused(admin, packet.tempDays() > 0 ? RpPerm.LICENSE_TEMP : RpPerm.LICENSE_GIVE)) {
             List<String> existing = LicenseManager.getLicenses(target.getUUID());
 
             if (existing.contains(licenseId)) {
-                admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ALREADY_LICENSE,
+                admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_ALREADY_LICENSE,
                         "player", targetName, "license", licenseId)));
             } else {
                 ProfessionRestrictionManager.ProfessionData profData =
                         ProfessionRestrictionManager.getProfessionData(licenseId);
                 if (profData == null) {
-                    admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_PROFESSION,
+                    admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_UNKNOWN_PROFESSION,
                             "profession", licenseId)));
                 } else {
                     int days = Math.max(0, Math.min(365, packet.tempDays()));
@@ -268,10 +286,20 @@ public record SetPlayerProfilePacket(
                 packet.nickname(), packet.role(), packet.licenseId());
     }
 
+    /**
+     * True (and told to the staff member) when their role or LuckPerms refuses this node. The profile node is enough
+     * to use the GUI, but it does not override a node that was refused on purpose.
+     */
+    private static boolean refused(ServerPlayer admin, RpPerm perm) {
+        if (!net.rp.rpessentials.permission.RpPerms.refused(admin, perm)) return false;
+        admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
+                ServerLang.get(admin, MessagesConfig.MANAGE_NO_PERMISSION, "node", perm.node())));
+        return true;
+    }
+
     // ── Role helper ────────────────────────────────────────────────────────────
     public static boolean applyRole(MinecraftServer server, ServerPlayer target, String roleId) {
         var silentSource = server.createCommandSourceStack().withSuppressedOutput().withPermission(4);
-        String targetName = target.getName().getString();
         if (!Cfg.ready(RpEssentialsConfig.SPEC)) {
             RpEssentials.LOGGER.warn("[GUI] ROLES config unavailable when applying role '{}'", roleId);
             return false;
@@ -289,10 +317,11 @@ public record SetPlayerProfilePacket(
 
             for (String entry : RpEssentialsConfig.ROLES.get()) {
                 String oldTag = entry.split(";", 2)[0].trim();
-                server.getCommands().performPrefixedCommand(silentSource, "tag " + targetName + " remove " + oldTag);
+                target.removeTag(oldTag);
+                target.removeTag(oldTag.toLowerCase(java.util.Locale.ROOT));
             }
-            server.getCommands().performPrefixedCommand(silentSource, "tag " + targetName + " add " + roleId);
-            server.getCommands().performPrefixedCommand(silentSource, "lp user " + targetName + " parent set " + lpGroup);
+            target.addTag(roleId);
+            server.getCommands().performPrefixedCommand(silentSource, "lp user " + target.getUUID() + " parent set " + lpGroup);
 
             net.rp.rpessentials.permission.RpPerms.refresh(target);
             ProfessionSyncHelper.syncToPlayer(target);
@@ -300,7 +329,7 @@ public record SetPlayerProfilePacket(
             RpEssentialsScheduleManager.enforceOnlineDelayed(server);
             return true;
         } catch (Exception e) {
-            RpEssentials.LOGGER.error("[GUI] Error applying role '{}' to {}: {}", roleId, targetName, e.getMessage());
+            RpEssentials.LOGGER.error("[GUI] Error applying role '{}' to {}: {}", roleId, target.getGameProfile().getName(), e.getMessage());
         }
         return false;
     }

@@ -43,8 +43,12 @@ public abstract class MixinPlayerList implements IRpPlayerList {
     @Inject(
             method = "broadcastSystemMessage(Lnet/minecraft/network/chat/Component;Z)V",
             at = @At("HEAD"),
+            //#if forge
+            //? cancellable = true
+            //#else
             cancellable = true,
             remap = false
+            //#endif
     )
     public void onBroadcastSystemMessage(Component component, boolean bl, CallbackInfo ci) {
         if (rpessentials$isSendingCustomMessage) return;
@@ -57,7 +61,7 @@ public abstract class MixinPlayerList implements IRpPlayerList {
                 java.util.UUID id = net.rp.rpessentials.moderation.VanishManager.awardingId();
                 for (net.minecraft.server.level.ServerPlayer p : ((PlayerList) (Object) this).getPlayers()) {
                     if (!net.rp.rpessentials.moderation.VanishManager.isHiddenFrom(p, id))
-                        p.sendSystemMessage(component.copy().append(Component.literal(net.rp.rpessentials.lang.ServerLang.get(p,
+                        p.sendSystemMessage(component.copy().append(net.rp.rpessentials.util.ColorHelper.parseSection(net.rp.rpessentials.lang.ServerLang.get(p,
                                 net.rp.rpessentials.config.MessagesConfig.VANISH_ADVANCEMENT_HIDDEN))));
                 }
             }
@@ -74,6 +78,12 @@ public abstract class MixinPlayerList implements IRpPlayerList {
         } catch (Exception e) { return; }
 
         ci.cancel();
+    }
+
+    /** /op, /deop: vanilla sends the command tree, not what this mod depends on. */
+    @Inject(method = "sendPlayerPermissionLevel(Lnet/minecraft/server/level/ServerPlayer;)V", at = @At("TAIL"), remap = false)
+    private void rpessentials$opLevelChanged(net.minecraft.server.level.ServerPlayer player, CallbackInfo ci) {
+        net.rp.rpessentials.permission.AccessRefresh.mark(player.getUUID());
     }
 
     // =========================================================================

@@ -17,7 +17,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.rp.rpessentials.moderation.ReportManager;
 import net.rp.rpessentials.moderation.ReportService;
 
-import java.util.Collection;
 
 /**
  * /rp report &lt;player&gt; &lt;reason&gt;  (players)
@@ -78,9 +77,7 @@ public final class RpReportCommands {
 
     private static int report(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer reporter = ctx.getSource().getPlayerOrException();
-        Collection<GameProfile> profiles = GameProfileArgument.getGameProfiles(ctx, "player");
-        if (profiles.size() != 1) throw net.minecraft.commands.arguments.EntityArgument.ERROR_NOT_SINGLE_PLAYER.create();
-        GameProfile target = profiles.iterator().next();
+        GameProfile target = KnownPlayers.get(ctx, "player");
         return ReportService.submit(reporter, target.getId(), target.getName(),
                 StringArgumentType.getString(ctx, "reason"));
     }

@@ -35,6 +35,7 @@ publishing {
 // Minecraft 1.20.1 runs on Java 17: the mod must be compiled for Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+
 // ModDevGradle (legacy Forge flavour): sets up Minecraft + Forge 1.20.1, the run configurations and IntelliJ.
 legacyForge {
     version = "${minecraft_version}-${forge_version}"
@@ -73,7 +74,7 @@ legacyForge {
         gameTestServer {
             type = "gameTestServer"
             ideName = 'Forge 1.20.1 - GameTestServer'
-            gameDirectory = rootProject.file('runs/forge-1.20.1/gameTestServer')
+            gameDirectory = rootProject.file("runs/tests-${project.name}")
         }
     }
 
@@ -89,6 +90,34 @@ mixin {
     add sourceSets.main, "${mod_id}.refmap.json"
     config "${mod_id}.mixin.json"
 }
+
+// ── Code shared with NeoForge 1.21.1 (see SHARED_CODE.md) ────────────────────────────────────────────
+// The NeoForge files are copied for Forge (names replaced, "//#if forge" blocks); src/main of this folder only holds
+// what exists on Forge alone. Never edit build/generated: it is written again at each build.
+apply from: rootProject.file('gradle/forge-from-neoforge.gradle')
+def neoforgeMain = rootProject.file('neoforge-1.21.1/src/main')
+def forgeJava = tasks.register('forgeSources', Sync) {
+    group = 'build'
+    description = 'Makes the Forge sources from the NeoForge ones.'
+    from(new File(neoforgeMain, 'java'))
+    into layout.buildDirectory.dir('generated/shared/java')
+    toForge(it)
+    inputs.property 'names', forgeNames.toString()
+}
+def forgeResources = tasks.register('forgeResources', Sync) {
+    group = 'build'
+    description = 'Copies the NeoForge resources that Forge uses too.'
+    from(new File(neoforgeMain, 'resources')) {
+        // Written differently for Forge (in src/main/resources of this folder), or NeoForge only.
+        exclude 'META-INF/neoforge.mods.toml', 'META-INF/enumextensions.json', 'rpessentials.mixin.json', 'data/curios/tags/item/**'
+    }
+    into layout.buildDirectory.dir('generated/shared/resources')
+}
+sourceSets.main.java.srcDir(forgeJava)
+sourceSets.main.resources.srcDir(forgeResources)
+legacyForge.ideSyncTask(forgeJava)
+legacyForge.ideSyncTask(forgeResources)
+idea.module.generatedSourceDirs += file('build/generated/shared/java')
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
@@ -151,12 +180,35 @@ def syncClientMods = tasks.register('syncClientMods') {
         }
     }
 }
-tasks.matching { it.name in ['runClient', 'runClient2'] }.configureEach { dependsOn syncClientMods }
+// prepare...Run: also done before a launch from IntelliJ, which does not use the runClient tasks.
+tasks.matching { it.name in ['prepareClientRun', 'prepareClient2Run'] }.configureEach { dependsOn syncClientMods }
 
 jar {
     manifest {
         attributes(['MixinConfigs': "${mod_id}.mixin.json"])
     }
+}
+
+// The files read by the IntelliJ run configurations (build/moddev/*RunVmArgs.txt) are written when Gradle is synced,
+// and deleted by "gradlew clean": they are written again with every build, so the launches keep working.
+if (!System.getenv('CI')) {
+    tasks.named('processResources') {
+        dependsOn tasks.matching { it.name ==~ /prepare\w*Run/ }
+    }
+}
+
+// IntelliJ starts the game with the Java of the Gradle JVM (21): Minecraft 1.20.1 runs on Java 17, like for the players.
+gradle.projectsEvaluated {
+    def java17 = javaToolchains.launcherFor(java.toolchain).get()
+    tasks.withType(JavaExec).each {
+        it.executable = java17.executablePath.asFile.path
+        it.javaLauncher = java17
+    }
+}
+
+// Both versions put their jar in build/libs of the root folder (reobfJar: the published jar, with the production names).
+tasks.named('reobfJar') {
+    destinationDirectory = rootProject.layout.buildDirectory.dir('libs')
 }
 
 processResources {
@@ -196,3 +248,7 @@ idea {
         downloadJavadoc = true
     }
 }
+
+// Tests (tests/, kept out of Git): only when the folder is there.
+def testsScript = rootProject.file('tests/tests.gradle')
+if (testsScript.exists()) apply from: testsScript

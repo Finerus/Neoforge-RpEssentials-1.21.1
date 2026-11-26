@@ -55,7 +55,7 @@ public record RequestConfigFilePacket(String fileId) implements CustomPacketPayl
 
             // Security: only staff can access config GUI
             if (!RpPerms.has(player, RpPerm.CONFIG_GUI)) {
-                RpEssentials.LOGGER.warn("[ConfigGUI] Non-staff player {} tried to request config file '{}'",
+                if (PacketGuard.every(player, "config_denied", 60_000L)) RpEssentials.LOGGER.warn("[ConfigGUI] Non-staff player {} tried to request config file '{}'",
                         player.getName().getString(), packet.fileId());
                 return;
             }
@@ -73,7 +73,7 @@ public record RequestConfigFilePacket(String fileId) implements CustomPacketPayl
 
             // Load entries for this file
             List<ConfigInspector.EntryData> entries = ConfigInspector.getEntries(
-                    packet.fileId(), RpEssentialsPermissions.canEditSensitiveConfig(player));
+                    packet.fileId(), p -> RpPerms.has(player, p));
 
             if (entries.isEmpty()) {
                 RpEssentials.LOGGER.warn("[ConfigGUI] No entries found for file id '{}'", packet.fileId());

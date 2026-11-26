@@ -13,6 +13,8 @@ import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.config.MessagesConfig;
 import net.rp.rpessentials.config.RpConfig;
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
 
 public record DiceRollPacket(String diceName) implements CustomPacketPayload {
 
@@ -34,12 +36,16 @@ public record DiceRollPacket(String diceName) implements CustomPacketPayload {
             if (Cfg.ready(RpConfig.SPEC)) {
                 if (!RpConfig.ENABLE_DICE_SYSTEM.get()) return;
             } else { return; }
+            // Same rule as /roll, and a pause between two rolls even when diceCooldownSeconds is 0.
+            if (!RpPerms.has(player, RpPerm.PLAYER_ROLL)) return;
+            if (!PacketGuard.every(player, "dice", 250L)) return;
 
             boolean success = DiceManager.roll(player, packet.diceName());
             if (!success) {
-                player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                player.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                         ServerLang.get(player,
-                                MessagesConfig.DICE_UNKNOWN, "dice", packet.diceName())));
+                                MessagesConfig.DICE_UNKNOWN, "dice", packet.diceName().length() > DiceManager.MAX_INPUT
+                                        ? packet.diceName().substring(0, DiceManager.MAX_INPUT) : packet.diceName())));
             }
         });
     }

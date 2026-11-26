@@ -1,5 +1,6 @@
 package net.rp.rpessentials.commands;
 
+import net.rp.rpessentials.util.PlayerRefs;
 import net.rp.rpessentials.permission.RpPerm;
 import net.rp.rpessentials.permission.RpPerms;
 
@@ -34,78 +35,71 @@ public class RpBlurTabCommands {
         whitelistNode.then(Commands.literal("add")
                 .then(Commands.argument("player", StringArgumentType.string())
                         .suggests(ONLINE_NAMES)
-                        .executes(ctx -> modifyList(ctx, RpEssentialsConfig.WHITELIST, MessagesConfig.BLUR_LIST_WHITELIST, true))));
+                        .executes(ctx -> modifyList(ctx, PlayerRefs.TAB_WHITELIST, MessagesConfig.BLUR_LIST_WHITELIST, true))));
         whitelistNode.then(Commands.literal("remove")
                 .then(Commands.argument("player", StringArgumentType.string())
                         .suggests((ctx, builder) -> {
-                            RpEssentialsConfig.WHITELIST.get().forEach(builder::suggest);
+                            PlayerRefs.TAB_WHITELIST.names().forEach(builder::suggest);
                             return builder.buildFuture();
                         })
-                        .executes(ctx -> modifyList(ctx, RpEssentialsConfig.WHITELIST, MessagesConfig.BLUR_LIST_WHITELIST, false))));
-        whitelistNode.then(Commands.literal("list").executes(ctx -> listConfig(ctx, RpEssentialsConfig.WHITELIST, MessagesConfig.BLUR_TITLE_WHITELIST)));
+                        .executes(ctx -> modifyList(ctx, PlayerRefs.TAB_WHITELIST, MessagesConfig.BLUR_LIST_WHITELIST, false))));
+        whitelistNode.then(Commands.literal("list").executes(ctx -> listConfig(ctx, PlayerRefs.TAB_WHITELIST, MessagesConfig.BLUR_TITLE_WHITELIST)));
         blurtabNode.then(whitelistNode);
 
         var blacklistNode = Commands.literal("blacklist");
         blacklistNode.then(Commands.literal("add")
                 .then(Commands.argument("player", StringArgumentType.string())
                         .suggests(ONLINE_NAMES)
-                        .executes(ctx -> modifyList(ctx, RpEssentialsConfig.BLACKLIST, MessagesConfig.BLUR_LIST_BLACKLIST, true))));
+                        .executes(ctx -> modifyList(ctx, PlayerRefs.TAB_BLACKLIST, MessagesConfig.BLUR_LIST_BLACKLIST, true))));
         blacklistNode.then(Commands.literal("remove")
                 .then(Commands.argument("player", StringArgumentType.string())
                         .suggests((ctx, builder) -> {
-                            RpEssentialsConfig.BLACKLIST.get().forEach(builder::suggest);
+                            PlayerRefs.TAB_BLACKLIST.names().forEach(builder::suggest);
                             return builder.buildFuture();
                         })
-                        .executes(ctx -> modifyList(ctx, RpEssentialsConfig.BLACKLIST, MessagesConfig.BLUR_LIST_BLACKLIST, false))));
-        blacklistNode.then(Commands.literal("list").executes(ctx -> listConfig(ctx, RpEssentialsConfig.BLACKLIST, MessagesConfig.BLUR_TITLE_BLACKLIST)));
+                        .executes(ctx -> modifyList(ctx, PlayerRefs.TAB_BLACKLIST, MessagesConfig.BLUR_LIST_BLACKLIST, false))));
+        blacklistNode.then(Commands.literal("list").executes(ctx -> listConfig(ctx, PlayerRefs.TAB_BLACKLIST, MessagesConfig.BLUR_TITLE_BLACKLIST)));
         blurtabNode.then(blacklistNode);
 
         var alwaysVisibleNode = Commands.literal("alwaysvisible");
         alwaysVisibleNode.then(Commands.literal("add")
                 .then(Commands.argument("player", StringArgumentType.string())
                         .suggests(ONLINE_NAMES)
-                        .executes(ctx -> modifyList(ctx, RpEssentialsConfig.ALWAYS_VISIBLE_LIST, MessagesConfig.BLUR_LIST_ALWAYS, true))));
+                        .executes(ctx -> modifyList(ctx, PlayerRefs.TAB_ALWAYS_VISIBLE, MessagesConfig.BLUR_LIST_ALWAYS, true))));
         alwaysVisibleNode.then(Commands.literal("remove")
                 .then(Commands.argument("player", StringArgumentType.string())
                         .suggests((ctx, builder) -> {
-                            try {
-                                if (RpEssentialsConfig.ALWAYS_VISIBLE_LIST != null)
-                                    RpEssentialsConfig.ALWAYS_VISIBLE_LIST.get().forEach(builder::suggest);
-                            } catch (Exception ignored) {}
+                            PlayerRefs.TAB_ALWAYS_VISIBLE.names().forEach(builder::suggest);
                             return builder.buildFuture();
                         })
-                        .executes(ctx -> modifyList(ctx, RpEssentialsConfig.ALWAYS_VISIBLE_LIST, MessagesConfig.BLUR_LIST_ALWAYS, false))));
-        alwaysVisibleNode.then(Commands.literal("list").executes(ctx -> listConfig(ctx, RpEssentialsConfig.ALWAYS_VISIBLE_LIST, MessagesConfig.BLUR_TITLE_ALWAYS)));
+                        .executes(ctx -> modifyList(ctx, PlayerRefs.TAB_ALWAYS_VISIBLE, MessagesConfig.BLUR_LIST_ALWAYS, false))));
+        alwaysVisibleNode.then(Commands.literal("list").executes(ctx -> listConfig(ctx, PlayerRefs.TAB_ALWAYS_VISIBLE, MessagesConfig.BLUR_TITLE_ALWAYS)));
         blurtabNode.then(alwaysVisibleNode);
 
         return blurtabNode;
     }
 
     private static int modifyList(CommandContext<CommandSourceStack> ctx,
-                                  ModConfigSpec.ConfigValue<List<? extends String>> config,
+                                  PlayerRefs refs,
                                   ModConfigSpec.ConfigValue<String> listKey, boolean add) {
         String listName = Msg.get(ctx.getSource(), listKey);
         String player = StringArgumentType.getString(ctx, "player");
-        List<String> list = new ArrayList<>(config.get());
+        java.util.UUID id = RpEssentialsCommands.findUUIDByName(ctx.getSource().getServer(), player);
 
         if (add) {
-            if (list.contains(player)) {
+            if (!refs.add(id, player)) {
                 ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_BLUR_ALREADY, "player", player, "list", listName));
                 return 0;
             }
-            list.add(player);
             ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_BLUR_ADDED, "player", player, "list", listName), true);
         } else {
-            if (!list.remove(player)) {
+            if (!refs.remove(player, id)) {
                 ctx.getSource().sendFailure(Msg.c(ctx.getSource(), MessagesConfig.STAFF_BLUR_NOT_IN, "player", player, "list", listName));
                 return 0;
             }
             ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_BLUR_REMOVED, "player", player, "list", listName), true);
         }
 
-        config.set(list);
-        config.save();
-        net.rp.rpessentials.gameplay.TabListCache.reload();
         // The whitelist is part of the cached blur settings, and viewers who see everyone
         // skip known targets: both must be rebuilt for the change to apply right away.
         net.rp.rpessentials.gameplay.TabBlur.reload();
@@ -113,10 +107,10 @@ public class RpBlurTabCommands {
     }
 
     private static int listConfig(CommandContext<CommandSourceStack> ctx,
-                                  ModConfigSpec.ConfigValue<List<? extends String>> config,
+                                  PlayerRefs refs,
                                   ModConfigSpec.ConfigValue<String> labelKey) {
         String label = Msg.get(ctx.getSource(), labelKey);
-        List<? extends String> list = config.get();
+        List<String> list = refs.names();
         if (list.isEmpty()) {
             ctx.getSource().sendSuccess(() -> Msg.c(ctx.getSource(), MessagesConfig.STAFF_BLUR_EMPTY, "label", label), false);
         } else {

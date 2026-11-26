@@ -148,7 +148,7 @@ public class ConfigManagerScreen extends net.rp.rpessentials.client.skin.CanvasS
         currentEntries  = packet.entries();
         loading         = false;
         loadFailed      = false;
-        if (entriesList != null) entriesList.setScrollAmount(0);
+        // The scroll position is kept after a save or a refresh; requestFile() goes back to the top for another file.
         // Preserve editBox values for entries that were already being edited
         // (happens on refresh after apply — keep any unsaved changes)
         // We only clear editBox values for entries that DON'T have pending changes
@@ -604,7 +604,11 @@ public class ConfigManagerScreen extends net.rp.rpessentials.client.skin.CanvasS
 
 
     @Override
+    //#if forge
+    //? public void renderBackground(GuiGraphics g) {
+    //#else
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {
+    //#endif
         // Intentionally empty — we draw our own background in render()
     }
 
@@ -1070,8 +1074,13 @@ public class ConfigManagerScreen extends net.rp.rpessentials.client.skin.CanvasS
 
         /** Vanilla background in the legacy look; on the canvas the window is already darkened. */
         @Override
+        //#if forge
+        //? public void renderBackground(GuiGraphics g) {
+            //? if (!canvasActive()) super.renderBackground(g);
+        //#else
         public void renderBackground(GuiGraphics g, int mx, int my, float partial) {
             if (!canvasActive()) super.renderBackground(g, mx, my, partial);
+        //#endif
         }
 
         @Override
@@ -1082,7 +1091,6 @@ public class ConfigManagerScreen extends net.rp.rpessentials.client.skin.CanvasS
         if (selectedFileId == null) return;
         currentEntries = null;
         fileCache.remove(selectedFileId);
-        if (entriesList != null) entriesList.setScrollAmount(0);
         pendingChanges.clear();
         editBoxValues.clear();
         sendRequest(selectedFileId);

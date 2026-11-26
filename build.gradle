@@ -1,5 +1,18 @@
 // Root project: only declares the plugin versions shared by the two version folders.
 plugins {
+    id 'base' // "gradlew clean" also empties build/libs of the root, where both versions put their jar
     id 'net.neoforged.moddev' version '2.0.148' apply false
     id 'net.neoforged.moddev.legacyforge' version '2.0.148' apply false
+}
+
+// Every test of both versions, one server at a time (tests/, kept out of Git). See tests/README.md.
+if (file('tests/tests.gradle').exists()) {
+    tasks.register('testAll') {
+        group = 'tests'
+        description = 'All the tests of both versions.'
+        dependsOn ':neoforge-1.21.1:testAll', ':forge-1.20.1:testAll'
+    }
+    gradle.projectsEvaluated {
+        project(':forge-1.20.1').tasks.named('runGameTestServer') { mustRunAfter ':neoforge-1.21.1:runGameTestServer' }
+    }
 }

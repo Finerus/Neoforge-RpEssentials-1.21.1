@@ -166,9 +166,9 @@ public class RpLicenseCommands {
         LicenseHelper.giveLicenseItem(server, staff, target, professionId);
 
         String displayName = NicknameManager.getDisplayName(target);
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(
                 Msg.get(ctx.getSource(), MessagesConfig.LICENSE_GIVE_STAFF, "profession", profData.getFormattedName(), "player", displayName)), true);
-        target.sendSystemMessage(Component.literal(
+        target.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                 ServerLang.get(target, MessagesConfig.LICENSE_GIVE_PLAYER, "profession", profData.getFormattedName())));
         return 1;
     }
@@ -191,9 +191,9 @@ public class RpLicenseCommands {
         ProfessionRestrictionManager.ProfessionData profData = ProfessionRestrictionManager.getProfessionData(profession);
         String profDisplayName = profData != null ? profData.getFormattedName() : profession;
 
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(
                 Msg.get(ctx.getSource(), MessagesConfig.LICENSE_REVOKE_STAFF, "profession", profDisplayName, "player", target.getName().getString())), true);
-        target.sendSystemMessage(Component.literal(
+        target.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                 ServerLang.get(target, MessagesConfig.LICENSE_REVOKE_PLAYER, "profession", profDisplayName)));
         return 1;
     }
@@ -201,7 +201,7 @@ public class RpLicenseCommands {
     private static int sendLicenseList(CommandContext<CommandSourceStack> ctx, UUID uuid, String name) {
         List<String> licenses = LicenseManager.getLicenses(uuid);
         if (licenses.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal(
+            ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(
                     Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_NONE, "player", name)), false);
             return 1;
         }
@@ -235,7 +235,7 @@ public class RpLicenseCommands {
     private static int listAllLicenses(CommandContext<CommandSourceStack> ctx) {
         var allLicenses = LicenseManager.getAllLicenses();
         if (allLicenses.isEmpty()) {
-            ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_ALL_NONE)), false);
+            ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_LIST_ALL_NONE)), false);
             return 1;
         }
 
@@ -290,10 +290,10 @@ public class RpLicenseCommands {
         LicenseManager.logAction("TEMPGIVE", staff, target, professionId, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_TEMP, "days", String.valueOf(days), "date", String.valueOf(expires)));
         LicenseHelper.giveLicenseItem(server, staff, target, professionId, expires);
 
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(
                 Msg.get(ctx.getSource(), MessagesConfig.LICENSE_GIVE_RP_STAFF, "profession", profData.getFormattedName(),
                         "player", displayName, "days", String.valueOf(days), "date", expires)), true);
-        target.sendSystemMessage(Component.literal(
+        target.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                 ServerLang.get(target, MessagesConfig.LICENSE_GIVE_RP_PLAYER, "profession", profData.getFormattedName(), "date", expires)));
         return 1;
     }
@@ -304,7 +304,7 @@ public class RpLicenseCommands {
         MinecraftServer server = ctx.getSource().getServer();
 
         if (!LicenseManager.hasLicense(target.getUUID(), professionId)) {
-            ctx.getSource().sendFailure(Component.literal(
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(
                     Msg.get(ctx.getSource(), MessagesConfig.LICENSE_REISSUE_NOT_FOUND,
                             "player", target.getName().getString(), "profession", professionId)));
             return 0;
@@ -312,7 +312,7 @@ public class RpLicenseCommands {
 
         ProfessionRestrictionManager.ProfessionData profData = ProfessionRestrictionManager.getProfessionData(professionId);
         if (profData == null) {
-            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.LICENSE_UNKNOWN_PROFESSION, "profession", professionId)));
             return 0;
         }
 
@@ -327,10 +327,10 @@ public class RpLicenseCommands {
         LicenseManager.logActionSystem("REISSUE", target.getName().getString(), target.getUUID().toString(),
                 professionId, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_REISSUED, "staff", staff != null ? staff.getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE)));
 
-        ctx.getSource().sendSuccess(() -> Component.literal(
+        ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(
                 Msg.get(ctx.getSource(), MessagesConfig.LICENSE_REISSUE_STAFF, "profession", profData.getFormattedName(),
                         "player", target.getName().getString())), true);
-        target.sendSystemMessage(Component.literal(
+        target.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                 ServerLang.get(target, MessagesConfig.LICENSE_REISSUE_PLAYER, "profession", profData.getFormattedName())));
         return 1;
     }

@@ -2,7 +2,11 @@ package net.rp.rpessentials.api.event;
 
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.bus.api.Event;
+//#if forge
+//? import net.minecraftforge.eventbus.api.Cancelable;
+//#else
 import net.neoforged.bus.api.ICancellableEvent;
+//#endif
 
 /**
  * Opening and closing of the RP server (schedule of rpessentials-schedule.toml or forced by staff),
@@ -42,7 +46,12 @@ public abstract class ServerScheduleEvent extends Event {
     public Cause getCause() { return cause; }
 
     /** Before the forced state changes. Cancel it to keep the current state. */
+    //#if forge
+    //? @Cancelable
+    //? public static class ForceStateChanging extends ServerScheduleEvent {
+    //#else
     public static class ForceStateChanging extends ServerScheduleEvent implements ICancellableEvent {
+    //#endif
         private final ForceState oldState;
         private final ForceState newState;
         private final String actor;

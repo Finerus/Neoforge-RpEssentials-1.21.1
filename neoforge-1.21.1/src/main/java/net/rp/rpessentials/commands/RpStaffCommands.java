@@ -109,7 +109,7 @@ public class RpStaffCommands {
                                 ChatConfig.ENABLE_PROXIMITY_SPY.set(newVal);
                                 ChatConfig.SPEC.save();
                             } else { return 0; }
-                            ctx.getSource().getPlayerOrException().sendSystemMessage(Component.literal(
+                            ctx.getSource().getPlayerOrException().sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                                     Msg.get(ctx.getSource(), newVal
                                             ? MessagesConfig.PROXIMITY_CHAT_SPY_ENABLED
                                             : MessagesConfig.PROXIMITY_CHAT_SPY_DISABLED)));
@@ -225,7 +225,11 @@ public class RpStaffCommands {
         Optional<Holder.Reference<MobEffect>> effect =
                 BuiltInRegistries.MOB_EFFECT.getHolder(ResourceKey.create(BuiltInRegistries.MOB_EFFECT.key(), effectId));
         if (effect.isPresent()) {
+            //#if forge
+            //? target.addEffect(new MobEffectInstance(effect.get().value(), duration * 20, amplifier, false, false));
+            //#else
             target.addEffect(new MobEffectInstance(effect.get(), duration * 20, amplifier, false, false));
+            //#endif
             String sourceName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.UI_CONSOLE);
             logToStaff(ctx.getSource(), sourceName + " gave effect " + effectId + " to " + target.getName().getString());
             if (ModerationConfig.NOTIFY_TARGET.get()) {
@@ -320,7 +324,8 @@ public class RpStaffCommands {
         String staffName = ctx.getSource().getPlayer() != null ? ctx.getSource().getPlayer().getName().getString() : Msg.get(ctx.getSource(), MessagesConfig.UI_CONSOLE);
         int count = 0;
         for (ServerPlayer p : ctx.getSource().getServer().getPlayerList().getPlayers()) {
-            if (!RpEssentialsPermissions.isStaff(p)) continue;
+            // Read by the staff and by everyone who can write there.
+            if (!RpEssentialsPermissions.isStaff(p) && !RpPerms.has(p, RpPerm.STAFF_BROADCAST)) continue;
             p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseColors(
                     Msg.get(p, MessagesConfig.STAFF_TOOLS_BROADCAST_FORMAT, "staff", staffName, "message", message)));
             count++;
@@ -443,7 +448,7 @@ public class RpStaffCommands {
     static void broadcastToStaff(MinecraftServer server, String message) {
         if (message == null || message.isEmpty()) return;
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(Component.literal(message));
+            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(message));
         }
     }
 

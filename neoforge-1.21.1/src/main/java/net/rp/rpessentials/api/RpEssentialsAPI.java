@@ -154,6 +154,18 @@ public final class RpEssentialsAPI {
                 net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.API);
     }
 
+    /** Same, for some minutes (0 = until someone changes it) and with a reason ("" = none). */
+    public static boolean forceOpenServer(MinecraftServer server, String actor, int minutes, String reason) {
+        return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.forceOpen(server, actor,
+                net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.API, minutes, reason);
+    }
+
+    /** Same, for some minutes (0 = until someone changes it) and with a reason shown to the refused players. */
+    public static boolean forceCloseServer(MinecraftServer server, String actor, int minutes, String reason) {
+        return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.forceClose(server, actor,
+                net.rp.rpessentials.api.event.ServerScheduleEvent.Cause.API, minutes, reason);
+    }
+
     /** Back to the normal schedule, like /schedule resetforcestate. */
     public static boolean resetServerForceState(MinecraftServer server, String actor) {
         return net.rp.rpessentials.gameplay.RpEssentialsScheduleManager.resetForceState(server, actor,

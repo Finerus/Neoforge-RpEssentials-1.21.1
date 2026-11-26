@@ -26,15 +26,20 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 /**
- * Sends staff events to a Discord channel through a webhook (discordWebhookUrl in rpessentials-core.toml).
+ * Sends staff events to a Discord channel, through a bot (discordBotToken + discordChannelId in
+ * rpessentials-core.toml: the channel is chosen by its ID) or a webhook (discordWebhookUrl: the channel it was
+ * created in).
  * <p>
  * Messages go out one by one on a background thread, in order, so the server never waits for Discord.
- * The webhook URL is a secret: it is never written to the log.
+ * The webhook URL and the bot token are secrets: they are never written to the log.
  */
 public final class DiscordWebhook {
 
     private static final Pattern URL = Pattern.compile(
             "https://(?:(?:ptb|canary)\\.)?discord(?:app)?\\.com/api/webhooks/\\d+/[\\w-]+");
+
+    private static final Pattern BOT_TOKEN = Pattern.compile("[\\w-]+\\.[\\w-]+\\.[\\w-]+");
+    private static final Pattern CHANNEL_ID = Pattern.compile("\\d{17,20}");
 
     /** Messages waiting to be sent; beyond this, new ones are dropped (Discord down, spam...). */
     private static final int MAX_QUEUE = 100;
@@ -54,12 +59,15 @@ public final class DiscordWebhook {
 
     private static volatile ThreadPoolExecutor executor = createExecutor();
     /** Logged once per problem, not once per message. */
-    private static volatile boolean warnedBadUrl = false;
+    private static volatile Failure warned = null;
 
     private DiscordWebhook() {}
 
     /** Why a message was not sent; turned into a translated text with {@link #describe}. */
-    public enum Failure { INVALID_URL, QUEUE_FULL, WEBHOOK_GONE, REFUSED, HTTP, RATE_LIMITED, NETWORK, INTERRUPTED }
+    public enum Failure {
+        INVALID_URL, INVALID_TOKEN, INVALID_CHANNEL, QUEUE_FULL, WEBHOOK_GONE, BOT_REFUSED, BOT_NO_ACCESS,
+        CHANNEL_NOT_FOUND, REFUSED, HTTP, RATE_LIMITED, NETWORK, INTERRUPTED
+    }
 
     /** A failure with its detail (HTTP code, exception type), or null when the message was sent. */
     public record Result(Failure failure, String detail) {
@@ -71,6 +79,10 @@ public final class DiscordWebhook {
         String d = r.detail() == null ? "" : r.detail();
         return switch (r.failure()) {
             case INVALID_URL -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_INVALID_URL);
+            case INVALID_TOKEN, BOT_REFUSED -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_TOKEN);
+            case INVALID_CHANNEL -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_CHANNEL_ID);
+            case BOT_NO_ACCESS -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_NO_ACCESS);
+            case CHANNEL_NOT_FOUND -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_CHANNEL_GONE);
             case QUEUE_FULL -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_QUEUE_FULL);
             case WEBHOOK_GONE -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_GONE, "code", d);
             case REFUSED -> ServerLang.get(viewer, MessagesConfig.DISCORD_ERR_REFUSED);
@@ -97,9 +109,42 @@ public final class DiscordWebhook {
         return Cfg.get(RpEssentialsConfig.DISCORD_WEBHOOK_URL, "").trim();
     }
 
-    /** True when a webhook URL is set (it may still be invalid). */
+    private static String token() {
+        return Cfg.get(RpEssentialsConfig.DISCORD_BOT_TOKEN, "").trim();
+    }
+
+    private static String channel() {
+        return Cfg.get(RpEssentialsConfig.DISCORD_CHANNEL_ID, "").trim();
+    }
+
+    /** Where the messages go: {@code token} null = webhook. {@code problem} not null = wrong value in the config. */
+    private record Target(String url, String token, Failure problem) {
+        boolean bot() { return token != null; }
+    }
+
+    /** The bot when its token and the channel ID are both set, else the webhook; null = nothing set. */
+    private static Target target() {
+        String token = token();
+        String channel = channel();
+        if (!token.isEmpty() && !channel.isEmpty()) {
+            Failure problem = !BOT_TOKEN.matcher(token).matches() ? Failure.INVALID_TOKEN
+                    : !CHANNEL_ID.matcher(channel).matches() ? Failure.INVALID_CHANNEL : null;
+            return new Target("https://discord.com/api/v10/channels/" + channel + "/messages", token, problem);
+        }
+        String url = url();
+        if (url.isEmpty()) return null;
+        return new Target(url, null, validUrl(url) ? null : Failure.INVALID_URL);
+    }
+
+    /** True when a webhook URL, or a bot token and a channel ID, are set (they may still be invalid). */
     public static boolean configured() {
-        return !url().isEmpty();
+        return target() != null;
+    }
+
+    /** True when messages can be sent (nothing wrong seen in the config). */
+    public static boolean ready() {
+        Target t = target();
+        return t != null && t.problem() == null;
     }
 
     public static boolean validUrl(String url) {
@@ -140,16 +185,27 @@ public final class DiscordWebhook {
     }
 
     /** {@code open} / {@code close} null = opened by hand (forceopen), sent without hours. */
-    public static void onServerOpened(String open, String close) {
+    public static void onServerOpened(String open, String close, String reason) {
         if (!on(RpEssentialsConfig.DISCORD_SCHEDULE)) return;
         String desc = open != null && close != null
-                ? ServerLang.get(null, MessagesConfig.DISCORD_SERVER_OPENED_DESC, "open", open, "close", close) : null;
+                ? ServerLang.get(null, MessagesConfig.DISCORD_SERVER_OPENED_DESC, "open", open, "close", close) : reasonText(reason);
         send(ServerLang.get(null, MessagesConfig.DISCORD_SERVER_OPENED), desc, COLOR_GREEN, null, null);
     }
 
-    public static void onServerClosed() {
+    public static void onServerClosed(String reason) {
         if (!on(RpEssentialsConfig.DISCORD_SCHEDULE)) return;
-        send(ServerLang.get(null, MessagesConfig.DISCORD_SERVER_CLOSED), null, COLOR_RED, null, null);
+        send(ServerLang.get(null, MessagesConfig.DISCORD_SERVER_CLOSED), reasonText(reason), COLOR_RED, null, null);
+    }
+
+    /** The server restarted and its state (open or closed to the players) is still the same. */
+    public static void onServerRestarted(boolean open) {
+        if (!on(RpEssentialsConfig.DISCORD_SCHEDULE)) return;
+        send(ServerLang.get(null, open ? MessagesConfig.DISCORD_RESTARTED_OPEN : MessagesConfig.DISCORD_RESTARTED_CLOSED),
+                null, COLOR_GREY, null, null);
+    }
+
+    private static String reasonText(String reason) {
+        return reason == null || reason.isBlank() ? null : ServerLang.get(null, MessagesConfig.SCHED_FORCE_REASON, "reason", reason);
     }
 
     /**
@@ -157,11 +213,16 @@ public final class DiscordWebhook {
      * (null = console) through {@code reply}, on the server thread.
      */
     public static void test(ServerPlayer viewer, Consumer<String> reply) {
-        String url = url();
-        if (url.isEmpty()) { reply.accept(ServerLang.get(viewer, MessagesConfig.DISCORD_NOT_SET)); return; }
-        if (!validUrl(url)) { reply.accept(ServerLang.get(viewer, MessagesConfig.DISCORD_BAD_URL)); return; }
+        // Only one of the two bot options: they do nothing alone, and a webhook cannot choose its channel.
+        if (token().isEmpty() != channel().isEmpty()) {
+            reply.accept(ServerLang.get(viewer, MessagesConfig.DISCORD_BOT_INCOMPLETE));
+        }
+        Target to = target();
+        if (to == null) { reply.accept(ServerLang.get(viewer, MessagesConfig.DISCORD_NOT_SET)); return; }
+        if (to.problem() == Failure.INVALID_URL) { reply.accept(ServerLang.get(viewer, MessagesConfig.DISCORD_BAD_URL)); return; }
         var server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-        send(ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_TITLE), ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_DESC),
+        send(ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_TITLE), ServerLang.get(viewer, to.bot()
+                        ? MessagesConfig.DISCORD_TEST_DESC_BOT : MessagesConfig.DISCORD_TEST_DESC),
                 COLOR_BLUE, null, error -> {
                     String msg = error == null
                             ? ServerLang.get(viewer, MessagesConfig.DISCORD_TEST_OK)
@@ -178,17 +239,17 @@ public final class DiscordWebhook {
      * on the Discord thread.
      */
     private static void send(String title, String description, int color, String footer, Consumer<Result> done) {
-        String url = url();
-        if (url.isEmpty()) return;
-        if (!validUrl(url)) {
-            if (!warnedBadUrl) {
-                warnedBadUrl = true;
-                RpEssentials.LOGGER.warn("[Discord] discordWebhookUrl is not a Discord webhook URL, nothing is sent.");
+        Target to = target();
+        if (to == null) return;
+        if (to.problem() != null) {
+            if (warned != to.problem()) {
+                warned = to.problem();
+                RpEssentials.LOGGER.warn("[Discord] Nothing is sent: {}", describe(null, Result.of(to.problem(), null)));
             }
-            if (done != null) done.accept(Result.of(Failure.INVALID_URL, null));
+            if (done != null) done.accept(Result.of(to.problem(), null));
             return;
         }
-        warnedBadUrl = false;
+        warned = null;
 
         JsonObject embed = new JsonObject();
         embed.addProperty("title", cut(clean(title), 256));
@@ -201,7 +262,7 @@ public final class DiscordWebhook {
             embed.add("footer", f);
         }
         JsonObject body = new JsonObject();
-        body.addProperty("username", cut(Cfg.get(RpEssentialsConfig.DISCORD_USERNAME, "RpEssentials"), 80));
+        if (!to.bot()) body.addProperty("username", cut(Cfg.get(RpEssentialsConfig.DISCORD_USERNAME, "RpEssentials"), 80));
         JsonArray embeds = new JsonArray();
         embeds.add(embed);
         body.add("embeds", embeds);
@@ -218,20 +279,22 @@ public final class DiscordWebhook {
             return;
         }
         executor.execute(() -> {
-            Result error = post(url, json);
+            Result error = post(to, json);
             if (error != null) RpEssentials.LOGGER.warn("[Discord] Message not sent: {}", describe(null, error));
             if (done != null) done.accept(error);
         });
     }
 
     /** Sends the request, waiting when Discord asks to slow down. Returns null or the failure. */
-    private static Result post(String url, String json) {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(url))
+    private static Result post(Target to, String json) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(to.url()))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json")
-                .header("User-Agent", "RpEssentials (Minecraft mod)")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
+                // The bot API only accepts the "DiscordBot (name, version)" form.
+                .header("User-Agent", to.bot() ? "DiscordBot (RpEssentials, 1.0)" : "RpEssentials (Minecraft mod)")
+                .POST(HttpRequest.BodyPublishers.ofString(json));
+        if (to.bot()) builder.header("Authorization", "Bot " + to.token());
+        HttpRequest request = builder.build();
         for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
             try {
                 HttpResponse<String> res = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
@@ -240,6 +303,11 @@ public final class DiscordWebhook {
                 if (code == 429) {
                     Thread.sleep(retryAfterMs(res.body()));
                     continue;
+                }
+                if (to.bot()) {
+                    if (code == 401) return Result.of(Failure.BOT_REFUSED, "401");
+                    if (code == 403) return Result.of(Failure.BOT_NO_ACCESS, "403");
+                    if (code == 404) return Result.of(Failure.CHANNEL_NOT_FOUND, "404");
                 }
                 return switch (code) {
                     case 401, 403, 404 -> Result.of(Failure.WEBHOOK_GONE, String.valueOf(code));

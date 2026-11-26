@@ -1,152 +1,110 @@
 package net.rp.rpessentials.gameplay;
 
-import net.rp.rpessentials.permission.RpPerm;
-import net.rp.rpessentials.permission.RpPerms;
-
-import net.rp.rpessentials.config.Cfg;
+import com.google.gson.Gson;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.NeoForge;
+import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.api.event.ServerScheduleEvent;
+import net.rp.rpessentials.compat.DiscordWebhook;
+import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.MessagesConfig;
-import net.rp.rpessentials.config.RpEssentialsConfig;
 import net.rp.rpessentials.config.ScheduleConfig;
+import net.rp.rpessentials.core.JsonStore;
+import net.rp.rpessentials.lang.Msg;
+import net.rp.rpessentials.lang.ServerLang;
 import net.rp.rpessentials.moderation.DeathRPManager;
+import net.rp.rpessentials.permission.RpPerm;
+import net.rp.rpessentials.permission.RpPerms;
+import net.rp.rpessentials.util.ColorHelper;
+import net.rp.rpessentials.util.PlayerRefs;
+import net.rp.rpessentials.util.TimeHelper;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.TextStyle;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import net.rp.rpessentials.RpEssentials;
-import net.rp.rpessentials.lang.ServerLang;
-import net.rp.rpessentials.permission.RpEssentialsPermissions;
-import net.rp.rpessentials.permission.RpEssentialsRoleManager;
-import net.rp.rpessentials.util.ColorHelper;
-import net.rp.rpessentials.util.TimeHelper;
-import net.neoforged.neoforge.common.NeoForge;
-import net.rp.rpessentials.api.event.ServerScheduleEvent;
 
+/**
+ * Opening hours of the server: who may be there, announcements, forced state, death and HRP hours.
+ * The hours themselves (slots, midnight, exceptions) are in {@link ScheduleClock}.
+ */
 public class RpEssentialsScheduleManager {
 
+    private static final DateTimeFormatter FMT = ScheduleClock.FMT;
+    private static volatile ScheduleClock clock = new ScheduleClock();
     private static String lastSummary = "";
+    private static String lastHrpSlotKey = "";
+    private static String lastDeathHoursSlotKey = "";
+    /** Warnings already sent: "event time|kind|minutes". */
+    private static final Set<String> sentWarnings = new HashSet<>();
 
     // =========================================================================
-    // STRUCTURE
+    // SAVED STATE (schedule-state.json)
     // =========================================================================
-    public record DaySchedule(LocalTime open, LocalTime close) {
+    /** What was last announced and the details of the forced state: survives a restart. */
+    private static final class State {
+        /** True = players were told it is open, false = closed, null = nothing announced yet. */
+        Boolean announcedOpen;
+        String force = "NONE";
+        /** End of the forced state (epoch ms), 0 = until someone changes it. */
+        long forceUntil;
+        String forceReason = "";
 
-        /**
-         * Returns true if {@code now} falls within this schedule's session.
-         * -
-         * Two cases:
-         *  - Normal    (open < close): 20:00 → 23:59  →  open ≤ now < close
-         *  - Cross-midnight (close < open): 22:00 → 02:00  →  now ≥ open  OR  now < close
-         */
-        public boolean isOpen(LocalTime now) {
-            if (!close.isBefore(open)) {
-                // Normal same-day session
-                return !now.isBefore(open) && now.isBefore(close);
-            } else {
-                // Cross-midnight session: open side OR close side
-                return !now.isBefore(open) || now.isBefore(close);
-            }
-        }
-
-        /** True when this schedule's session extends past midnight. */
-        public boolean crossesMidnight() {
-            return close.isBefore(open);
-        }
-
-        /**
-         * Minutes remaining until this session closes, given the current time.
-         * Works for both normal and cross-midnight sessions.
-         * Returns a negative value if the session is not open.
-         */
-        public long minutesUntilClose(LocalTime now) {
-            if (!isOpen(now)) return -1;
-            if (!crossesMidnight() || !now.isBefore(close)) {
-                // Same-day session, or we are on the "before-close" side of a cross-midnight session
-                return Duration.between(now, close).toMinutes();
-            } else {
-                // We are on the "after-open" side of a cross-midnight session (e.g. now=23:30, close=02:00)
-                // Time until midnight + time from midnight to close
-                long toMidnight = Duration.between(now, LocalTime.MIDNIGHT).toMinutes();
-                long fromMidnight = Duration.between(LocalTime.MIDNIGHT, close).toMinutes();
-                // toMidnight is 0 or negative at midnight: use modulo 1440
-                return Math.floorMod(toMidnight, 1440) + fromMidnight;
-            }
+        State copy() {
+            State s = new State();
+            s.announcedOpen = announcedOpen;
+            s.force = force;
+            s.forceUntil = forceUntil;
+            s.forceReason = forceReason;
+            return s;
         }
     }
 
-    // =========================================================================
-    // STATE
-    // =========================================================================
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("HH:mm");
-    private static final Map<DayOfWeek, DaySchedule> schedules = new EnumMap<>(DayOfWeek.class);
-    /** Dated exceptions. A null value means closed that day. */
-    private static final Map<LocalDate, DaySchedule> exceptions = new java.util.TreeMap<>();
+    private static final JsonStore<State> STORE = new JsonStore<>("schedule-state.json", State.class, "Schedule", new Gson());
+    private static State state = null;
+    private static boolean firstTick = true;
 
-    /** Schedule of a given date: its exception if there is one, else the weekly schedule. */
-    public static DaySchedule scheduleFor(LocalDate date) {
-        if (exceptions.containsKey(date)) return exceptions.get(date);
-        return schedules.get(date.getDayOfWeek());
-    }
-
-    /** Upcoming exceptions (today included), in date order. A null value means closed. */
-    public static Map<LocalDate, DaySchedule> getUpcomingExceptions() {
-        Map<LocalDate, DaySchedule> out = new java.util.LinkedHashMap<>();
-        LocalDate today = today();
-        for (Map.Entry<LocalDate, DaySchedule> e : exceptions.entrySet()) {
-            if (!e.getKey().isBefore(today)) out.put(e.getKey(), e.getValue());
+    private static State state() {
+        if (state == null) {
+            STORE.reset();
+            State s = STORE.load();
+            state = s != null ? s : new State();
         }
-        return out;
+        return state;
     }
 
-    private static void parseExceptions() {
-        exceptions.clear();
-        for (String raw : ScheduleConfig.SCHEDULE_EXCEPTIONS.get()) {
-            String line = raw.trim();
-            int eq = line.indexOf('=');
-            try {
-                if (eq < 0) throw new IllegalArgumentException();
-                LocalDate date = LocalDate.parse(line.substring(0, eq).trim());
-                String v = line.substring(eq + 1).trim();
-                if (v.equalsIgnoreCase("CLOSED")) {
-                    exceptions.put(date, null);
-                    continue;
-                }
-                if (v.equalsIgnoreCase("OPEN")) {
-                    exceptions.put(date, new DaySchedule(LocalTime.MIDNIGHT, LocalTime.of(23, 59)));
-                    continue;
-                }
-                String[] t = v.split("-");
-                if (t.length != 2 || !isValidTimeFormat(t[0].trim()) || !isValidTimeFormat(t[1].trim()))
-                    throw new IllegalArgumentException();
-                exceptions.put(date, new DaySchedule(LocalTime.parse(t[0].trim(), FMT), LocalTime.parse(t[1].trim(), FMT)));
-            } catch (Exception e) {
-                warnConfig(MessagesConfig.SCHED_WARN_INVALID_EXCEPTION, "value", line);
-            }
-        }
+    private static void saveState() { STORE.save(state().copy()); }
+
+    /** Server stopped: the next world has its own state. */
+    public static void onServerStopped() {
+        state = null;
+        firstTick = true;
+        sentWarnings.clear();
+        ScheduleGate.clear();
     }
 
-    private static final Set<Integer> sentWarnings    = new HashSet<>();
-    private static boolean hasClosedToday             = false;
-    private static boolean hasOpenedToday             = false;
-    private static DayOfWeek lastResetDay             = null;
-    private static String lastHrpSlotKey              = "";
-    private static String lastDeathHoursSlotKey       = "";
-    private static boolean closeNoticeSent = false;
+    private static void setAnnounced(Boolean open) {
+        if (java.util.Objects.equals(state().announcedOpen, open)) return;
+        state().announcedOpen = open;
+        saveState();
+    }
 
     // =========================================================================
     // RELOAD
     // =========================================================================
     public static void reload() {
-        schedules.clear();
-        sentWarnings.clear();
         configWarnings.clear();
         TimeHelper.reload();
 
@@ -155,156 +113,230 @@ public class RpEssentialsScheduleManager {
             return;
         }
         try {
-            schedules.put(DayOfWeek.MONDAY,   parseDay(ScheduleConfig.MONDAY_ENABLED,    ScheduleConfig.MONDAY_OPEN,    ScheduleConfig.MONDAY_CLOSE));
-            schedules.put(DayOfWeek.TUESDAY,   parseDay(ScheduleConfig.TUESDAY_ENABLED,   ScheduleConfig.TUESDAY_OPEN,   ScheduleConfig.TUESDAY_CLOSE));
-            schedules.put(DayOfWeek.WEDNESDAY, parseDay(ScheduleConfig.WEDNESDAY_ENABLED, ScheduleConfig.WEDNESDAY_OPEN, ScheduleConfig.WEDNESDAY_CLOSE));
-            schedules.put(DayOfWeek.THURSDAY,  parseDay(ScheduleConfig.THURSDAY_ENABLED,  ScheduleConfig.THURSDAY_OPEN,  ScheduleConfig.THURSDAY_CLOSE));
-            schedules.put(DayOfWeek.FRIDAY,    parseDay(ScheduleConfig.FRIDAY_ENABLED,    ScheduleConfig.FRIDAY_OPEN,    ScheduleConfig.FRIDAY_CLOSE));
-            schedules.put(DayOfWeek.SATURDAY,  parseDay(ScheduleConfig.SATURDAY_ENABLED,  ScheduleConfig.SATURDAY_OPEN,  ScheduleConfig.SATURDAY_CLOSE));
-            schedules.put(DayOfWeek.SUNDAY,    parseDay(ScheduleConfig.SUNDAY_ENABLED,    ScheduleConfig.SUNDAY_OPEN,    ScheduleConfig.SUNDAY_CLOSE));
-            parseExceptions();
+            ScheduleClock c = new ScheduleClock();
+            c.setDay(DayOfWeek.MONDAY,    parseDay(ScheduleConfig.MONDAY_ENABLED,    ScheduleConfig.MONDAY_OPEN,    ScheduleConfig.MONDAY_CLOSE,    ScheduleConfig.MONDAY_EXTRA));
+            c.setDay(DayOfWeek.TUESDAY,   parseDay(ScheduleConfig.TUESDAY_ENABLED,   ScheduleConfig.TUESDAY_OPEN,   ScheduleConfig.TUESDAY_CLOSE,   ScheduleConfig.TUESDAY_EXTRA));
+            c.setDay(DayOfWeek.WEDNESDAY, parseDay(ScheduleConfig.WEDNESDAY_ENABLED, ScheduleConfig.WEDNESDAY_OPEN, ScheduleConfig.WEDNESDAY_CLOSE, ScheduleConfig.WEDNESDAY_EXTRA));
+            c.setDay(DayOfWeek.THURSDAY,  parseDay(ScheduleConfig.THURSDAY_ENABLED,  ScheduleConfig.THURSDAY_OPEN,  ScheduleConfig.THURSDAY_CLOSE,  ScheduleConfig.THURSDAY_EXTRA));
+            c.setDay(DayOfWeek.FRIDAY,    parseDay(ScheduleConfig.FRIDAY_ENABLED,    ScheduleConfig.FRIDAY_OPEN,    ScheduleConfig.FRIDAY_CLOSE,    ScheduleConfig.FRIDAY_EXTRA));
+            c.setDay(DayOfWeek.SATURDAY,  parseDay(ScheduleConfig.SATURDAY_ENABLED,  ScheduleConfig.SATURDAY_OPEN,  ScheduleConfig.SATURDAY_CLOSE,  ScheduleConfig.SATURDAY_EXTRA));
+            c.setDay(DayOfWeek.SUNDAY,    parseDay(ScheduleConfig.SUNDAY_ENABLED,    ScheduleConfig.SUNDAY_OPEN,    ScheduleConfig.SUNDAY_CLOSE,    ScheduleConfig.SUNDAY_EXTRA));
+            parseExceptions(c);
+            clock = c;
 
             StringBuilder sb = new StringBuilder();
-            for (DayOfWeek day : DayOfWeek.values()) {
-                DaySchedule s = schedules.get(day);
-                sb.append(day).append(s == null ? " CLOSED" : " " + s.open().format(FMT) + "-" + s.close().format(FMT)
-                        + (s.crossesMidnight() ? "*" : "")).append("; ");
-            }
+            for (DayOfWeek day : DayOfWeek.values()) sb.append(day).append(' ').append(slotsText(c.day(day), "CLOSED")).append("; ");
             String summary = sb.toString();
             if (!summary.equals(lastSummary)) {
                 lastSummary = summary;
                 RpEssentials.LOGGER.info("[Schedule] {}", summary);
             }
 
-            net.minecraft.server.MinecraftServer srv = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
-            if (srv != null) {
+            MinecraftServer srv = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+            if (srv != null && !configWarnings.isEmpty()) {
                 for (ServerPlayer p : srv.getPlayerList().getPlayers()) {
                     if (!RpPerms.has(p, RpPerm.NOTIFY)) continue;
-                    for (String w : getConfigWarnings(p)) p.sendSystemMessage(Component.literal(
+                    for (String w : getConfigWarnings(p)) p.sendSystemMessage(ColorHelper.parseSection(
                             ServerLang.get(p, MessagesConfig.SCHED_SYS_CONFIG_WARNING, "warning", w)));
                 }
             }
         } catch (Exception e) {
-            RpEssentials.LOGGER.error("[Schedule] Error parsing schedule: {}", e.getMessage());
+            RpEssentials.LOGGER.error("[Schedule] Error parsing schedule", e);
         }
     }
 
-    private static DaySchedule parseDay(
+    private static List<ScheduleClock.Slot> parseDay(
             net.neoforged.neoforge.common.ModConfigSpec.BooleanValue enabled,
             net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> open,
-            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> close) {
-        if (!enabled.get()) return null;
-        String openStr = open.get();
-        String closeStr = close.get();
-        if (!isValidTimeFormat(openStr)) {
-            warnConfig(MessagesConfig.SCHED_WARN_INVALID_OPEN, "day", String.join(".", open.getPath()), "value", openStr);
-            return null;
+            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> close,
+            net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<List<? extends String>> extra) {
+        List<ScheduleClock.Slot> out = new ArrayList<>();
+        if (!enabled.get()) return out;
+        LocalTime o = ScheduleClock.parseTime(open.get(), false);
+        LocalTime c = ScheduleClock.parseTime(close.get(), true);
+        if (o == null) warnConfig(MessagesConfig.SCHED_WARN_INVALID_OPEN, "day", String.join(".", open.getPath()), "value", open.get());
+        if (c == null) warnConfig(MessagesConfig.SCHED_WARN_INVALID_CLOSE, "day", String.join(".", close.getPath()), "value", close.get());
+        if (o != null && c != null) out.add(new ScheduleClock.Slot(o, c));
+        for (String line : extra.get()) {
+            ScheduleClock.Slot s = ScheduleClock.parseSlot(line);
+            if (s != null) out.add(s);
+            else warnConfig(MessagesConfig.SCHED_WARN_INVALID_SLOT, "day", String.join(".", extra.getPath()), "value", line);
         }
-        if (!isValidTimeFormat(closeStr)) {
-            warnConfig(MessagesConfig.SCHED_WARN_INVALID_CLOSE, "day", String.join(".", close.getPath()), "value", closeStr);
-            return null;
-        }
-        return new DaySchedule(LocalTime.parse(openStr, FMT), LocalTime.parse(closeStr, FMT));
+        return out;
     }
 
-    private static boolean isValidTimeFormat(String time) {
-        if (time == null) return false;
-        return time.matches("^([01]\\d|2[0-3]):[0-5]\\d$");
+    private static void parseExceptions(ScheduleClock c) {
+        for (String raw : ScheduleConfig.SCHEDULE_EXCEPTIONS.get()) {
+            String line = raw.trim();
+            int eq = line.indexOf('=');
+            try {
+                if (eq < 0) throw new IllegalArgumentException();
+                LocalDate date = LocalDate.parse(line.substring(0, eq).trim());
+                String v = line.substring(eq + 1).trim();
+                List<ScheduleClock.Slot> slots;
+                if (v.equalsIgnoreCase("CLOSED")) slots = List.of();
+                else if (v.equalsIgnoreCase("OPEN")) slots = List.of(new ScheduleClock.Slot(LocalTime.MIDNIGHT, LocalTime.MIDNIGHT));
+                else slots = ScheduleClock.parseSlots(v);
+                if (slots == null) throw new IllegalArgumentException();
+                c.setException(date, slots);
+            } catch (Exception e) {
+                warnConfig(MessagesConfig.SCHED_WARN_INVALID_EXCEPTION, "value", line);
+            }
+        }
+    }
+
+    private static String slotsText(List<ScheduleClock.Slot> slots, String closed) {
+        if (slots.isEmpty()) return closed;
+        List<String> out = new ArrayList<>();
+        for (ScheduleClock.Slot s : slots) out.add(s.text());
+        return String.join(", ", out);
     }
 
     // =========================================================================
-    // API PUBLIQUE
+    // QUERIES
     // =========================================================================
-    /**
-     * Returns the active schedule for the current moment.
-     *
-     * Priority:
-     *  1. Today's schedule, if its session is currently open.
-     *  2. Yesterday's schedule, if it crosses midnight and is still open now.
-     *  3. null — no session is active.
-     */
-    public static DaySchedule getActiveSchedule() {
-        LocalTime now   = nowTime();
-        LocalDate todayDate = today();
+    /** An opening of a day, as shown to the players. */
+    public record Hours(String open, String close) {}
 
-        // Check today first
-        DaySchedule todayS = scheduleFor(todayDate);
-        // An overnight session (22:00 -> 02:00) only belongs to today from its opening time;
-        // before midnight-close it is yesterday's session.
-        if (todayS != null && todayS.isOpen(now)
-                && (!todayS.crossesMidnight() || !now.isBefore(todayS.open()))) return todayS;
-
-        // Check yesterday (cross-midnight session that started the day before)
-        DaySchedule yesterdayS = scheduleFor(todayDate.minusDays(1));
-        if (yesterdayS != null && yesterdayS.crossesMidnight() && yesterdayS.isOpen(now))
-            return yesterdayS;
-
-        return null;
+    private static List<Hours> hours(List<ScheduleClock.Slot> slots) {
+        List<Hours> out = new ArrayList<>();
+        for (ScheduleClock.Slot s : slots) out.add(new Hours(s.open().format(FMT), s.closeText()));
+        return out;
     }
 
-    public static DaySchedule getTodaySchedule() {
-        return scheduleFor(today());
-    }
+    /** Openings of a weekday, empty = closed. */
+    public static List<Hours> getHours(DayOfWeek day) { return hours(clock.day(day)); }
 
-    public static Map<DayOfWeek, DaySchedule> getSchedules() {
-        return Collections.unmodifiableMap(schedules);
+    /** Upcoming special dates (today included), in date order; no opening = closed. */
+    public static Map<LocalDate, List<Hours>> getUpcomingExceptions() {
+        Map<LocalDate, List<Hours>> out = new java.util.LinkedHashMap<>();
+        clock.exceptionsFrom(today()).forEach((date, slots) -> out.put(date, hours(slots)));
+        return out;
     }
 
     public static boolean isScheduleExempt(ServerPlayer player) {
         if (RpPerms.has(player, RpPerm.BYPASS_SCHEDULE)) return true;
         if (player.getServer() != null && player.getServer().isSingleplayerOwner(player.getGameProfile())) return true;
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            return ScheduleConfig.SCHEDULE_WHITELIST.get().contains(player.getGameProfile().getName());
-        } else {
-            return false;
-        }
+        return PlayerRefs.SCHEDULE.contains(player.getGameProfile());
     }
 
-    public static Component canPlayerJoin(ServerPlayer player) {
-        if (isScheduleExempt(player)) return null;
+    private static boolean scheduleOn() {
+        return Cfg.ready(ScheduleConfig.SPEC) && ScheduleConfig.ENABLE_SCHEDULE.get();
+    }
 
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            String state = ScheduleConfig.FORCE_STATE.get();
-            if ("FORCE_OPEN".equals(state))   return null;
-            if ("FORCE_CLOSED".equals(state))
-                return ColorHelper.parseColors(ScheduleConfig.FORCE_CLOSED_MESSAGE.get());
-            if (!ScheduleConfig.ENABLE_SCHEDULE.get()) return null;
-        } else {
-            return null;
-        }
-        if (isServerOpen()) return null;
+    /** True when the schedule alone (no forced state) has the server open at this time. */
+    private static boolean scheduledOpen(LocalDateTime t) {
+        return !scheduleOn() || clock.active(t) != null;
+    }
 
-        DaySchedule next = getNextOpenSchedule();
-        String open  = next != null ? next.open().format(FMT)  : "?";
-        String close = next != null ? next.close().format(FMT) : "?";
-        String day   = getNextOpenDayName(player);
-        String msg;
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            msg = ScheduleConfig.MSG_SERVER_CLOSED.get()
-                    .replace("{open}",  open)
-                    .replace("{close}", close)
-                    .replace("{day}",   day);
-        } else {
-            msg = ScheduleConfig.MSG_SERVER_CLOSED.getDefault().replace("{open}", open).replace("{close}", close).replace("{day}", day);
-        }
-        return ColorHelper.parseColors(msg);
+    /** True when the server is open now: forced state, else schedule. */
+    public static boolean isServerOpen() {
+        if (!Cfg.ready(ScheduleConfig.SPEC)) return true;
+        return switch (getForceState()) {
+            case FORCE_OPEN -> true;
+            case FORCE_CLOSED -> false;
+            case NONE -> scheduledOpen(now());
+        };
     }
 
     /**
-     * Returns true when the server is currently open.
-     * Handles cross-midnight sessions transparently via {@link #getActiveSchedule()}.
+     * Check made once the player is in the world: the reference, for what {@link ScheduleGate} could not know before.
+     * Null = may stay.
      */
-    public static boolean isServerOpen() {
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            String state = ScheduleConfig.FORCE_STATE.get();
-            if ("FORCE_OPEN".equals(state))   return true;
-            if ("FORCE_CLOSED".equals(state)) return false;
-            if (!ScheduleConfig.ENABLE_SCHEDULE.get()) return true;
-        } else {
-            return true;
+    public static Component canPlayerJoin(ServerPlayer player) {
+        if (isServerOpen() || isScheduleExempt(player)) return null;
+        if (player.getServer() != null && ScheduleGate.pendingRoleAllows(player.getServer(), player.getGameProfile())) return null;
+        return closedMessage();
+    }
+
+    /** When the server will be open again, null = not planned. */
+    private static LocalDateTime reopening() {
+        LocalDateTime from = now();
+        if (getForceState() == ServerScheduleEvent.ForceState.FORCE_CLOSED) {
+            from = forceEnd();
+            if (from == null) return null;
+            if (scheduledOpen(from)) return from;
         }
-        if (schedules.isEmpty()) return true;
-        return getActiveSchedule() != null;
+        ScheduleClock.Session next = clock.next(from);
+        return next != null ? next.start() : null;
+    }
+
+    /** When the server will close, null = not planned. */
+    private static LocalDateTime closing() {
+        LocalDateTime from = now();
+        if (getForceState() == ServerScheduleEvent.ForceState.FORCE_OPEN) {
+            from = forceEnd();
+            if (from == null || !scheduleOn()) return null;
+            ScheduleClock.Session s = clock.active(from);
+            return s != null ? s.end() : from;
+        }
+        if (!scheduleOn()) return null;
+        ScheduleClock.Session s = clock.active(from);
+        return s != null ? s.end() : null;
+    }
+
+    /** "2h 15min" until then, in the viewer's language (null = server language). */
+    private static String in(ServerPlayer v, LocalDateTime t) {
+        return MessagesConfig.formatDuration(v, (int) Math.max(1, (seconds(t) + 59) / 60));
+    }
+
+    /** Seconds until then (clock changes of the time zone included). */
+    private static long seconds(LocalDateTime t) {
+        return Duration.between(Instant.now(), t.atZone(zone()).toInstant()).getSeconds();
+    }
+
+    /** What a refused or kicked player reads. */
+    public static Component closedMessage() {
+        LocalDateTime open = reopening();
+        if (getForceState() == ServerScheduleEvent.ForceState.FORCE_CLOSED) {
+            StringBuilder sb = new StringBuilder(ScheduleConfig.FORCE_CLOSED_MESSAGE.get());
+            String reason = forceReason();
+            if (!reason.isEmpty()) sb.append('\n').append(ServerLang.get(null, MessagesConfig.SCHED_FORCE_REASON, "reason", reason));
+            if (open != null) sb.append('\n').append(ServerLang.get(null, MessagesConfig.SCHED_REOPENS_IN, "in", in(null, open)));
+            return ColorHelper.parseColors(sb.toString());
+        }
+        if (open == null) return ColorHelper.parseColors(ScheduleConfig.MSG_SERVER_CLOSED_NO_OPENING.get());
+        ScheduleClock.Session s = clock.active(open);
+        return ColorHelper.parseColors(ScheduleConfig.MSG_SERVER_CLOSED.get()
+                .replace("{open}", open.format(FMT))
+                .replace("{close}", s != null ? s.end().format(FMT) : "?")
+                .replace("{day}", getDayName(null, open.getDayOfWeek()))
+                .replace("{in}", in(null, open)));
+    }
+
+    /** State shown in the multiplayer list, null when there is nothing to show (no schedule, option off). */
+    public static ServerListState serverListState() {
+        if (!Cfg.get(ScheduleConfig.SHOW_IN_SERVER_LIST, true)) return null;
+        boolean forced = getForceState() != ServerScheduleEvent.ForceState.NONE;
+        if (!scheduleOn() && !forced) return null;
+        boolean open = isServerOpen();
+        LocalDateTime next = open ? closing() : reopening();
+        return new ServerListState(open, forced, ServerLang.fromMod(), next == null ? 0L : next.atZone(zone()).toEpochSecond());
+    }
+
+    /** Lines above the player names in the multiplayer list, in the server language; the first one carries the state. */
+    public static List<com.mojang.authlib.GameProfile> serverListLines() {
+        ServerListState s = serverListState();
+        if (s == null) return List.of();
+        List<com.mojang.authlib.GameProfile> out = new ArrayList<>(2);
+        out.add(new com.mojang.authlib.GameProfile(s.toUuid(), (s.open() ? "§a" : "§c") + getTimeUntilNextEvent(null)));
+        String reason = forceReason();
+        if (!reason.isEmpty()) {
+            String text = ServerLang.get(null, MessagesConfig.SCHED_FORCE_REASON);
+            int at = text.indexOf("{reason}");
+            java.util.UUID id = at < 0 || !s.fromMod() ? net.minecraft.Util.NIL_UUID
+                    : ServerListState.reasonUuid(at, text.length() - at - "{reason}".length());
+            out.add(new com.mojang.authlib.GameProfile(id, text.replace("{reason}", reason)));
+        }
+        return out;
+    }
+
+    /** Staff notice of a refused player (notifyRefusedJoin). */
+    public static void notifyRefused(MinecraftServer server, String name) {
+        if (!Cfg.get(ScheduleConfig.NOTIFY_REFUSED_JOIN, false)) return;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(Msg.c(p, MessagesConfig.LOGIN_REFUSED_NOTICE, "player", name));
+        }
     }
 
     public static String getTimeUntilNextEvent() {
@@ -313,98 +345,32 @@ public class RpEssentialsScheduleManager {
 
     /** Short status ("Open: closing in 2h05"...) in the viewer's language. */
     public static String getTimeUntilNextEvent(ServerPlayer v) {
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            if (!ScheduleConfig.ENABLE_SCHEDULE.get())
-                return ServerLang.get(v, MessagesConfig.SCHED_NEXT_DISABLED);
-        } else {
-            return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NOT_INIT);
+        if (!Cfg.ready(ScheduleConfig.SPEC)) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NOT_INIT);
+        boolean forced = getForceState() != ServerScheduleEvent.ForceState.NONE;
+        if (!scheduleOn() && !forced) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_DISABLED);
+        if (isServerOpen()) {
+            LocalDateTime close = closing();
+            if (close == null) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NO_CLOSING);
+            long min = Math.max(0, seconds(close) / 60);
+            return ServerLang.get(v, MessagesConfig.SCHED_NEXT_OPEN, "h", String.valueOf(min / 60), "min", String.format("%02d", min % 60));
         }
-        if (schedules.isEmpty()) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NOT_INIT);
-
-        DaySchedule active = getActiveSchedule();
-        LocalTime now = nowTime();
-
-        if (active != null) {
-            long min = active.minutesUntilClose(now);
-            if (min < 0) min = 0;
-            return ServerLang.get(v, MessagesConfig.SCHED_NEXT_OPEN,
-                    "h", String.valueOf(min / 60), "min", String.format("%02d", min % 60));
-        }
-
-        // Find next opening
-        NextOpening n = findNextOpening();
-        if (n == null) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NONE);
+        LocalDateTime open = reopening();
+        if (open == null) return ServerLang.get(v, MessagesConfig.SCHED_NEXT_NONE);
         return ServerLang.get(v, MessagesConfig.SCHED_NEXT_CLOSED,
-                "day", n.today() ? ServerLang.get(v, MessagesConfig.SCHED_TODAY) : getDayName(v, n.day()),
-                "time", n.schedule().open().format(FMT));
+                "day", open.toLocalDate().equals(today()) ? ServerLang.get(v, MessagesConfig.SCHED_TODAY) : getDayName(v, open.getDayOfWeek()),
+                "time", open.format(FMT));
     }
 
+    /** Kicks whoever may not stay, when the server is closed (config or role changed). */
     public static void enforceOnline(MinecraftServer server) {
-        if (server == null) return;
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            if (!ScheduleConfig.ENABLE_SCHEDULE.get() && "NONE".equals(ScheduleConfig.FORCE_STATE.get())) return;
-        } else { return; }
-        if (isServerOpen()) return;
-        closeServer(server, false);
+        if (server == null || isServerOpen()) return;
+        kickNotExempt(server);
     }
 
     public static void enforceOnlineDelayed(MinecraftServer server) {
         if (server == null) return;
         CompletableFuture.runAsync(() -> server.execute(() -> enforceOnline(server)),
                 CompletableFuture.delayedExecutor(1, TimeUnit.SECONDS));
-    }
-
-    // =========================================================================
-    // ACCESSEURS D'ÉTAT
-    // =========================================================================
-    public static boolean hasOpenedToday() { return hasOpenedToday; }
-    public static boolean hasClosedToday() { return hasClosedToday; }
-
-    public static void markOpenedToday() { hasOpenedToday = true; hasClosedToday = false; closeNoticeSent = false; }
-
-    public static void resetDailyFlags() {
-        hasClosedToday = false;
-        hasOpenedToday = false;
-        closeNoticeSent = false;
-        sentWarnings.clear();
-    }
-
-    public static void markClosedToday()   { hasClosedToday = true; }
-
-    // =========================================================================
-    // TICK MIDNIGHT — reset flags (every day)
-    // =========================================================================
-    public static void tickMidnightSweep(MinecraftServer server) {
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            if (!ScheduleConfig.ENABLE_SCHEDULE.get()) return;
-        } else {
-            return;
-        }
-        DayOfWeek today = today().getDayOfWeek();
-        if (today.equals(lastResetDay)) return;
-
-        LocalTime now = nowTime();
-
-        lastResetDay          = today;
-        sentWarnings.clear();
-        lastHrpSlotKey        = "";
-        lastDeathHoursSlotKey = "";
-
-        // Only reset open/close flags if yesterday's schedule does NOT cross midnight
-        // (if it does, the session is still ongoing and we must not prematurely reset).
-        DaySchedule yesterdayS = scheduleFor(today().minusDays(1));
-        boolean midnightSessionOngoing = yesterdayS != null
-                && yesterdayS.crossesMidnight()
-                && yesterdayS.isOpen(now);
-
-        // Both flags are reset every day. While yesterday's overnight session is still running the
-        // active schedule is yesterday's, so today's opening is only announced when it really starts,
-        // and the close at the end of the overnight session still kicks players.
-        hasClosedToday = false;
-        hasOpenedToday = false;
-        RpEssentials.LOGGER.info(midnightSessionOngoing
-                ? "[Schedule] Daily flags reset for {} (overnight session still running)"
-                : "[Schedule] Daily flags reset for {}", today);
     }
 
     public static String getDayName(java.time.DayOfWeek day) {
@@ -458,172 +424,256 @@ public class RpEssentialsScheduleManager {
     }
 
     // =========================================================================
-    // TICK MÉTHODES — appelées depuis RpEssentials.onServerTick
-    // =========================================================================
-    /**
-     * Sends closing warnings.
-     * Uses {@code minutesUntilClose()} so it works for both normal and cross-midnight sessions.
-     */
-    public static void checkWarnings(MinecraftServer server, LocalTime now, DaySchedule s) {
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            long remaining = s.minutesUntilClose(now);
-            if (remaining < 0) return;
-
-            for (int minutes : ScheduleConfig.WARNING_TIMES.get()) {
-                // Fire the warning when we enter the target minute
-                // (remaining is checked against a 2-minute window to tolerate tick granularity)
-                if (remaining <= minutes && remaining > minutes - 2 && !sentWarnings.contains(minutes)) {
-                    sentWarnings.add(minutes);
-                    String msg = (minutes == 1)
-                            ? ScheduleConfig.MSG_CLOSING_IMMINENT.get()
-                            .replace("{minutes}", String.valueOf(minutes))
-                            .replace("{close}",   s.close().format(FMT))
-                            : ScheduleConfig.MSG_WARNING.get()
-                            .replace("{minutes}", String.valueOf(minutes))
-                            .replace("{close}",   s.close().format(FMT));
-                    server.getPlayerList().broadcastSystemMessage(ColorHelper.parseColors(msg), false);
-                }
-            }
-        }
-    }
-
-    public static void sendOpeningMessage(MinecraftServer server, DaySchedule s) {
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            String msg = ScheduleConfig.MSG_SERVER_OPENED.get()
-                    .replace("{open}",  s.open().format(FMT))
-                    .replace("{close}", s.close().format(FMT))
-                    .replace("{day}", RpEssentialsScheduleManager.getDayName(
-                            RpEssentialsScheduleManager.today().getDayOfWeek()));
-            for (ServerPlayer p : server.getPlayerList().getPlayers())
-                if (RpPerms.has(p, RpPerm.NOTIFY))
-                    p.sendSystemMessage(ColorHelper.parseColors(msg));
-        }
-        net.rp.rpessentials.compat.DiscordWebhook.onServerOpened(s.open().format(FMT), s.close().format(FMT));
-        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, ServerScheduleEvent.Cause.SCHEDULE,
-                s.open().format(FMT), s.close().format(FMT)));
-    }
-
-    // =========================================================================
     // FORCED STATE (/schedule forceopen, forceclose, resetforcestate and RpEssentialsAPI)
     // =========================================================================
 
     /** Forced state of the schedule config; NONE when the config is not loaded or the value is unknown. */
     public static ServerScheduleEvent.ForceState getForceState() {
         if (!Cfg.ready(ScheduleConfig.SPEC)) return ServerScheduleEvent.ForceState.NONE;
-        try {
-            return ServerScheduleEvent.ForceState.valueOf(ScheduleConfig.FORCE_STATE.get());
-        } catch (IllegalArgumentException e) {
-            return ServerScheduleEvent.ForceState.NONE;
-        }
+        return switch (ScheduleConfig.FORCE_STATE.get()) {
+            case "FORCE_OPEN" -> ServerScheduleEvent.ForceState.FORCE_OPEN;
+            case "FORCE_CLOSED" -> ServerScheduleEvent.ForceState.FORCE_CLOSED;
+            default -> ServerScheduleEvent.ForceState.NONE;
+        };
+    }
+
+    /** Details of the forced state, only while it is the one they were given for (it can be changed in the config). */
+    private static boolean hasForceDetails() {
+        return getForceState() != ServerScheduleEvent.ForceState.NONE && getForceState().name().equals(state().force);
+    }
+
+    /** Why the state is forced, "" when not said. */
+    public static String forceReason() {
+        return hasForceDetails() && state().forceReason != null ? state().forceReason : "";
+    }
+
+    /** End of the forced state, null = until someone changes it. */
+    private static LocalDateTime forceEnd() {
+        return hasForceDetails() && state().forceUntil > 0
+                ? LocalDateTime.ofInstant(Instant.ofEpochMilli(state().forceUntil), zone()) : null;
+    }
+
+    /** " (reason: ..., 2h left)" of the forced state, "" when there is nothing to say. */
+    public static String forceDetails(ServerPlayer v) {
+        List<String> parts = new ArrayList<>();
+        if (!forceReason().isEmpty()) parts.add(ServerLang.get(v, MessagesConfig.SCHED_FORCE_REASON, "reason", forceReason()));
+        LocalDateTime end = forceEnd();
+        if (end != null) parts.add(ServerLang.get(v, MessagesConfig.SCHED_FORCE_LEFT, "in", in(v, end)));
+        return parts.isEmpty() ? "" : " §8(" + String.join("§8, ", parts) + "§8)";
     }
 
     /** Posts ForceStateChanging and saves the new state. False when another mod cancelled it. */
-    private static boolean setForceState(MinecraftServer server, ServerScheduleEvent.ForceState state, String actor,
-                                         ServerScheduleEvent.Cause cause) {
-        var ev = new ServerScheduleEvent.ForceStateChanging(server, cause, getForceState(), state, actor);
+    private static boolean setForceState(MinecraftServer server, ServerScheduleEvent.ForceState next, String actor,
+                                         ServerScheduleEvent.Cause cause, int minutes, String reason) {
+        var ev = new ServerScheduleEvent.ForceStateChanging(server, cause, getForceState(), next, actor);
+        //#if forge
+        //? if (MinecraftForge.EVENT_BUS.post(ev)) return false;
+        //#else
         if (NeoForge.EVENT_BUS.post(ev).isCanceled()) return false;
+        //#endif
         if (Cfg.ready(ScheduleConfig.SPEC)) {
-            ScheduleConfig.FORCE_STATE.set(state.name());
+            ScheduleConfig.FORCE_STATE.set(next.name());
             ScheduleConfig.SPEC.save();
         }
+        State s = state();
+        s.force = next.name();
+        s.forceUntil = minutes > 0 ? System.currentTimeMillis() + minutes * 60_000L : 0L;
+        s.forceReason = reason == null ? "" : reason.strip();
+        sentWarnings.clear();
+        saveState();
         return true;
     }
 
     private static void notifyStaff(MinecraftServer server, net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key,
-                                    String... args) {
+                                    boolean details, String... args) {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(net.rp.rpessentials.lang.Msg.c(p, key, args));
+            if (!RpPerms.has(p, RpPerm.NOTIFY)) continue;
+            p.sendSystemMessage(ColorHelper.parseSection(ServerLang.get(p, key, args) + (details ? forceDetails(p) : "")));
         }
     }
 
     /** Back to the normal schedule. False when cancelled by another mod. */
     public static boolean resetForceState(MinecraftServer server, String actor, ServerScheduleEvent.Cause cause) {
-        if (!setForceState(server, ServerScheduleEvent.ForceState.NONE, actor, cause)) return false;
-        resetDailyFlags();
-        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_RESET, "staff", actor);
+        if (!setForceState(server, ServerScheduleEvent.ForceState.NONE, actor, cause, 0, "")) return false;
+        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_RESET, false, "staff", actor);
+        // Opens or closes at once if the schedule says something else.
+        applyState(server);
         return true;
     }
 
     /** Opens the server now, whatever the schedule says. False when cancelled by another mod. */
     public static boolean forceOpen(MinecraftServer server, String actor, ServerScheduleEvent.Cause cause) {
-        if (!setForceState(server, ServerScheduleEvent.ForceState.FORCE_OPEN, actor, cause)) return false;
-        resetDailyFlags();
-        markOpenedToday();
-        net.rp.rpessentials.compat.DiscordWebhook.onServerOpened(null, null);
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            String msg = ScheduleConfig.MSG_SERVER_OPENED.get()
-                    .replace("{open}", "now")
-                    .replace("{close}", "—")
-                    .replace("{day}", today().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH));
-            server.getPlayerList().broadcastSystemMessage(ColorHelper.parseColors(msg), false);
-        }
-        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_OPEN, "staff", actor);
+        return forceOpen(server, actor, cause, 0, "");
+    }
+
+    /** Same, for some minutes (0 = until someone changes it) and with a reason. */
+    public static boolean forceOpen(MinecraftServer server, String actor, ServerScheduleEvent.Cause cause, int minutes, String reason) {
+        if (!setForceState(server, ServerScheduleEvent.ForceState.FORCE_OPEN, actor, cause, minutes, reason)) return false;
+        setAnnounced(true);
+        announceOpened(server);
+        DiscordWebhook.onServerOpened(null, null, reason);
+        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_OPEN, true, "staff", actor);
         NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, cause, null, null));
         return true;
     }
 
     /** Closes the server now and kicks the players who are not exempt. False when cancelled by another mod. */
     public static boolean forceClose(MinecraftServer server, String actor, ServerScheduleEvent.Cause cause) {
-        if (!setForceState(server, ServerScheduleEvent.ForceState.FORCE_CLOSED, actor, cause)) return false;
-        markClosedToday();
-        net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
-        String kickMsg = Cfg.ready(ScheduleConfig.SPEC)
-                ? ScheduleConfig.FORCE_CLOSED_MESSAGE.get() : ScheduleConfig.FORCE_CLOSED_MESSAGE.getDefault();
-        List<ServerPlayer> toKick = new ArrayList<>();
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (!isScheduleExempt(p)) toKick.add(p);
-        }
-        for (ServerPlayer p : toKick) p.connection.disconnect(ColorHelper.parseColors(kickMsg));
-        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_CLOSE, "staff", actor, "count", String.valueOf(toKick.size()));
-        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, cause, toKick.size()));
+        return forceClose(server, actor, cause, 0, "");
+    }
+
+    /** Same, for some minutes (0 = until someone changes it) and with a reason, shown to the refused players. */
+    public static boolean forceClose(MinecraftServer server, String actor, ServerScheduleEvent.Cause cause, int minutes, String reason) {
+        if (!setForceState(server, ServerScheduleEvent.ForceState.FORCE_CLOSED, actor, cause, minutes, reason)) return false;
+        setAnnounced(false);
+        DiscordWebhook.onServerClosed(reason);
+        int kicked = kickNotExempt(server, true);
+        notifyStaff(server, MessagesConfig.STAFF_SCHED_FORCE_CLOSE, true, "staff", actor, "count", String.valueOf(kicked));
+        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, cause, kicked));
         return true;
     }
 
+    // =========================================================================
+    // OPENING, CLOSING
+    // =========================================================================
+    /** Told to everyone online: the staff always, and the players who were allowed to stay. */
+    private static void announceOpened(MinecraftServer server) {
+        LocalDateTime now = now(), close = closing();
+        server.getPlayerList().broadcastSystemMessage(ColorHelper.parseColors(ScheduleConfig.MSG_SERVER_OPENED.get()
+                .replace("{open}", now.format(FMT))
+                .replace("{close}", close != null ? close.format(FMT) : "—")
+                .replace("{day}", getDayName(null, now.getDayOfWeek()))), false);
+    }
 
-    public static int closeServer(MinecraftServer server) { return closeServer(server, true); }
+    private static int kickNotExempt(MinecraftServer server) { return kickNotExempt(server, false); }
 
-    /** Kicks the players who are not exempt (if kickNonStaff). Returns how many were kicked. */
-    public static int closeServer(MinecraftServer server, boolean announceToStaff) {
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            if ("FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) return 0;
-            if (!ScheduleConfig.KICK_NON_STAFF.get()) return 0;
-        } else {
-            return 0;
-        }
-        DaySchedule next = getNextOpenSchedule();
-        String open  = next != null ? next.open().format(FMT)  : "?";
-        String close = next != null ? next.close().format(FMT) : "?";
-        String day   = getNextOpenDayName();
-
-        String kickMsg;
-        if (Cfg.ready(ScheduleConfig.SPEC)) {
-            kickMsg = ScheduleConfig.MSG_SERVER_CLOSED.get()
-                    .replace("{open}",  open)
-                    .replace("{close}", close)
-                    .replace("{day}",   day);
-        } else {
-            kickMsg = ScheduleConfig.MSG_SERVER_CLOSED.getDefault().replace("{open}", open).replace("{close}", close).replace("{day}", day);
-        }
-        String finalKickMsg = kickMsg;
-        boolean announce = announceToStaff && !closeNoticeSent;
+    /** Kicks the players who are not exempt (kickNonStaff, or {@code always}). Returns how many. */
+    private static int kickNotExempt(MinecraftServer server, boolean always) {
+        if (!always && !Cfg.get(ScheduleConfig.KICK_NON_STAFF, true)) return 0;
         List<ServerPlayer> toKick = new ArrayList<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (!isScheduleExempt(p)) toKick.add(p);
-            else if (announce && RpPerms.has(p, RpPerm.NOTIFY))
-                p.sendSystemMessage(Component.literal(ServerLang.get(p, MessagesConfig.SCHED_SYS_STAFF_CLOSED)));
         }
-        if (announce) closeNoticeSent = true;
-        for (ServerPlayer p : toKick) {
-            p.connection.disconnect(ColorHelper.parseColors(finalKickMsg));
-            RpEssentials.LOGGER.info("[Schedule] Kicked {} (server closed)", p.getName().getString());
-        }
-        if (announceToStaff || !toKick.isEmpty()) {
-            sentWarnings.clear();
-            RpEssentials.LOGGER.info("[Schedule] Server closed, kicked {} player(s).", toKick.size());
-        }
+        if (toKick.isEmpty()) return 0;
+        Component message = closedMessage();
+        for (ServerPlayer p : toKick) p.connection.disconnect(message);
+        RpEssentials.LOGGER.info("[Schedule] Server closed, kicked {} player(s).", toKick.size());
         return toKick.size();
     }
 
+    /** Announces the state when it is not the one last announced (also after a restart). */
+    private static void applyState(MinecraftServer server) {
+        boolean open = isServerOpen();
+        boolean first = firstTick;
+        firstTick = false;
+        if (!scheduleOn() && getForceState() == ServerScheduleEvent.ForceState.NONE) {
+            // No schedule: a server that was closed is open again, nothing else to say.
+            if (Boolean.FALSE.equals(state().announcedOpen)) opened(server);
+            setAnnounced(null);
+            return;
+        }
+        Boolean told = state().announcedOpen;
+        if (told != null && told == open) {
+            if (first) {
+                RpEssentials.LOGGER.info("[Schedule] Server restarted, still {} to players.", open ? "open" : "closed");
+                DiscordWebhook.onServerRestarted(open);
+            }
+            return;
+        }
+        if (open) {
+            opened(server);
+        } else {
+            setAnnounced(false);
+            notifyStaff(server, MessagesConfig.SCHED_SYS_STAFF_CLOSED, false);
+            int kicked = kickNotExempt(server);
+            DiscordWebhook.onServerClosed(forceReason());
+            NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, ServerScheduleEvent.Cause.SCHEDULE, kicked));
+        }
+    }
+
+    private static void opened(MinecraftServer server) {
+        setAnnounced(true);
+        LocalDateTime close = closing();
+        String from = now().format(FMT), to = close != null ? close.format(FMT) : null;
+        announceOpened(server);
+        DiscordWebhook.onServerOpened(from, to, "");
+        NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Opened(server, ServerScheduleEvent.Cause.SCHEDULE, from, to));
+    }
+
+    /**
+     * Every 20 seconds: end of a forced state, opening and closing, warnings, then the death hours and HRP hours
+     * notifications.
+     */
+    public static void tick(MinecraftServer server) {
+        if (Cfg.ready(ScheduleConfig.SPEC)) {
+            LocalDateTime end = forceEnd();
+            if (end != null && seconds(end) <= 0) {
+                notifyStaff(server, MessagesConfig.SCHED_FORCE_ENDED, false);
+                if (setForceState(server, ServerScheduleEvent.ForceState.NONE, "System", ServerScheduleEvent.Cause.SCHEDULE, 0, "")) {
+                    RpEssentials.LOGGER.info("[Schedule] End of the forced state.");
+                } else {
+                    // Refused by another mod: kept as a forced state without end, not asked again every 20 seconds.
+                    state().forceUntil = 0L;
+                    saveState();
+                }
+            }
+            applyState(server);
+            warnings(server);
+        }
+        LocalTime time = nowTime();
+        tickDeathHoursNotifications(server, time);
+        tickHrpNotifications(server, time);
+    }
+
+    // =========================================================================
+    // WARNINGS
+    // =========================================================================
+    private static void warnings(MinecraftServer server) {
+        if (server.getPlayerList().getPlayerCount() == 0) return;
+        ServerScheduleEvent.ForceState force = getForceState();
+        // What will really happen.
+        LocalDateTime close = isServerOpen() ? closing() : null;
+        if (close != null) {
+            final LocalDateTime at = close;
+            warn("close", at, minutes -> server.getPlayerList().broadcastSystemMessage(ColorHelper.parseColors(
+                    (minutes == 1 ? ScheduleConfig.MSG_CLOSING_IMMINENT : ScheduleConfig.MSG_WARNING).get()
+                            .replace("{minutes}", String.valueOf(minutes)).replace("{close}", at.format(FMT))), false));
+        }
+        if (!scheduleOn() || force == ServerScheduleEvent.ForceState.NONE) return;
+        // What would have happened without the forced state.
+        LocalDateTime end = forceEnd();
+        if (force == ServerScheduleEvent.ForceState.FORCE_OPEN) {
+            ScheduleClock.Session s = clock.active(now());
+            if (s != null && !s.end().equals(close)) supposed(server, "supposedClose", s.end(), MessagesConfig.SCHED_SUPPOSED_CLOSE);
+        } else {
+            ScheduleClock.Session s = clock.next(now());
+            if (s != null && (end == null || end.isAfter(s.start()))) supposed(server, "supposedOpen", s.start(), MessagesConfig.SCHED_SUPPOSED_OPEN);
+        }
+    }
+
+    private static void supposed(MinecraftServer server, String kind, LocalDateTime at,
+                                 net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key) {
+        warn(kind, at, minutes -> {
+            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                p.sendSystemMessage(Msg.c(p, key, "minutes", String.valueOf(minutes), "time", at.format(FMT)));
+            }
+        });
+    }
+
+    private static void warn(String kind, LocalDateTime at, java.util.function.IntConsumer send) {
+        long remaining = seconds(at) / 60;
+        if (remaining < 0) return;
+        for (int minutes : ScheduleConfig.WARNING_TIMES.get()) {
+            // A 2 minutes window: the check runs every 20 seconds, and the server can lag.
+            if (remaining > minutes || remaining <= minutes - 2) continue;
+            if (sentWarnings.size() > 200) sentWarnings.clear();
+            if (sentWarnings.add(at + "|" + kind + "|" + minutes)) send.accept(minutes);
+        }
+    }
+
+    // =========================================================================
+    // DEATH HOURS / HRP HOURS NOTIFICATIONS
+    // =========================================================================
     public static void tickDeathHoursNotifications(MinecraftServer server, LocalTime now) {
         if (Cfg.ready(ScheduleConfig.SPEC)) {
             if (!ScheduleConfig.DEATH_HOURS_ENABLED.get()) return;
@@ -689,57 +739,20 @@ public class RpEssentialsScheduleManager {
         }
     }
 
-    // =========================================================================
-    // UTILITAIRES PRIVÉS
-    // =========================================================================
-    private record NextOpening(DayOfWeek day, DaySchedule schedule, boolean today) {}
-
-    private static NextOpening findNextOpening() {
-        LocalTime now = nowTime();
-        LocalDate todayDate = today();
-        // Look a bit further than a week: a closed exception can push the next opening.
-        for (int i = 0; i <= 31; i++) {
-            LocalDate date = todayDate.plusDays(i);
-            DayOfWeek day = date.getDayOfWeek();
-            DaySchedule s = scheduleFor(date);
-            if (s == null) continue;
-            if (i == 0 && !now.isBefore(s.open())) continue;
-            return new NextOpening(day, s, i == 0);
-        }
-        return null;
-    }
-
-    private static DaySchedule getNextOpenSchedule() {
-        NextOpening n = findNextOpening();
-        return n != null ? n.schedule() : null;
-    }
-
-    private static String getNextOpenDayName() {
-        return getNextOpenDayName(null);
-    }
-
-    private static String getNextOpenDayName(ServerPlayer v) {
-        NextOpening n = findNextOpening();
-        return n != null ? getDayName(v, n.day()) : ServerLang.get(v, MessagesConfig.UI_NA);
-    }
-
-    // =====================================================================================
-    // UTILITAIRE — parsing de plage "HH:MM-HH:MM", supporte cross-minuit, fuseau horaire
-    // =====================================================================================
+    /** Plage "HH:MM-HH:MM", supporte cross-minuit. */
     public static boolean isInSlot(LocalTime now, String slot) {
-        if (slot == null || !slot.contains("-")) return false;
-        String[] p = slot.split("-", 2);
-        try {
-            LocalTime start = LocalTime.parse(p[0].trim(), FMT);
-            LocalTime end   = LocalTime.parse(p[1].trim(), FMT);
-            // Reuse DaySchedule logic for consistency
-            return new DaySchedule(start, end).isOpen(now);
-        } catch (Exception e) {
+        ScheduleClock.Slot s = ScheduleClock.parseSlot(slot);
+        if (s == null) {
             RpEssentials.LOGGER.warn("[Schedule] Invalid slot format: '{}'", slot);
             return false;
         }
+        if (s.close().isAfter(s.open())) return !now.isBefore(s.open()) && now.isBefore(s.close());
+        return !now.isBefore(s.open()) || now.isBefore(s.close());
     }
 
+    // =========================================================================
+    // CONFIG PROBLEMS, TIME
+    // =========================================================================
     private record ConfigWarning(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<String> key, String[] args) {}
     private static final List<ConfigWarning> configWarnings = new ArrayList<>();
 
@@ -758,32 +771,9 @@ public class RpEssentialsScheduleManager {
 
     public static java.time.ZoneId zone() { return TimeHelper.zone(); }
 
-    public static LocalTime nowTime() { return TimeHelper.nowTime(); }
+    public static LocalDateTime now() { return TimeHelper.now(); }
 
-    /**
-     * Every 20 seconds: opening message, closing warnings and closing of the server when the
-     * schedule says so, then the death hours and HRP hours notifications.
-     */
-    public static void tick(MinecraftServer server) {
-        LocalTime now = nowTime();
-        if (Cfg.ready(ScheduleConfig.SPEC) && ScheduleConfig.ENABLE_SCHEDULE.get() && !getSchedules().isEmpty()) {
-            DaySchedule active = getActiveSchedule();
-            DaySchedule today = getTodaySchedule();
-            if (!hasOpenedToday() && today != null && today == active) {
-                markOpenedToday();
-                sendOpeningMessage(server, today);
-            }
-            if (active != null) checkWarnings(server, now, active);
-            if (!hasClosedToday() && active == null && !"FORCE_OPEN".equals(ScheduleConfig.FORCE_STATE.get())) {
-                markClosedToday();
-                int kicked = closeServer(server);
-                net.rp.rpessentials.compat.DiscordWebhook.onServerClosed();
-                NeoForge.EVENT_BUS.post(new ServerScheduleEvent.Closed(server, ServerScheduleEvent.Cause.SCHEDULE, kicked));
-            }
-        }
-        tickDeathHoursNotifications(server, now);
-        tickHrpNotifications(server, now);
-    }
+    public static LocalTime nowTime() { return TimeHelper.nowTime(); }
 
     public static LocalDate today() { return TimeHelper.today(); }
 }

@@ -171,6 +171,7 @@ public class MessagesConfig {
     // =========================================================================
     // CATEGORY: SETROLE
     // =========================================================================
+    public static final ModConfigSpec.ConfigValue<String> SCHED_FORCE_REASON, SCHED_FORCE_LEFT, SCHED_REOPENS_IN, SCHED_FORCE_ENDED, SCHED_SUPPOSED_CLOSE, SCHED_SUPPOSED_OPEN, LOGIN_FORCE_OPEN, SCHED_NEXT_NO_CLOSING, SCHED_WARN_INVALID_SLOT, SETROLE_QUEUED, DISCORD_RESTARTED_OPEN, DISCORD_RESTARTED_CLOSED, SCHED_DURATION_HINT;
     public static final ModConfigSpec.ConfigValue<String> SETROLE_UNKNOWN;
     public static final ModConfigSpec.ConfigValue<String> SETROLE_SUCCESS_STAFF;
     public static final ModConfigSpec.ConfigValue<String> SETROLE_SUCCESS_PLAYER;
@@ -392,6 +393,7 @@ public class MessagesConfig {
             STAFF_HELP_STAFF;
     public static final ModConfigSpec.ConfigValue<String> STAFF_TOOLSX_OP_TOO_HIGH,
             STAFF_TOOLSX_OP_SET,
+            STAFF_TOOLSX_OP_LOWER_SELF,
             STAFF_TOOLSX_OP_NOTHING,
             STAFF_TOOLSX_STAFF_LOG;
     public static final ModConfigSpec.ConfigValue<String> STAFF_LASTCO_COPY_HOVER;
@@ -421,6 +423,9 @@ public class MessagesConfig {
             STAFF_STATS_V_HOLDERS,
             STAFF_STATS_V_WARNS;
     public static final ModConfigSpec.ConfigValue<String> STAFF_CFG_BACKUP,
+            STAFF_CFG_BACKUP_DONE,
+            STAFF_CFG_BACKUP_COPY,
+            STAFF_CFG_BACKUP_FAIL,
             STAFF_CFG_EXPORT_DONE,
             STAFF_CFG_EXPORT_FAIL,
             STAFF_CFG_VALUE_SET,
@@ -688,12 +693,16 @@ public class MessagesConfig {
             REPORT_CLOSED, REPORT_REOPENED, REPORT_DELETED, REPORT_ALREADY_CLOSED, REPORT_NOT_CLOSED,
             REPORT_REPORTER_CLOSED, REPORT_LIST_HEADER, REPORT_LIST_NONE, REPORT_LIST_LINE, REPORT_INFO,
             REPORT_INFO_HANDLER, REPORT_INFO_NOTE, REPORT_STATUS_OPEN, REPORT_STATUS_CLAIMED, REPORT_STATUS_CLOSED,
-            REPORT_BTN_CLAIM, REPORT_BTN_CLOSE, REPORT_BTN_TP, REPORT_TP_FAILED;
+            REPORT_BTN_CLAIM, REPORT_BTN_CLOSE, REPORT_BTN_TP, REPORT_TP_FAILED,
+            HISTORY_T_REPORT_STAFF, REPORT_H_PLAYER, REPORT_H_STAFF, REPORT_H_NOTE, REPORT_H_CLAIM, REPORT_H_CLOSE,
+            REPORT_H_REOPEN, REPORT_H_DELETE, REPORT_H_TP;
 
     public static final ModConfigSpec.ConfigValue<String> DISCORD_BY, DISCORD_SERVER_OPENED, DISCORD_SERVER_OPENED_DESC,
             DISCORD_SERVER_CLOSED, DISCORD_TEST_TITLE, DISCORD_TEST_DESC, DISCORD_TEST_SENDING, DISCORD_TEST_OK,
             DISCORD_TEST_FAIL, DISCORD_NOT_SET, DISCORD_BAD_URL, DISCORD_ERR_INVALID_URL, DISCORD_ERR_QUEUE_FULL,
-            DISCORD_ERR_GONE, DISCORD_ERR_REFUSED, DISCORD_ERR_HTTP, DISCORD_ERR_RATE, DISCORD_ERR_NETWORK;
+            DISCORD_ERR_GONE, DISCORD_ERR_REFUSED, DISCORD_ERR_HTTP, DISCORD_ERR_RATE, DISCORD_ERR_NETWORK,
+            DISCORD_TEST_DESC_BOT, DISCORD_BOT_INCOMPLETE, DISCORD_ERR_TOKEN, DISCORD_ERR_CHANNEL_ID,
+            DISCORD_ERR_NO_ACCESS, DISCORD_ERR_CHANNEL_GONE;
 
     public static final ModConfigSpec.ConfigValue<String> HISTORY_T_SHEET, SHEET_F_NAME, SHEET_F_AGE, SHEET_F_RACE,
             SHEET_F_LANGUAGES, SHEET_F_APPEARANCE, SHEET_F_DESCRIPTION, SHEET_F_LORE, SHEET_SAVED, SHEET_NO_CHANGE,
@@ -1742,6 +1751,7 @@ public class MessagesConfig {
         BUILDER.push("Staff Tools Extra");
         STAFF_TOOLSX_OP_TOO_HIGH = BUILDER.comment("/rpessentials op: level above the executor.").define("opLevelTooHigh", "§c[RpEssentials] You cannot grant a level higher than your own.");
         STAFF_TOOLSX_OP_SET = BUILDER.comment("Placeholders: {player} {level}").define("opSet", "§a[RpEssentials] §f{player} §ais now OP level §e{level}");
+        STAFF_TOOLSX_OP_LOWER_SELF = BUILDER.comment("/op: asks to confirm before lowering the OP level of the one who types it. Placeholders: {old} {level}").define("opLowerSelfConfirm", "§e[RpEssentials] This lowers your own OP level from §f{old} §eto §f{level}§e. Type the command again within 30 seconds, or:");
         STAFF_TOOLSX_OP_NOTHING = BUILDER.comment("/rpessentials op: nothing changed.").define("opNothingChanged", "§c[RpEssentials] Nothing changed (already at this level or higher than you).");
         STAFF_TOOLSX_STAFF_LOG = BUILDER.comment("Staff log line. Placeholder: {message}").define("staffLog", "§7§o[StaffLog] {message}");
         BUILDER.pop();
@@ -1780,6 +1790,10 @@ public class MessagesConfig {
 
         BUILDER.push("Staff Config");
         STAFF_CFG_BACKUP = BUILDER.comment("config backup.").define("backupStarted", "§a[RpEssentials] Backup started.");
+        STAFF_CFG_BACKUP_DONE = BUILDER.comment("Backup written. Placeholders: {file} {size} {path}")
+                .define("backupDone", "§a[RpEssentials] Backup done §7({size})§a: §f{path}");
+        STAFF_CFG_BACKUP_COPY = BUILDER.comment("Hover of backupDone.").define("backupCopy", "Click to copy the path");
+        STAFF_CFG_BACKUP_FAIL = BUILDER.comment("Placeholder: {error}").define("backupFailed", "§c[RpEssentials] Backup failed: {error}");
         STAFF_CFG_EXPORT_DONE = BUILDER.comment("config exportlang. Placeholder: {path}").define("exportWritten", "§a[RpEssentials] Written: {path}");
         STAFF_CFG_EXPORT_FAIL = BUILDER.comment("Placeholder: {error}").define("exportFailed", "§c[RpEssentials] Export failed: {error}");
         STAFF_CFG_VALUE_SET = BUILDER.comment("config set. Placeholders: {name} {value}").define("valueSet", "§a[RpEssentials] {name} set to: {value}");
@@ -2153,6 +2167,17 @@ public class MessagesConfig {
         REPORT_BTN_CLOSE = BUILDER.define("buttonClose", "§a[Close]");
         REPORT_BTN_TP = BUILDER.define("buttonTp", "§b[TP]");
         REPORT_TP_FAILED = BUILDER.define("tpFailed", "§c[Report] This place cannot be reached.");
+        HISTORY_T_REPORT_STAFF = BUILDER.comment("History type label (history of the staff member).").define("historyTypeStaff", "Report handled");
+        REPORT_H_PLAYER = BUILDER.comment("Staff action, in the history of the reported player. Placeholders: {id} {action} {player} {reporter} {reason} {note}")
+                .define("historyPlayer", "#{id} {action} §8- §7reported by §f{reporter}§7: {reason}{note}");
+        REPORT_H_STAFF = BUILDER.comment("Staff action, in the history of the staff member. Placeholders: {id} {action} {player} {reporter} {reason} {note}")
+                .define("historyStaff", "#{id} {action} §8- §f{player} §7reported by §f{reporter}§7: {reason}{note}");
+        REPORT_H_NOTE = BUILDER.comment("Closing note, value of {note} above. Placeholder: {note}").define("historyNote", " §8- §7note: §f{note}");
+        REPORT_H_CLAIM = BUILDER.comment("Values of {action} above.").define("historyClaim", "taken in charge");
+        REPORT_H_CLOSE = BUILDER.define("historyClose", "closed");
+        REPORT_H_REOPEN = BUILDER.define("historyReopen", "reopened");
+        REPORT_H_DELETE = BUILDER.define("historyDelete", "deleted");
+        REPORT_H_TP = BUILDER.define("historyTp", "teleport to the place");
         BUILDER.pop();
 
         BUILDER.push("Discord");
@@ -2165,7 +2190,7 @@ public class MessagesConfig {
         DISCORD_TEST_SENDING = BUILDER.define("testSending", "§7[Discord] Sending a test message...");
         DISCORD_TEST_OK = BUILDER.define("testOk", "§a[Discord] Test message sent, check the channel.");
         DISCORD_TEST_FAIL = BUILDER.comment("Placeholder: {error}").define("testFail", "§c[Discord] Sending failed: §f{error}");
-        DISCORD_NOT_SET = BUILDER.define("notSet", "§c[Discord] No webhook URL set (discordWebhookUrl in rpessentials-core.toml).");
+        DISCORD_NOT_SET = BUILDER.define("notSet", "§c[Discord] No webhook URL (discordWebhookUrl) nor bot (discordBotToken and discordChannelId) set in rpessentials-core.toml.");
         DISCORD_BAD_URL = BUILDER.define("badUrl", "§c[Discord] discordWebhookUrl is not a Discord webhook URL (https://discord.com/api/webhooks/...).");
         DISCORD_ERR_INVALID_URL = BUILDER.comment("Failure reasons, used in {error} of testFail and in the log.").define("errorInvalidUrl", "invalid webhook URL");
         DISCORD_ERR_QUEUE_FULL = BUILDER.define("errorQueueFull", "too many messages waiting");
@@ -2174,6 +2199,12 @@ public class MessagesConfig {
         DISCORD_ERR_HTTP = BUILDER.comment("Placeholder: {code}").define("errorHttp", "HTTP error {code}");
         DISCORD_ERR_RATE = BUILDER.define("errorRateLimited", "too many messages, Discord asked to slow down");
         DISCORD_ERR_NETWORK = BUILDER.comment("Placeholder: {type}").define("errorNetwork", "network error ({type})");
+        DISCORD_TEST_DESC_BOT = BUILDER.define("testDescBot", "The bot works: staff events will be posted in this channel.");
+        DISCORD_BOT_INCOMPLETE = BUILDER.define("botIncomplete", "§e[Discord] discordChannelId only works with discordBotToken (both are needed): a webhook always posts in its own channel.");
+        DISCORD_ERR_TOKEN = BUILDER.define("errorBotToken", "wrong bot token (discordBotToken)");
+        DISCORD_ERR_CHANNEL_ID = BUILDER.define("errorChannelId", "discordChannelId is not a channel ID (17 to 20 digits)");
+        DISCORD_ERR_NO_ACCESS = BUILDER.define("errorBotAccess", "the bot cannot write in this channel (View Channel, Send Messages and Embed Links permissions)");
+        DISCORD_ERR_CHANNEL_GONE = BUILDER.define("errorChannelUnknown", "channel not found (wrong ID, or the bot is not on this server)");
         BUILDER.pop();
 
         BUILDER.push("Character Sheet");
@@ -2190,7 +2221,26 @@ public class MessagesConfig {
         SHEET_DISABLED = BUILDER.define("disabled", "§c[RpEssentials] Character sheets are disabled (enableCharacterSheets in rpessentials-rp.toml).");
         BUILDER.pop();
 
+        BUILDER.push("Schedule Forced");
+        SCHED_FORCE_REASON = BUILDER.comment("Reason given with /schedule forceopen / forceclose. Placeholder: {reason}").define("forceReason", "§7Reason: §f{reason}");
+        SCHED_FORCE_LEFT = BUILDER.comment("Time left of a forced state. Placeholder: {in}").define("forceLeft", "§7{in} left");
+        SCHED_REOPENS_IN = BUILDER.comment("Shown to refused players when the end of a forced closing is known. Placeholder: {in}").define("reopensIn", "§7Opens again in §f{in}");
+        SCHED_FORCE_ENDED = BUILDER.comment("Alert to staff when a forced state reaches its end.").define("forceEnded", "§e[Schedule] End of the forced state. The schedule resumes normally.");
+        SCHED_SUPPOSED_CLOSE = BUILDER.comment("Warning while the server is forcibly open. Placeholders: {minutes} {time}").define("supposedClose", "§e[Schedule] The server is supposed to close in §c{minutes} min §e(at {time}), but it is forcibly open.");
+        SCHED_SUPPOSED_OPEN = BUILDER.comment("Warning while the server is forcibly closed. Placeholders: {minutes} {time}").define("supposedOpen", "§e[Schedule] The server is supposed to open in §a{minutes} min §e(at {time}), but it is forcibly closed.");
+        LOGIN_FORCE_OPEN = BUILDER.comment("Staff login notice while the server is forcibly open.").define("forceOpenWarning", "§6[Schedule] ⚠ The server is currently forcibly OPEN. §f/schedule resetforcestate §6goes back to the schedule.");
+        SCHED_NEXT_NO_CLOSING = BUILDER.comment("/schedule next event: open, no closing planned.").define("nextNoClosing", "Open: no closing planned");
+        SCHED_WARN_INVALID_SLOT = BUILDER.comment("Schedule config warning. Placeholders: {day} {value}").define("invalidSlot", "{day}: invalid slot '{value}' (expected HH:MM-HH:MM), ignored.");
+        SETROLE_QUEUED = BUILDER.comment("/setrole on a player who is not connected. Placeholders: {role} {player}").define("setroleQueued", "§a✔ Role §e§l{role} §awill be given to §e§l{player} §aat their next login. §7(already counted by the schedule)");
+        DISCORD_RESTARTED_OPEN = BUILDER.comment("Discord: the server restarted while open.").define("restartedOpen", "Server restarted, still open to players");
+        DISCORD_RESTARTED_CLOSED = BUILDER.comment("Discord: the server restarted while closed.").define("restartedClosed", "Server restarted, still closed to players");
+        SCHED_DURATION_HINT = BUILDER.comment("/schedule forceopen / forceclose: duration too long. Placeholder: {value}").define("forceUsage", "§c[Schedule] Invalid duration: {value} (examples: 30m, 2h, 1d12h)");
+        BUILDER.pop();
+
         SPEC = BUILDER.build();
+
+        // Tooltip of the license item, drawn on the client.
+        ConfigAccess.client(SPEC, LICENSE_REVOKED_TITLE, LICENSE_REVOKED_BODY, LICENSE_TOOLTIP_OFFICIAL, LICENSE_TOOLTIP_NONTRANSFERABLE);
     }
 
     // =========================================================================

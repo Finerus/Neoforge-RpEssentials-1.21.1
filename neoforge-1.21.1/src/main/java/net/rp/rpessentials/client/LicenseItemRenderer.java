@@ -11,7 +11,10 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+//#if forge
+//#else
 import net.minecraft.core.component.DataComponents;
+//#endif
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
@@ -19,7 +22,10 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+//#if forge
+//#else
 import net.minecraft.world.item.component.CustomData;
+//#endif
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.rp.rpessentials.util.ColorHelper;
@@ -62,9 +68,17 @@ public class LicenseItemRenderer extends BlockEntityWithoutLevelRenderer {
         String profId = "", holder = "?", issueDate = "?", expiryDate = null;
         boolean revoked = false;
 
+        //#if forge
+        //? CompoundTag cd = stack.getTag();
+        //#else
         CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
+        //#endif
         if (cd != null) {
+            //#if forge
+            //? CompoundTag tag = cd.copy();
+            //#else
             CompoundTag tag = cd.copyTag();
+            //#endif
             profId    = tag.getString("professionId");
             holder    = tag.contains("holderName")  ? tag.getString("holderName")  : "?";
             issueDate = tag.contains("issueDate")   ? tag.getString("issueDate")   : "?";
@@ -96,10 +110,17 @@ public class LicenseItemRenderer extends BlockEntityWithoutLevelRenderer {
         var vc = buffer.getBuffer(RenderType.text(texture));
         Matrix4f m = ps.last().pose();
 
+        //#if forge
+        //? vc.vertex(m, -hw,  hh, 0f).color(255, 255, 255, 255).uv(0f, 1f).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        //? vc.vertex(m,  hw,  hh, 0f).color(255, 255, 255, 255).uv(1f, 1f).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        //? vc.vertex(m,  hw, -hh, 0f).color(255, 255, 255, 255).uv(1f, 0f).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        //? vc.vertex(m, -hw, -hh, 0f).color(255, 255, 255, 255).uv(0f, 0f).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        //#else
         vc.addVertex(m, -hw,  hh, 0f).setColor(255, 255, 255, 255).setUv(0f, 1f).setLight(LightTexture.FULL_BRIGHT);
         vc.addVertex(m,  hw,  hh, 0f).setColor(255, 255, 255, 255).setUv(1f, 1f).setLight(LightTexture.FULL_BRIGHT);
         vc.addVertex(m,  hw, -hh, 0f).setColor(255, 255, 255, 255).setUv(1f, 0f).setLight(LightTexture.FULL_BRIGHT);
         vc.addVertex(m, -hw, -hh, 0f).setColor(255, 255, 255, 255).setUv(0f, 0f).setLight(LightTexture.FULL_BRIGHT);
+        //#endif
     }
 
     private void renderText(PoseStack ps, MultiBufferSource buffer,

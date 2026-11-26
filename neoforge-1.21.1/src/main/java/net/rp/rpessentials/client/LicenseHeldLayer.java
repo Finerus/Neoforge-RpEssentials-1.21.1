@@ -8,7 +8,10 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+//#if forge
+//#else
 import net.minecraft.client.resources.PlayerSkin;
+//#endif
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -98,13 +101,21 @@ public class LicenseHeldLayer extends RenderLayer<AbstractClientPlayer, PlayerMo
     }
 
     /** Adds the layer to both player models (wide and slim arms). */
+    //#if forge
+    //? @EventBusSubscriber(modid = RpEssentials.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
+    //#else
     @EventBusSubscriber(modid = RpEssentials.MODID, value = Dist.CLIENT)
+    //#endif
     public static final class Registration {
         private Registration() {}
 
         @SubscribeEvent
         public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
+            //#if forge
+            //? for (String model : event.getSkins()) {
+            //#else
             for (PlayerSkin.Model model : event.getSkins()) {
+            //#endif
                 if (event.getSkin(model) instanceof PlayerRenderer renderer) {
                     renderer.addLayer(new LicenseHeldLayer(renderer));
                 }

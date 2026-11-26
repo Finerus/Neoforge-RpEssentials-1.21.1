@@ -31,6 +31,7 @@ public class RpEssentialsConfig {
 
     // === ROLES ===
     public static ModConfigSpec.ConfigValue<List<? extends String>> ROLES;
+    public static final ModConfigSpec.BooleanValue PROTECT_ROLE_TAGS;
     public static final ModConfigSpec.BooleanValue LP_SYNC_ENABLED;
     public static final ModConfigSpec.BooleanValue LP_SYNC_IMPORT_ALL_GROUPS;
 
@@ -39,7 +40,8 @@ public class RpEssentialsConfig {
     public static final ModConfigSpec.BooleanValue USE_LUCKPERMS_GROUPS;
 
     // === WORLD BORDER & ZONES ===
-    public static final ModConfigSpec.BooleanValue ENABLE_WORLD_BORDER_WARNING;
+    public static final ModConfigSpec.BooleanValue ENABLE_WORLD_BORDER;
+    public static final ModConfigSpec.BooleanValue ENABLE_NAMED_ZONES;
     public static final ModConfigSpec.IntValue WORLD_BORDER_DISTANCE;
     public static final ModConfigSpec.ConfigValue<String> WORLD_BORDER_SHAPE;
     public static final ModConfigSpec.BooleanValue WORLD_BORDER_TELEPORT_ENABLED;
@@ -88,6 +90,8 @@ public class RpEssentialsConfig {
 
     public static final ModConfigSpec.ConfigValue<String> DISCORD_WEBHOOK_URL;
     public static final ModConfigSpec.ConfigValue<String> DISCORD_USERNAME;
+    public static final ModConfigSpec.ConfigValue<String> DISCORD_BOT_TOKEN;
+    public static final ModConfigSpec.ConfigValue<String> DISCORD_CHANNEL_ID;
     public static final ModConfigSpec.BooleanValue DISCORD_REPORTS;
     public static final ModConfigSpec.BooleanValue DISCORD_WARNS;
     public static final ModConfigSpec.BooleanValue DISCORD_MUTES;
@@ -146,11 +150,13 @@ public class RpEssentialsConfig {
                 .defineInRange("sneakProximityDistance", 1, 1, 32);
 
         OPS_SEE_ALL = BUILDER
-                .comment("If true, operators and staff always see all names clearly.")
+                .comment("If true, operators and staff always see all names clearly.",
+                        "A role with rpessentials.see.all (rpessentials.* included) sees all names clearly even when this is false.")
                 .define("opsSeeAll", true);
 
         DEBUG_SELF_BLUR = BUILDER
-                .comment("DEBUG only — applies blur to yourself. Never leave enabled in production.")
+                .comment("DEBUG only — applies blur to everyone, yourself included, whatever the distance and the permissions",
+                        "(except the always visible players). Never leave enabled in production.")
                 .define("debugSelfBlur", false);
 
         HIDE_NAMETAGS = BUILDER
@@ -163,16 +169,31 @@ public class RpEssentialsConfig {
                 .define("showNametagPrefixSuffix", true);
 
         WHITELIST = BUILDER
-                .comment("Players who always see everything clearly and are never obfuscated.")
+                .comment("Players who always see everything clearly and are never obfuscated.",
+                        "A Minecraft name is replaced by the UUID of the player when they join: UUID (Name).")
+                //#if forge
+                //? .defineListAllowEmpty("whitelist", List.of(), obj -> obj instanceof String);
+                //#else
                 .defineList("whitelist", List.of(), obj -> obj instanceof String);
+                //#endif
 
         BLACKLIST = BUILDER
-                .comment("Players who are always obfuscated regardless of proximity.")
+                .comment("Players who are always obfuscated regardless of proximity.",
+                        "A Minecraft name is replaced by the UUID of the player when they join: UUID (Name).")
+                //#if forge
+                //? .defineListAllowEmpty("blacklist", List.of(), obj -> obj instanceof String);
+                //#else
                 .defineList("blacklist", List.of(), obj -> obj instanceof String);
+                //#endif
 
         ALWAYS_VISIBLE_LIST = BUILDER
-                .comment("Players who are always shown clearly in the TabList.")
+                .comment("Players who are always shown clearly in the TabList.",
+                        "A Minecraft name is replaced by the UUID of the player when they join: UUID (Name).")
+                //#if forge
+                //? .defineListAllowEmpty("alwaysVisibleList", List.of(), obj -> obj instanceof String);
+                //#else
                 .defineList("alwaysVisibleList", List.of(), obj -> obj instanceof String);
+                //#endif
 
         BLUR_SPECTATORS = BUILDER
                 .comment("If true, spectators are also subject to name blurring.")
@@ -203,7 +224,11 @@ public class RpEssentialsConfig {
 
         ROLES = BUILDER
                 .comment(rolesComment())
+                //#if forge
+                //? .defineListAllowEmpty("roles",
+                //#else
                 .defineList("roles",
+                //#endif
                         java.util.Arrays.asList(
                                 "admin;admin;rpessentials.*",
                                 "moderator;moderator;rpessentials.staff,rpessentials.bypass.profession,rpessentials.see.nicknames,"
@@ -213,6 +238,13 @@ public class RpEssentialsConfig {
                                 "player;player"
                         ),
                         obj -> obj instanceof String && ((String) obj).contains(";"));
+
+        PROTECT_ROLE_TAGS = BUILDER
+                .comment("A role is a vanilla tag on the player, so /tag (OP 2, command blocks) could give its permissions.",
+                        "If true, /tag add and /tag remove refuse the tag of a role that has permissions, unless the one who runs",
+                        "the command may give roles (rpessentials.roles.set). Other tags, roles without permissions, the console",
+                        "and the functions run by the server itself are never refused.")
+                .define("protectRoleTags", true);
 
         LP_SYNC_ENABLED = BUILDER
                 .comment("Two way sync between the roles and the LuckPerms groups.",
@@ -233,11 +265,18 @@ public class RpEssentialsConfig {
         // =========================================================================
         // WORLD BORDER & ZONES
         // =========================================================================
-        BUILDER.push("World Border Warning");
+        BUILDER.push("World Border");
 
-        ENABLE_WORLD_BORDER_WARNING = BUILDER
-                .comment("Enable warning when players reach the world border distance. Since the 4.2.0, if the value is set to false, the world border will now be completely disabled.")
-                .define("enableWorldBorderWarning", true);
+        ENABLE_WORLD_BORDER = BUILDER
+                .comment("World border on or off. false = no distance limit at all: no warning, no pre-warning, no teleport.",
+                        "Named zones have their own switch (enableNamedZones).",
+                        "Replaces enableWorldBorderWarning (before 6.2.0), which also turned the named zones off.")
+                .define("enableWorldBorder", true);
+
+        ENABLE_NAMED_ZONES = BUILDER
+                .comment("Named zones on or off (namedZones): enter / exit messages and zoneActions.",
+                        "Restrictions limited to a zone (|zone=<name>) keep working when this is false.")
+                .define("enableNamedZones", true);
 
         WORLD_BORDER_DISTANCE = BUILDER
                 .comment("Distance from spawn (blocks) before warning is triggered.")
@@ -264,7 +303,11 @@ public class RpEssentialsConfig {
                         "  prewarnDistance: pre-warning distance (0 = use global value)",
                         "Example: minecraft:the_nether;1000;false;800"
                 )
+                //#if forge
+                //? .defineListAllowEmpty("worldBorderDimensionOverrides",
+                //#else
                 .defineList("worldBorderDimensionOverrides",
+                //#endif
                         List.of(),
                         obj -> obj instanceof String && ((String) obj).contains(";"));
 
@@ -298,14 +341,22 @@ public class RpEssentialsConfig {
                         "Format with dimension:    name;centerX;centerZ;radius;dimension;messageEnter;messageExit",
                         "Example: spawn;0;0;50;minecraft:overworld;Welcome to spawn!;You left spawn.",
                         "The radius field accepts: 50 (circle), square:50, rect:50x30, ellipse:50x30 (half sizes, X then Z).")
+                //#if forge
+                //? .defineListAllowEmpty("namedZones", Arrays.asList(), obj -> obj instanceof String);
+                //#else
                 .defineList("namedZones", Arrays.asList(), obj -> obj instanceof String);
+                //#endif
 
         ZONE_ACTIONS = BUILDER
                 .comment("Commands run when a player enters or leaves a named zone.",
                         "Format: zoneName;enter|exit;command",
                         "Placeholder: {player}",
                         "Example: spawn;enter;effect give {player} minecraft:regeneration 10 0 true")
+                //#if forge
+                //? .defineListAllowEmpty("zoneActions", List.of(),
+                //#else
                 .defineList("zoneActions", List.of(),
+                //#endif
                         obj -> obj instanceof String && ((String) obj).split(";", 3).length == 3);
 
         ZONE_MESSAGE_MODE = BUILDER
@@ -318,7 +369,7 @@ public class RpEssentialsConfig {
                 .define("zoneMessageMode", "ACTION_BAR");
         ConfigRules.displayMode(ZONE_MESSAGE_MODE);
 
-        BUILDER.pop(); // World Border Warning
+        BUILDER.pop(); // World Border
 
         // =========================================================================
         // DEATH RP
@@ -512,8 +563,22 @@ public class RpEssentialsConfig {
                 .define("discordWebhookUrl", "");
 
         DISCORD_USERNAME = BUILDER
-                .comment("Name shown as the author of the messages in Discord.")
+                .comment("Name shown as the author of the messages in Discord (webhook only, a bot keeps its own name).")
                 .define("discordUsername", "RpEssentials");
+
+        DISCORD_BOT_TOKEN = BUILDER
+                .comment("To choose the channel by its ID, messages are sent by a Discord bot instead of the webhook",
+                        "(Discord ties a webhook to the channel it was created in, its channel cannot be chosen).",
+                        "Create a bot on https://discord.com/developers/applications, invite it on your server with the",
+                        "View Channel, Send Messages and Embed Links permissions, and paste its token here.",
+                        "Used only when discordChannelId is set too; otherwise the webhook is used.",
+                        "Keep it secret: anyone with this token controls the bot.")
+                .define("discordBotToken", "");
+
+        DISCORD_CHANNEL_ID = BUILDER
+                .comment("ID of the channel (or thread) where the bot posts. Needs discordBotToken.",
+                        "In Discord: Settings > Advanced > Developer Mode, then right click the channel > Copy Channel ID.")
+                .define("discordChannelId", "");
 
         DISCORD_REPORTS = BUILDER
                 .comment("Player reports: new report, report closed.")
@@ -544,6 +609,13 @@ public class RpEssentialsConfig {
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+
+        ConfigAccess.secret(DISCORD_WEBHOOK_URL, DISCORD_BOT_TOKEN);
+        // zoneActions: commands run with OP level 4.
+        ConfigAccess.sensitive(DISCORD_CHANNEL_ID, OP_LEVEL_BYPASS, USE_LUCKPERMS_GROUPS, ROLES, PROTECT_ROLE_TAGS,
+                LP_SYNC_ENABLED, LP_SYNC_IMPORT_ALL_GROUPS, ZONE_ACTIONS);
+        ConfigAccess.node(net.rp.rpessentials.permission.RpPerm.BLURTAB, WHITELIST, BLACKLIST, ALWAYS_VISIBLE_LIST);
+        ConfigAccess.node(net.rp.rpessentials.permission.RpPerm.DEATHRP, DEATH_RP_GLOBAL_ENABLED);
     }
 
     /** Comment of the roles option: format, rules, and every node with its default. */
@@ -554,10 +626,14 @@ public class RpEssentialsConfig {
                 "Format: id;luckpermsGroup;node1,node2,...",
                 "  rpessentials.moderation.warn    : grants the node",
                 "  rpessentials.moderation.*       : grants every node starting with rpessentials.moderation.",
-                "  rpessentials.*                  : grants every node",
+                "  rpessentials.*                  : grants every node, except rpessentials.tab.alwaysvisible (write it on its own)",
                 "  -rpessentials.manage.ban        : refuses the node (the most precise entry wins, a refusal wins a tie)",
                 "Nodes only cover RpEssentials commands: vanilla commands (/kick, /ban, /op...) keep their vanilla OP checks.",
+                //#if forge
+                //? "With LuckPerms set as permissionHandler in forge-server.toml, LuckPerms can also set these nodes.",
+                //#else
                 "With LuckPerms set as permissionHandler in neoforge-server.toml, LuckPerms can also set these nodes.",
+                //#endif
                 "A node set nowhere uses its default, shown below: staff = given to rpessentials.staff,",
                 "OP n = from OP level n, sensitive = the level of opLevelBypass (4 when 0), everyone = every player.",
                 ""));

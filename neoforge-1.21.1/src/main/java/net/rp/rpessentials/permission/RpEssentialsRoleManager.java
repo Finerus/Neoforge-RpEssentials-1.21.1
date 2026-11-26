@@ -136,6 +136,8 @@ public class RpEssentialsRoleManager {
         for (String e : entries) {
             boolean neg = e.startsWith("-");
             String pattern = neg ? e.substring(1) : e;
+            // Granting everything does not grant the nodes that must be written on their own.
+            if (!neg && pattern.equals(RpPerms.PREFIX + "*") && RpPerm.explicitOnly(node)) continue;
             int score = match(pattern, node);
             if (score < 0) continue;
             if (neg) deny = Math.max(deny, score);
@@ -153,6 +155,24 @@ public class RpEssentialsRoleManager {
             if (node.startsWith(base)) return base.length();
         }
         return -1;
+    }
+
+    /** True when this tag is the one of a role with permissions, granted or refused (any case, like the roles). */
+    public static boolean givesPermissions(String tag) {
+        if (roles.isEmpty()) reload();
+        Set<String> entries = roles.get(tag.toLowerCase(Locale.ROOT));
+        return entries != null && !entries.isEmpty();
+    }
+
+    /** True when this tag is the one of a role, with or without permissions. Cheap: called at each tag change of a player. */
+    public static boolean isRoleTag(String tag) {
+        return roles.containsKey(tag.toLowerCase(Locale.ROOT));
+    }
+
+    /** True when the player has at least one role of the config (tag, or LuckPerms group). */
+    public static boolean hasRole(ServerPlayer player) {
+        if (roles.isEmpty()) reload();
+        return !roleIdsOf(player).isEmpty();
     }
 
     private static Set<String> entriesOf(ServerPlayer player) {
@@ -177,10 +197,18 @@ public class RpEssentialsRoleManager {
             String t = tag.toLowerCase(Locale.ROOT);
             if (roles.containsKey(t)) ids.add(t);
         }
-        if (!Cfg.get(RpEssentialsConfig.USE_LUCKPERMS_GROUPS, true)) return ids;
+        ids.addAll(luckPermsRoleIds(player.getUUID()));
+        return ids;
+    }
+
+    /** Roles given by the LuckPerms groups of a player, online or logging in. */
+    public static Set<String> luckPermsRoleIds(UUID uuid) {
+        if (!RpEssentials.luckPermsPresent() || !Cfg.get(RpEssentialsConfig.USE_LUCKPERMS_GROUPS, true)) return Set.of();
+        if (roles.isEmpty()) reload();
+        Set<String> ids = new LinkedHashSet<>();
         try {
             net.luckperms.api.LuckPerms lp = net.luckperms.api.LuckPermsProvider.get();
-            net.luckperms.api.model.user.User user = lp.getUserManager().getUser(player.getUUID());
+            net.luckperms.api.model.user.User user = lp.getUserManager().getUser(uuid);
             if (user != null) {
                 String primary = user.getPrimaryGroup().toLowerCase(Locale.ROOT);
                 if (roles.containsKey(primary)) ids.add(primary);
@@ -202,10 +230,14 @@ public class RpEssentialsRoleManager {
      * installed and the sync is on; null when LuckPerms does not define it.
      */
     public static Boolean luckPermsValue(UUID uuid, String node) {
-        if (!Cfg.get(RpEssentialsConfig.LP_SYNC_ENABLED, true)) return null;
+        if (!RpEssentials.luckPermsPresent() || !Cfg.get(RpEssentialsConfig.LP_SYNC_ENABLED, true)) return null;
         try {
             net.luckperms.api.model.user.User user = net.luckperms.api.LuckPermsProvider.get().getUserManager().getUser(uuid);
             if (user == null) return null;
+            if (RpPerm.explicitOnly(node)) {
+                // Set on its own in LuckPerms (user or group): a wildcard (*, rpessentials.*) does not count.
+                return user.getCachedData().getPermissionData().getPermissionMap().get(node);
+            }
             net.luckperms.api.util.Tristate t = user.getCachedData().getPermissionData().checkPermission(node);
             return t == net.luckperms.api.util.Tristate.UNDEFINED ? null : t.asBoolean();
         } catch (NoClassDefFoundError | IllegalStateException ignored) {
@@ -213,6 +245,23 @@ public class RpEssentialsRoleManager {
         } catch (Exception e) {
             RpEssentials.LOGGER.debug("[RoleManager] LuckPerms node check failed: {}", e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * True when the permissions of a player who is not in the world yet can be fully known: no other permission mod,
+     * and LuckPerms (if any) read by this mod and done loading the player.
+     */
+    public static boolean canDecideOffline(UUID uuid) {
+        try {
+            net.minecraft.resources.ResourceLocation handler = net.neoforged.neoforge.server.permission.PermissionAPI.getActivePermissionHandler();
+            boolean luckPerms = handler != null && handler.getNamespace().equals("luckperms");
+            if (handler != null && !luckPerms && !handler.getPath().equals("default_handler")) return false;
+            if (!RpEssentials.luckPermsPresent()) return true;
+            if (!Cfg.get(RpEssentialsConfig.LP_SYNC_ENABLED, true) && luckPerms) return false;
+            return net.luckperms.api.LuckPermsProvider.get().getUserManager().getUser(uuid) != null;
+        } catch (NoClassDefFoundError | IllegalStateException e) {
+            return !RpEssentials.luckPermsPresent();
         }
     }
 

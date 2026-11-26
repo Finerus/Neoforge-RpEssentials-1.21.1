@@ -105,7 +105,16 @@ public class RpManageCommands {
     }
 
     private static UUID key(CommandContext<CommandSourceStack> ctx) {
-        return ctx.getSource().getEntity() instanceof ServerPlayer p ? p.getUUID() : CONSOLE;
+        ServerPlayer p = RpPerms.actor(ctx.getSource());
+        return p != null ? p.getUUID() : CONSOLE;
+    }
+
+    /** Checked here too: {@link ManageService} only knows the player, not the sign or command block behind them. */
+    private static boolean refused(CommandContext<CommandSourceStack> ctx, ManageService.Action action) {
+        if (RpPerms.has(ctx.getSource(), RpPerm.manage(action))) return false;
+        ctx.getSource().sendFailure(ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_NO_PERMISSION,
+                "node", RpPerm.manage(action).node())));
+        return true;
     }
 
     private static Component button(String label, String command) {
@@ -122,6 +131,7 @@ public class RpManageCommands {
             ctx.getSource().sendFailure(ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_UNKNOWN_ACTION)));
             return 0;
         }
+        if (refused(ctx, action)) return 0;
         UUID target = RpEssentialsCommands.findUUIDByName(ctx.getSource().getServer(), playerName);
         if (target == null || VanishManager.canHide(VanishManager.Aspect.SELECTORS, ctx.getSource(), target)) {
             ctx.getSource().sendFailure(ColorHelper.parseSection(
@@ -194,7 +204,8 @@ public class RpManageCommands {
             ctx.getSource().sendFailure(ColorHelper.parseSection(t(ctx, MessagesConfig.MANAGE_NOTHING)));
             return 0;
         }
-        ManageService.Result r = ManageService.execute(ctx.getSource().getServer(), ctx.getSource().getPlayer(),
+        if (refused(ctx, p.action())) return 0;
+        ManageService.Result r = ManageService.execute(ctx.getSource().getServer(), RpPerms.actor(ctx.getSource()),
                 p.target(), p.action(), p.text(), p.number());
         if (r.ok()) ctx.getSource().sendSuccess(() -> Component.literal(r.message()), false);
         else ctx.getSource().sendFailure(Component.literal(r.message()));

@@ -122,7 +122,7 @@ public final class VanishManager {
     }
 
     private static void load() {
-        try (FileReader reader = new FileReader(dataFile)) {
+        try (FileReader reader = new FileReader(dataFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, Integer>>(){}.getType();
             Map<String, Integer> data = GSON.fromJson(reader, type);
             if (data == null) return;
@@ -321,7 +321,11 @@ public final class VanishManager {
         for (GameProfile g : p.sample()) if (!vanished.containsKey(g.getId())) sample.add(g);
         return new ServerStatus(status.description(),
                 Optional.of(new ServerStatus.Players(p.max(), Math.max(0, p.online() - hiddenOnline), sample)),
-                status.version(), status.favicon(), status.enforcesSecureChat());
+                //#if forge
+                //? status.version(), status.favicon(), status.enforcesSecureChat(), status.forgeData());
+                //#else
+                status.version(), status.favicon(), status.enforcesSecureChat(), status.isModded());
+                //#endif
     }
 
     public static boolean silentOpen(ServerPlayer p) {
@@ -354,7 +358,7 @@ public final class VanishManager {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (p.getUUID().equals(player.getUUID())) continue;
             if (RpPerms.has(p, RpPerm.NOTIFY) && !isHiddenFrom(p, player.getUUID())) {
-                p.sendSystemMessage(Component.literal(ServerLang.get(p, key, "player", name)));
+                p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(p, key, "player", name)));
             }
         }
     }

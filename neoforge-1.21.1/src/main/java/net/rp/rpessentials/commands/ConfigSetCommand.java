@@ -40,6 +40,7 @@ public final class ConfigSetCommand {
     /** Old /config set names that differ from the option name: alias -> file, option name or path. */
     private static final Map<String, String[]> ALIASES = Map.ofEntries(
             Map.entry("proximity", new String[]{"core", "proximityDistance"}),
+            Map.entry("enableWorldBorderWarning", new String[]{"core", "enableWorldBorder"}),
             Map.entry("blur", new String[]{"core", "enableBlur"}),
             Map.entry("deathRpGlobalEnabled", new String[]{"core", "globalEnabled"}),
             Map.entry("deathRpWhitelistRemove", new String[]{"core", "whitelistRemove"}),
@@ -74,6 +75,9 @@ public final class ConfigSetCommand {
             "nametagBlurMode", List.of("OFF", "BLUR", "HIDE"),
             "blurStyle", List.of("OBFUSCATED", "DASHES", "HASHES", "STARS"));
 
+    /** File of the texts: its options (several hundreds) are only suggested after {@code set messages}. */
+    private static final String MESSAGES_FILE = "messages";
+
     /** One option of one file, with the name typed to reach it. */
     private record Option(String fileId, ConfigInspector.EntryData entry, String name) {}
 
@@ -100,14 +104,10 @@ public final class ConfigSetCommand {
     // =========================================================================
     // OPTIONS
     // =========================================================================
-    private static boolean sensitive(CommandSourceStack src) {
-        return !(src.getEntity() instanceof ServerPlayer p) || RpEssentialsPermissions.canEditSensitiveConfig(p);
-    }
-
     /** Options of a file the source may change, each with the shortest name that is unique in the file. */
     private static List<Option> options(CommandSourceStack src, String fileId) {
         List<ConfigInspector.EntryData> entries = new ArrayList<>();
-        for (ConfigInspector.EntryData e : ConfigInspector.getEntries(fileId, sensitive(src))) {
+        for (ConfigInspector.EntryData e : ConfigInspector.getEntries(fileId, p -> net.rp.rpessentials.permission.RpPerms.has(src, p))) {
             if (!e.isSection()) entries.add(e);
         }
         Map<String, Integer> keyCount = new HashMap<>();
@@ -120,10 +120,11 @@ public final class ConfigSetCommand {
         return out;
     }
 
-    /** Option names unique across every file, plus the old names: what "set <option> <value>" accepts. */
+    /** Option names unique across every file (texts excluded), plus the old names: suggested after "set ". */
     private static Set<String> shortNames(CommandSourceStack src) {
         Map<String, Integer> count = new HashMap<>();
         for (ConfigInspector.FileInfo f : ConfigInspector.getFileInfos()) {
+            if (f.id().equals(MESSAGES_FILE)) continue;
             for (Option o : options(src, f.id())) if (o.name().equals(o.entry().key())) count.merge(o.name(), 1, Integer::sum);
         }
         Set<String> out = new LinkedHashSet<>();
@@ -158,6 +159,10 @@ public final class ConfigSetCommand {
                     found.add(o);
                 }
             }
+        }
+        // Without a file name, an option wins over a text with the same name (texts: "set messages <name>").
+        if (fileId == null && found.stream().anyMatch(o -> !o.fileId().equals(MESSAGES_FILE))) {
+            found.removeIf(o -> o.fileId().equals(MESSAGES_FILE));
         }
         // An exact name or path wins over options that only share the short key.
         final String name = typed;
@@ -237,10 +242,15 @@ public final class ConfigSetCommand {
                     "expected", expected(o.entry())));
             return 0;
         }
-        ConfigRefresh.refresh(src.getServer());
-        String shown = value.replace("\n", "; ");
+        ConfigRefresh.refresh(src.getServer(), ConfigInspector.specOf(o.fileId()));
+        // A secret (webhook URL, bot token) is never written in the chat of the staff nor in the log.
+        String shown = ConfigInspector.mask(o.entry().key(), value).replace("\n", "; ");
+        String before = ConfigInspector.mask(o.entry().key(), old == null ? "" : old).replace("\n", "; ");
+        // A restricted option is not repeated to the other OPs.
+        boolean tellOthers = !ConfigInspector.isRestricted(o.fileId(), o.entry().fullPath());
         src.sendSuccess(() -> Msg.c(src, MessagesConfig.STAFF_CFG_VALUE_CHANGED, "file", o.fileId(), "name", o.name(),
-                "old", old == null ? "" : old.replace("\n", "; "), "value", shown), true);
+                "old", before, "value", shown), tellOthers);
+        if (!tellOthers) net.rp.rpessentials.RpEssentials.LOGGER.info("[Config] {} changed '{}' ({})", src.getTextName(), o.name(), o.fileId());
         return 1;
     }
 

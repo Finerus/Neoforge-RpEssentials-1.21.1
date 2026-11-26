@@ -109,14 +109,14 @@ public class RpEssentialsMessagingManager {
     public static int reply(ServerPlayer sender, String message, MinecraftServer server) {
         UUID lastId = lastMessaged.get(sender.getUUID());
         if (lastId == null) {
-            sender.sendSystemMessage(Component.literal(ServerLang.get(sender, MessagesConfig.MP_NO_ONE_TO_REPLY))
+            sender.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(sender, MessagesConfig.MP_NO_ONE_TO_REPLY))
                     .withStyle(style -> style.withColor(0xFF5555).withItalic(true)));
             return 0;
         }
         ServerPlayer target = server.getPlayerList().getPlayer(lastId);
         if (target == null
                 || VanishManager.canHide(VanishManager.Aspect.SELECTORS, sender, lastId)) {
-            sender.sendSystemMessage(Component.literal(ServerLang.get(sender, MessagesConfig.MP_TARGET_OFFLINE))
+            sender.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(sender, MessagesConfig.MP_TARGET_OFFLINE))
                     .withStyle(style -> style.withColor(0xFF5555).withItalic(true)));
             return 0;
         }

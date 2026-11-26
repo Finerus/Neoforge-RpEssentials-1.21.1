@@ -70,7 +70,7 @@ public class ProfessionRestrictionEventHandler {
 
     private static void sendBlocked(ServerPlayer player, String message) {
         if (canSendMessage(player.getUUID(), lastMessageTime, MESSAGE_COOLDOWN)) {
-            player.displayClientMessage(Component.literal(message), true);
+            player.displayClientMessage(net.rp.rpessentials.util.ColorHelper.parseSection(message), true);
         }
     }
 
@@ -130,7 +130,11 @@ public class ProfessionRestrictionEventHandler {
         // on it (placing a block against a chest...). Replaces the ServerPlayerGameMode mixin.
         ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(player.level().getBlockState(event.getPos()).getBlock());
         if (!ProfessionRestrictionManager.canOpenContainer(player, blockId)) {
+            //#if forge
+            //? event.setUseBlock(net.minecraftforge.eventbus.api.Event.Result.DENY);
+            //#else
             event.setUseBlock(net.neoforged.neoforge.common.util.TriState.FALSE);
+            //#endif
             ProfessionRestrictionManager.notifyBlocked(player, "container",
                     () -> ProfessionRestrictionManager.getContainerOpenBlockedMessage(player, blockId));
         }
@@ -140,14 +144,22 @@ public class ProfessionRestrictionEventHandler {
 
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (!ProfessionRestrictionManager.canUseItem(player, itemId)) {
+            //#if forge
+            //? event.setUseItem(net.minecraftforge.eventbus.api.Event.Result.DENY);
+            //#else
             event.setUseItem(net.neoforged.neoforge.common.util.TriState.FALSE);
+            //#endif
             sendBlocked(player, ProfessionRestrictionManager.getItemUseBlockedMessage(player, itemId));
         }
     }
 
     private static void checkItemUse(net.minecraft.world.entity.Entity entity,
                                      ItemStack itemStack,
+                                     //#if forge
+                                     //? net.minecraftforge.eventbus.api.Event event) {
+                                     //#else
                                      net.neoforged.bus.api.ICancellableEvent event) {
+                                     //#endif
         if (!(entity instanceof ServerPlayer player)) return;
         if (itemStack.isEmpty()) return;
 
@@ -263,7 +275,11 @@ public class ProfessionRestrictionEventHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         if (player.isCreative()) return;
         EquipmentSlot slot = event.getSlot();
+        //#if forge
+        //? if (slot.getType() != EquipmentSlot.Type.ARMOR) return;
+        //#else
         if (slot.getType() != EquipmentSlot.Type.HUMANOID_ARMOR) return;
+        //#endif
 
         ItemStack stack = event.getTo();
         if (stack.isEmpty()) return;

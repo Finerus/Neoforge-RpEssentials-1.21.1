@@ -4,7 +4,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.Event;
+//#if forge
+//? import net.minecraftforge.eventbus.api.Cancelable;
+//#else
 import net.neoforged.bus.api.ICancellableEvent;
+//#endif
 
 /**
  * Posted on NeoForge.EVENT_BUS around the teleports of RpEssentials (/rp spawn, /rp afk,
@@ -40,7 +44,13 @@ public abstract class RpTeleportEvent extends Event {
 
     public Vec3 getDestination() { return destination; }
 
+    //#if forge
+    //? @Cancelable
+//?
+    //? public static class Warmup extends RpTeleportEvent {
+    //#else
     public static class Warmup extends RpTeleportEvent implements ICancellableEvent {
+    //#endif
         private int warmupTicks;
         private boolean cancelOnMove;
         private boolean cancelOnDamage;
@@ -98,7 +108,13 @@ public abstract class RpTeleportEvent extends Event {
         public Reason getReason() { return reason; }
     }
 
+    //#if forge
+    //? @Cancelable
+//?
+    //? public static class Pre extends RpTeleportEvent {
+    //#else
     public static class Pre extends RpTeleportEvent implements ICancellableEvent {
+    //#endif
         public Pre(ServerPlayer player, String kind, ServerLevel level, Vec3 destination) {
             super(player, kind, level, destination);
         }

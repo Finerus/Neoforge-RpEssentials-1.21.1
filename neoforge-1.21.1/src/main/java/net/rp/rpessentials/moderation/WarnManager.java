@@ -120,7 +120,7 @@ public class WarnManager {
     // =========================================================================
     private static void loadFromFile() {
         if (dataFile == null || !dataFile.exists()) return;
-        try (FileReader reader = new FileReader(dataFile)) {
+        try (FileReader reader = new FileReader(dataFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<List<WarnEntry>>(){}.getType();
             List<WarnEntry> data = GSON.fromJson(reader, type);
             if (data != null) {

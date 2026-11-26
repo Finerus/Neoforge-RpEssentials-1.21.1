@@ -10,6 +10,7 @@ import net.luckperms.api.event.EventBus;
 import net.luckperms.api.event.EventSubscription;
 import net.luckperms.api.event.group.GroupCreateEvent;
 import net.luckperms.api.event.node.NodeMutateEvent;
+import net.luckperms.api.event.user.UserDataRecalculateEvent;
 import net.luckperms.api.model.group.Group;
 import net.luckperms.api.model.group.GroupManager;
 import net.luckperms.api.model.user.User;
@@ -22,6 +23,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.ModList;
 import net.rp.rpessentials.RpEssentials;
+import net.rp.rpessentials.permission.AccessRefresh;
 import net.rp.rpessentials.permission.RpEssentialsPermissions;
 import net.rp.rpessentials.permission.RpEssentialsRoleManager;
 import net.rp.rpessentials.gameplay.RpEssentialsScheduleManager;
@@ -46,6 +48,8 @@ final class LuckPermsSyncImpl {
     private static final List<EventSubscription<?>> subs = new ArrayList<>();
     private static final Set<String> dirty = ConcurrentHashMap.newKeySet();
     private static final Map<String, Long> recent = new ConcurrentHashMap<>();
+    /** Groups this mod is writing: their events are its own changes coming back, not changes to import. */
+    private static final Map<String, Integer> pushing = new ConcurrentHashMap<>();
     private static final AtomicBoolean scheduled = new AtomicBoolean(false);
 
     private LuckPermsSyncImpl() {}
@@ -59,11 +63,15 @@ final class LuckPermsSyncImpl {
     // =========================================================================
     static void start(MinecraftServer server) {
         stop();
-        if (!enabled()) return;
         ModContainer container = ModList.get().getModContainerById(RpEssentials.MODID).orElse(null);
         if (container == null) return;
         LuckPerms lp = LuckPermsProvider.get();
         EventBus bus = lp.getEventBus();
+        // Sent once LuckPerms has forgotten the old data of the player (NodeMutateEvent comes before), for any reason:
+        // user or group edited, temporary permission ended, change made by another server. Even without the sync, the
+        // groups give roles.
+        subs.add(bus.subscribe(container, UserDataRecalculateEvent.class, e -> AccessRefresh.mark(e.getUser().getUniqueId())));
+        if (!enabled()) return;
         subs.add(bus.subscribe(container, NodeMutateEvent.class, e -> onNodeMutate(server, e)));
         subs.add(bus.subscribe(container, GroupCreateEvent.class, e -> mark(server, e.getGroup().getName())));
         lp.getGroupManager().loadAllGroups().thenRun(() -> server.execute(() -> reconcile(server)));
@@ -76,6 +84,7 @@ final class LuckPermsSyncImpl {
         subs.clear();
         dirty.clear();
         recent.clear();
+        pushing.clear();
         scheduled.set(false);
     }
 
@@ -93,34 +102,31 @@ final class LuckPermsSyncImpl {
     // =========================================================================
     private static void onNodeMutate(MinecraftServer server, NodeMutateEvent e) {
         if (e.isUser()) {
-            UUID id = ((User) e.getTarget()).getUniqueId();
-            RpEssentials.invalidateMeta(id);
-            server.execute(() -> {
-                ServerPlayer online = server.getPlayerList().getPlayer(id);
-                if (online != null) net.rp.rpessentials.permission.RpPerms.refresh(online);
-                else RpEssentialsRoleManager.invalidate(id);
-            });
+            AccessRefresh.mark(((User) e.getTarget()).getUniqueId());
             return;
         }
         if (!e.isGroup()) return;
         RpEssentials.clearMetaCache();
         // Any group change can change the nodes or the roles of the players (inheritance, parents...).
-        server.execute(() -> net.rp.rpessentials.permission.RpPerms.refreshAll(server));
+        server.execute(() -> AccessRefresh.markAll(server));
         if (!touchesRp(e.getDataBefore()) && !touchesRp(e.getDataAfter())) return;
         mark(server, ((Group) e.getTarget()).getName());
     }
 
     private static void mark(MinecraftServer server, String group) {
         String name = group.toLowerCase();
-        recent.put(name, System.currentTimeMillis());
+        if (!pushing.containsKey(name)) recent.put(name, System.currentTimeMillis());
         dirty.add(name);
         if (!scheduled.compareAndSet(false, true)) return;
         CompletableFuture.runAsync(() -> server.execute(() -> {
             scheduled.set(false);
             List<String> names = new ArrayList<>(dirty);
             dirty.clear();
+            // Still being written: looked at again once done, the roles of the config are the right ones until then.
+            for (String n : names) if (pushing.containsKey(n)) mark(server, n);
+            names.removeIf(pushing::containsKey);
             importGroups(server, names, true);
-        }), CompletableFuture.delayedExecutor(1, TimeUnit.SECONDS));
+        }), CompletableFuture.delayedExecutor(250, TimeUnit.MILLISECONDS));
     }
 
     private static void importGroups(MinecraftServer server, Collection<String> names, boolean eventDriven) {
@@ -145,11 +151,12 @@ final class LuckPermsSyncImpl {
         RpEssentialsRoleManager.clearAll();
         RpEssentialsRoleManager.reload();
         RpEssentialsPermissions.clearCache();
+        AccessRefresh.markAll(server);
         RpEssentialsScheduleManager.enforceOnlineDelayed(server);
 
         String roleList = String.join("§7, §f", touched);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(Component.literal(
+            if (RpPerms.has(p, RpPerm.NOTIFY)) p.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(
                     net.rp.rpessentials.lang.ServerLang.get(p, net.rp.rpessentials.config.MessagesConfig.LP_ROLES_SYNCED, "roles", roleList)));
         }
         RpEssentials.LOGGER.info("[LuckPerms] Roles synced from LuckPerms: {}", touched);
@@ -219,18 +226,22 @@ final class LuckPermsSyncImpl {
         GroupManager gm = lp.getGroupManager();
         Group existing = gm.getGroup(group);
         if (existing != null) {
-            if (new HashSet<>(granted(existing)).equals(new HashSet<>(desired))) return;
-            gm.modifyGroup(group, g -> write(g, desired)).exceptionally(ex -> fail(group, ex));
+            if (!pushing.containsKey(group) && new HashSet<>(granted(existing)).equals(new HashSet<>(desired))) return;
+            pushing.merge(group, 1, Integer::sum);
+            gm.modifyGroup(group, g -> write(g, desired)).whenComplete((v, ex) -> pushed(group, ex));
             return;
         }
+        pushing.merge(group, 1, Integer::sum);
         gm.createAndLoadGroup(group)
                 .thenCompose(g -> gm.modifyGroup(group, x -> write(x, desired)))
-                .exceptionally(ex -> fail(group, ex));
+                .whenComplete((v, ex) -> pushed(group, ex));
     }
 
-    private static Void fail(String group, Throwable ex) {
-        RpEssentials.LOGGER.warn("[LuckPerms] Could not sync group '{}': {}", group, ex.getMessage());
-        return null;
+    private static void pushed(String group, Throwable ex) {
+        if (ex != null) RpEssentials.LOGGER.warn("[LuckPerms] Could not sync group '{}': {}", group, ex.getMessage());
+        // The events of the write are sent apart: a little later.
+        CompletableFuture.runAsync(() -> pushing.computeIfPresent(group, (k, n) -> n <= 1 ? null : n - 1),
+                CompletableFuture.delayedExecutor(300, TimeUnit.MILLISECONDS));
     }
 
     /** Replaces the rpessentials.* nodes (without context) of the group by the role entries. */

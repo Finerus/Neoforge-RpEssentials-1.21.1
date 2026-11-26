@@ -5,7 +5,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.permission.PermissionAPI;
 import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import net.neoforged.neoforge.server.permission.nodes.PermissionNode;
@@ -13,7 +12,6 @@ import net.neoforged.neoforge.server.permission.nodes.PermissionTypes;
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.RpEssentialsConfig;
-import net.rp.rpessentials.network.SyncPermissionsPacket;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,6 +56,10 @@ public final class RpPerms {
     // =========================================================================
     public static boolean has(ServerPlayer player, RpPerm perm) {
         if (player == null) return false;
+        // OP 4 owns the server: no role, refused node or LuckPerms group can lock them out of giving roles.
+        if (perm == RpPerm.ROLES_SET && player.hasPermissions(4)) return true;
+        // Not asked to the permission handler: LuckPerms would count its wildcards.
+        if (RpPerm.explicitOnly(perm.node())) return resolveDefault(player, player.getUUID(), perm);
         try {
             return PermissionAPI.getPermission(player, NODES.get(perm));
         } catch (RuntimeException e) {
@@ -66,9 +68,31 @@ public final class RpPerms {
         }
     }
 
-    /** Console, command blocks and functions: their OP level against the node default (4 for the console). */
+    /**
+     * True when a role or LuckPerms refuses this node on purpose (a node that is simply not granted is not refused).
+     */
+    public static boolean refused(ServerPlayer player, RpPerm perm) {
+        Boolean lp = RpEssentialsRoleManager.luckPermsValue(player.getUUID(), perm.node());
+        if (lp != null) return !lp;
+        return Boolean.FALSE.equals(RpEssentialsRoleManager.roleValue(player, perm));
+    }
+
+    /**
+     * The player who really runs a command: with "/execute as X", the one who typed it, not X.
+     * Null for the console, command blocks and functions acting as nobody.
+     */
+    public static ServerPlayer actor(CommandSourceStack src) {
+        return src.source instanceof ServerPlayer typed ? typed : src.getPlayer();
+    }
+
+    /**
+     * A player: their nodes ("/execute as" gives nobody else's). Console, command blocks, signs and functions:
+     * their OP level against the node default (4 for the console); when they act as a player (a sign clicked by a
+     * staff member...), that player must have the node too.
+     */
     public static boolean has(CommandSourceStack src, RpPerm perm) {
-        if (src.getEntity() instanceof ServerPlayer p) return has(p, perm);
+        if (src.source instanceof ServerPlayer typed) return has(typed, perm);
+        if (src.getEntity() instanceof ServerPlayer p && !has(p, perm)) return false;
         int level;
         if (perm.opLevel() == RpPerm.SENSITIVE) level = RpEssentialsPermissions.sensitiveLevel();
         else if (perm.opLevel() <= 4) level = perm.opLevel();
@@ -129,14 +153,11 @@ public final class RpPerms {
         return out;
     }
 
-    /** Forgets the cached roles, then resends the command tree and the granted nodes to the player. */
+    /** Forgets the cached roles, then resends the command tree, and the rest when the access changed. */
     public static void refresh(ServerPlayer player) {
         RpEssentialsRoleManager.invalidate(player.getUUID());
-        RpEssentialsPermissions.invalidateCache(player.getUUID());
         MinecraftServer server = player.getServer();
-        if (server == null) return;
-        server.getCommands().sendCommands(player);
-        PacketDistributor.sendToPlayer(player, new SyncPermissionsPacket(granted(player)));
+        if (server != null) AccessRefresh.apply(server, player, true);
     }
 
     public static void refreshAll(MinecraftServer server) {

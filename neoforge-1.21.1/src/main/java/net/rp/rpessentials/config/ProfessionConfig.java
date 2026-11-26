@@ -106,7 +106,11 @@ public class ProfessionConfig {
         );
 
         PROFESSIONS = BUILDER
+                //#if forge
+                //? .defineListAllowEmpty("professions",
+                //#else
                 .defineList("professions",
+                //#endif
                         Arrays.asList(
                                 "hunter;Hunter;§a",
                                 "fisher;Fisher;§b",
@@ -149,7 +153,11 @@ public class ProfessionConfig {
                         "  minecraft:*_pickaxe          - Block all pickaxes",
                         "  minecraft:iron_*             - Block all iron items"
                 )
+                //#if forge
+                //? .defineListAllowEmpty("globalBlockedCrafts",
+                //#else
                 .defineList("globalBlockedCrafts",
+                //#endif
                         Arrays.asList(
                                 "minecraft:diamond_sword",
                                 "minecraft:diamond_pickaxe",
@@ -172,7 +180,11 @@ public class ProfessionConfig {
                         "  minecraft:ancient_debris     - Cannot mine ancient debris",
                         "  minecraft:*_ore              - Cannot mine any ore"
                 )
+                //#if forge
+                //? .defineListAllowEmpty("globalUnbreakableBlocks",
+                //#else
                 .defineList("globalUnbreakableBlocks",
+                //#endif
                         Arrays.asList(
                                 "minecraft:diamond_ore",
                                 "minecraft:deepslate_diamond_ore",
@@ -193,7 +205,11 @@ public class ProfessionConfig {
                         "  minecraft:flint_and_steel    - Cannot use flint and steel",
                         "  minecraft:*_bucket           - Cannot use any bucket"
                 )
+                //#if forge
+                //? .defineListAllowEmpty("globalBlockedItems",
+                //#else
                 .defineList("globalBlockedItems",
+                //#endif
                         Arrays.asList(
                                 "minecraft:flint_and_steel",
                                 "minecraft:fire_charge"
@@ -211,7 +227,11 @@ public class ProfessionConfig {
                         "  minecraft:diamond_helmet     - Cannot wear diamond helmet",
                         "  minecraft:diamond_*          - Cannot use any diamond equipment"
                 )
+                //#if forge
+                //? .defineListAllowEmpty("globalBlockedEquipment",
+                //#else
                 .defineList("globalBlockedEquipment",
+                //#endif
                         Arrays.asList(
                                 "minecraft:diamond_sword",
                                 "minecraft:diamond_helmet",
@@ -233,7 +253,11 @@ public class ProfessionConfig {
                         "  minecraft:brewing_stand;alchemist",
                         "  minecraft:enchanting_table;alchemist,blacksmith"
                 )
+                //#if forge
+                //? .defineListAllowEmpty("containerOpenRestrictions",
+                //#else
                 .defineList("containerOpenRestrictions",
+                //#endif
                         Arrays.asList(
                                 "minecraft:anvil;blacksmith",
                                 "minecraft:brewing_stand;alchemist",
@@ -270,7 +294,11 @@ public class ProfessionConfig {
                         "Crafts that each profession IS ALLOWED to make.",
                         "Overrides global craft restrictions."
                 )
+                //#if forge
+                //? .defineListAllowEmpty("professionAllowedCrafts",
+                //#else
                 .defineList("professionAllowedCrafts",
+                //#endif
                         Arrays.asList(
                                 "blacksmith;minecraft:diamond_sword,minecraft:diamond_pickaxe,minecraft:diamond_axe,minecraft:netherite_sword,minecraft:netherite_pickaxe",
                                 "miner;minecraft:diamond_pickaxe,minecraft:iron_pickaxe",
@@ -285,7 +313,11 @@ public class ProfessionConfig {
                         "Blocks that each profession IS ALLOWED to mine.",
                         "Overrides global unbreakable block restrictions."
                 )
+                //#if forge
+                //? .defineListAllowEmpty("professionAllowedBlocks",
+                //#else
                 .defineList("professionAllowedBlocks",
+                //#endif
                         Arrays.asList(
                                 "miner;minecraft:diamond_ore,minecraft:deepslate_diamond_ore,minecraft:iron_ore,minecraft:deepslate_iron_ore,minecraft:gold_ore,minecraft:deepslate_gold_ore"
                         ),
@@ -298,7 +330,11 @@ public class ProfessionConfig {
                         "Items that each profession IS ALLOWED to use.",
                         "Overrides global item use restrictions."
                 )
+                //#if forge
+                //? .defineListAllowEmpty("professionAllowedItems",
+                //#else
                 .defineList("professionAllowedItems",
+                //#endif
                         Arrays.asList(
                                 "alchemist;minecraft:flint_and_steel,minecraft:fire_charge",
                                 "guard;minecraft:flint_and_steel"
@@ -312,7 +348,11 @@ public class ProfessionConfig {
                         "Equipment that each profession IS ALLOWED to wear/wield.",
                         "Overrides global blocked equipment."
                 )
+                //#if forge
+                //? .defineListAllowEmpty("professionAllowedEquipment",
+                //#else
                 .defineList("professionAllowedEquipment",
+                //#endif
                         Arrays.asList(
                                 "guard;minecraft:diamond_sword,minecraft:diamond_helmet,minecraft:diamond_chestplate,minecraft:diamond_leggings,minecraft:diamond_boots",
                                 "miner;minecraft:diamond_pickaxe"
@@ -375,5 +415,7 @@ public class ProfessionConfig {
         BUILDER.pop();
 
         SPEC = BUILDER.build();
+
+        ConfigAccess.file(net.rp.rpessentials.permission.RpPerm.PROFESSIONS_EDIT, SPEC);
     }
 }

@@ -1,21 +1,36 @@
 package net.rp.rpessentials.network;
 
+//#if forge
+//? import net.minecraft.resources.ResourceLocation;
+//? import net.rp.rpessentials.network.compat.DirectionalPayloadHandler;
+//? import net.rp.rpessentials.network.compat.PayloadRegistrar;
+//#else
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+//#endif
 import net.rp.rpessentials.RpEssentials;
 import net.rp.rpessentials.network.SyncNametagDataPacket;
 import net.rp.rpessentials.client.ClientNametagConfig;
 import net.rp.rpessentials.client.ClientProfessionRestrictions;
 
+//#if forge
+//#else
 @EventBusSubscriber(modid = RpEssentials.MODID)
+//#endif
 public class NetworkHandler {
 
+    //#if forge
+    //? /** Called from the mod constructor: Forge 1.20.1 channels must exist before the game connects. */
+    //? public static void register() {
+        //? PayloadRegistrar registrar = PayloadRegistrar.create(new ResourceLocation(RpEssentials.MODID, "main"), "1");
+    //#else
     @SubscribeEvent
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("1");
+    //#endif
 
         // ── Nametag sync ──────────────────────────────────────────────────────
         registrar.playToClient(
@@ -50,8 +65,10 @@ public class NetworkHandler {
                 SyncPermissionsPacket.TYPE,
                 SyncPermissionsPacket.STREAM_CODEC,
                 new DirectionalPayloadHandler<>(
-                        (packet, ctx) -> ctx.enqueueWork(() ->
-                                net.rp.rpessentials.client.ClientPerms.set(packet.granted())),
+                        (packet, ctx) -> ctx.enqueueWork(() -> {
+                            net.rp.rpessentials.client.ClientPerms.set(packet.granted());
+                            ClientGuiOpener.closeRefused();
+                        }),
                         null
                 )
         );
@@ -69,7 +86,7 @@ public class NetworkHandler {
         registrar.playToServer(
                 RequestOpenGuiPacket.TYPE,
                 RequestOpenGuiPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, RequestOpenGuiPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(RequestOpenGuiPacket::handleOnServer))
         );
 
         registrar.playToClient(
@@ -87,7 +104,7 @@ public class NetworkHandler {
         registrar.playToServer(
                 RequestPlayerStatsPacket.TYPE,
                 RequestPlayerStatsPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, RequestPlayerStatsPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(RequestPlayerStatsPacket::handleOnServer))
         );
 
         registrar.playToClient(
@@ -99,7 +116,7 @@ public class NetworkHandler {
         registrar.playToServer(
                 RequestPlayerHistoryPacket.TYPE,
                 RequestPlayerHistoryPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, RequestPlayerHistoryPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(RequestPlayerHistoryPacket::handleOnServer))
         );
 
         registrar.playToClient(
@@ -111,31 +128,31 @@ public class NetworkHandler {
         registrar.playToServer(
                 SaveProfessionPacket.TYPE,
                 SaveProfessionPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, SaveProfessionPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(SaveProfessionPacket::handleOnServer))
         );
 
         registrar.playToServer(
                 SetPlayerProfilePacket.TYPE,
                 SetPlayerProfilePacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, SetPlayerProfilePacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(SetPlayerProfilePacket::handleOnServer))
         );
 
         registrar.playToServer(
                 PlayerNoteActionPacket.TYPE,
                 PlayerNoteActionPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, PlayerNoteActionPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(PlayerNoteActionPacket::handleOnServer))
         );
 
         registrar.playToServer(
                 RequestAddPlayerPacket.TYPE,
                 RequestAddPlayerPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, RequestAddPlayerPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(RequestAddPlayerPacket::handleOnServer))
         );
 
         registrar.playToServer(
                 DeletePendingProfilePacket.TYPE,
                 DeletePendingProfilePacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, DeletePendingProfilePacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(DeletePendingProfilePacket::handleOnServer))
         );
 
         // ── Config Manager GUI ────────────────────────────────────────────────
@@ -150,13 +167,13 @@ public class NetworkHandler {
         registrar.playToServer(
                 RequestConfigFilePacket.TYPE,
                 RequestConfigFilePacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, RequestConfigFilePacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(RequestConfigFilePacket::handleOnServer))
         );
 
         registrar.playToServer(
                 DiceRollPacket.TYPE,
                 DiceRollPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, DiceRollPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(DiceRollPacket::handleOnServer))
         );
 
         // S→C: entries for one file
@@ -170,7 +187,7 @@ public class NetworkHandler {
         registrar.playToServer(
                 SaveConfigEntriesPacket.TYPE,
                 SaveConfigEntriesPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, SaveConfigEntriesPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(SaveConfigEntriesPacket::handleOnServer))
         );
 
         registrar.playToClient(
@@ -182,19 +199,19 @@ public class NetworkHandler {
         registrar.playToServer(
                 SaveRolePacket.TYPE,
                 SaveRolePacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, SaveRolePacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(SaveRolePacket::handleOnServer))
         );
 
         registrar.playToServer(
                 DeleteProfessionPacket.TYPE,
                 DeleteProfessionPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, DeleteProfessionPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(DeleteProfessionPacket::handleOnServer))
         );
 
         registrar.playToServer(
                 DeleteRolePacket.TYPE,
                 DeleteRolePacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, DeleteRolePacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(DeleteRolePacket::handleOnServer))
         );
 
         registrar.playToClient(
@@ -206,13 +223,13 @@ public class NetworkHandler {
         registrar.playToServer(
                 SaveGlobalRestrictionsPacket.TYPE,
                 SaveGlobalRestrictionsPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, SaveGlobalRestrictionsPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(SaveGlobalRestrictionsPacket::handleOnServer))
         );
 
         registrar.playToServer(
                 ManagePlayerPacket.TYPE,
                 ManagePlayerPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, ManagePlayerPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(ManagePlayerPacket::handleOnServer))
         );
         registrar.playToClient(
                 net.rp.rpessentials.network.SyncNametagBatchPacket.TYPE,
@@ -225,11 +242,18 @@ public class NetworkHandler {
                 new DirectionalPayloadHandler<>(SyncTooltipPacket::handle, null)
         );
 
+        // ── Notes (profile GUI): answer to PlayerNoteActionPacket ─────────────
+        registrar.playToClient(
+                PlayerNotesPacket.TYPE,
+                PlayerNotesPacket.STREAM_CODEC,
+                new DirectionalPayloadHandler<>(PlayerNotesPacket::handleOnClient, null)
+        );
+
         // ── Reports (profile GUI) ─────────────────────────────────────────────
         registrar.playToServer(
                 RequestPlayerReportsPacket.TYPE,
                 RequestPlayerReportsPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, RequestPlayerReportsPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(RequestPlayerReportsPacket::handleOnServer))
         );
         registrar.playToClient(
                 PlayerReportsPacket.TYPE,
@@ -239,14 +263,14 @@ public class NetworkHandler {
         registrar.playToServer(
                 ReportActionPacket.TYPE,
                 ReportActionPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, ReportActionPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(ReportActionPacket::handleOnServer))
         );
 
         // ── Character sheets (profile GUI) ────────────────────────────────────
         registrar.playToServer(
                 RequestCharacterSheetPacket.TYPE,
                 RequestCharacterSheetPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, RequestCharacterSheetPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(RequestCharacterSheetPacket::handleOnServer))
         );
         registrar.playToClient(
                 CharacterSheetPacket.TYPE,
@@ -256,7 +280,7 @@ public class NetworkHandler {
         registrar.playToServer(
                 SaveCharacterSheetPacket.TYPE,
                 SaveCharacterSheetPacket.STREAM_CODEC,
-                new DirectionalPayloadHandler<>(null, SaveCharacterSheetPacket::handleOnServer)
+                new DirectionalPayloadHandler<>(null, PacketGuard.limit(SaveCharacterSheetPacket::handleOnServer))
         );
     }
 

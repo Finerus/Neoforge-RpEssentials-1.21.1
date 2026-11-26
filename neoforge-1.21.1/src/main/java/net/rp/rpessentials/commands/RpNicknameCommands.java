@@ -215,10 +215,10 @@ public class RpNicknameCommands {
         }
 
         if (results.isEmpty()) {
-            ctx.getSource().sendFailure(Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WHOIS_NOT_FOUND, "nick", searchNick)));
+            ctx.getSource().sendFailure(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.WHOIS_NOT_FOUND, "nick", searchNick)));
             return 0;
         }
-        ctx.getSource().sendSuccess(() -> Component.literal(Msg.get(ctx.getSource(), MessagesConfig.WHOIS_RESULTS_HEADER, "nick", searchNick)), false);
+        ctx.getSource().sendSuccess(() -> net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(ctx.getSource(), MessagesConfig.WHOIS_RESULTS_HEADER, "nick", searchNick)), false);
         for (MutableComponent r : results) ctx.getSource().sendSuccess(() -> r, false);
         return 1;
     }

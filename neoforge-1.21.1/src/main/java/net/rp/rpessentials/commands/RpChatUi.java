@@ -57,7 +57,7 @@ public final class RpChatUi {
     public static MutableComponent pager(CommandSourceStack src, int page, int pages, String baseCommand) {
         MutableComponent out = Component.empty();
         out.append(button("<<", page > 1, baseCommand + " " + (page - 1)));
-        out.append(Component.literal(Msg.get(src, MessagesConfig.UI_PAGE,
+        out.append(net.rp.rpessentials.util.ColorHelper.parseSection(Msg.get(src, MessagesConfig.UI_PAGE,
                 "page", String.valueOf(page), "pages", String.valueOf(pages))));
         out.append(button(">>", page < pages, baseCommand + " " + (page + 1)));
         return out;

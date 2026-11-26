@@ -30,8 +30,10 @@ public class ColorHelper {
         return parseSection(AMP_CODE.matcher(expandGradients(text)).replaceAll("§"));
     }
 
-    public static Component parseSection(String text) {
+    /** § codes, hex colors and {@code <grad:#RRGGBB:#RRGGBB>} tags (nicknames, profession names...). */
+    public static MutableComponent parseSection(String text) {
         if (text == null || text.isEmpty()) return Component.empty();
+        text = expandGradients(text);
         if (text.indexOf('§') < 0) return Component.literal(text);
         MutableComponent result = Component.empty();
         for (TextSegment segment : parseSegments(text)) {
@@ -42,7 +44,7 @@ public class ColorHelper {
 
     public static String stripAll(String text) {
         if (text == null) return "";
-        return ANY_CODE.matcher(text).replaceAll("");
+        return ANY_CODE.matcher(expandGradients(text)).replaceAll("");
     }
 
     /**
@@ -144,7 +146,7 @@ public class ColorHelper {
      */
     public static String stripColors(String text) {
         if (text == null) return "";
-        return STRIP_CODE.matcher(text).replaceAll("");
+        return STRIP_CODE.matcher(expandGradients(text)).replaceAll("");
     }
 
     /**

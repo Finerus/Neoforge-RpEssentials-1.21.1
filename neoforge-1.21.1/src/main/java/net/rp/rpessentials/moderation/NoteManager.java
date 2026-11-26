@@ -123,6 +123,8 @@ public class NoteManager {
         List<NoteEntry> list = new ArrayList<>(notes.getOrDefault(uuid, List.of()));
         String name = playerNames.get(uuid);
         File dir = notesDir;
+        // Offline-mode servers accept names with "/" or "..".
+        if (name != null) name = name.replaceAll("[^A-Za-z0-9_.+-]", "_").replace("..", "_");
         String uuidStr = uuid.toString();
         File targetFile = new File(dir, (name != null ? name + " - " : "") + uuidStr + ".json");
 

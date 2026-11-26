@@ -8,14 +8,20 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.language.I18n;
+//#if forge
+//#else
 import net.minecraft.core.component.DataComponents;
+//#endif
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
+//#if forge
+//#else
 import net.minecraft.world.item.component.CustomData;
+//#endif
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.rp.rpessentials.util.ColorHelper;
@@ -72,9 +78,17 @@ public class LicenseCardRenderer {
         String expiryDate = null;
         boolean revoked = false;
 
+        //#if forge
+        //? CompoundTag cd = stack.getTag();
+        //#else
         CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
+        //#endif
         if (cd != null) {
+            //#if forge
+            //? CompoundTag tag = cd.copy();
+            //#else
             CompoundTag tag = cd.copyTag();
+            //#endif
             profId = shownProfession(tag);
             if (tag.contains("holderName")) holder = tag.getString("holderName");
             if (tag.contains("issueDate")) issueDate = tag.getString("issueDate");
@@ -90,10 +104,17 @@ public class LicenseCardRenderer {
 
         var vc = bufferSource.getBuffer(RenderType.text(CARD_TEXTURE));
 
+        //#if forge
+        //? vc.vertex(poseStack.last().pose(), -HALF_W,  HALF_H, 0f).color(255, 255, 255, 255).uv(0f, 1f).uv2(light).endVertex();
+        //? vc.vertex(poseStack.last().pose(),  HALF_W,  HALF_H, 0f).color(255, 255, 255, 255).uv(1f, 1f).uv2(light).endVertex();
+        //? vc.vertex(poseStack.last().pose(),  HALF_W, -HALF_H, 0f).color(255, 255, 255, 255).uv(1f, 0f).uv2(light).endVertex();
+        //? vc.vertex(poseStack.last().pose(), -HALF_W, -HALF_H, 0f).color(255, 255, 255, 255).uv(0f, 0f).uv2(light).endVertex();
+        //#else
         vc.addVertex(poseStack.last(), -HALF_W,  HALF_H, 0f).setColor(255, 255, 255, 255).setUv(0f, 1f).setLight(light);
         vc.addVertex(poseStack.last(),  HALF_W,  HALF_H, 0f).setColor(255, 255, 255, 255).setUv(1f, 1f).setLight(light);
         vc.addVertex(poseStack.last(),  HALF_W, -HALF_H, 0f).setColor(255, 255, 255, 255).setUv(1f, 0f).setLight(light);
         vc.addVertex(poseStack.last(), -HALF_W, -HALF_H, 0f).setColor(255, 255, 255, 255).setUv(0f, 0f).setLight(light);
+        //#endif
 
         drawThickness(vc, poseStack, light);
 
@@ -177,8 +198,12 @@ public class LicenseCardRenderer {
         int[][] orders = {{0, 1, 2, 3}, {3, 2, 1, 0}};
         for (int[] o : orders) {
             for (int i : o) {
+                //#if forge
+                //? vc.vertex(m.pose(), p[i][0], p[i][1], p[i][2]).color(shade, shade, shade, 255).uv(p[i][3], p[i][4]).uv2(light).endVertex();
+                //#else
                 vc.addVertex(m, p[i][0], p[i][1], p[i][2]).setColor(shade, shade, shade, 255)
                         .setUv(p[i][3], p[i][4]).setLight(light);
+                //#endif
             }
         }
     }

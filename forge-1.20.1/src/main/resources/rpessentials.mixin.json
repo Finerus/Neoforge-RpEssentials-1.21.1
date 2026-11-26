@@ -25,12 +25,16 @@
     "MixinListenerLeave",
     "MixinPlayerAdvancements",
     "MixinContainerOpenersCounter",
-    "MixinMinecraftServerStatus"
+    "MixinMinecraftServerStatus",
+    "MixinConfigSync",
+    "MixinTagCommand",
+    "MixinPlayerListLogin"
   ],
   "client": [
     "client.MixinPlayerTabOverlay",
     "client.MixinStringDecomposer",
-    "client.MixinGuiGraphicsCanvas"
+    "client.MixinGuiGraphicsCanvas",
+    "client.MixinOnlineServerEntry"
   ]
 ,
   "injectors": {

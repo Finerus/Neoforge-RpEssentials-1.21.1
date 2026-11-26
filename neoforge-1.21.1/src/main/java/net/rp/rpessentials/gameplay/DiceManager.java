@@ -185,7 +185,11 @@ public class DiceManager {
     /** Parse result: the request, or why it is refused. */
     public record Parsed(Request request, Status status) {}
 
+    /** Longest accepted roll: it is shown to the other players. */
+    public static final int MAX_INPUT = 64;
+
     public static Parsed parse(String input) {
+        if (input != null && input.length() > MAX_INPUT) return new Parsed(null, Status.UNKNOWN);
         boolean secret = false;
         Mode mode = Mode.NORMAL;
         StringBuilder spec = new StringBuilder();
@@ -307,10 +311,18 @@ public class DiceManager {
 
         Roll roll = execute(req);
         DiceRollEvent.Pre pre = new DiceRollEvent.Pre(player, req.dice(), roll.result(), roll);
+        //#if forge
+        //? if (MinecraftForge.EVENT_BUS.post(pre)) return Status.CANCELLED;
+        //#else
         if (NeoForge.EVENT_BUS.post(pre).isCanceled()) return Status.CANCELLED;
+        //#endif
         if (!ignoreCooldown) RpCooldownManager.setCooldown(player.getUUID(), "dice");
 
+        //#if forge
+        //? String result = pre.getRollResult();
+        //#else
         String result = pre.getResult();
+        //#endif
         boolean replaced = !result.equals(roll.result());
         String playerName = NicknameManager.getDisplayName(player);
         String shownDice = req.expression();

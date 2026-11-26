@@ -3,7 +3,10 @@ package net.rp.rpessentials.gameplay;
 import net.rp.rpessentials.config.Cfg;
 import net.rp.rpessentials.config.RpConfig;
 import net.minecraft.core.BlockPos;
+//#if forge
+//#else
 import net.minecraft.core.HolderLookup;
+//#endif
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
@@ -32,10 +35,16 @@ public class AfkPlatformInitializer {
         private String noticeFrom = "";
         private String noticeTo = "";
         private final java.util.Set<java.util.UUID> noticeSeen = new java.util.HashSet<>();
+        /** OPs who were already told how to get a role (once per player, see ModNotices). */
+        private final java.util.Set<java.util.UUID> roleHintSeen = new java.util.HashSet<>();
 
         public ModState() {}
 
+        //#if forge
+        //? public static ModState load(CompoundTag tag) {
+        //#else
         public static ModState load(CompoundTag tag, HolderLookup.Provider provider) {
+        //#endif
             ModState state = new ModState();
             state.afkPlatformPlaced = tag.getBoolean("afkPlatformPlaced");
             state.platformKey = tag.getString("platformKey");
@@ -45,11 +54,18 @@ public class AfkPlatformInitializer {
             for (net.minecraft.nbt.Tag t : tag.getList("noticeSeen", net.minecraft.nbt.Tag.TAG_STRING)) {
                 try { state.noticeSeen.add(java.util.UUID.fromString(t.getAsString())); } catch (IllegalArgumentException ignored) {}
             }
+            for (net.minecraft.nbt.Tag t : tag.getList("roleHintSeen", net.minecraft.nbt.Tag.TAG_STRING)) {
+                try { state.roleHintSeen.add(java.util.UUID.fromString(t.getAsString())); } catch (IllegalArgumentException ignored) {}
+            }
             return state;
         }
 
         @Override
+        //#if forge
+        //? public CompoundTag save(CompoundTag tag) {
+        //#else
         public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
+        //#endif
             tag.putBoolean("afkPlatformPlaced", afkPlatformPlaced);
             tag.putString("platformKey", platformKey);
             tag.putString("lastModVersion", lastModVersion);
@@ -58,6 +74,9 @@ public class AfkPlatformInitializer {
             net.minecraft.nbt.ListTag seen = new net.minecraft.nbt.ListTag();
             for (java.util.UUID u : noticeSeen) seen.add(net.minecraft.nbt.StringTag.valueOf(u.toString()));
             tag.put("noticeSeen", seen);
+            net.minecraft.nbt.ListTag hints = new net.minecraft.nbt.ListTag();
+            for (java.util.UUID u : roleHintSeen) hints.add(net.minecraft.nbt.StringTag.valueOf(u.toString()));
+            tag.put("roleHintSeen", hints);
             return tag;
         }
 
@@ -88,6 +107,12 @@ public class AfkPlatformInitializer {
             if (noticeSeen.add(uuid)) setDirty();
         }
 
+        public boolean roleHintSeenBy(java.util.UUID uuid) { return roleHintSeen.contains(uuid); }
+
+        public void markRoleHintSeen(java.util.UUID uuid) {
+            if (roleHintSeen.add(uuid)) setDirty();
+        }
+
         public void markPlaced(String key) {
             afkPlatformPlaced = true;
             platformKey = key;
@@ -99,9 +124,13 @@ public class AfkPlatformInitializer {
 
     /** Mod state of the server (saved with the overworld, data/rpessentials_modstate.dat). */
     public static ModState state(MinecraftServer server) {
+        //#if forge
+        //? return server.overworld().getDataStorage().computeIfAbsent(ModState::load, ModState::new, SAVED_DATA_ID);
+        //#else
         return server.overworld().getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(ModState::new, ModState::load),
                 SAVED_DATA_ID);
+        //#endif
     }
 
     public static void tryPlace(MinecraftServer server) {

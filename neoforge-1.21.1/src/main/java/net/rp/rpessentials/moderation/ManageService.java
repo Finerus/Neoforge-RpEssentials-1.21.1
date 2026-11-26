@@ -212,6 +212,10 @@ public final class ManageService {
             case OP -> {
                 int level = Math.max(1, Math.min(4, number));
                 if (level > adminLevel) yield fail(admin, MessagesConfig.MANAGE_OP_TOO_HIGH);
+                // Giving a level also takes the old one away: a higher OP cannot be lowered.
+                if (!self && pl.isOp(profile) && server.getProfilePermissions(profile) > adminLevel) {
+                    yield fail(admin, MessagesConfig.MANAGE_DEOP_HIGHER);
+                }
                 if (self && level < adminLevel) yield fail(admin, MessagesConfig.MANAGE_OP_LOWER_SELF);
                 setOp(server, profile, level);
                 yield ok(admin, MessagesConfig.MANAGE_OP_SET, "player", name, "level", String.valueOf(level));
@@ -257,6 +261,8 @@ public final class ManageService {
                 if (online == null) {
                     if (PendingProfileManager.hasPending(uuid)) {
                         PendingProfileManager.setRole(uuid, "");
+                        // Already came here: the role they have is cleared too, not only the one waiting for them.
+                        if (LastConnectionManager.getEntry(uuid) != null) PendingActionManager.add(uuid, name, action, adminName);
                         yield ok(admin, MessagesConfig.MANAGE_PREP_ROLE_CLEARED, "player", name);
                     }
                     yield queue(admin, uuid, name, action, adminName);
@@ -391,16 +397,16 @@ public final class ManageService {
 
     private static boolean clearRole(MinecraftServer server, ServerPlayer target) {
         var silent = server.createCommandSourceStack().withSuppressedOutput().withPermission(4);
-        String name = target.getName().getString();
         if (Cfg.ready(RpEssentialsConfig.SPEC)) {
             for (String entry : RpEssentialsConfig.ROLES.get()) {
-                server.getCommands().performPrefixedCommand(silent,
-                        "tag " + name + " remove " + entry.split(";", 2)[0].trim());
+                String tag = entry.split(";", 2)[0].trim();
+                target.removeTag(tag);
+                target.removeTag(tag.toLowerCase(java.util.Locale.ROOT));
             }
         } else {
             return false;
         }
-        server.getCommands().performPrefixedCommand(silent, "lp user " + name + " parent set default");
+        server.getCommands().performPrefixedCommand(silent, "lp user " + target.getUUID() + " parent set default");
         net.rp.rpessentials.permission.RpPerms.refresh(target);
         RpEssentialsPermissions.invalidateCache(target.getUUID());
         ProfessionSyncHelper.syncToPlayer(target);
@@ -411,13 +417,12 @@ public final class ManageService {
 
     private static int clearProfessions(MinecraftServer server, UUID uuid, ServerPlayer online,
                                         String name, String adminName) {
-        var silent = server.createCommandSourceStack().withSuppressedOutput().withPermission(4);
         List<String> licenses = LicenseManager.getLicenses(uuid);
         for (String prof : licenses) {
             LicenseManager.removeLicense(uuid, prof);
             LicenseManager.logActionSystem("REVOKE", name, uuid.toString(), prof, net.rp.rpessentials.lang.ServerLang.get(null, net.rp.rpessentials.config.MessagesConfig.AUDIT_VIA_MANAGE, "staff", adminName));
             if (online != null && !ProfessionRestrictionManager.isReservedTag(prof)) {
-                server.getCommands().performPrefixedCommand(silent, "tag " + name + " remove " + prof);
+                online.removeTag(prof);
             }
         }
         int count = licenses.size();

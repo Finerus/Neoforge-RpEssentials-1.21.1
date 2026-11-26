@@ -42,34 +42,36 @@ public record RequestAddPlayerPacket(String playerName) implements CustomPacketP
             if (!RpPerms.has(admin, RpPerm.PROFILE)) return;
 
             String name = packet.playerName().trim();
-            if (name.isEmpty()) return;
+            if (name.isEmpty() || name.length() > 32) return;
+            if (!PacketGuard.every(admin, "add_player", 500L)) return;
             MinecraftServer server = admin.getServer();
 
             // Résolution en tâche de fond : évite un appel réseau bloquant sur le thread serveur
-            net.rp.rpessentials.core.RpEssentialsIO.submit(() -> {
+            // (not on the IO thread of the mod: a slow answer from Mojang would delay the saves).
+            net.minecraft.Util.ioPool().execute(() -> {
                 java.util.Optional<GameProfile> result = server.getProfileCache() != null
                         ? server.getProfileCache().get(name)
                         : java.util.Optional.empty();
 
                 server.execute(() -> {
                     if (result.isEmpty()) {
-                        admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ADD_NOT_FOUND, "player", name)));
+                        admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_ADD_NOT_FOUND, "player", name)));
                         return;
                     }
                     GameProfile profile = result.get();
 
                     if (server.getPlayerList().getPlayer(profile.getId()) != null
                             || PendingProfileManager.hasPending(profile.getId())) {
-                        admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ADD_KNOWN, "player", profile.getName())));
+                        admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_ADD_KNOWN, "player", profile.getName())));
                         return;
                     }
                     if (net.rp.rpessentials.moderation.LastConnectionManager.getEntry(profile.getId()) != null) {
-                        admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ADD_CONNECTED, "player", profile.getName())));
+                        admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_ADD_CONNECTED, "player", profile.getName())));
                         return;
                     }
 
                     PendingProfileManager.addPending(profile.getId(), profile.getName());
-                    admin.sendSystemMessage(Component.literal(ServerLang.get(admin, MessagesConfig.GUI_ADD_DONE, "player", profile.getName())));
+                    admin.sendSystemMessage(net.rp.rpessentials.util.ColorHelper.parseSection(ServerLang.get(admin, MessagesConfig.GUI_ADD_DONE, "player", profile.getName())));
                     RequestOpenGuiPacket.handlePlayerProfileGui(admin);
                 });
             });

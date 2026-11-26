@@ -1,6 +1,100 @@
 # Changelog - Rp Essentials
 All notable changes to this project will be documented in this file.
 
+## [6.2.0]
+
+### Breaking Changes
+
+* **Network:** new `PlayerNotesPacket`. Server and clients must run the same version.
+* **Options only for staff with `rpessentials.config.sensitive`:** `afkCommands`, `spawnCommands` and `zoneActions` join `autoUnwhitelistExtraCommands`, since their commands run with OP level 4.
+* **Config Manager and `/rpessentials config set` follow the nodes of the commands:** the options that do the same thing as a command now need its node, and are hidden without it: `whitelist`, `blacklist`, `alwaysVisibleList` (`config.blurtab`), `forceState` (`schedule.force`), `scheduleWhitelist` (`schedule.whitelist`), `platforms` (`staff.setplatform`), Death RP `globalEnabled` (`deathrp.manage`), `enableProximitySpy` (`staff.proximityspy`), the whole professions file (`professions.edit`). Most are OP 2 by default, so a staff member without OP no longer sees them.
+* **`/tag` on the tag of a role:** refused without `rpessentials.roles.set` (see Security). Command blocks and quests that give such a role must use `/rpessentials setrole` from the console or a function run by the server, or set `protectRoleTags` to `false`.
+* **`rpessentials.*` no longer gives `rpessentials.tab.alwaysvisible`:** a role (or LuckPerms group) that must always be shown clearly needs this node on its own. The config files are not changed: a role where the node was granted or refused on its own keeps that choice.
+
+### Added
+
+* **World border switch:** `enableWorldBorder` (core config) turns the whole distance limit off (warning, pre-warning, teleport). `enableNamedZones` does the same for the named zones (messages and actions), which no longer depend on the world border. They replace `enableWorldBorderWarning`, which turned both off.
+* **Forge 1.20.1:** the mod is now also available for Minecraft 1.20.1 on Forge 47.1 and newer, and on NeoForge 1.20.1 (47.1.x), with the same features as the NeoForge 1.21.1 version. API difference: on Forge, `DiceRollEvent.getResult()` / `setResult()` are named `getRollResult()` / `setRollResult()`.
+* **Discord, channel chosen by its ID:** `discordBotToken` and `discordChannelId` (core config) send the staff events with a Discord bot in the channel or thread of your choice. Discord ties a webhook to its own channel, so a bot is needed for this. When one of the two is empty, the webhook is used as before. `/rpessentials discord test` explains what is wrong (token, channel ID, missing permissions).
+* **Report actions in the history:** handling, closing, reopening, deleting a report and teleporting to its place are written in the history of the reported player (who reported, why) and in the one of the staff member (which player, who reported, why). New history type `REPORT_STAFF` for the staff side (usable in `historyRetention`).
+* **First staff member:** on a new server, as long as nobody is staff, players are told what to type in the server console to get the admin role (it is written in the console at startup too). An OP who can give roles but has no role gets the command to click, at login or as soon as they are made OP (once per player).
+* **Schedule, refused before entering:** while the server is closed, a player who may not come is refused like by the whitelist, instead of entering the world and being kicked. Nothing about their roles is copied: the tags are read in their save file, and roles given or cleared while they are away, LuckPerms groups, OP level and the schedule whitelist are looked at live. When something cannot be known at this point (another permission mod...), the check made in the world decides, as before.
+* **`/rpessentials setrole` on a player who is not connected** (also in the Player Profile): given at their next login, and already counted by the schedule, so it lets them in while the server is closed.
+* **`/schedule forceopen [duration] [reason]` and `/schedule forceclose [duration] [reason]`**, for example `/schedule forceclose 2h maintenance`: the forced state ends by itself. The reason and the time left are shown to refused players, in `/schedule`, to the staff when they log in (also for a forced opening) and on Discord. API: same options in `forceOpenServer` and `forceCloseServer`.
+* **Several openings per day:** `extraSlots` of each day, and `date=14:00-18:00,20:00-23:00` in `scheduleExceptions`. `24:00` can be used as an end.
+* **Multiplayer list:** tells if the server is open or closed and until when, without changing the MOTD: above the player names when hovering the player count (everyone), and with a badge next to the server name, in the language and time zone of the player (players with the mod). `showInServerList` (schedule config) turns it off for everyone; each player can hide the badge alone with `showServerBadge` in `rpessentials-client.toml`.
+* **Closed message:** `{in}` is the time left before the opening (added to the default message), and `msgServerClosedNoOpening` is shown when no opening is planned.
+* **OP 4 can always use `/rpessentials setrole`**, even with a role or a LuckPerms group that refuses it. Other OP levels are unchanged (OP 3 by default).
+* **Backup:** `/rpessentials config backup` says when the backup is done, with its size and its full path (click to copy), or why it failed.
+
+### Changed
+
+* **Schedule announcements:** the opening message goes to everyone online. While the state is forced, the warnings say what was supposed to happen ("supposed to close in 30 min, but it is forcibly open"). After a restart, Discord gets "Server restarted, still open / closed to players" instead of a new opening or closing.
+* **Schedule and blur lists by UUID:** `scheduleWhitelist`, `whitelist`, `blacklist` and `alwaysVisibleList` keep the UUID of the players (`UUID (Name)`). Names already written are converted when these players join.
+* **Core config:** the section `World Border Warning` is now `World Border` (it also holds the named zones). Its values and comments are moved at startup.
+* **Config migration:** `enableWorldBorderWarning` is converted at startup, with the same result: `false` keeps both the world border and the named zones off. The old name still works in `/rpessentials config set`. The migration now also covers the `serverconfig` folder of the worlds (where Forge 1.20.1 keeps the server configs).
+* **Access updated at once:** the commands, GUIs, name blur and profession restrictions of a player follow a change of role, OP level or LuckPerms immediately, however it was made (`/tag`, functions, other mods, `/op`, groups, temporary permissions...), instead of up to 30 seconds later. A staff screen still open is closed when its permission is lost.
+* **Multiplayer list:** with `messageSource = MOD`, the lines above the player names follow the language of the game, like the badge (players with the mod; the others get `serverLanguage`).
+* **`/op` on yourself:** lowering your own OP level must be confirmed (click, or type the command again within 30 seconds).
+* **Staff broadcast:** `/rpessentials staff broadcast` messages are now also received by players with `rpessentials.staff.broadcast` who are not staff (they could write but not read them).
+* **Update note:** staff members are told what `rpessentials.*` means for the name blur (it includes `rpessentials.see.all`).
+* **`/rpessentials config set`:** the message options are only suggested after `config set messages`. Without a file name, an option now wins over a message with the same name.
+* **Discord secrets:** the webhook URL and the bot token are hidden (`********`) in the messages sent to the staff and in the log when they are changed.
+* **Refresh of the Player Profile and of the Profession / Role editor:** the tab, the selected entry and the scroll position are kept.
+
+### Fixed
+
+* **LuckPerms sync:** a role changed twice within 5 seconds kept the first change, or got it back.
+* **LuckPerms groups without `luckPermsSync`:** a group change only gave or took the role after up to 30 seconds.
+* **Welcome message (since 6.1.0):** it was never shown on a new server, which was always seen as a server where the mod already ran.
+* **Name blur with the admin role (since 6.1.0):** `rpessentials.*`, the default of the admin role, also made its players always visible, so nobody saw them blurred and `debugSelfBlur` did nothing for them. They are blurred for other players again, as in 6.0.0. They still see everyone clearly (`rpessentials.see.all`).
+* **Player Profile notes:** a note added or edited shows at once with its number, date and buttons, instead of waiting for a refresh. The note field keeps the focus, to write several notes in a row.
+* **Gradients:** nicknames and profession names with a gradient were shown with their `<grad:...>` tags in `/whois`, the Player Profile feedback, the history and most chat messages of the mod.
+* **Config Manager:** saving or refreshing no longer goes back to the top of the list.
+* **Backups:** data changed in the last second was missing from the zip (a backup could even be empty).
+
+### Security
+
+* **Config files readable by every player:** Minecraft mod loaders send the server config files in full to each client that joins, so a player could read the Discord webhook URL, the roles, the commands, the staff platforms... The clients now only get the few options they need (dice, license tooltip), and default values for everything else; a new option is private unless it is marked. **If you use a Discord webhook, create a new one and delete the old one:** anyone who joined before may have it.
+* **Config Manager:** a staff member with `rpessentials.config.gui` (every staff member by default) could write a command run with OP level 4 in `spawnCommands`, `afkCommands` or `zoneActions`, and become OP. They could also change options whose command they are not allowed to use. The values of restricted options are no longer shown to the rest of the staff when they change.
+* **Role tags:** `/tag` (OP 2, command blocks, signs, functions called by a player) could give the tag of a role, so its permissions. It is refused for roles that have permissions (`protectRoleTags`, on by default). Other tags, roles without permissions and the console are not concerned.
+* **Signs, command blocks and `/execute as`:** a command run through a sign clicked by an admin, a command block or `/execute as <admin>` used the permissions of that admin (`setrole`, `manage op`, `config set`). The permissions of the one who really runs it are now used, and a sign or command block also needs the OP level of the command.
+* **Player Profile:** it ignored the refused nodes `-rpessentials.license.give`, `license.temp`, `license.revoke` and `identity.nick`. Notes and report counts are only sent to staff with `moderation.note` / `moderation.reports`. What staff could do without a refused node is unchanged.
+* **`manage op`:** an OP cannot lower the level of a higher OP anymore.
+* **Profession and role editors:** a modified client could create a profession with the id of a role (or the opposite).
+* **Packets:** a player who floods the server with packets of the mod has the extra ones ignored. Rolling dice by packet follows `rpessentials.player.roll`, the length of a roll is limited, and the texts sent by the editors have a maximum length.
+* **`/rp report`:** an unknown name asked the Mojang servers on the server thread, so any player could freeze the server. Only players known by the server can be reported.
+* **`/rp selfnick`:** refuses invisible characters, the Minecraft name of another player (with `nickUnique`), and gradients when colors are not allowed.
+* **Player names in commands:** roles, licenses and the automatic unwhitelist no longer build commands with the player name (offline-mode servers accept names such as `@a`).
+
+### Performance
+
+* **Without LuckPerms**, each permission check failed a class lookup: about 25 times faster now. The tab blur also checks the `tab.alwaysvisible` node once per player instead of once per pair of players.
+* **Config Manager and `/rpessentials config set`:** the options are read by reflection once instead of at each opening and each key typed, and a change only refreshes what depends on its file.
+* **Login:** what is sent for the config files of the mod is prepared once and reused.
+* **`lastconnection.json` and `history.json`** are no longer written or copied on the server thread (at each logout, every minute, and at each history line).
+
+### Fixed (data)
+
+* **`/rpessentials config reload`** could lose the changes of the last second.
+* **Automatic unwhitelist:** when LuckPerms could not answer, players with the bypass could be removed.
+
+### Fixed (schedule)
+
+* A session past midnight opened the server again the next evening when that day was closed (Friday 22:00-02:00 and Saturday closed: open on Saturday from 22:00).
+* `OPEN` and full days (00:00-23:59) closed the server and kicked everyone for one minute at 23:59.
+* "Server closed" was sent again to Discord each midnight, and opening or closing again after each restart.
+* The opening was announced while the server was forcibly closed, and closing warnings were sent while it was forcibly open.
+* `/schedule forceopen` announced an English day and "now" as the opening time.
+* Clearing the role of a prepared player who already came did not clear the role they had.
+
+### Personal notes
+
+Hey, it's me, it's Bobbity ask me anything. Hummm...
+So as asked by a curseforge user, I (mostly claude, but I worked on it a bit too (I hate forge)) backported the mod to Forge 1.20.1.
+I still haven't touched the GUIs textures (I was lazy), so nothing changed on that since 6.1.0 ^^'
+Oh and, the readme is finally (after 8 month lol) updated to show Server AND client side mod! Took my time to ring that bell in my head...
+
 ## [6.1.0]
 
 > **Textured look (work in progress):** only the 5 tabs of the Player Profile (Stats, Notes, Manage, History, Reports) have their final textures so far; the character sheet, profile tab and the other screens keep the generic textures and will be drawn in later versions. The tabs already drawn may still change. The legacy look is unchanged.

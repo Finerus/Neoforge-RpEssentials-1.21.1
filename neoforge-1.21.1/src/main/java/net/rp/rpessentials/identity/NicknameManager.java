@@ -64,7 +64,7 @@ public class NicknameManager {
     private static void loadFromFile() {
         if (nicknameFile == null || !nicknameFile.exists()) return;
 
-        try (FileReader reader = new FileReader(nicknameFile)) {
+        try (FileReader reader = new FileReader(nicknameFile, java.nio.charset.StandardCharsets.UTF_8)) {
             Type type = new TypeToken<Map<String, String>>(){}.getType();
             Map<String, String> data = GSON.fromJson(reader, type);
 
@@ -227,6 +227,19 @@ public class NicknameManager {
         return ColorHelper.stripAll(ColorHelper.translateAlternateColorCodes(nick)).trim();
     }
 
+    /** Zero-width, text direction and control characters. */
+    private static final java.util.regex.Pattern INVISIBLE = java.util.regex.Pattern.compile("[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]");
+    /** Characters drawn as an empty space. */
+    private static final java.util.regex.Pattern BLANK =
+            java.util.regex.Pattern.compile("[\\s\\p{Z}\\x{2800}\\x{3164}\\x{115F}\\x{1160}\\x{FFA0}]");
+
+    private static boolean isNameOfAnother(UUID self, String name) {
+        MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        ServerPlayer online = server != null ? server.getPlayerList().getPlayerByName(name) : null;
+        UUID id = online != null ? online.getUUID() : net.rp.rpessentials.moderation.LastConnectionManager.findUUIDByName(name);
+        return id != null && !id.equals(self);
+    }
+
     public static String rejection(UUID self, String nick, boolean staff, ServerPlayer viewer) {
         ensureInitialized();
         String n = plain(nick);
@@ -238,6 +251,11 @@ public class NicknameManager {
                 }
             }
             if (!staff) {
+                if (INVISIBLE.matcher(n).find() || BLANK.matcher(n).replaceAll("").isEmpty())
+                    return ServerLang.get(viewer, MessagesConfig.NICK_FORBIDDEN);
+                // The Minecraft name of someone else: nobody could tell them apart.
+                if (RpConfig.NICK_UNIQUE.get() && isNameOfAnother(self, n))
+                    return ServerLang.get(viewer, MessagesConfig.NICK_USED);
                 for (String w : RpConfig.NICK_BLACKLIST.get()) {
                     if (!w.isBlank() && n.toLowerCase().contains(w.trim().toLowerCase()))
                         return ServerLang.get(viewer, MessagesConfig.NICK_FORBIDDEN);

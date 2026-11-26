@@ -83,7 +83,11 @@ public class DiceSelectionScreen extends net.rp.rpessentials.client.skin.CanvasS
     }
 
     @Override
+    //#if forge
+    //? public void renderBackground(GuiGraphics g) {}
+    //#else
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partial) {}
+    //#endif
 
     @Override
     public boolean isPauseScreen() { return false; }
